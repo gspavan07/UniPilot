@@ -49,7 +49,11 @@ router.post(
 router
   .route("/:id")
   .get(checkPermission("users:view"), getUser)
-  .put(checkPermission("users:edit"), updateUser)
+  .put(
+    checkPermission("users:edit"),
+    studentUpload.array("documents"),
+    updateUser
+  )
   .delete(checkPermission("users:delete"), deleteUser);
 
 module.exports = router;

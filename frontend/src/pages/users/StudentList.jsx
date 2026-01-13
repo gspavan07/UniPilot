@@ -8,6 +8,7 @@ import {
   fetchUserStats,
   fetchStudentSections,
 } from "../../store/slices/userSlice";
+import { fetchRoles } from "../../store/slices/roleSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
 import api from "../../utils/api";
@@ -84,6 +85,7 @@ const StudentList = () => {
   useEffect(() => {
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
+    dispatch(fetchRoles());
     dispatch(fetchUserStats());
     // Initial fetch of sections (optional, or wait for filters)
     dispatch(fetchStudentSections({}));

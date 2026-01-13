@@ -71,7 +71,11 @@ export const createUser = createAsyncThunk(
   "users/create",
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await api.post("/users", userData);
+      const config =
+        userData instanceof FormData
+          ? { headers: { "Content-Type": "multipart/form-data" } }
+          : {};
+      const response = await api.post("/users", userData, config);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
@@ -85,7 +89,11 @@ export const updateUser = createAsyncThunk(
   "users/update",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/users/${id}`, data);
+      const config =
+        data instanceof FormData
+          ? { headers: { "Content-Type": "multipart/form-data" } }
+          : {};
+      const response = await api.put(`/users/${id}`, data, config);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(

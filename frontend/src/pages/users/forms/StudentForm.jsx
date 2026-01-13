@@ -8,6 +8,7 @@ import {
   Save,
   AlertCircle,
   Loader2,
+  ExternalLink,
   User as UserIcon,
   Mail,
   Phone,
@@ -39,11 +40,20 @@ import api from "../../../utils/api";
 
 const studentSchema = yup.object().shape({
   ...baseUserSchema,
+  auto_generate: yup.boolean().default(true),
   role: yup.string().default("student"),
   role_id: yup.string().required(),
   program_id: yup.string().required("Program is required"),
-  student_id: yup.string().required("Student ID is required"),
-  admission_number: yup.string().required("Admission Number is required"),
+  student_id: yup.string().when("auto_generate", {
+    is: true,
+    then: (schema) => schema.optional(),
+    otherwise: (schema) => schema.required("Student ID is required"),
+  }),
+  admission_number: yup.string().when("auto_generate", {
+    is: true,
+    then: (schema) => schema.optional(),
+    otherwise: (schema) => schema.required("Admission Number is required"),
+  }),
   current_semester: yup
     .number()
     .min(1)
@@ -104,6 +114,7 @@ const StudentForm = ({
   const [admissionConfig, setAdmissionConfig] = useState(null);
   const [seatMatrix, setSeatMatrix] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState({});
+  const [existingDocuments, setExistingDocuments] = useState([]);
   const { isVisible, applyConfig } = useFieldConfig("student");
   const dispatch = useDispatch(); // Initialize useDispatch
 
@@ -123,6 +134,7 @@ const StudentForm = ({
     watch,
     trigger,
     getValues,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(studentSchema),
@@ -220,10 +232,43 @@ const StudentForm = ({
       fetchConfigAndSeats();
     }
 
+    if (roleId) {
+      setValue("role_id", roleId);
+    }
+
     if (user && isOpen) {
+      let parsedCustomFields = user.custom_fields || {};
+      if (typeof parsedCustomFields === "string") {
+        try {
+          parsedCustomFields = JSON.parse(parsedCustomFields);
+        } catch (e) {
+          parsedCustomFields = {};
+        }
+      }
+
+      let parsedPreviousAcademics = user.previous_academics || [];
+      if (typeof parsedPreviousAcademics === "string") {
+        try {
+          parsedPreviousAcademics = JSON.parse(parsedPreviousAcademics);
+        } catch (e) {
+          parsedPreviousAcademics = [];
+        }
+      }
+
+      // Fetch existing documents for the user
+      api
+        .get(`/admission/documents/${user.id}`)
+        .then((res) => setExistingDocuments(res.data.data))
+        .catch((err) => console.error("Failed to fetch documents", err));
+
       reset({
         ...user,
+        custom_fields: parsedCustomFields,
         role_id: roleId,
+        auto_generate: false, // Force manual/existing ID mode for edits
+        gender: user.gender
+          ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1)
+          : "Other",
         guardian_type: user.parent_details?.guardian_type || "Both Parents",
         father_name: user.parent_details?.father_name || "",
         father_job: user.parent_details?.father_job || "",
@@ -239,7 +284,7 @@ const StudentForm = ({
         guardian_job: user.parent_details?.guardian_job || "",
         guardian_email: user.parent_details?.guardian_email || "",
         guardian_mobile: user.parent_details?.guardian_mobile || "",
-        previous_academics: user.previous_academics || [],
+        previous_academics: parsedPreviousAcademics,
       });
     }
   }, [dispatch, isOpen, user, reset, roleId]);
@@ -265,10 +310,12 @@ const StudentForm = ({
 
     // Explicitly handle date/files if needed, but the loop covers most strings
 
-    // 3. Parent Details
+    // 3. Parent Details - Validate and Merge
+    const existingParentDetails = user ? user.parent_details || {} : {};
     formData.append(
       "parent_details",
       JSON.stringify({
+        ...existingParentDetails, // Merge existing fields to prevent data loss
         guardian_type: data.guardian_type,
         single_parent_type: data.single_parent_type,
         father_name: data.father_name,
@@ -295,7 +342,20 @@ const StudentForm = ({
     );
 
     // 5. Custom Fields
-    const customFields = {};
+    let customFields = {};
+    if (user && user.custom_fields) {
+      // Parse existing custom fields if string
+      let oldCustom = user.custom_fields;
+      if (typeof oldCustom === "string") {
+        try {
+          oldCustom = JSON.parse(oldCustom);
+        } catch (e) {
+          oldCustom = {};
+        }
+      }
+      customFields = { ...oldCustom };
+    }
+
     if (admissionConfig?.field_config?.custom) {
       Object.keys(admissionConfig.field_config.custom).forEach((key) => {
         if (data[key]) customFields[key] = data[key];
@@ -504,14 +564,15 @@ const StudentForm = ({
               <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
             </div>
             <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
-              Registration Successful!
+              {user ? "Update Successful!" : "Registration Successful!"}
             </h2>
             <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-10">
               Student{" "}
               <span className="text-emerald-600 font-black tracking-tight uppercase">
                 "{registeredStudent?.name}"
               </span>{" "}
-              has been registered and is now awaiting verification.
+              has been {user ? "updated" : "registered"} and is now awaiting
+              verification.
             </p>
 
             <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
@@ -627,29 +688,30 @@ const StudentForm = ({
                         )}
                       </div>
                     )}
-                    <div className="col-span-2">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <input
-                          type="checkbox"
-                          checked={autoGenerate}
-                          onChange={(e) => setAutoGenerate(e.target.checked)}
-                          className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest">
-                          Auto-generate Roll Number & Admission No.
-                        </span>
+                    {!user && (
+                      <div className="col-span-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <input
+                            type="checkbox"
+                            {...register("auto_generate")}
+                            className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest">
+                            Auto-generate Roll Number & Admission No.
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <input
+                            type="checkbox"
+                            {...register("is_temporary_id")}
+                            className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+                            Issue Temporary ID
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <input
-                          type="checkbox"
-                          {...register("is_temporary_id")}
-                          className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">
-                          Issue Temporary ID
-                        </span>
-                      </div>
-                    </div>
+                    )}
                     <div>
                       {renderFieldLabel(
                         "personal",
@@ -1402,52 +1464,93 @@ const StudentForm = ({
                           "Entrance Rank Card",
                           "Allotment Order",
                         ])
-                  ).map((doc) => (
-                    <div
-                      key={doc}
-                      className="p-4 rounded-3xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 flex items-center justify-between shadow-sm group hover:border-primary-300 transition-all"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                            selectedFiles[doc]
-                              ? "bg-emerald-100 text-emerald-600"
-                              : "bg-gray-50 dark:bg-gray-700 text-gray-400"
-                          }`}
-                        >
-                          <FileText className="w-5 h-5" />
+                  ).map((doc) => {
+                    const existingDoc = existingDocuments.find(
+                      (d) => d.type === doc
+                    );
+                    const isNewUploaded = !!selectedFiles[doc];
+
+                    return (
+                      <div
+                        key={doc}
+                        className="p-4 rounded-3xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 flex items-center justify-between shadow-sm group hover:border-primary-300 transition-all"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                              isNewUploaded
+                                ? "bg-emerald-100 text-emerald-600"
+                                : existingDoc
+                                  ? "bg-blue-100 text-blue-600"
+                                  : "bg-gray-50 dark:bg-gray-700 text-gray-400"
+                            }`}
+                          >
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                              {doc}
+                            </p>
+                            <div className="flex flex-col">
+                              {isNewUploaded ? (
+                                <p className="text-[10px] text-emerald-600 font-medium">
+                                  {selectedFiles[doc].name} (New)
+                                </p>
+                              ) : existingDoc ? (
+                                <div className="flex items-center space-x-2">
+                                  <a
+                                    href={`${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3000"}${existingDoc.file_url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-blue-600 font-medium hover:underline flex items-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    View Existing
+                                    <ExternalLink className="w-3 h-3 ml-1" />
+                                  </a>
+                                  <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded ${
+                                      existingDoc.status === "approved"
+                                        ? "bg-emerald-100 text-emerald-700"
+                                        : "bg-amber-100 text-amber-700"
+                                    }`}
+                                  >
+                                    {existingDoc.status}
+                                  </span>
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-gray-400">
+                                  Click to upload file
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-700 dark:text-gray-200">
-                            {doc}
-                          </p>
-                          <p className="text-[10px] text-gray-400">
-                            {selectedFiles[doc]
-                              ? selectedFiles[doc].name
-                              : "Click to upload file"}
-                          </p>
-                        </div>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setSelectedFiles({
+                                  ...selectedFiles,
+                                  [doc]: file,
+                                });
+                              }
+                            }}
+                          />
+                          <div className="btn btn-secondary py-1.5 px-3 text-[10px] group-hover:bg-primary-500 group-hover:text-white transition-all">
+                            {isNewUploaded
+                              ? "Change"
+                              : existingDoc
+                                ? "Replace"
+                                : "Upload"}
+                          </div>
+                        </label>
                       </div>
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              setSelectedFiles({
-                                ...selectedFiles,
-                                [doc]: file,
-                              });
-                            }
-                          }}
-                        />
-                        <div className="btn btn-secondary py-1.5 px-3 text-[10px] group-hover:bg-primary-500 group-hover:text-white transition-all">
-                          {selectedFiles[doc] ? "Change" : "Upload"}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1564,6 +1667,7 @@ const StudentForm = ({
               {currentStep < steps.length ? (
                 <button
                   type="button"
+                  key="continue-btn"
                   onClick={handleNext}
                   className="flex items-center space-x-2 px-8 py-3 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all"
                 >
@@ -1573,6 +1677,7 @@ const StudentForm = ({
               ) : (
                 <button
                   type="submit"
+                  key="submit-btn"
                   disabled={loading}
                   className="flex items-center space-x-2 px-8 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all"
                 >
@@ -1581,7 +1686,7 @@ const StudentForm = ({
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  <span>Confirm & Register</span>
+                  <span>{user ? "Update Student" : "Confirm & Register"}</span>
                 </button>
               )}
             </div>

@@ -452,6 +452,13 @@ exports.createUser = async (req, res) => {
 
     // Process Uploaded Documents (Now using StudentDocument model)
     if (req.files && req.files.length > 0) {
+      logger.info(
+        `Processing ${req.files.length} documents for user ${user.id}`
+      );
+      logger.info(
+        `Document Types received: ${JSON.stringify(req.body.document_types)}`
+      );
+
       const { StudentDocument } = require("../models");
       const documentTypes = Array.isArray(req.body.document_types)
         ? req.body.document_types
@@ -517,6 +524,29 @@ exports.updateUser = async (req, res) => {
     delete updateData.email; // Usually emails shouldn't be changed easily
 
     user = await user.update(updateData);
+
+    // Process Uploaded Documents (Now using StudentDocument model)
+    if (req.files && req.files.length > 0) {
+      logger.info(
+        `Processing ${req.files.length} documents for user update ${user.id}`
+      );
+      const { StudentDocument } = require("../models");
+      const documentTypes = Array.isArray(req.body.document_types)
+        ? req.body.document_types
+        : [req.body.document_types];
+
+      await Promise.all(
+        req.files.map((file, index) =>
+          StudentDocument.create({
+            user_id: user.id,
+            name: file.originalname,
+            file_url: `/uploads/student_docs/${file.filename}`,
+            type: documentTypes[index] || "Other",
+            status: "pending",
+          })
+        )
+      );
+    }
 
     res.status(200).json({
       success: true,

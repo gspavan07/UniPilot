@@ -57,6 +57,19 @@ const AdmissionSettings = () => {
     }
   };
 
+  const handleDelete = async (id, e) => {
+    e.stopPropagation(); // Prevent opening edit modal
+    if (window.confirm("Are you sure you want to delete this configuration?")) {
+      try {
+        await api.delete(`/admission/configs/${id}`);
+        toast.success("Configuration deleted successfully");
+        fetchConfigs();
+      } catch (error) {
+        toast.error("Failed to delete configuration");
+      }
+    }
+  };
+
   const createNew = () => {
     setEditingConfig({
       batch_year: new Date().getFullYear(),
@@ -177,6 +190,13 @@ const AdmissionSettings = () => {
               >
                 Edit Config
               </button>
+              <button
+                onClick={(e) => handleDelete(config.id, e)}
+                className="px-3 py-2 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 rounded-xl hover:bg-error-100 dark:hover:bg-error-900/40 transition-all"
+                title="Delete Config"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
         ))}
@@ -288,6 +308,28 @@ const AdmissionSettings = () => {
                       <span className="text-primary-500 font-bold">
                         {"{SEQ}"}
                       </span>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
+                      Temp ID Generation Format
+                    </label>
+                    <input
+                      type="text"
+                      value={editingConfig.temp_id_format || ""}
+                      onChange={(e) =>
+                        setEditingConfig({
+                          ...editingConfig,
+                          temp_id_format: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
+                      placeholder="T{YY}{SEQ}"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-2 px-1">
+                      Same placeholders supported. Used for initial temporary
+                      IDs.
                     </p>
                   </div>
 

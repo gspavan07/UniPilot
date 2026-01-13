@@ -14,6 +14,7 @@ const {
 const {
   getAdmissionConfigs,
   saveAdmissionConfig,
+  deleteAdmissionConfig,
 } = require("../controllers/admissionConfigController");
 const studentUpload = require("../middleware/studentUpload");
 const { authenticate, checkPermission } = require("../middleware/auth");
@@ -56,6 +57,11 @@ router.post(
   "/configs",
   checkPermission("admissions:manage"),
   saveAdmissionConfig
+);
+router.delete(
+  "/configs/:id",
+  checkPermission("admissions:manage"),
+  deleteAdmissionConfig
 );
 
 // Document Re-upload
