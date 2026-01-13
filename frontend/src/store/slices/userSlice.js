@@ -3,6 +3,7 @@ import api from "../../utils/api";
 
 const initialState = {
   users: [],
+  sections: [],
   userStats: null,
   currentUser: null,
   status: "idle",
@@ -14,12 +15,14 @@ export const fetchUsers = createAsyncThunk(
   "users/fetchAll",
   async (filters = {}, { rejectWithValue }) => {
     try {
-      const { role, department_id, search } = filters;
+      const { role, department_id, search, batch_year, section } = filters;
       let url = "/users";
       const params = new URLSearchParams();
       if (role) params.append("role", role);
       if (department_id) params.append("department_id", department_id);
       if (search) params.append("search", search);
+      if (batch_year) params.append("batch_year", batch_year);
+      if (section) params.append("section", section);
 
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
@@ -43,6 +46,22 @@ export const fetchUserStats = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error || "Failed to fetch user stats"
+      );
+    }
+  }
+);
+
+export const fetchStudentSections = createAsyncThunk(
+  "users/fetchSections",
+  async ({ department_id, batch_year }, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/users/sections", {
+        params: { department_id, batch_year },
+      });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch sections"
       );
     }
   }
@@ -140,6 +159,9 @@ export const userSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.users.unshift(action.payload);
+      })
+      .addCase(fetchStudentSections.fulfilled, (state, action) => {
+        state.sections = action.payload;
       })
       .addCase(updateUser.fulfilled, (state, action) => {
         const index = state.users.findIndex((u) => u.id === action.payload.id);

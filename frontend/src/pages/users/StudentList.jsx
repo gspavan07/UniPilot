@@ -6,18 +6,36 @@ import {
   createUser,
   updateUser,
   fetchUserStats,
+  fetchStudentSections,
 } from "../../store/slices/userSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
-import { fetchRoles } from "../../store/slices/roleSlice";
+import api from "../../utils/api";
 import UserForm from "./UserForm";
+import StudentDetailModal from "./StudentDetailModal";
 import BulkImportModal from "./BulkImportModal";
-import { Plus, Search, Edit2, Trash2, Loader2, SearchX } from "lucide-react";
+import DocumentVerificationModal from "../../components/admission/DocumentVerificationModal";
+import BulkCommunicationModal from "../../components/admission/BulkCommunicationModal";
+import {
+  Plus,
+  Search,
+  Filter,
+  Edit2,
+  Trash2,
+  Loader2,
+  SearchX,
+  Download,
+  FileText,
+  FileDown,
+  Mail,
+  Eye,
+} from "lucide-react";
 
-const UserList = ({ role: forcedRole }) => {
+const StudentList = () => {
   const dispatch = useDispatch();
   const {
     users,
+    sections,
     status: userStatus,
     error: userError,
     userStats,
@@ -28,55 +46,79 @@ const UserList = ({ role: forcedRole }) => {
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState(forcedRole || "");
   const [deptFilter, setDeptFilter] = useState("");
+  const [batchFilter, setBatchFilter] = useState("");
+  const [sectionFilter, setSectionFilter] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isBulkNotifOpen, setIsBulkNotifOpen] = useState(false);
+  const [docModal, setDocModal] = useState({
+    isOpen: false,
+    studentId: null,
+    studentName: "",
+  });
+  const [detailModal, setDetailModal] = useState({
+    isOpen: false,
+    student: null,
+  });
+
+  const handleDownloadLetter = async (studentId) => {
+    try {
+      const response = await api.get(`/admission/letter/${studentId}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `admission_letter_${studentId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Failed to download admission letter");
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
     dispatch(fetchUserStats());
-    dispatch(fetchRoles());
+    // Initial fetch of sections (optional, or wait for filters)
+    dispatch(fetchStudentSections({}));
   }, [dispatch]);
+
+  // Fetch sections when filters change
+  useEffect(() => {
+    dispatch(
+      fetchStudentSections({
+        department_id: deptFilter,
+        batch_year: batchFilter,
+      })
+    );
+  }, [dispatch, deptFilter, batchFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       dispatch(
         fetchUsers({
           search: searchTerm,
-          role: forcedRole || roleFilter,
+          role: "student",
           department_id: deptFilter,
+          batch_year: batchFilter,
+          section: sectionFilter,
         })
       );
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [dispatch, searchTerm, roleFilter, deptFilter, forcedRole]);
-
-  // Dynamic Content based on forced role
-  const getPageTitle = () => {
-    if (forcedRole === "faculty") return "Faculty Directory";
-    if (forcedRole === "staff") return "Staff Directory";
-    if (forcedRole === "admin") return "Administrator Directory";
-    return "User Directory";
-  };
-
-  const getPageDesc = () => {
-    if (forcedRole === "faculty")
-      return "Manage teaching assignments, professional profiles, and staff details.";
-    if (forcedRole === "staff")
-      return "Manage administrative and operational staff records.";
-    if (forcedRole === "admin")
-      return "Manage system configurations and administrative access.";
-    return "Manage profiles for faculty and administrative staff.";
-  };
+  }, [dispatch, searchTerm, deptFilter, batchFilter, sectionFilter]);
 
   const handleDeleteUser = async (id) => {
     if (
       window.confirm(
-        "Are you sure you want to remove this user? This action cannot be undone."
+        "Are you sure you want to remove this student? This action cannot be undone."
       )
     ) {
       await dispatch(deleteUser(id));
@@ -103,38 +145,46 @@ const UserList = ({ role: forcedRole }) => {
     setIsFormOpen(true);
   };
 
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case "admin":
-        return (
-          <span className="badge bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-400">
-            Admin
-          </span>
-        );
-      case "faculty":
-        return (
-          <span className="badge bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-            Faculty
-          </span>
-        );
-      case "staff":
-        return (
-          <span className="badge bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400">
-            Staff
-          </span>
-        );
-      case "student":
-        return (
-          <span className="badge bg-secondary-100 text-secondary-700 dark:bg-secondary-900/30 dark:text-secondary-400">
-            Student
-          </span>
-        );
-      default:
-        return (
-          <span className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400">
-            {role}
-          </span>
-        );
+  // Handle Data Export for Admissions
+  const handleExport = async () => {
+    try {
+      const response = await api.get("/admission/export", {
+        params: {
+          year: deptFilter, // example usage
+          department_id: deptFilter,
+        },
+      });
+
+      const data = response.data.data;
+      if (data.length === 0) {
+        alert("No records found to export.");
+        return;
+      }
+
+      const headers = Object.keys(data[0]).join(",");
+      const csv = [
+        headers,
+        ...data.map((row) =>
+          Object.values(row)
+            .map((v) => `"${v}"`)
+            .join(",")
+        ),
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute(
+        "download",
+        `admissions_export_${new Date().toISOString().split("T")[0]}.csv`
+      );
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Export failed:", error);
     }
   };
 
@@ -143,26 +193,22 @@ const UserList = ({ role: forcedRole }) => {
   // Permission Logic
   const canCreate = (() => {
     let roleSlug = currentUser?.role_data?.slug;
-
     if (!roleSlug && currentUser?.role_id && roles.length > 0) {
       const r = roles.find((role) => role.id === currentUser.role_id);
       if (r) roleSlug = r.slug;
     }
-
     if (!roleSlug) roleSlug = currentUser?.role || "";
-
     roleSlug = roleSlug.toLowerCase();
 
     const isSystemAdmin = roleSlug === "admin" || roleSlug === "super_admin";
-
     if (isSystemAdmin) return true;
-    if (roleSlug.includes("hr")) {
+    if (roleSlug === "admission_admin" || roleSlug === "admission_staff") {
       return true;
     }
+    // HOD/Faculty/Staff usually cannot create students directly in this context unless specified
     return false;
   })();
 
-  // Check if current user can manage a specific target user
   const canManageUser = (targetUser) => {
     let myRoleSlug = currentUser?.role_data?.slug;
     if (!myRoleSlug && currentUser?.role_id && roles.length > 0) {
@@ -172,24 +218,20 @@ const UserList = ({ role: forcedRole }) => {
     if (!myRoleSlug) myRoleSlug = currentUser?.role || "";
     myRoleSlug = myRoleSlug.toLowerCase();
 
-    const targetRole = (targetUser?.role || "").toLowerCase();
     const isSystemAdmin =
       myRoleSlug === "admin" || myRoleSlug === "super_admin";
-
     if (isSystemAdmin) return true;
 
-    // HR: Manage Employees only
-    if (myRoleSlug.includes("hr")) {
-      return targetRole !== "student";
+    if (myRoleSlug === "admission_admin" || myRoleSlug === "admission_staff") {
+      return true;
     }
 
-    // HOD: Manage Dept Users (Student, Faculty, Staff)
     if (myRoleSlug === "hod") {
-      const allowedTargets = ["faculty", "staff"];
-      if (allowedTargets.includes(targetRole)) {
-        return currentUser.department_id === targetUser.department_id;
-      }
-      return false;
+      return currentUser.department_id === targetUser.department_id;
+    }
+
+    if (myRoleSlug.includes("_staff") || myRoleSlug.includes("_admin")) {
+      return currentUser.department_id === targetUser.department_id;
     }
 
     return false;
@@ -201,14 +243,37 @@ const UserList = ({ role: forcedRole }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-display">
-            {getPageTitle()}
+            Student Directory
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {getPageDesc()}
+            Manage enrollment details, academic status, and records for
+            students.
           </p>
         </div>
-        {(canCreate || currentUser?.role === "super_admin") && (
+        {(canCreate ||
+          (currentUser?.role_data?.slug || "").includes("admission") ||
+          currentUser?.role === "super_admin") && (
           <div className="flex gap-3">
+            {((currentUser?.role_data?.slug || "").includes("admission") ||
+              currentUser?.role === "super_admin") && (
+              <button
+                onClick={handleExport}
+                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
+              >
+                <Download className="w-4 h-4 mr-2 text-primary-500" />
+                Export Admissions
+              </button>
+            )}
+            {((currentUser?.role_data?.slug || "").includes("admission") ||
+              currentUser?.role === "super_admin") && (
+              <button
+                onClick={() => setIsBulkNotifOpen(true)}
+                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
+              >
+                <Mail className="w-4 h-4 mr-2 text-primary-500" />
+                Bulk Message
+              </button>
+            )}
             {canCreate && (
               <>
                 <button
@@ -223,9 +288,7 @@ const UserList = ({ role: forcedRole }) => {
                   className="btn btn-primary flex items-center shadow-lg shadow-primary-500/20"
                 >
                   <Plus className="w-5 h-5 mr-2" />
-                  {forcedRole
-                    ? `Register ${forcedRole.charAt(0).toUpperCase() + forcedRole.slice(1)}`
-                    : "Register User"}
+                  Register Student
                 </button>
               </>
             )}
@@ -236,14 +299,14 @@ const UserList = ({ role: forcedRole }) => {
       {/* Stats Quick Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {userStats
-          ?.filter((stat) => !forcedRole || stat.role === forcedRole)
+          ?.filter((stat) => stat.role === "student")
           .map((stat) => (
             <div
               key={stat.role}
               className="card p-4 border border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
             >
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Total {stat.role}s
+                Total Students
               </p>
               <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
                 {stat.count}
@@ -266,25 +329,6 @@ const UserList = ({ role: forcedRole }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        {!forcedRole && (
-          <>
-            <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
-            <select
-              className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="">All Roles</option>
-              {roles
-                .filter((role) => role.slug !== "student")
-                .map((role) => (
-                  <option key={role.id} value={role.slug}>
-                    {role.name}
-                  </option>
-                ))}
-            </select>
-          </>
-        )}
         <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
         <select
           className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
@@ -297,6 +341,36 @@ const UserList = ({ role: forcedRole }) => {
               {dept.code}
             </option>
           ))}
+        </select>
+        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
+        <select
+          className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
+          value={batchFilter}
+          onChange={(e) => setBatchFilter(e.target.value)}
+        >
+          <option value="">All Batches</option>
+          {[...Array(5)].map((_, i) => {
+            const y = new Date().getFullYear() - i;
+            return (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            );
+          })}
+        </select>
+        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
+        <select
+          className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
+          value={sectionFilter}
+          onChange={(e) => setSectionFilter(e.target.value)}
+        >
+          <option value="">All Sections</option>
+          {sections &&
+            sections.map((sec) => (
+              <option key={sec} value={sec}>
+                Section {sec}
+              </option>
+            ))}
         </select>
       </div>
 
@@ -322,7 +396,7 @@ const UserList = ({ role: forcedRole }) => {
           <div className="py-24 text-center">
             <SearchX className="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <p className="text-gray-900 dark:text-white font-bold mb-1">
-              No users found
+              No students found
             </p>
             <p className="text-gray-500 text-sm">
               Try adjusting your filters or search terms.
@@ -334,16 +408,16 @@ const UserList = ({ role: forcedRole }) => {
               <thead className="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
                 <tr>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    User Identity
+                    Student Identity
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Classification
+                    Role
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Affiliation
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    System Status
+                    Status
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">
                     Actions
@@ -383,9 +457,11 @@ const UserList = ({ role: forcedRole }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        {getRoleBadge(user.role)}
+                        <span className="badge bg-secondary-100 text-secondary-700 dark:bg-secondary-900/30 dark:text-secondary-400">
+                          Student
+                        </span>
                         <span className="text-[10px] font-mono text-gray-400 uppercase tracking-tighter">
-                          ID: {user.employee_id || "N/A"}
+                          ID: {user.student_id || "N/A"}
                         </span>
                       </div>
                     </td>
@@ -394,6 +470,23 @@ const UserList = ({ role: forcedRole }) => {
                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                           {user.department?.code || "Main Office"}
                         </span>
+                        {user.program && (
+                          <span className="text-[10px] text-gray-400 truncate w-32">
+                            {user.program.name}
+                          </span>
+                        )}
+                        <div className="flex gap-1 mt-1">
+                          {user.batch_year && (
+                            <span className="text-[10px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                              '{user.batch_year.toString().slice(-2)}
+                            </span>
+                          )}
+                          {user.section && (
+                            <span className="text-[10px] bg-purple-50 text-purple-600 px-1 rounded border border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
+                              Sec {user.section}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -408,6 +501,45 @@ const UserList = ({ role: forcedRole }) => {
                         {(canManageUser(user) ||
                           currentUser?.role === "super_admin") && (
                           <>
+                            {((currentUser?.role_data?.slug || "").includes(
+                              "admission"
+                            ) ||
+                              currentUser?.role === "super_admin") && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    setDetailModal({
+                                      isOpen: true,
+                                      student: user,
+                                    })
+                                  }
+                                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
+                                  title="View Details"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setDocModal({
+                                      isOpen: true,
+                                      studentId: user.id,
+                                      studentName: `${user.first_name} ${user.last_name}`,
+                                    })
+                                  }
+                                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
+                                  title="Verify Documents"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDownloadLetter(user.id)}
+                                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
+                                  title="Download Admission Letter"
+                                >
+                                  <FileDown className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => openEditForm(user)}
                               className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
@@ -440,18 +572,39 @@ const UserList = ({ role: forcedRole }) => {
         departmentList={departments}
         programList={programs}
         roleList={roles}
-        forcedRole={forcedRole || roleFilter}
+        forcedRole="student"
       />
 
       <BulkImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        forcedRole={forcedRole || roleFilter}
+        forcedRole="student"
         roleList={roles}
         departmentList={departments}
+      />
+      {/* Document Verification Modal */}
+      <DocumentVerificationModal
+        isOpen={docModal.isOpen}
+        onClose={() => setDocModal({ ...docModal, isOpen: false })}
+        studentId={docModal.studentId}
+        studentName={docModal.studentName}
+      />
+
+      <StudentDetailModal
+        isOpen={detailModal.isOpen}
+        onClose={() => setDetailModal({ isOpen: false, student: null })}
+        student={detailModal.student}
+      />
+
+      {/* Bulk Communication Modal */}
+      <BulkCommunicationModal
+        isOpen={isBulkNotifOpen}
+        onClose={() => setIsBulkNotifOpen(false)}
+        userCount={users.length}
+        filters={{ role: "student", department: deptFilter }}
       />
     </div>
   );
 };
 
-export default UserList;
+export default StudentList;

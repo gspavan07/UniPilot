@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import DepartmentList from "./pages/departments/DepartmentList";
 import ProgramList from "./pages/programs/ProgramList";
 import UserList from "./pages/users/UserList";
+import StudentList from "./pages/users/StudentList";
 import CourseList from "./pages/courses/CourseList";
 import MyCourses from "./pages/courses/MyCourses";
 import RoleManagement from "./pages/settings/RoleManagement";
@@ -59,7 +60,7 @@ function App() {
           <Route path="/programs" element={<ProgramList />} />
           <Route path="/courses" element={<CourseList />} />
           <Route path="/faculty" element={<UserList role="faculty" />} />
-          <Route path="/students" element={<UserList role="student" />} />
+          <Route path="/students" element={<StudentList />} />
           <Route path="/staff" element={<UserList role="staff" />} />
           <Route path="/admins" element={<UserList role="admin" />} />
           <Route path="/admission/dashboard" element={<AdmissionDashboard />} />

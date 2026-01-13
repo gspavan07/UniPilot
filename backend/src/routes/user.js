@@ -23,6 +23,12 @@ router.use(authenticate);
 
 // Stats route
 router.get("/stats", checkPermission("users:view"), getUserStats);
+// Dynamic Sections route
+router.get(
+  "/sections",
+  checkPermission("users:view"),
+  require("../controllers/userController").getStudentSections
+);
 
 router
   .route("/")

@@ -96,6 +96,10 @@ const User = sequelize.define(
       type: DataTypes.INTEGER,
       comment: "Current semester for students",
     },
+    section: {
+      type: DataTypes.STRING(10),
+      comment: "Section for students (e.g. A, B, C)",
+    },
     admission_date: {
       type: DataTypes.DATEONLY,
       comment: "Date of admission for students",

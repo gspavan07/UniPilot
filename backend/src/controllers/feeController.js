@@ -217,138 +217,152 @@ exports.collectPayment = async (req, res) => {
   }
 };
 
-// @desc    Get student's fee details
+// Helper to calculate fee status
+const calculateFeeStatus = async (studentId) => {
+  const student = await User.findByPk(studentId);
+  if (!student) {
+    throw new Error("Student not found");
+  }
+
+  const { program_id, batch_year, is_hosteller, requires_transport } = student;
+  const effectiveBatchYear = batch_year || 2023;
+
+  const [structures, payments, semesterConfigs] = await Promise.all([
+    FeeStructure.findAll({
+      where: { program_id, batch_year: effectiveBatchYear, is_active: true },
+      include: [{ model: FeeCategory, as: "category" }],
+      order: [["semester", "ASC"]],
+    }),
+    FeePayment.findAll({
+      where: { student_id: studentId, status: "completed" },
+    }),
+    FeeSemesterConfig.findAll({
+      where: { program_id, batch_year: effectiveBatchYear },
+    }),
+  ]);
+
+  const configMap = {};
+  semesterConfigs.forEach((c) => (configMap[c.semester] = c));
+
+  const semesterWise = {};
+  const grandTotals = { payable: 0, paid: 0, due: 0 };
+  const today = new Date();
+
+  for (let i = 1; i <= 8; i++) {
+    // Calculate paid fines for this semester
+    const paidFines = payments
+      .filter((p) => !p.fee_structure_id && p.semester === i)
+      .reduce((sum, p) => sum + parseFloat(p.amount_paid), 0);
+
+    semesterWise[i] = {
+      fees: [],
+      totals: { payable: 0, paid: 0, due: 0 },
+      fine: {
+        amount: 0,
+        paid: paidFines,
+        due: 0,
+        isOverdue: false,
+        deadline: configMap[i]?.due_date || null,
+      },
+    };
+  }
+
+  structures.forEach((s) => {
+    if (s.is_optional) {
+      if (s.applies_to === "hostellers" && !is_hosteller) return;
+      if (s.applies_to === "day_scholars" && !requires_transport) return;
+    }
+
+    const structPayments = payments.filter((p) => p.fee_structure_id === s.id);
+    const paid = structPayments.reduce(
+      (sum, p) => sum + parseFloat(p.amount_paid),
+      0
+    );
+    const payable = parseFloat(s.amount);
+    const due = Math.max(0, payable - paid);
+
+    semesterWise[s.semester].fees.push({
+      id: s.id,
+      category: s.category?.name || "Other",
+      payable,
+      paid,
+      due,
+      receipts: structPayments.map((p) => ({
+        number: p.transaction_id,
+        date: p.payment_date,
+      })),
+    });
+
+    semesterWise[s.semester].totals.payable += payable;
+    semesterWise[s.semester].totals.paid += paid;
+    semesterWise[s.semester].totals.due += due;
+  });
+
+  Object.keys(semesterWise).forEach((sem) => {
+    const data = semesterWise[sem];
+    const config = configMap[sem];
+
+    if (config && config.due_date && data.totals.due > 0) {
+      const deadline = new Date(config.due_date);
+      if (today > deadline) {
+        let totalFine = 0;
+        if (config.fine_type === "fixed") {
+          totalFine = parseFloat(config.fine_amount);
+        } else if (config.fine_type === "percentage") {
+          totalFine = (data.totals.due * parseFloat(config.fine_amount)) / 100;
+        }
+
+        data.fine.amount = totalFine;
+        data.fine.isOverdue = true;
+        data.fine.due = Math.max(0, totalFine - data.fine.paid);
+
+        data.totals.due += data.fine.due;
+        data.totals.payable += totalFine;
+        data.totals.paid += data.fine.paid;
+      }
+    }
+
+    grandTotals.payable += data.totals.payable;
+    grandTotals.paid += data.totals.paid;
+    grandTotals.due += data.totals.due;
+  });
+
+  return {
+    semesterWise,
+    grandTotals,
+    studentInfo: {
+      batch_year: effectiveBatchYear,
+      is_hosteller,
+      requires_transport,
+    },
+  };
+};
+
+// @desc    Get student's fee details (Self)
 exports.getMyFeeStatus = async (req, res) => {
   try {
     const studentId = req.user.userId || req.user.id;
-
-    const student = await User.findByPk(studentId);
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
-
-    const { program_id, batch_year, is_hosteller, requires_transport } =
-      student;
-    const effectiveBatchYear = batch_year || 2023;
-
-    const [structures, payments, semesterConfigs] = await Promise.all([
-      FeeStructure.findAll({
-        where: { program_id, batch_year: effectiveBatchYear, is_active: true },
-        include: [{ model: FeeCategory, as: "category" }],
-        order: [["semester", "ASC"]],
-      }),
-      FeePayment.findAll({
-        where: { student_id: studentId, status: "completed" },
-      }),
-      FeeSemesterConfig.findAll({
-        where: { program_id, batch_year: effectiveBatchYear },
-      }),
-    ]);
-
-    const configMap = {};
-    semesterConfigs.forEach((c) => (configMap[c.semester] = c));
-
-    const semesterWise = {};
-    const grandTotals = { payable: 0, paid: 0, due: 0 };
-    const today = new Date();
-
-    for (let i = 1; i <= 8; i++) {
-      // Calculate paid fines for this semester
-      const paidFines = payments
-        .filter((p) => !p.fee_structure_id && p.semester === i)
-        .reduce((sum, p) => sum + parseFloat(p.amount_paid), 0);
-
-      semesterWise[i] = {
-        fees: [],
-        totals: { payable: 0, paid: 0, due: 0 },
-        fine: {
-          amount: 0,
-          paid: paidFines,
-          due: 0,
-          isOverdue: false,
-          deadline: configMap[i]?.due_date || null,
-        },
-      };
-    }
-
-    structures.forEach((s) => {
-      if (s.is_optional) {
-        if (s.applies_to === "hostellers" && !is_hosteller) return;
-        if (s.applies_to === "day_scholars" && !requires_transport) return;
-      }
-
-      const structPayments = payments.filter(
-        (p) => p.fee_structure_id === s.id
-      );
-      const paid = structPayments.reduce(
-        (sum, p) => sum + parseFloat(p.amount_paid),
-        0
-      );
-      const payable = parseFloat(s.amount);
-      const due = Math.max(0, payable - paid);
-
-      semesterWise[s.semester].fees.push({
-        id: s.id,
-        category: s.category?.name || "Other",
-        payable,
-        paid,
-        due,
-        receipts: structPayments.map((p) => ({
-          number: p.transaction_id,
-          date: p.payment_date,
-        })),
-      });
-
-      semesterWise[s.semester].totals.payable += payable;
-      semesterWise[s.semester].totals.paid += paid;
-      semesterWise[s.semester].totals.due += due;
-    });
-
-    Object.keys(semesterWise).forEach((sem) => {
-      const data = semesterWise[sem];
-      const config = configMap[sem];
-
-      if (config && config.due_date && data.totals.due > 0) {
-        const deadline = new Date(config.due_date);
-        if (today > deadline) {
-          let totalFine = 0;
-          if (config.fine_type === "fixed") {
-            totalFine = parseFloat(config.fine_amount);
-          } else if (config.fine_type === "percentage") {
-            totalFine =
-              (data.totals.due * parseFloat(config.fine_amount)) / 100;
-          }
-
-          data.fine.amount = totalFine;
-          data.fine.isOverdue = true;
-          data.fine.due = Math.max(0, totalFine - data.fine.paid);
-
-          data.totals.due += data.fine.due;
-          data.totals.payable += totalFine;
-          data.totals.paid += data.fine.paid;
-        }
-      }
-
-      grandTotals.payable += data.totals.payable;
-      grandTotals.paid += data.totals.paid;
-      grandTotals.due += data.totals.due;
-    });
-
-    res.json({
-      success: true,
-      data: {
-        semesterWise,
-        grandTotals,
-        studentInfo: {
-          batch_year: effectiveBatchYear,
-          is_hosteller,
-          requires_transport,
-        },
-      },
-    });
+    const data = await calculateFeeStatus(studentId);
+    res.json({ success: true, data });
   } catch (error) {
     logger.error("Error fetching my fee status:", error);
-    res.status(500).json({ error: "Failed to fetch fee status" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to fetch fee status" });
+  }
+};
+
+// @desc    Get any student's fee details (Admin)
+exports.getStudentFeeStatus = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const data = await calculateFeeStatus(studentId);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error("Error fetching student fee status:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to fetch fee status" });
   }
 };
 

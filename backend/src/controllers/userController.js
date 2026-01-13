@@ -82,6 +82,12 @@ exports.getAllUsers = async (req, res) => {
     if (role && role !== "undefined") where.role = role.toLowerCase();
     if (department_id && department_id !== "undefined")
       where.department_id = department_id;
+    if (req.query.batch_year && req.query.batch_year !== "undefined") {
+      where.batch_year = req.query.batch_year;
+    }
+    if (req.query.section && req.query.section !== "undefined") {
+      where.section = req.query.section;
+    }
 
     // Faculty Restriction Override
     if (req.forcedDepartmentId) {
@@ -205,6 +211,49 @@ exports.getUserStats = async (req, res) => {
     });
   } catch (error) {
     logger.error("Error in getUserStats:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Get distinct sections for students based on filters
+// @route   GET /api/users/sections
+// @access  Private
+exports.getStudentSections = async (req, res) => {
+  try {
+    const { department_id, batch_year } = req.query;
+    const where = {
+      role: "student",
+      section: { [Op.ne]: null }, // Only sections that are not null
+    };
+
+    if (department_id) where.department_id = department_id;
+    if (batch_year) where.batch_year = batch_year;
+
+    // We use findAll with group and attributes to simulate DISTINCT
+    const sections = await User.findAll({
+      attributes: [
+        [
+          User.sequelize.fn("DISTINCT", User.sequelize.col("section")),
+          "section",
+        ],
+      ],
+      where,
+      order: [["section", "ASC"]],
+      raw: true,
+    });
+
+    // Extract just the section names
+    const sectionList = sections.map((s) => s.section).filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      data: sectionList,
+    });
+  } catch (error) {
+    logger.error("Error in getStudentSections:", error);
     res.status(500).json({
       success: false,
       error: "Server Error",

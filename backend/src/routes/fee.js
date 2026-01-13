@@ -9,6 +9,7 @@ const {
   cloneFeeStructure,
   collectPayment,
   getMyFeeStatus,
+  getStudentFeeStatus,
   getSemesterConfigs,
   updateSemesterConfig,
 } = require("../controllers/feeController");
@@ -61,6 +62,11 @@ router.post(
   "/payments",
   checkPermission("finance:fees:collect"),
   collectPayment
+);
+router.get(
+  "/summary/:studentId",
+  checkPermission("finance:fees:oversight"),
+  getStudentFeeStatus
 );
 
 // Semester Configs
