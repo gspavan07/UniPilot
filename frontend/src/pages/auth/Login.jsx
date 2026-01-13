@@ -47,7 +47,13 @@ const Login = () => {
   }, [user, navigate, dispatch]);
 
   const onSubmit = (data) => {
-    dispatch(login(data));
+    dispatch(
+      login({
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe,
+      })
+    );
   };
 
   return (
@@ -147,7 +153,7 @@ const Login = () => {
 
               <div className="text-sm">
                 <a
-                  href="#"
+                  href="/auth/forgot-password"
                   className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 transition-colors"
                 >
                   Forgot your password?

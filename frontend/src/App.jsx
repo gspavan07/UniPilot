@@ -4,6 +4,8 @@ import { loadUser } from "./store/slices/authSlice";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Login from "./pages/auth/Login";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import DepartmentList from "./pages/departments/DepartmentList";
 import ProgramList from "./pages/programs/ProgramList";
@@ -46,6 +48,8 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
 
         {/* Protected Dashboard Routes */}
         <Route

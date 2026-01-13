@@ -38,7 +38,7 @@ class AuthController {
    */
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { email, password, rememberMe } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({
@@ -47,7 +47,7 @@ class AuthController {
         });
       }
 
-      const result = await authService.login(email, password);
+      const result = await authService.login(email, password, rememberMe);
 
       res.json({
         success: true,
@@ -59,6 +59,42 @@ class AuthController {
         success: false,
         error: error.message,
       });
+    }
+  }
+
+  /**
+   * Forgot Password
+   * POST /api/auth/forgot-password
+   */
+  async forgotPassword(req, res, next) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      const result = await authService.forgotPassword(email);
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reset Password
+   * POST /api/auth/reset-password
+   */
+  async resetPassword(req, res, next) {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
+        return res
+          .status(400)
+          .json({ error: "Token and new password are required" });
+      }
+      const result = await authService.resetPassword(token, newPassword);
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      next(error);
     }
   }
 
