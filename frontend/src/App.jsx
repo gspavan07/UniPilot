@@ -1,0 +1,108 @@
+import React from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { loadUser } from "./store/slices/authSlice";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import Login from "./pages/auth/Login";
+import Dashboard from "./pages/Dashboard";
+import DepartmentList from "./pages/departments/DepartmentList";
+import ProgramList from "./pages/programs/ProgramList";
+import UserList from "./pages/users/UserList";
+import CourseList from "./pages/courses/CourseList";
+import MyCourses from "./pages/courses/MyCourses";
+import RoleManagement from "./pages/settings/RoleManagement";
+import ProctorDashboard from "./pages/proctoring/ProctorDashboard";
+import AdmissionDashboard from "./pages/dashboards/AdmissionDashboard";
+import AdmissionSettings from "./pages/settings/AdmissionSettings";
+import PromotionManager from "./pages/promotion/PromotionManager";
+import AttendanceTracker from "./pages/attendance/AttendanceTracker";
+import LeaveManager from "./pages/attendance/LeaveManager";
+import ExamManagement from "./pages/exam/ExamManagement";
+import StudentResults from "./pages/exam/StudentResults";
+import FeeManagement from "./pages/fee/FeeManagement";
+import MyFees from "./pages/fee/MyFees";
+import LibraryDashboard from "./pages/library/LibraryDashboard";
+import MyLibrary from "./pages/library/MyLibrary";
+import TimetableManager from "./pages/timetable/TimetableManager";
+import MyTimetable from "./pages/timetable/MyTimetable";
+import UserProfile from "./pages/profile/UserProfile";
+import MainLayout from "./components/layout/MainLayout";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+
+function App() {
+  const dispatch = useDispatch();
+  const { user, accessToken } = useSelector((state) => state.auth);
+
+  React.useEffect(() => {
+    if (accessToken) {
+      dispatch(loadUser());
+    }
+  }, [dispatch, accessToken]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <Toaster position="top-right" reverseOrder={false} />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/auth/login" element={<Login />} />
+
+        {/* Protected Dashboard Routes */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/departments" element={<DepartmentList />} />
+          <Route path="/programs" element={<ProgramList />} />
+          <Route path="/courses" element={<CourseList />} />
+          <Route path="/faculty" element={<UserList role="faculty" />} />
+          <Route path="/students" element={<UserList role="student" />} />
+          <Route path="/staff" element={<UserList role="staff" />} />
+          <Route path="/admins" element={<UserList role="admin" />} />
+          <Route path="/admission/dashboard" element={<AdmissionDashboard />} />
+          <Route path="/admission/settings" element={<AdmissionSettings />} />
+          <Route path="/users" element={<UserList />} />
+          <Route path="/timetable/manage" element={<TimetableManager />} />
+          <Route path="/timetable/my" element={<MyTimetable />} />
+          <Route path="/settings/roles" element={<RoleManagement />} />
+          <Route path="/proctoring" element={<ProctorDashboard />} />
+          <Route path="/lifecycle" element={<PromotionManager />} />
+          <Route path="/attendance" element={<AttendanceTracker />} />
+          <Route path="/leave" element={<LeaveManager />} />
+          <Route path="/exams" element={<ExamManagement />} />
+          <Route path="/results" element={<StudentResults />} />
+          <Route path="/fees" element={<FeeManagement />} />
+          <Route path="/my-fees" element={<MyFees />} />
+          <Route path="/my-courses" element={<MyCourses />} />
+          <Route path="/library" element={<LibraryDashboard />} />
+          <Route path="/my-library" element={<MyLibrary />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route
+            path="/settings"
+            element={<Navigate to="/settings/roles" replace />}
+          />
+        </Route>
+
+        {/* Root Redirect */}
+        <Route
+          path="/"
+          element={
+            user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/auth/login" replace />
+            )
+          }
+        />
+
+        {/* 404 Redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+}
+
+export default App;

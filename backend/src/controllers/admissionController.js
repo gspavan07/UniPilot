@@ -1,0 +1,566 @@
+const {
+  User,
+  Department,
+  Program,
+  Role,
+  StudentDocument,
+  AdmissionConfig,
+  sequelize,
+} = require("../models");
+const { Op } = require("sequelize");
+const PDFDocument = require("pdfkit");
+const logger = require("../utils/logger");
+
+/**
+ * Admission Controller
+ * Handles admission-specific analytics and reporting
+ */
+
+// @desc    Get admission statistics (Batch-wise & Department-wise)
+// @route   GET /api/admission/stats
+// @access  Private (Admission Admin/Staff)
+exports.getAdmissionStats = async (req, res) => {
+  try {
+    const { year } = req.query;
+
+    // 1. Group by Batch Year
+    const batchStats = await User.findAll({
+      attributes: [
+        "batch_year",
+        [User.sequelize.fn("COUNT", User.sequelize.col("id")), "count"],
+      ],
+      where: {
+        role: "student",
+        batch_year: { [Op.ne]: null },
+      },
+      group: ["batch_year"],
+      order: [["batch_year", "ASC"]],
+    });
+
+    // 2. Group by Department (for a specific year if provided)
+    const deptWhere = { role: "student" };
+    if (year) {
+      deptWhere.batch_year = year;
+    }
+
+    const deptStats = await User.findAll({
+      attributes: [
+        [User.sequelize.fn("COUNT", User.sequelize.col("User.id")), "count"],
+      ],
+      where: deptWhere,
+      include: [
+        {
+          model: Department,
+          as: "department",
+          attributes: ["name", "code"],
+        },
+      ],
+      group: ["department.id", "department.name", "department.code"],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        batchWise: batchStats,
+        deptWise: deptStats,
+      },
+    });
+  } catch (error) {
+    logger.error("Error in getAdmissionStats:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Export admission data
+// @route   GET /api/admission/export
+// @access  Private (Admission Admin/Staff)
+exports.exportAdmissionData = async (req, res) => {
+  try {
+    const { year, department_id } = req.query;
+    const where = { role: "student" };
+
+    if (year) where.batch_year = year;
+    if (department_id) where.department_id = department_id;
+
+    const students = await User.findAll({
+      where,
+      include: [
+        { model: Department, as: "department", attributes: ["name"] },
+        { model: Program, as: "program", attributes: ["name", "code"] },
+      ],
+      attributes: [
+        "student_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "batch_year",
+        "admission_date",
+        "admission_number",
+        "academic_status",
+      ],
+      order: [
+        ["batch_year", "DESC"],
+        ["last_name", "ASC"],
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      data: students,
+    });
+  } catch (error) {
+    logger.error("Error in exportAdmissionData:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Get Seat Matrix (Intake vs Filled)
+// @route   GET /api/admission/seat-matrix
+// @access  Private (Admission Admin/Staff)
+exports.getSeatMatrix = async (req, res) => {
+  try {
+    const { year = new Date().getFullYear() } = req.query;
+
+    const programs = await Program.findAll({
+      include: [
+        { model: Department, as: "department", attributes: ["name", "code"] },
+      ],
+      where: { is_active: true },
+    });
+
+    const admissionConfig = await AdmissionConfig.findOne({
+      where: { batch_year: year, is_active: true },
+    });
+
+    const seatMatrix = await Promise.all(
+      programs.map(async (prog) => {
+        const filled = await User.count({
+          where: {
+            role: "student",
+            program_id: prog.id,
+            batch_year: year,
+          },
+        });
+
+        // Use override if available, otherwise fallback to program intake
+        const maxIntake =
+          admissionConfig?.seat_matrix?.[prog.id] || prog.max_intake || 0;
+
+        return {
+          id: prog.id,
+          name: prog.name,
+          code: prog.code,
+          department: prog.department.code,
+          max_intake: maxIntake,
+          filled_seats: filled,
+          available_seats: Math.max(0, maxIntake - filled),
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: seatMatrix,
+    });
+  } catch (error) {
+    logger.error("Error in getSeatMatrix:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Get all documents for a student
+// @route   GET /api/admission/documents/:userId
+// @access  Private (Admission Admin/Staff/Student)
+exports.getStudentDocuments = async (req, res) => {
+  try {
+    const documents = await StudentDocument.findAll({
+      where: { user_id: req.params.userId },
+      include: [
+        {
+          model: User,
+          as: "verifier",
+          attributes: ["first_name", "last_name"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: documents,
+    });
+  } catch (error) {
+    logger.error("Error in getStudentDocuments:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Update document verification status
+// @route   PUT /api/admission/documents/:id/status
+// @access  Private (Admission Admin/Staff)
+exports.updateDocumentStatus = async (req, res) => {
+  try {
+    const { status, remarks } = req.body;
+    const document = await StudentDocument.findByPk(req.params.id);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: "Document not found",
+      });
+    }
+
+    await document.update({
+      status,
+      remarks,
+      verified_by: req.user.userId,
+      verified_at: new Date(),
+    });
+
+    // --- Phase 4: Communication Hub - Notification Toggle ---
+    // In a real system, this would trigger an email or SMS service
+    logger.info(
+      `NOTIF_TRIGGER: Student ${document.user_id} - Document ${document.name} ${status}. Remarks: ${remarks || "None"}`
+    );
+
+    res.status(200).json({
+      success: true,
+      data: document,
+    });
+  } catch (error) {
+    logger.error("Error in updateDocumentStatus:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+// @desc    Re-upload a rejected document
+// @route   POST /api/admission/documents/:documentId/reupload
+// @access  Private (Student/Admission Staff)
+exports.reuploadDocument = async (req, res) => {
+  try {
+    const document = await StudentDocument.findByPk(req.params.documentId);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: "Document not found",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: "No file uploaded",
+      });
+    }
+
+    // Update with new file and reset status
+    await document.update({
+      file_url: `/uploads/student_docs/${req.file.filename}`,
+      status: "pending",
+      remarks: "Re-uploaded by user",
+      verified_at: null,
+      verified_by: null,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: document,
+    });
+  } catch (error) {
+    logger.error("Error in reuploadDocument:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Mark a student as verified
+// @route   POST /api/admission/verify-student/:userId
+// @access  Private (Admission Staff)
+exports.verifyStudent = async (req, res) => {
+  try {
+    const student = await User.findByPk(req.params.userId);
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: "Student not found",
+      });
+    }
+
+    // Mark as verified and activate academic status
+    await student.update({
+      is_verified: true,
+      academic_status: "active",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Student verified successfully",
+      data: student,
+    });
+  } catch (error) {
+    logger.error("Error in verifyStudent:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Generate and download admission letter PDF
+// @route   GET /api/admission/letter/:userId
+// @access  Private (Admission Admin/Staff/Student)
+exports.generateAdmissionLetter = async (req, res) => {
+  try {
+    const student = await User.findByPk(req.params.userId, {
+      include: [
+        { model: Department, as: "department", attributes: ["name"] },
+        {
+          model: Program,
+          as: "program",
+          attributes: ["name", "duration_years"],
+        },
+      ],
+    });
+
+    if (!student || student.role !== "student") {
+      return res.status(404).json({
+        success: false,
+        error: "Student not found",
+      });
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+    let filename = `Admission_Letter_${student.student_id}.pdf`;
+
+    // Set headers for download
+    res.setHeader(
+      "Content-disposition",
+      'attachment; filename="' + filename + '"'
+    );
+    res.setHeader("Content-type", "application/pdf");
+
+    doc.pipe(res);
+
+    // --- Header ---
+    doc
+      .fillColor("#1a365d")
+      .fontSize(26)
+      .text("UniPilot University", { align: "center" });
+    doc
+      .fillColor("#4a5568")
+      .fontSize(10)
+      .text("Official Admissions Office | campus.unipilot.com", {
+        align: "center",
+      });
+    doc.moveDown(1);
+    doc
+      .strokeColor("#e2e8f0")
+      .lineWidth(1)
+      .moveTo(50, doc.y)
+      .lineTo(550, doc.y)
+      .stroke();
+    doc.moveDown(2);
+
+    // --- Date & Reference ---
+    const today = new Date().toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    doc
+      .fillColor("#000")
+      .fontSize(11)
+      .text(`Date: ${today}`, { align: "right" });
+    doc.text(`Ref No: UPU/ADM/${student.batch_year}/${student.student_id}`, {
+      align: "right",
+    });
+    doc.moveDown(2);
+
+    // --- Addressee ---
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .text("ADMISSION PROVISIONAL OFFER LETTER");
+    doc.moveDown(1);
+    doc.font("Helvetica").text("To,");
+    doc
+      .font("Helvetica-Bold")
+      .text(`${student.first_name} ${student.last_name}`);
+    doc.font("Helvetica").text(`Student ID: ${student.student_id}`);
+    doc.moveDown(1.5);
+
+    // --- Body ---
+    doc.text(`Dear ${student.first_name},`);
+    doc.moveDown(1);
+    doc.text(
+      `Congratulations! We are pleased to inform you that you have been provisionally admitted to the ${student.program?.name} program at UniPilot University for the Batch of ${student.batch_year}.`,
+      { align: "justify" }
+    );
+    doc.moveDown(1);
+    doc.text("Admission Details:", { font: "Helvetica-Bold" });
+    doc.moveDown(0.5);
+
+    const details = [
+      ["Program:", student.program?.name || "N/A"],
+      ["Department:", student.department?.name || "N/A"],
+      ["Duration:", `${student.program?.duration_years} Years`],
+      ["Batch Year:", student.batch_year],
+      ["Admission Date:", new Date(student.admission_date).toDateString()],
+    ];
+
+    details.forEach(([label, value]) => {
+      doc.font("Helvetica-Bold").text(label, { continued: true });
+      doc.font("Helvetica").text(` ${value}`);
+    });
+
+    doc.moveDown(2);
+    doc.text(
+      "Please note that this offer is provisional and subject to the fulfillment of eligibility criteria and verification of documents. You are required to complete the remaining registration formalities and fee payment as per the university's academic calendar.",
+      { align: "justify" }
+    );
+
+    doc.moveDown(3);
+
+    // --- Signature ---
+    doc.text("Sincerely,", { align: "left" });
+    doc.moveDown(1);
+    doc
+      .font("Helvetica-Bold")
+      .text("Registrar (Admissions)", { align: "left" });
+    doc
+      .font("Helvetica")
+      .text("UniPilot University Admissions Office", { align: "left" });
+
+    // --- Footer ---
+    doc
+      .fontSize(8)
+      .fillColor("#718096")
+      .text(
+        "This is a computer-generated document and does not require a physical signature.",
+        50,
+        750,
+        { align: "center" }
+      );
+
+    doc.end();
+  } catch (error) {
+    logger.error("Error in generateAdmissionLetter:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: "Server Error",
+      });
+    }
+  }
+};
+
+// @desc    Get Admission Funnel Stats
+// @route   GET /api/admission/funnel
+// @access  Private (Admission Admin/Staff)
+exports.getFunnelStats = async (req, res) => {
+  try {
+    const { year = new Date().getFullYear() } = req.query;
+
+    const totalApplied = await User.count({
+      where: { role: "student", batch_year: year },
+    });
+
+    // Students with at least one document
+    const withDocs = await User.count({
+      include: [
+        {
+          model: StudentDocument,
+          as: "documents",
+          required: true,
+        },
+      ],
+      where: { role: "student", batch_year: year },
+    });
+
+    // Students with all documents approved (simplified: at least one approved and none rejected/pending)
+    // Actually, let's just count those with at least one approved document for now as a "Verified" stage proxy
+    const verified = await User.count({
+      include: [
+        {
+          model: StudentDocument,
+          as: "documents",
+          required: true,
+          where: { status: "approved" },
+        },
+      ],
+      where: { role: "student", batch_year: year },
+    });
+
+    const admitted = await User.count({
+      where: {
+        role: "student",
+        batch_year: year,
+        admission_number: { [Op.ne]: null },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: [
+        { stage: "Applied", count: totalApplied },
+        { stage: "Docs Uploaded", count: withDocs },
+        { stage: "Verified", count: verified },
+        { stage: "Admitted", count: admitted },
+      ],
+    });
+  } catch (error) {
+    logger.error("Error in getFunnelStats:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};
+
+// @desc    Get Geographic Distribution Stats
+// @route   GET /api/admission/geo-stats
+// @access  Private (Admission Admin/Staff)
+exports.getGeoStats = async (req, res) => {
+  try {
+    const { year = new Date().getFullYear() } = req.query;
+
+    const stats = await User.findAll({
+      attributes: [
+        [sequelize.col("state"), "state"],
+        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+      ],
+      where: {
+        role: "student",
+        batch_year: year,
+        state: { [Op.ne]: null },
+      },
+      group: ["state"],
+      order: [[sequelize.fn("COUNT", sequelize.col("id")), "DESC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    logger.error("Error in getGeoStats:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};

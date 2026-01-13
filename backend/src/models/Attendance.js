@@ -1,0 +1,46 @@
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/database");
+
+const Attendance = sequelize.define(
+  "Attendance",
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    student_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: "users", key: "id" },
+    },
+    course_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "courses", key: "id" },
+    },
+    date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.ENUM("present", "absent", "late", "excused"),
+      defaultValue: "present",
+      allowNull: false,
+    },
+    remarks: {
+      type: DataTypes.TEXT,
+    },
+    marked_by: {
+      type: DataTypes.UUID,
+      references: { model: "users", key: "id" },
+    },
+  },
+  {
+    tableName: "attendance",
+    timestamps: true,
+    underscored: true,
+  }
+);
+
+module.exports = Attendance;

@@ -1,0 +1,64 @@
+require('dotenv').config();
+const app = require('./src/app');
+const { sequelize } = require('./src/config/database');
+const logger = require('./src/utils/logger');
+const redis = require('./src/config/redis');
+
+const PORT = process.env.PORT || 3000;
+
+// Graceful shutdown handler
+const gracefulShutdown = async () => {
+  logger.info('Received shutdown signal, closing connections...');
+  
+  try {
+    await sequelize.close();
+    await redis.quit();
+    logger.info('Database and Redis connections closed');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+// Start server
+const startServer = async () => {
+  try {
+    // Test database connection
+    await sequelize.authenticate();
+    logger.info('✓ Master database connected successfully');
+    
+    // Test Redis connection
+    await redis.ping();
+    logger.info('✓ Redis connected successfully');
+    
+    // Start HTTP server
+    app.listen(PORT, () => {
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`📝 Environment: ${process.env.NODE_ENV}`);
+      logger.info(`🔗 API URL: http://localhost:${PORT}/api`);
+    });
+    
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (error) => {
+  logger.error('Unhandled Promise Rejection:', error);
+  gracefulShutdown();
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown();
+});
+
+startServer();
