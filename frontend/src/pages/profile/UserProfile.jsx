@@ -69,11 +69,16 @@ const UserProfile = () => {
         <div className="relative">
           <img
             src={
-              user?.profile_picture ||
-              `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
+              user?.profile_picture
+                ? user.profile_picture.startsWith("http")
+                  ? user.profile_picture
+                  : `${user.profile_picture}?token=${localStorage.getItem(
+                      "accessToken"
+                    )}`
+                : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
             }
             alt="Profile"
-            className="w-32 h-32 rounded-full ring-4 ring-gray-50 dark:ring-gray-700"
+            className="w-32 h-32 rounded-full ring-4 ring-gray-50 dark:ring-gray-700 object-cover"
           />
           <div className="absolute bottom-1 right-1 bg-green-500 w-5 h-5 rounded-full border-4 border-white dark:border-gray-800"></div>
         </div>

@@ -99,8 +99,13 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
             <div className="relative inline-block">
               <img
                 src={
-                  student.profile_picture ||
-                  `https://ui-avatars.com/api/?name=${student.first_name}+${student.last_name}&background=random&size=128`
+                  student.profile_picture
+                    ? student.profile_picture.startsWith("http")
+                      ? student.profile_picture
+                      : `${student.profile_picture}?token=${localStorage.getItem(
+                          "accessToken"
+                        )}`
+                    : `https://ui-avatars.com/api/?name=${student.first_name}+${student.last_name}&background=random&size=128`
                 }
                 className="w-24 h-24 rounded-2xl object-cover shadow-lg mb-4 mx-auto"
                 alt="Profile"

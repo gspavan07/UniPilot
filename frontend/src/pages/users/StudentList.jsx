@@ -18,6 +18,7 @@ import BulkImportModal from "./BulkImportModal";
 import DocumentVerificationModal from "../../components/admission/DocumentVerificationModal";
 import BulkCommunicationModal from "../../components/admission/BulkCommunicationModal";
 import GenerateIdModal from "../../components/admission/GenerateIdModal";
+import BulkPhotoUploadModal from "../../components/admission/BulkPhotoUploadModal";
 import {
   Plus,
   Wand2,
@@ -28,6 +29,7 @@ import {
   Loader2,
   SearchX,
   Download,
+  Upload,
   FileText,
   FileDown,
   Mail,
@@ -66,6 +68,7 @@ const StudentList = () => {
     student: null,
   });
   const [isGenerateIdOpen, setIsGenerateIdOpen] = useState(false);
+  const [isBulkPhotoOpen, setIsBulkPhotoOpen] = useState(false);
 
   const handleDownloadLetter = async (studentId) => {
     try {
@@ -193,7 +196,18 @@ const StudentList = () => {
     }
   };
 
-  const { user: currentUser } = useSelector((state) => state.auth);
+  const { user: currentUser, accessToken } = useSelector((state) => state.auth);
+
+  // ... (Permission Logic)
+
+  const getProfileImageUrl = (user) => {
+    if (user.profile_picture) {
+      if (user.profile_picture.startsWith("http")) return user.profile_picture;
+      // Append token for secure access
+      return `${user.profile_picture}?token=${accessToken}`;
+    }
+    return `https://ui-avatars.com/api/?name=${user.first_name}+${user.last_name}&background=random&size=128`;
+  };
 
   // Permission Logic
   const canCreate = (() => {
@@ -296,6 +310,16 @@ const StudentList = () => {
               >
                 <Mail className="w-4 h-4 mr-2 text-primary-500" />
                 Bulk Message
+              </button>
+            )}
+
+            {hasPermission("admissions:manage") && (
+              <button
+                onClick={() => setIsBulkPhotoOpen(true)}
+                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
+              >
+                <Upload className="w-4 h-4 mr-2 text-primary-500" />
+                Bulk Photos
               </button>
             )}
             {hasPermission("admissions:generate_ids") && (
@@ -467,10 +491,7 @@ const StudentList = () => {
                       <div className="flex items-center">
                         <div className="relative">
                           <img
-                            src={
-                              user.profile_picture ||
-                              `https://ui-avatars.com/api/?name=${user.first_name}+${user.last_name}&background=random&size=128`
-                            }
+                            src={getProfileImageUrl(user)}
                             className="w-10 h-10 rounded-xl object-cover shadow-sm border border-gray-100 dark:border-gray-700"
                             alt="avatar"
                           />
@@ -646,6 +667,11 @@ const StudentList = () => {
         }
         departmentList={departments}
         programList={programs}
+      />
+
+      <BulkPhotoUploadModal
+        isOpen={isBulkPhotoOpen}
+        onClose={() => setIsBulkPhotoOpen(false)}
       />
     </div>
   );

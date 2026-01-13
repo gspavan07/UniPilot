@@ -12,8 +12,18 @@ const path = require("path");
 
 const app = express();
 
-// Serve static files from uploads directory
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+const fileController = require("./controllers/fileController");
+
+// Serve Profile Images Securely
+app.get("/uploads/profiles/:filename", fileController.serveProfileImage);
+
+// Serve other static files (e.g. student_docs) - Temporary/Legacy
+// Ideally these should also be protected, but keeping open to prevent breaking existing features for now
+app.use(
+  "/uploads/student_docs",
+  express.static(path.join(__dirname, "../uploads/student_docs"))
+);
+// Make sure other subfolders in uploads are not accidentally exposed unless explicitly added
 
 // Security middleware
 app.use(helmet());

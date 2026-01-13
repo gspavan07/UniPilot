@@ -21,6 +21,8 @@ const {
   previewBulkIds,
   commitBulkIds,
 } = require("../controllers/admissionIdController");
+const bulkUploadController = require("../controllers/bulkUploadController");
+const profileUpload = require("../middleware/profileUpload");
 const studentUpload = require("../middleware/studentUpload");
 const { authenticate, checkPermission } = require("../middleware/auth");
 
@@ -84,6 +86,14 @@ router.post(
   checkPermission("students:edit"), // Admission can also verify this
   studentUpload.single("document"),
   reuploadDocument
+);
+
+// Bulk Photo Upload
+router.post(
+  "/photos/bulk",
+  checkPermission("admissions:manage"), // Or generate_ids? Manage seems appropriate
+  profileUpload.array("photos", 100),
+  bulkUploadController.uploadStudentPhotos
 );
 
 module.exports = router;

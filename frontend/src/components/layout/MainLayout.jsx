@@ -265,12 +265,21 @@ const MainLayout = () => {
 
         {/* Sidebar Footer (User Info) */}
         <div className="p-4 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center overflow-hidden">
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-              <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-            </div>
-            <Link
-              to="/profile"
+          <Link to="/profile" className="flex items-center overflow-hidden">
+            <img
+              src={
+                user?.profile_picture
+                  ? user.profile_picture.startsWith("http")
+                    ? user.profile_picture
+                    : `${user.profile_picture}?token=${localStorage.getItem(
+                        "accessToken"
+                      )}`
+                  : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
+              }
+              alt="Profile"
+              className="w-10 h-10 rounded-full ring-4 ring-gray-50 dark:ring-gray-700 object-cover"
+            />
+            <div
               className={`ml-3 overflow-hidden ${!sidebarOpen && "hidden"} cursor-pointer hover:text-primary-600`}
             >
               <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
@@ -279,7 +288,7 @@ const MainLayout = () => {
               <p className="text-xs text-gray-500 dark:text-gray-400 capitalize truncate">
                 {user?.role}
               </p>
-            </Link>
+            </div>
             <button
               onClick={handleLogout}
               className={`ml-auto p-2 rounded-lg text-gray-500 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 transition-all ${!sidebarOpen && "hidden"}`}
@@ -287,7 +296,7 @@ const MainLayout = () => {
             >
               <LogOut className="w-5 h-5" />
             </button>
-          </div>
+          </Link>
         </div>
       </aside>
 
