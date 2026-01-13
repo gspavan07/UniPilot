@@ -17,6 +17,10 @@ const {
   saveAdmissionConfig,
   deleteAdmissionConfig,
 } = require("../controllers/admissionConfigController");
+const {
+  previewBulkIds,
+  commitBulkIds,
+} = require("../controllers/admissionIdController");
 const studentUpload = require("../middleware/studentUpload");
 const { authenticate, checkPermission } = require("../middleware/auth");
 
@@ -65,6 +69,14 @@ router.delete(
   checkPermission("admissions:manage"),
   deleteAdmissionConfig
 );
+
+// Bulk ID Generation
+router.post(
+  "/ids/preview",
+  checkPermission("admissions:manage"),
+  previewBulkIds
+);
+router.post("/ids/commit", checkPermission("admissions:manage"), commitBulkIds);
 
 // Document Re-upload
 router.post(

@@ -41,6 +41,7 @@ import api from "../../../utils/api";
 const studentSchema = yup.object().shape({
   ...baseUserSchema,
   auto_generate: yup.boolean().default(true),
+  is_lateral: yup.boolean().default(false),
   role: yup.string().default("student"),
   role_id: yup.string().required(),
   program_id: yup.string().required("Program is required"),
@@ -153,6 +154,7 @@ const StudentForm = ({
       single_parent_type: "Father",
       previous_academics: [],
       auto_generate: true,
+      is_lateral: false,
       nationality: "Indian",
       custom_fields: {},
     },
@@ -166,15 +168,42 @@ const StudentForm = ({
   const programId = watch("program_id");
   const batchYear = watch("batch_year");
   const isTemporary = watch("is_temporary_id");
+  const isLateral = watch("is_lateral");
+
+  // Handle Lateral Entry Logic
+  useEffect(() => {
+    if (isLateral) {
+      // Set Batch Year to previous year and Semester to 3
+      const currentYear = new Date().getFullYear();
+      setValue("batch_year", currentYear - 1);
+      setValue("current_semester", 3);
+    } else {
+      // Reset if untoggled (optional, or keep manual changes)
+      // Only reset if it matches the "lateral" default to avoid overwriting manual edits?
+      // Generically, if unchecking, maybe default back to current year/sem 1?
+      const currentYear = new Date().getFullYear();
+      if (getValues("batch_year") === currentYear - 1) {
+        setValue("batch_year", currentYear);
+      }
+      if (getValues("current_semester") === 3) {
+        setValue("current_semester", 1);
+      }
+    }
+  }, [isLateral, setValue, getValues]);
 
   // Generate ID Preview
   useEffect(() => {
     if (currentStep === 6 && autoGenerate && admissionConfig && programId) {
       const program = programList.find((p) => p.id === programId);
       if (program) {
-        const format = isTemporary
-          ? admissionConfig.temp_id_format || "TM-{YY}-{BRANCH}-{SEQ}"
-          : admissionConfig.id_format || "ST-{YY}-{BRANCH}-{SEQ}";
+        let format = admissionConfig.id_format || "ST-{YY}-{BRANCH}-{SEQ}";
+
+        if (isTemporary) {
+          format = admissionConfig.temp_id_format || "TM-{YY}-{BRANCH}-{SEQ}";
+        } else if (isLateral) {
+          format =
+            admissionConfig.lateral_id_format || "L{YY}{UNIV}{BRANCH}{SEQ}";
+        }
 
         const yearShort = (batchYear || new Date().getFullYear())
           .toString()
@@ -203,6 +232,7 @@ const StudentForm = ({
     programId,
     batchYear,
     isTemporary,
+    isLateral,
     programList,
   ]);
 
@@ -708,6 +738,16 @@ const StudentForm = ({
                           />
                           <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">
                             Issue Temporary ID
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <input
+                            type="checkbox"
+                            {...register("is_lateral")}
+                            className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                            Lateral Entry (Direct 2nd Year)
                           </span>
                         </div>
                       </div>

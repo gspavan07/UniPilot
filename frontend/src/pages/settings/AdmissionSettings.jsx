@@ -76,6 +76,7 @@ const AdmissionSettings = () => {
       university_code: "B11",
       id_format: "{YY}{UNIV}{BRANCH}{SEQ}",
       temp_id_format: "T{YY}{SEQ}",
+      lateral_id_format: "L{YY}{UNIV}{BRANCH}{SEQ}",
       is_active: true,
       required_documents: ["Photo ID", "10th Marksheet", "12th Marksheet"],
       field_config: {
@@ -330,6 +331,28 @@ const AdmissionSettings = () => {
                     <p className="text-[10px] text-gray-400 mt-2 px-1">
                       Same placeholders supported. Used for initial temporary
                       IDs.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
+                      Lateral ID Generation Format
+                    </label>
+                    <input
+                      type="text"
+                      value={editingConfig.lateral_id_format || ""}
+                      onChange={(e) =>
+                        setEditingConfig({
+                          ...editingConfig,
+                          lateral_id_format: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
+                      placeholder="L{YY}{UNIV}{BRANCH}{SEQ}"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-2 px-1">
+                      Same placeholders supported. Used for Lateral Entry
+                      students.
                     </p>
                   </div>
 

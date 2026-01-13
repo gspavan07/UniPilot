@@ -178,6 +178,16 @@ const User = sequelize.define(
       allowNull: true,
       comment: "Type of admission for students",
     },
+    is_lateral: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: "Flag for Lateral Entry students",
+    },
+    is_temporary_id: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: "Flag indicating if the current ID is temporary",
+    },
 
     // Complex Data Fields
     bank_details: {

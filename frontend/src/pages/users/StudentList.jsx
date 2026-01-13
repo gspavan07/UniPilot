@@ -17,8 +17,10 @@ import StudentDetailModal from "./StudentDetailModal";
 import BulkImportModal from "./BulkImportModal";
 import DocumentVerificationModal from "../../components/admission/DocumentVerificationModal";
 import BulkCommunicationModal from "../../components/admission/BulkCommunicationModal";
+import GenerateIdModal from "../../components/admission/GenerateIdModal";
 import {
   Plus,
+  Wand2,
   Search,
   Filter,
   Edit2,
@@ -63,6 +65,7 @@ const StudentList = () => {
     isOpen: false,
     student: null,
   });
+  const [isGenerateIdOpen, setIsGenerateIdOpen] = useState(false);
 
   const handleDownloadLetter = async (studentId) => {
     try {
@@ -239,6 +242,25 @@ const StudentList = () => {
     return false;
   };
 
+  const hasPermission = (permSlug) => {
+    if (currentUser?.role === "super_admin") return true;
+    // Check if permission exists in user's permission list (if loaded)
+    // Or check if role matches known defaults (fallback)
+
+    // Ideally use permissions from auth state
+    if (currentUser?.permissions?.includes(permSlug)) return true;
+
+    // Fallback for Admission Admin until re-login/refresh
+    const roleSlug = currentUser?.role_data?.slug || currentUser?.role || "";
+    if (
+      roleSlug === "admission_admin" &&
+      permSlug === "admissions:generate_ids"
+    )
+      return true;
+
+    return false;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Header */}
@@ -274,6 +296,15 @@ const StudentList = () => {
               >
                 <Mail className="w-4 h-4 mr-2 text-primary-500" />
                 Bulk Message
+              </button>
+            )}
+            {hasPermission("admissions:generate_ids") && (
+              <button
+                onClick={() => setIsGenerateIdOpen(true)}
+                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
+              >
+                <Wand2 className="w-4 h-4 mr-2 text-primary-500" />
+                Generate IDs
               </button>
             )}
             {canCreate && (
@@ -604,6 +635,17 @@ const StudentList = () => {
         onClose={() => setIsBulkNotifOpen(false)}
         userCount={users.length}
         filters={{ role: "student", department: deptFilter }}
+      />
+
+      {/* Generate ID Modal */}
+      <GenerateIdModal
+        isOpen={isGenerateIdOpen}
+        onClose={() => setIsGenerateIdOpen(false)}
+        onSuccess={() =>
+          dispatch(fetchUsers({ role: "student", department_id: deptFilter }))
+        }
+        departmentList={departments}
+        programList={programs}
       />
     </div>
   );

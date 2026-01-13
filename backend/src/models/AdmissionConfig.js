@@ -38,11 +38,23 @@ const AdmissionConfig = sequelize.define(
       defaultValue: "T{YY}{SEQ}",
       comment: "Format for temporary IDs",
     },
+    lateral_id_format: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      defaultValue: "L{YY}{UNIV}{BRANCH}{SEQ}",
+      comment: "Format for Lateral Entry IDs",
+    },
     current_sequence: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 1,
       comment: "Next available sequence number for this batch",
+    },
+    program_sequences: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
+      comment: "Tracks current sequence number per program ID",
     },
     is_active: {
       type: DataTypes.BOOLEAN,
