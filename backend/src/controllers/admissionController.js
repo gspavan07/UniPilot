@@ -564,3 +564,36 @@ exports.getGeoStats = async (req, res) => {
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };
+// @desc    Get Gender Distribution Stats
+// @route   GET /api/admission/gender-stats
+// @access  Private (Admission Admin/Staff)
+exports.getGenderStats = async (req, res) => {
+  try {
+    const { year } = req.query;
+    const where = { role: "student" };
+
+    if (year) {
+      where.batch_year = year;
+    }
+
+    const stats = await User.findAll({
+      attributes: [
+        "gender",
+        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+      ],
+      where: {
+        ...where,
+        gender: { [Op.ne]: null },
+      },
+      group: ["gender"],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    logger.error("Error in getGenderStats:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};

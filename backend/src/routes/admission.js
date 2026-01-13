@@ -10,6 +10,7 @@ const {
   getGeoStats,
   reuploadDocument,
   verifyStudent,
+  getGenderStats, // Added
 } = require("../controllers/admissionController");
 const {
   getAdmissionConfigs,
@@ -45,6 +46,7 @@ router.get(
 );
 router.get("/funnel", checkPermission("admissions:view"), getFunnelStats);
 router.get("/geo-stats", checkPermission("admissions:view"), getGeoStats);
+router.get("/gender-stats", checkPermission("admissions:view"), getGenderStats);
 router.post(
   "/verify-student/:userId",
   checkPermission("admissions:manage"),
