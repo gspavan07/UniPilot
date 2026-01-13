@@ -427,6 +427,9 @@ exports.createUser = async (req, res) => {
       const { generateStudentId } = require("../services/admissionService");
       try {
         const batchYear = userData.batch_year || new Date().getFullYear();
+        if (!userData.admission_date) {
+          userData.admission_date = new Date();
+        }
         if (!student_id) {
           userData.student_id = await generateStudentId({
             batchYear,

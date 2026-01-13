@@ -43,7 +43,7 @@ const generateStudentId = async ({
     let studentId = format
       .replace("{YY}", yearShort)
       .replace("{UNIV}", univCode)
-      .replace("{BRANCH}", isTemporary ? `${branchCode}TM` : branchCode)
+      .replace("{BRANCH}", branchCode)
       .replace("{SEQ}", sequence);
 
     // 4. Increment Sequence
