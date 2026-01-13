@@ -71,6 +71,27 @@ When you are ready to merge:
 
 ---
 
+## 🕵️‍♀️ How to Review & Verify (For Reviewers)
+
+Don't just look at the code on GitHub! You should **run it** to make sure it actually works.
+
+1.  **Get their code**:
+    ```bash
+    git fetch origin
+    git checkout feature/their-feature-branch
+    ```
+2.  **Update Dependencies**:
+    - If they added packages: `npm install`
+    - If they added migrations: `npm run migrate`
+3.  **Test It**:
+    - Start the app (`npm run dev`) and try to break what they built.
+    - Check for console errors.
+4.  **Finish**:
+    - Go back to your work: `git checkout main`
+    - Approve (or Request Changes) on GitHub.
+
+---
+
 ## 🤝 Collaboration Tips
 
 - **Communicate**: If you are working on `AdmissionService`, tell the team so nobody else touches it at the same time.
