@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate, checkPermission } = require("../middleware/auth");
 const staffAttendanceController = require("../controllers/staffAttendanceController");
 const payrollController = require("../controllers/payrollController");
+const hrDashboardController = require("../controllers/hrDashboardController");
 
 // Staff Attendance Routes
 router.post(
@@ -27,6 +28,13 @@ router.get(
   "/my-attendance",
   authenticate,
   staffAttendanceController.getMyAttendance
+);
+// Dashboard Stats
+router.get(
+  "/dashboard/stats",
+  authenticate,
+  checkPermission("hr:staff:manage"),
+  hrDashboardController.getDashboardStats
 );
 
 // Leave Management

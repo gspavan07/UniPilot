@@ -214,6 +214,18 @@ export const confirmPayout = createAsyncThunk(
   }
 );
 
+export const fetchHRDashboardStats = createAsyncThunk(
+  "hr/fetchDashboardStats",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/hr/dashboard/stats");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || error.message);
+    }
+  }
+);
+
 const hrSlice = createSlice({
   name: "hr",
   initialState: {
@@ -231,6 +243,19 @@ const hrSlice = createSlice({
       configuredStaff: 0,
       totalDepartments: 0,
       readinessPercentage: 0,
+    },
+    dashboardStats: {
+      metrics: {
+        totalStaff: 0,
+        presentToday: 0,
+        onLeaveToday: 0,
+        payrollTotal: 0,
+        payrollConfigured: 0,
+        readinessPercentage: 0,
+      },
+      workforceMix: [],
+      attendanceTrend: [],
+      pendingLeaves: [],
     },
     payrollPreview: [],
     actionPayslips: [],
@@ -411,6 +436,21 @@ const hrSlice = createSlice({
       .addCase(confirmPayout.rejected, (state, action) => {
         state.operationStatus = "failed";
         state.operationError = action.payload;
+      });
+
+    // HR Dashboard Stats
+    builder
+      .addCase(fetchHRDashboardStats.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(fetchHRDashboardStats.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.dashboardStats = action.payload.data;
+        state.error = null;
+      })
+      .addCase(fetchHRDashboardStats.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload;
       });
   },
 });

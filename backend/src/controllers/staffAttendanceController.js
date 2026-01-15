@@ -74,15 +74,7 @@ exports.getDailyAttendanceView = async (req, res) => {
 
     // 1. Fetch Users
     const userWhere = {
-      role: [
-        "faculty",
-        "staff",
-        "admin",
-        "hr",
-        "hod",
-        "super_admin",
-        "lab_assistant",
-      ],
+      role: { [Op.ne]: "student" },
       is_active: true,
     };
     if (department_id && department_id !== "all") {

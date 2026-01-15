@@ -4,6 +4,7 @@ import AdminDashboard from "./dashboards/AdminDashboard";
 import StudentDashboard from "./dashboards/StudentDashboard";
 import FacultyDashboard from "./dashboards/FacultyDashboard";
 import AdmissionAnalytics from "./dashboards/AdmissionAnalytics";
+import HRDashboard from "./hr/HRDashboard";
 
 const Dashboard = () => {
   const { user } = useSelector((state) => state.auth);
@@ -19,6 +20,9 @@ const Dashboard = () => {
     case "admission_admin":
     case "admission_staff":
       return <AdmissionAnalytics />;
+    case "hr":
+    case "hr_admin":
+      return <HRDashboard />;
     case "admin":
     case "super_admin":
     default:

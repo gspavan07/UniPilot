@@ -268,6 +268,7 @@ Course.hasMany(Attendance, {
 Attendance.belongsTo(User, { as: "instructor", foreignKey: "marked_by" });
 
 LeaveRequest.belongsTo(User, { as: "student", foreignKey: "student_id" });
+LeaveRequest.belongsTo(User, { as: "applicant", foreignKey: "student_id" });
 User.hasMany(LeaveRequest, { as: "leave_requests", foreignKey: "student_id" });
 
 LeaveRequest.belongsTo(User, { as: "reviewer", foreignKey: "reviewed_by" });
