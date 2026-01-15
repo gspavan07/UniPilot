@@ -21,7 +21,6 @@ const HallTicket = sequelize.define(
     },
     ticket_number: {
       type: DataTypes.STRING,
-      unique: true,
     },
     download_status: {
       type: DataTypes.BOOLEAN,

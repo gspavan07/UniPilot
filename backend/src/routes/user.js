@@ -7,6 +7,7 @@ const {
   deleteUser,
   getUserStats,
   bulkImportUsers,
+  updateBankDetails,
 } = require("../controllers/userController");
 const upload = require("../middleware/upload");
 const studentUpload = require("../middleware/studentUpload");
@@ -45,6 +46,9 @@ router.post(
   upload.single("file"),
   bulkImportUsers
 );
+
+// Bank details route (must be before /:id route)
+router.put("/:id/bank-details", authenticate, updateBankDetails);
 
 router
   .route("/:id")

@@ -59,12 +59,10 @@ const User = sequelize.define(
     // User Type Specific Fields
     employee_id: {
       type: DataTypes.STRING(50),
-      unique: true,
       comment: "For faculty/staff",
     },
     student_id: {
       type: DataTypes.STRING(50),
-      unique: true,
       comment: "For students",
     },
 
@@ -124,7 +122,6 @@ const User = sequelize.define(
         "dropout"
       ),
       defaultValue: "active",
-      comment: "For students",
     },
 
     // Contact Information
@@ -160,23 +157,19 @@ const User = sequelize.define(
     },
     aadhaar_number: {
       type: DataTypes.STRING(20),
-      unique: true,
     },
     passport_number: {
       type: DataTypes.STRING(20),
-      unique: true,
     },
     joining_date: {
       type: DataTypes.DATEONLY,
     },
     admission_number: {
       type: DataTypes.STRING(50),
-      unique: true,
     },
     admission_type: {
       type: DataTypes.ENUM("management", "convener"),
       allowNull: true,
-      comment: "Type of admission for students",
     },
     is_lateral: {
       type: DataTypes.BOOLEAN,

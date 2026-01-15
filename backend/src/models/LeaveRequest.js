@@ -26,6 +26,10 @@ const LeaveRequest = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
+    is_half_day: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     reason: {
       type: DataTypes.TEXT,
       allowNull: false,
@@ -35,6 +39,10 @@ const LeaveRequest = sequelize.define(
       defaultValue: "pending",
     },
     reviewed_by: {
+      type: DataTypes.UUID,
+      references: { model: "users", key: "id" },
+    },
+    approver_id: {
       type: DataTypes.UUID,
       references: { model: "users", key: "id" },
     },

@@ -31,7 +31,13 @@ const Timetable = require("./Timetable");
 const TimetableSlot = require("./TimetableSlot");
 const FeeSemesterConfig = require("./FeeSemesterConfig");
 const StudentDocument = require("./StudentDocument");
+
 const AdmissionConfig = require("./AdmissionConfig");
+const StaffAttendance = require("./StaffAttendance");
+const LeaveBalance = require("./LeaveBalance");
+const SalaryStructure = require("./SalaryStructure");
+const Payslip = require("./Payslip");
+const SalaryGrade = require("./SalaryGrade");
 
 const models = {
   User,
@@ -64,7 +70,13 @@ const models = {
   TimetableSlot,
   FeeSemesterConfig,
   StudentDocument,
+
   AdmissionConfig,
+  StaffAttendance,
+  LeaveBalance,
+  SalaryStructure,
+  Payslip,
+  SalaryGrade,
 };
 
 // Define associations
@@ -257,6 +269,7 @@ LeaveRequest.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(LeaveRequest, { as: "leave_requests", foreignKey: "student_id" });
 
 LeaveRequest.belongsTo(User, { as: "reviewer", foreignKey: "reviewed_by" });
+LeaveRequest.belongsTo(User, { as: "approver", foreignKey: "approver_id" });
 
 // Examination Associations
 ExamCycle.hasMany(ExamSchedule, {
@@ -351,6 +364,34 @@ StudentDocument.belongsTo(User, { as: "verifier", foreignKey: "verified_by" });
 User.hasMany(StudentDocument, {
   as: "verified_documents",
   foreignKey: "verified_by",
+});
+
+// HR Management Associations
+StaffAttendance.belongsTo(User, { as: "staff", foreignKey: "user_id" });
+User.hasMany(StaffAttendance, {
+  as: "staff_attendance",
+  foreignKey: "user_id",
+});
+
+LeaveBalance.belongsTo(User, { as: "user", foreignKey: "user_id" });
+User.hasMany(LeaveBalance, {
+  as: "leave_balances",
+  foreignKey: "user_id",
+});
+
+SalaryStructure.belongsTo(User, { as: "staff", foreignKey: "user_id" });
+User.hasOne(SalaryStructure, {
+  as: "salary_structure",
+  foreignKey: "user_id",
+});
+
+Payslip.belongsTo(User, { as: "staff", foreignKey: "user_id" });
+User.hasMany(Payslip, { as: "payslips", foreignKey: "user_id" });
+
+SalaryStructure.belongsTo(SalaryGrade, { as: "grade", foreignKey: "grade_id" });
+SalaryGrade.hasMany(SalaryStructure, {
+  as: "staff_structures",
+  foreignKey: "grade_id",
 });
 
 // Export models and sequelize instance

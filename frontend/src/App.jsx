@@ -29,6 +29,12 @@ import MyLibrary from "./pages/library/MyLibrary";
 import TimetableManager from "./pages/timetable/TimetableManager";
 import MyTimetable from "./pages/timetable/MyTimetable";
 import UserProfile from "./pages/profile/UserProfile";
+import StaffList from "./pages/hr/StaffList";
+import StaffProfile from "./pages/hr/StaffProfile";
+import PayrollDashboard from "./pages/hr/PayrollDashboard";
+import GradeManagement from "./pages/hr/GradeManagement";
+import LeaveDashboard from "./pages/hr/LeaveDashboard";
+import StaffAttendance from "./pages/hr/StaffAttendance";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
@@ -84,6 +90,13 @@ function App() {
           <Route path="/my-courses" element={<MyCourses />} />
           <Route path="/library" element={<LibraryDashboard />} />
           <Route path="/my-library" element={<MyLibrary />} />
+          <Route path="/hr/staff" element={<StaffList />} />
+          <Route path="/hr/staff/:id" element={<StaffProfile />} />
+          <Route path="/hr/payroll" element={<PayrollDashboard />} />
+          <Route path="/hr/payroll/grades" element={<GradeManagement />} />
+          <Route path="/hr/leaves" element={<LeaveDashboard />} />
+          <Route path="/hr/attendance" element={<StaffAttendance />} />
+          <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route
             path="/settings"

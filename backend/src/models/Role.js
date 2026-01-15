@@ -12,12 +12,10 @@ const Role = sequelize.define(
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
     },
     slug: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
     },
     description: {
       type: DataTypes.TEXT,

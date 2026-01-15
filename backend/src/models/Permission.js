@@ -12,12 +12,10 @@ const Permission = sequelize.define(
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
     },
     slug: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
     },
     module: {
       type: DataTypes.STRING(50),

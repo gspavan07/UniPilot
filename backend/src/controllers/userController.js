@@ -28,8 +28,12 @@ exports.getAllUsers = async (req, res) => {
 
       // If NOT Super Admin, apply scoping
       if (requesterSlug !== "admin" && requesterSlug !== "super_admin") {
+        // Special Case: HR (Can see all employees, NO students)
+        if (requesterSlug === "hr_admin" || requesterSlug === "hr") {
+          roleScopeFilter = { slug: { [Op.ne]: "student" } };
+        }
         // Check if Module Admin (e.g., finance_admin, exam_admin)
-        if (requesterSlug && requesterSlug.includes("_admin")) {
+        else if (requesterSlug && requesterSlug.includes("_admin")) {
           const modulePrefix = requesterSlug.split("_")[0]; // e.g., 'finance'
 
           const allowedSlugs = [{ [Op.like]: `${modulePrefix}_%` }]; // Always allow own module team
@@ -765,5 +769,96 @@ exports.bulkImportUsers = async (req, res) => {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
+  }
+};
+
+// @desc    Update user bank details
+// @route   PUT /api/users/:id/bank-details
+// @access  Private (Self or HR)
+exports.updateBankDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bank_name, account_number, ifsc_code, branch_name, holder_name } =
+      req.body;
+
+    // Find the user
+    const user = await User.findByPk(id, {
+      include: [{ model: Role, as: "role_data" }],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    // Permission check: User can update their own, or HR/Admin can update anyone's
+    const requesterId = req.user.userId;
+    const requester = await User.findByPk(requesterId, {
+      include: [{ model: Role, as: "role_data" }],
+    });
+    const requesterSlug = requester?.role_data?.slug;
+
+    const isHR = ["admin", "super_admin", "hr", "hr_admin"].includes(
+      requesterSlug
+    );
+    const isSelf = requesterId === id;
+
+    if (!isHR && !isSelf) {
+      return res.status(403).json({
+        success: false,
+        error: "You don't have permission to update this user's bank details",
+      });
+    }
+
+    // Validate IFSC code format (basic validation)
+    if (ifsc_code && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc_code)) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Invalid IFSC code format. Should be 11 characters (e.g., SBIN0001234)",
+      });
+    }
+
+    // Validate account number (basic validation - numeric, 9-18 digits)
+    if (account_number && !/^\d{9,18}$/.test(account_number)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid account number. Should be 9-18 digits",
+      });
+    }
+
+    // Encrypt Account Number
+    const { encrypt } = require("../utils/encryption");
+    let finalAccountNumber = user.bank_details?.account_number || "";
+    if (account_number) {
+      finalAccountNumber = encrypt(account_number);
+    }
+
+    // Update bank details
+    const updatedBankDetails = {
+      bank_name: bank_name || user.bank_details?.bank_name || "",
+      account_number: finalAccountNumber,
+      ifsc_code: ifsc_code || user.bank_details?.ifsc_code || "",
+      branch_name: branch_name || user.bank_details?.branch_name || "",
+      holder_name: holder_name || user.bank_details?.holder_name || "",
+    };
+
+    await user.update({ bank_details: updatedBankDetails });
+
+    res.status(200).json({
+      success: true,
+      message: "Bank details updated successfully",
+      data: {
+        bank_details: updatedBankDetails,
+      },
+    });
+  } catch (error) {
+    logger.error("Error in updateBankDetails:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
   }
 };

@@ -16,7 +16,6 @@ const AdmissionConfig = sequelize.define(
     batch_year: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      unique: true,
       comment: "Academic year this config applies to",
     },
     university_code: {

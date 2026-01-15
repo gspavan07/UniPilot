@@ -7,6 +7,7 @@ const userRoutes = require("./user");
 const roleRoutes = require("./role");
 const proctorRoutes = require("./proctor");
 const promotionRoutes = require("./promotion");
+const hrRoutes = require("./hr"); // New HR Routes
 const attendanceRoutes = require("./attendance");
 const examRoutes = require("./exam");
 const feeRoutes = require("./fee");
@@ -39,6 +40,7 @@ router.use("/courses", courseRoutes);
 router.use("/roles", roleRoutes);
 router.use("/proctor", proctorRoutes);
 router.use("/promotion", promotionRoutes);
+router.use("/hr", hrRoutes);
 router.use("/attendance", attendanceRoutes);
 router.use("/exam", examRoutes);
 router.use("/fees", feeRoutes);

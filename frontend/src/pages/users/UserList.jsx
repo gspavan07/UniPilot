@@ -138,7 +138,7 @@ const UserList = ({ role: forcedRole }) => {
     }
   };
 
-  const { user: currentUser } = useSelector((state) => state.auth);
+  const { user: currentUser, accessToken } = useSelector((state) => state.auth);
 
   // Permission Logic
   const canCreate = (() => {
@@ -193,6 +193,14 @@ const UserList = ({ role: forcedRole }) => {
     }
 
     return false;
+  };
+
+  const getProfileImageUrl = (user) => {
+    if (user.profile_picture) {
+      if (user.profile_picture.startsWith("http")) return user.profile_picture;
+      return `${user.profile_picture}?token=${accessToken}`;
+    }
+    return `https://ui-avatars.com/api/?name=${user.first_name}+${user.last_name}&background=random&size=128`;
   };
 
   return (
@@ -360,10 +368,7 @@ const UserList = ({ role: forcedRole }) => {
                       <div className="flex items-center">
                         <div className="relative">
                           <img
-                            src={
-                              user.profile_picture ||
-                              `https://ui-avatars.com/api/?name=${user.first_name}+${user.last_name}&background=random&size=128`
-                            }
+                            src={getProfileImageUrl(user)}
                             className="w-10 h-10 rounded-xl object-cover shadow-sm border border-gray-100 dark:border-gray-700"
                             alt="avatar"
                           />

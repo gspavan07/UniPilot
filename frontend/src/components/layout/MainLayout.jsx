@@ -15,6 +15,7 @@ import {
   X,
   Clock,
   Bell,
+  Layers,
   Search,
   ChevronRight,
   User as UserIcon,
@@ -28,6 +29,7 @@ import {
   Coins,
   Library,
   Sliders,
+  Briefcase,
 } from "lucide-react";
 
 const MainLayout = () => {
@@ -75,12 +77,32 @@ const MainLayout = () => {
       href: "/users",
       icon: Users,
       permission: "users:view",
+      roles: ["super_admin", "admin", "administrator"], // Exclude HR
+    },
+    {
+      name: "Staff Management",
+      href: "/hr/staff",
+      icon: Briefcase,
+      roles: ["admin", "administrator", "super_admin", "hr", "hod", "hr_admin"],
+    },
+    {
+      name: "Payroll Dashboard",
+      href: "/hr/payroll",
+      icon: Wallet,
+      roles: ["admin", "super_admin", "hr", "hr_admin"],
+    },
+    {
+      name: "Salary Grades",
+      href: "/hr/payroll/grades",
+      icon: Layers,
+      roles: ["admin", "super_admin", "hr", "hr_admin"],
     },
     {
       name: "Students",
       href: "/students",
       icon: GraduationCap,
       permission: "users:view",
+      roles: ["super_admin", "admin", "administrator"], // Exclude HR
     },
     {
       name: "Schedule Management",
@@ -94,6 +116,12 @@ const MainLayout = () => {
       icon: Clock,
       permission: "academics:timetable:view",
       roles: ["student", "faculty"], // Explicitly for these roles only
+    },
+    {
+      name: "My HR",
+      href: "/hr/my-profile",
+      icon: UserIcon,
+      roles: ["staff", "faculty", "hr", "hr_admin", "admin", "super_admin"],
     },
     {
       name: "Proctoring",
@@ -114,11 +142,16 @@ const MainLayout = () => {
       permission: "academics:attendance:view",
     },
     {
-      name: "Leave Management",
-      href: "/leave",
+      name: "Leave Approvals",
+      href: "/hr/leaves",
       icon: PlaneTakeoff,
-      permission: "academics:attendance:view",
-      roles: ["faculty", "admin", "super_admin"], // Hiding from students
+      roles: ["admin", "super_admin", "hr", "hr_admin", "hod"],
+    },
+    {
+      name: "Staff Attendance",
+      href: "/hr/attendance",
+      icon: Users,
+      roles: ["hr", "hr_admin", "admin", "super_admin"],
     },
     {
       name: "Exams & Grading",
@@ -144,7 +177,7 @@ const MainLayout = () => {
       href: "/my-fees",
       icon: Coins,
       permission: "finance:fees:view",
-      roles: ["student"], // Only students pay fees
+      roles: ["student", "staff", "faculty"], // Students and Employees
     },
     {
       name: "Library",

@@ -12,6 +12,7 @@ import examReducer from "./slices/examSlice";
 import feeReducer from "./slices/feeSlice";
 import libraryReducer from "./slices/librarySlice";
 import timetableReducer from "./slices/timetableSlice";
+import hrReducer from "./slices/hrSlice";
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ export const store = configureStore({
     fee: feeReducer,
     library: libraryReducer,
     timetable: timetableReducer,
+    hr: hrReducer,
   },
 });
 

@@ -24,9 +24,11 @@ const DepartmentList = () => {
   const { departments, status, error } = useSelector(
     (state) => state.departments
   );
+  const { accessToken } = useSelector((state) => state.auth);
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState(null);
 
@@ -64,11 +66,26 @@ const DepartmentList = () => {
     setIsFormOpen(true);
   };
 
-  const filteredDepartments = departments.filter(
-    (dept) =>
+  const filteredDepartments = departments.filter((dept) => {
+    const matchesSearch =
       dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dept.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      dept.code.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesType =
+      filterType === "all" ||
+      dept.type === filterType ||
+      (filterType === "academic" && !dept.type); // Default to academic if no type
+
+    return matchesSearch && matchesType;
+  });
+
+  const getProfileImageUrl = (user) => {
+    if (user.profile_picture) {
+      if (user.profile_picture.startsWith("http")) return user.profile_picture;
+      return `${user.profile_picture}?token=${accessToken}`;
+    }
+    return `https://ui-avatars.com/api/?name=${user.first_name}+${user.last_name}&background=6366f1&color=fff&size=64`;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -103,17 +120,30 @@ const DepartmentList = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <select className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all">
-            <option>All Statuses</option>
-            <option>Active</option>
-            <option>Inactive</option>
-          </select>
-          <button className="btn bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center">
-            <Filter className="w-5 h-5 mr-2" />
-            More
+        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+          <button
+            onClick={() => setFilterType("all")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "all" ? "bg-white dark:bg-gray-700 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+          >
+            All Units
+          </button>
+          <button
+            onClick={() => setFilterType("academic")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "academic" ? "bg-white dark:bg-gray-700 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+          >
+            Academic
+          </button>
+          <button
+            onClick={() => setFilterType("administrative")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "administrative" ? "bg-white dark:bg-gray-700 text-secondary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+          >
+            Administrative
           </button>
         </div>
+        <button className="btn bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center">
+          <Filter className="w-5 h-5 mr-2" />
+          More
+        </button>
       </div>
 
       {/* Table/List */}
@@ -201,10 +231,7 @@ const DepartmentList = () => {
                       {dept.hod ? (
                         <div className="flex items-center">
                           <img
-                            src={
-                              dept.hod.profile_picture ||
-                              `https://ui-avatars.com/api/?name=${dept.hod.first_name}+${dept.hod.last_name}&background=6366f1&color=fff&size=64`
-                            }
+                            src={getProfileImageUrl(dept.hod)}
                             className="w-10 h-10 rounded-xl mr-3 shadow-sm border border-gray-100 dark:border-gray-700"
                             alt="HOD"
                           />

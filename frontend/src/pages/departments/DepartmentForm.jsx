@@ -45,6 +45,7 @@ const schema = yup.object().shape({
   phone: yup.string().optional(),
   office_location: yup.string().optional(),
   established_date: yup.string().optional(),
+  type: yup.string().oneOf(["academic", "administrative"]).default("academic"),
   is_active: yup.boolean().default(true),
 });
 
@@ -63,6 +64,7 @@ const DepartmentForm = ({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
@@ -76,6 +78,7 @@ const DepartmentForm = ({
       phone: "",
       office_location: "",
       established_date: "",
+      type: "academic",
       is_active: true,
     },
   });
@@ -92,6 +95,7 @@ const DepartmentForm = ({
         phone: department.phone || "",
         office_location: department.office_location || "",
         established_date: department.established_date || "",
+        type: department.type || "academic",
         is_active: department.is_active ?? true,
       });
     } else if (isOpen) {
@@ -105,6 +109,7 @@ const DepartmentForm = ({
         phone: "",
         office_location: "",
         established_date: "",
+        type: "academic",
         is_active: true,
       });
     }
@@ -215,6 +220,33 @@ const DepartmentForm = ({
                         type="date"
                         className="input"
                       />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="label">Classification / Type</label>
+                      <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <label
+                          className={`flex items-center justify-center py-2 px-3 rounded-lg text-xs font-bold cursor-pointer transition-all ${register("type").value === "academic" ? "bg-white dark:bg-gray-800 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                        >
+                          <input
+                            type="radio"
+                            value="academic"
+                            {...register("type")}
+                            className="sr-only"
+                          />
+                          Academic
+                        </label>
+                        <label
+                          className={`flex items-center justify-center py-2 px-3 rounded-lg text-xs font-bold cursor-pointer transition-all ${register("type").value === "administrative" ? "bg-white dark:bg-gray-800 text-secondary-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                        >
+                          <input
+                            type="radio"
+                            value="administrative"
+                            {...register("type")}
+                            className="sr-only"
+                          />
+                          Administrative
+                        </label>
+                      </div>
                     </div>
                     <div className="col-span-2">
                       <label className="label">Description</label>

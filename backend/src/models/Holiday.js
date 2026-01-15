@@ -16,7 +16,6 @@ const Holiday = sequelize.define(
     date: {
       type: DataTypes.DATEONLY,
       allowNull: false,
-      unique: true,
     },
     type: {
       type: DataTypes.STRING(50),
