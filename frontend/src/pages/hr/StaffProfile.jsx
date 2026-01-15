@@ -426,11 +426,42 @@ const PayslipBreakdownModal = ({ isOpen, onClose, slip }) => {
             <h4 className="text-xs font-bold text-success-600 uppercase tracking-widest mb-3 flex items-center">
               <Plus className="w-3 h-3 mr-1" /> Earnings & Allowances
             </h4>
+
+            {/* Pro-rata Info Banner */}
+            {breakdown.prorata && (
+              <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 text-xs">
+                <p className="font-bold text-blue-800 dark:text-blue-300 mb-1">
+                  ℹ️ Pro-Rata Adjustment
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-blue-700 dark:text-blue-400">
+                  <span>
+                    Joined:{" "}
+                    {new Date(
+                      breakdown.prorata.joining_date
+                    ).toLocaleDateString()}
+                  </span>
+                  <span>
+                    Paid Days: {breakdown.prorata.effective_days} /{" "}
+                    {breakdown.prorata.month_days}
+                  </span>
+                </div>
+                <p className="mt-1 opacity-80">
+                  Salary calculated for {breakdown.prorata.effective_days}{" "}
+                  active days only.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <div className="flex justify-between py-2 border-b border-gray-50 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Basic Pay
-                </span>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400 block">
+                    Basic Pay
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    Fixed Monthly Pay
+                  </span>
+                </div>
                 <span className="font-bold">
                   ₹{Number(breakdown.basic || 0).toLocaleString()}
                 </span>
@@ -452,7 +483,7 @@ const PayslipBreakdownModal = ({ isOpen, onClose, slip }) => {
                   </div>
                 );
               })}
-              <div className="flex justify-between py-3 text-success-600 font-bold">
+              <div className="flex justify-between py-3 text-success-600 font-bold bg-success-50 dark:bg-success-900/10 px-3 rounded-lg mt-2">
                 <span>Total Earnings</span>
                 <span>₹{Number(slip.total_earnings).toLocaleString()}</span>
               </div>
@@ -467,17 +498,29 @@ const PayslipBreakdownModal = ({ isOpen, onClose, slip }) => {
             <div className="space-y-2">
               {deductions.map(([name, raw]) => {
                 const { val, label } = resolve(raw, breakdown.basic);
+                // Special handling for LOP display
+                const isLOP = name === "loss_of_pay" && typeof raw === "object";
+
                 return (
                   <div
                     key={name}
                     className="flex justify-between py-2 border-b border-gray-50 dark:border-gray-700"
                   >
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {name}{" "}
-                      <span className="text-[10px] opacity-60 ml-1">
-                        {label}
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {isLOP ? "Loss of Pay (Absence)" : name}
                       </span>
-                    </span>
+                      {isLOP && (
+                        <span className="block text-[10px] text-error-400">
+                          Deducted for {raw.days} day(s)
+                        </span>
+                      )}
+                      {!isLOP && label && (
+                        <span className="text-[10px] opacity-60 ml-1">
+                          {label}
+                        </span>
+                      )}
+                    </div>
                     <span className="font-bold text-error-500">
                       ₹{val.toLocaleString()}
                     </span>

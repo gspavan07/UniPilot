@@ -265,16 +265,51 @@ exports.getBulkPayrollPreview = async (req, res) => {
 exports.bulkGeneratePayslips = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { department_id, month, year } = req.body;
+    const { department_id } = req.body; // Remove month/year destructuring here to parse them
+    let { month, year } = req.body;
+
+    month = parseInt(month);
+    year = parseInt(year);
+
+    if (isNaN(month) || isNaN(year)) {
+      if (t) await t.rollback();
+      return res
+        .status(400)
+        .json({ error: "Valid Month and Year are required" });
+    }
+
     const { Op } = require("sequelize");
 
-    // LOP Date Range
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Last day of month
+    // LOP Date Range (Format as YYYY-MM-DD for DATEONLY consistency)
+    // Javascript months are 0-indexed for Date constructor
+
+    // Start Date: 1st of the month
+    const startObj = new Date(year, month - 1, 1);
+    // End Date: 0th day of next month = Last day of current month
+    const endObj = new Date(year, month, 0);
+
+    // Formatting helper
+    const formatDate = (d) => d.toISOString().split("T")[0];
+
+    // Handle timezone offset helper if needed, but for DATEONLY, ISO string part is usually safe if constructed with local year/month
+    // Better safeguard:
+    const sYear = startObj.getFullYear();
+    const sMonth = String(startObj.getMonth() + 1).padStart(2, "0");
+    const sDay = String(startObj.getDate()).padStart(2, "0");
+    const startDate = `${sYear}-${sMonth}-${sDay}`;
+
+    const eYear = endObj.getFullYear();
+    const eMonth = String(endObj.getMonth() + 1).padStart(2, "0");
+    const eDay = String(endObj.getDate()).padStart(2, "0");
+    const endDate = `${eYear}-${eMonth}-${eDay}`;
 
     // 1. Find all users with a salary structure
-    const whereUser = { role: ["faculty", "staff", "admin", "hr"] };
-    if (department_id) whereUser.department_id = department_id;
+    const whereUser = {
+      role: { [Op.ne]: "student" },
+      is_active: true,
+    };
+    if (department_id && department_id !== "all")
+      whereUser.department_id = department_id;
 
     const structures = await SalaryStructure.findAll(
       {
@@ -325,6 +360,38 @@ exports.bulkGeneratePayslips = async (req, res) => {
         0
       );
 
+      // --- Pro-rata Calculation (For New Joinees) ---
+      let prorataFactor = 1.0;
+      let isProrata = false;
+      let effectiveDays = 0;
+      let monthDays = endObj.getDate(); // e.g. 28, 30, 31
+
+      if (structure.staff.joining_date) {
+        const joinDate = new Date(structure.staff.joining_date);
+        // Reset time to ensure strict date comparison
+        joinDate.setHours(0, 0, 0, 0);
+
+        // If joined AFTER start of this month AND BEFORE/ON end of this month
+        if (joinDate > startObj && joinDate <= endObj) {
+          isProrata = true;
+          // Calculate days active in this month
+          // joinDate to endObj inclusive
+          const diffTime = Math.abs(endObj - joinDate);
+          const activeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+          effectiveDays = activeDays;
+          prorataFactor = activeDays / monthDays;
+
+          // Apply Factor to Earnings (Basic + Fixed Allowances)
+          totalEarnings = Math.round(totalEarnings * prorataFactor);
+          // Deductions usually also prorated? Yes, for monthly fixed deductions.
+          // However, keeping deductions full might be safer for things like insurance?
+          // Standard practice: Prorate everything fixed.
+          totalDeductions = Math.round(totalDeductions * prorataFactor);
+        }
+      }
+      // ----------------------------------------------
+
       // --- LOP Calculation ---
       let lopDays = 0;
       let lopAmount = 0;
@@ -368,6 +435,19 @@ exports.bulkGeneratePayslips = async (req, res) => {
         allowances: structure.allowances,
         deductions: { ...structure.deductions },
       };
+
+      if (isProrata) {
+        breakdown.prorata = {
+          is_active: true,
+          joining_date: structure.staff.joining_date,
+          factor: prorataFactor.toFixed(2),
+          effective_days: effectiveDays,
+          month_days: monthDays,
+        };
+        // Note: basic in breakdown is usually the Reference Basic.
+        // Real paid basic is hidden in totalEarnings, but let's clarify nicely?
+        // For now, simple breakdown is fine.
+      }
 
       if (lopAmount > 0) {
         breakdown.deductions["loss_of_pay"] = {
@@ -783,21 +863,68 @@ exports.publishPayslips = async (req, res) => {
       whereUser.department_id = department_id;
     }
 
+    // 1. Fetch eligible drafts with user bank details
+    const drafts = await Payslip.findAll({
+      where: {
+        month: parseInt(month),
+        year: parseInt(year),
+        status: "draft",
+      },
+      include: [
+        {
+          model: User,
+          as: "staff",
+          where: whereUser,
+          attributes: ["id", "first_name", "last_name", "bank_details"],
+        },
+      ],
+      transaction: t,
+    });
+
+    if (drafts.length === 0) {
+      await t.rollback();
+      return res
+        .status(404)
+        .json({ error: "No draft payslips found to publish." });
+    }
+
+    const validIds = [];
+    const failedUsers = [];
+
+    // 2. Validate Bank Details
+    for (const slip of drafts) {
+      const bank = slip.staff?.bank_details || {};
+      const isValid =
+        bank.account_number &&
+        bank.ifsc_code &&
+        bank.bank_name &&
+        String(bank.account_number).trim().length > 5;
+
+      if (isValid) {
+        validIds.push(slip.id);
+      } else {
+        failedUsers.push({
+          id: slip.staff.id,
+          name: `${slip.staff.first_name} ${slip.staff.last_name}`,
+          reason: "Incomplete Bank Details",
+        });
+      }
+    }
+
+    if (validIds.length === 0) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        error: "No users have valid bank details. Cannot publish any payslips.",
+        failed_users: failedUsers,
+      });
+    }
+
+    // 3. Update Status for Valid IDs
     const [updatedCount] = await Payslip.update(
       { status: "published" },
       {
-        where: {
-          month: parseInt(month),
-          year: parseInt(year),
-          status: "draft",
-        },
-        include: [
-          {
-            model: User,
-            as: "staff",
-            where: whereUser,
-          },
-        ],
+        where: { id: validIds },
         transaction: t,
       }
     );
@@ -808,13 +935,23 @@ exports.publishPayslips = async (req, res) => {
     await auditService.log({
       action: "PAYROLL_PUBLISH",
       actor: req.user,
-      details: { count: updatedCount, month, year },
+      details: {
+        count: updatedCount,
+        month,
+        year,
+        skipped: failedUsers.length,
+      },
       req,
     });
 
     res.status(200).json({
       success: true,
-      message: `Successfully published ${updatedCount} payslips.`,
+      message: `Published ${updatedCount} payslips. ${failedUsers.length} skipped due to missing bank details.`,
+      data: {
+        published: updatedCount,
+        skipped: failedUsers.length,
+        skipped_details: failedUsers,
+      },
     });
   } catch (error) {
     if (t) await t.rollback();
