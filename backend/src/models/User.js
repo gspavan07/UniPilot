@@ -81,6 +81,15 @@ const User = sequelize.define(
         key: "id",
       },
     },
+    salary_grade_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "salary_grades",
+        key: "id",
+      },
+      comment: "Linked Salary Grade for payroll",
+    },
 
     // For Students
     program_id: {
@@ -305,6 +314,10 @@ User.associate = (models) => {
   User.belongsTo(models.Department, {
     foreignKey: "department_id",
     as: "department",
+  });
+  User.belongsTo(models.SalaryGrade, {
+    foreignKey: "salary_grade_id",
+    as: "salary_grade",
   });
   User.belongsTo(models.Program, {
     foreignKey: "program_id",

@@ -141,7 +141,7 @@ const HRDashboard = () => {
 
           <div className="flex flex-wrap gap-4">
             <Link
-              to="/hr/staff"
+              to="/hr/onboard"
               className="group p-4 bg-white/5 hover:bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl transition-all hover:scale-105"
             >
               <UserPlus className="w-6 h-6 text-indigo-400 mb-2" />

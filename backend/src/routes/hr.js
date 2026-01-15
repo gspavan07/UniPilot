@@ -48,6 +48,12 @@ router.get(
   authenticate,
   staffAttendanceController.getMyLeaveRequests
 );
+router.get(
+  "/leave/requests/:user_id",
+  authenticate,
+  checkPermission("hr:leaves:manage"),
+  staffAttendanceController.getUserLeaveRequests
+);
 router.post("/leave/apply", authenticate, staffAttendanceController.applyLeave);
 router.put(
   "/leave/:id",

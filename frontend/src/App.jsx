@@ -35,6 +35,7 @@ import PayrollDashboard from "./pages/hr/PayrollDashboard";
 import GradeManagement from "./pages/hr/GradeManagement";
 import LeaveDashboard from "./pages/hr/LeaveDashboard";
 import StaffAttendance from "./pages/hr/StaffAttendance";
+import EmployeeOnboarding from "./pages/hr/EmployeeOnboarding";
 import AcademicCalendar from "./pages/hr/AcademicCalendar";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
@@ -90,7 +91,8 @@ function App() {
           <Route path="/my-fees" element={<MyFees />} />
           <Route path="/my-courses" element={<MyCourses />} />
           <Route path="/library" element={<LibraryDashboard />} />
-          <Route path="/my-library" element={<MyLibrary />} />]
+          <Route path="/my-library" element={<MyLibrary />} />
+          <Route path="/hr/onboard" element={<EmployeeOnboarding />} />
           <Route path="/hr/staff" element={<StaffList />} />
           <Route path="/hr/staff/:id" element={<StaffProfile />} />
           <Route path="/hr/payroll" element={<PayrollDashboard />} />

@@ -1226,19 +1226,29 @@ const StaffProfile = ({ isSelf }) => {
 
   useEffect(() => {
     if (activeTab === "leaves" && id) {
+      const endpoint = isSelf
+        ? "/hr/leave/my-requests"
+        : `/hr/leave/requests/${id}`;
+
       api
-        .get("/hr/leave/my-requests")
+        .get(endpoint)
         .then((res) => setMyLeaves(res.data.data))
         .catch(console.error);
     }
     if (activeTab === "attendance" && id) {
       // Fetch full year for calendar
+      const params = isSelf
+        ? `start_date=2026-01-01&end_date=2026-12-31`
+        : `user_id=${id}&start_date=2026-01-01&end_date=2026-12-31`;
+
+      const endpoint = isSelf ? "/hr/my-attendance" : "/hr/attendance";
+
       api
-        .get(`/hr/my-attendance?start_date=2026-01-01&end_date=2026-12-31`)
+        .get(`${endpoint}?${params}`)
         .then((res) => setMyAttendance(res.data.data))
         .catch(console.error);
     }
-  }, [activeTab, id]);
+  }, [activeTab, id, isSelf]);
 
   const handleDownload = async (slipId) => {
     try {

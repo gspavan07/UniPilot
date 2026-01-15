@@ -288,6 +288,31 @@ exports.getMyLeaveRequests = async (req, res) => {
   }
 };
 
+// @desc    Get Specific User's Leave Requests (Admin/HR)
+// @route   GET /api/hr/leave/requests/:user_id
+// @access  Private/Admin/HR
+exports.getUserLeaveRequests = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    const requests = await LeaveRequest.findAll({
+      where: { student_id: user_id },
+      order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: User,
+          as: "approver",
+          attributes: ["first_name", "last_name", "role"],
+        },
+      ],
+    });
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    logger.error("Error fetching user leaves:", error);
+    res.status(500).json({ error: "Fetch failed" });
+  }
+};
+
 // @desc    Apply for Leave (Staff)
 // @route   POST /api/hr/leave/apply
 // @access  Private/Staff

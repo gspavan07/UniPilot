@@ -23,6 +23,7 @@ import {
   CalendarIcon,
   LifeBuoy,
   RefreshCcw,
+  UserPlus,
   ClipboardCheck,
   PlaneTakeoff,
   Award,
@@ -42,6 +43,13 @@ const MainLayout = () => {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+
+    {
+      name: "Onboard Employee",
+      href: "/hr/onboard",
+      icon: UserPlus,
+      roles: ["hr", "hr_admin", "admin", "super_admin"],
+    },
     {
       name: "Admissions",
       href: "/admission/dashboard",

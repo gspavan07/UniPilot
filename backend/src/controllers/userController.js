@@ -1,4 +1,11 @@
-const { User, Department, Program, Role } = require("../models");
+const {
+  User,
+  Department,
+  Program,
+  Role,
+  SalaryStructure,
+  SalaryGrade,
+} = require("../models");
 const { Op } = require("sequelize");
 const logger = require("../utils/logger");
 const { hashPassword } = require("../utils/bcrypt");
@@ -482,6 +489,29 @@ exports.createUser = async (req, res) => {
           })
         )
       );
+    }
+
+    // 4. Create Salary Structure if grade provided (Onboarding)
+    if (req.body.salary_grade_id) {
+      try {
+        const grade = await SalaryGrade.findByPk(req.body.salary_grade_id);
+        if (grade) {
+          await SalaryStructure.create({
+            user_id: user.id,
+            grade_id: grade.id,
+            basic_salary: grade.basic_salary,
+            allowances: grade.allowances || {},
+            deductions: grade.deductions || {},
+            effective_from: new Date(),
+          });
+          logger.info(
+            `Created default Salary Structure for user ${user.id} using grade ${grade.name}`
+          );
+        }
+      } catch (err) {
+        logger.error("Failed to create initial Salary Structure:", err);
+        // Non-blocking error, user is created, payroll can be fixed later
+      }
     }
 
     // Remove password from response
