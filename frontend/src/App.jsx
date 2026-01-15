@@ -35,6 +35,7 @@ import PayrollDashboard from "./pages/hr/PayrollDashboard";
 import GradeManagement from "./pages/hr/GradeManagement";
 import LeaveDashboard from "./pages/hr/LeaveDashboard";
 import StaffAttendance from "./pages/hr/StaffAttendance";
+import AcademicCalendar from "./pages/hr/AcademicCalendar";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
@@ -96,6 +97,14 @@ function App() {
           <Route path="/hr/payroll/grades" element={<GradeManagement />} />
           <Route path="/hr/leaves" element={<LeaveDashboard />} />
           <Route path="/hr/attendance" element={<StaffAttendance />} />
+          <Route
+            path="/hr/calendar"
+            element={<AcademicCalendar target="staff" />}
+          />
+          <Route
+            path="/academic/calendar"
+            element={<AcademicCalendar target="student" />}
+          />
           <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route

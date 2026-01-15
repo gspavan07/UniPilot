@@ -20,6 +20,7 @@ import {
   ChevronRight,
   User as UserIcon,
   Shield,
+  CalendarIcon,
   LifeBuoy,
   RefreshCcw,
   ClipboardCheck,
@@ -111,6 +112,12 @@ const MainLayout = () => {
       permission: "academics:timetable:manage",
     },
     {
+      name: "Student Calendar",
+      href: "/academic/calendar",
+      icon: CalendarIcon,
+      permission: "academics:timetable:manage",
+    },
+    {
       name: "My Schedule",
       href: "/timetable/my",
       icon: Clock,
@@ -151,6 +158,12 @@ const MainLayout = () => {
       name: "Staff Attendance",
       href: "/hr/attendance",
       icon: Users,
+      roles: ["hr", "hr_admin", "admin", "super_admin"],
+    },
+    {
+      name: "Staff Calendar",
+      href: "/hr/calendar",
+      icon: CalendarIcon,
       roles: ["hr", "hr_admin", "admin", "super_admin"],
     },
     {

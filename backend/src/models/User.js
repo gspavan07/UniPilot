@@ -65,6 +65,12 @@ const User = sequelize.define(
       type: DataTypes.STRING(50),
       comment: "For students",
     },
+    biometric_device_id: {
+      type: DataTypes.STRING(50),
+      unique: true,
+      allowNull: true,
+      comment: "ID used in the physical biometrics device",
+    },
 
     // Department Relation
     department_id: {

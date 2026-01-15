@@ -4,6 +4,7 @@ const {
   LeaveRequest,
   User,
   Holiday,
+  InstitutionSetting,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
@@ -97,6 +98,7 @@ exports.getDailyAttendanceView = async (req, res) => {
         "employee_id",
         "role",
         "department_id",
+        "biometric_device_id",
       ],
       include: ["department"],
       order: [["first_name", "ASC"]],
@@ -116,19 +118,53 @@ exports.getDailyAttendanceView = async (req, res) => {
       },
     });
 
-    // 4. Merge Data
+    // 4. Fetch Holiday for this date (Staff targeted)
+    const holiday = await Holiday.findOne({
+      where: {
+        date,
+        target: { [Op.in]: ["staff", "both"] },
+      },
+    });
+
+    // 4.5 Check if Saturday is a working day for staff
+    let isSatWorking = false;
+    const dayOfWeek = new Date(date).getDay(); // 0 is Sunday, 6 is Saturday
+    if (dayOfWeek === 6) {
+      const satSetting = await InstitutionSetting.findOne({
+        where: { setting_key: "staff_saturday_working" },
+      });
+      isSatWorking = satSetting?.setting_value === "true";
+    }
+    const isSunday = dayOfWeek === 0;
+
+    // 5. Merge Data
     const mergedData = users.map((user) => {
       // Check existing attendance
       const attCallback = attendance.find((a) => a.user_id === user.id);
 
       // Check leave
-      const leaveCallback = leaves.find((l) => l.student_id === user.id); // Note: LeaveRequest uses student_id as user_id
+      const leaveCallback = leaves.find((l) => l.student_id === user.id);
 
-      let status = "not_marked";
-      let remarks = "";
+      let status = holiday ? "holiday" : "not_marked";
+      let remarks = holiday ? `Holiday: ${holiday.name}` : "";
+
+      // If it's Sunday or a non-working Saturday, and not a holiday
+      if (!holiday) {
+        if (isSunday) {
+          status = "holiday";
+          remarks = "Weekly Off (Sunday)";
+        } else if (dayOfWeek === 6 && !isSatWorking) {
+          status = "holiday";
+          remarks = "Weekly Off (Saturday)";
+        }
+      }
+
       let check_in = "";
       let check_out = "";
-      let is_locked = false; // specific logic if we want to lock leaves
+      let is_locked =
+        !!holiday ||
+        (isSunday && !holiday) ||
+        (dayOfWeek === 6 && !isSatWorking && !holiday);
 
       if (attCallback) {
         status = attCallback.status;
@@ -138,7 +174,7 @@ exports.getDailyAttendanceView = async (req, res) => {
       } else if (leaveCallback) {
         status = leaveCallback.is_half_day ? "half-day" : "leave";
         remarks = `On Leave: ${leaveCallback.leave_type}`;
-        is_locked = true; // Suggest locking UI
+        is_locked = true;
       }
 
       return {
@@ -147,6 +183,7 @@ exports.getDailyAttendanceView = async (req, res) => {
         employee_id: user.employee_id,
         role: user.role,
         department: user.department?.name || "-",
+        biometric_device_id: user.biometric_device_id,
         status,
         check_in_time: check_in,
         check_out_time: check_out,

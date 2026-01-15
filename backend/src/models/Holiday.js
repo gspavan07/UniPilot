@@ -23,6 +23,14 @@ const Holiday = sequelize.define(
     description: {
       type: DataTypes.TEXT,
     },
+    target: {
+      type: DataTypes.STRING(50),
+      defaultValue: "staff",
+      allowNull: false,
+      validate: {
+        isIn: [["staff", "student", "both"]],
+      },
+    },
   },
   {
     tableName: "holidays",

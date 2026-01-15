@@ -1,12 +1,42 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import api from "../../utils/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const AttendanceCalendar = ({
   attendance = [],
   leaves = [],
-  holidays = [],
+  target = "staff",
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [holidays, setHolidays] = useState([]);
+  const [isSatWorking, setIsSatWorking] = useState(false);
+
+  useEffect(() => {
+    fetchHolidays();
+    fetchSettings();
+  }, [currentDate, target]);
+
+  const fetchHolidays = async () => {
+    try {
+      const res = await api.get(`/holidays?target=${target}`);
+      setHolidays(res.data.data);
+    } catch (error) {
+      console.error("Failed to fetch holidays:", error);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const settingKey =
+        target === "student"
+          ? "student_saturday_working"
+          : "staff_saturday_working";
+      const res = await api.get(`/settings?keys=${settingKey}`);
+      setIsSatWorking(res.data.data[settingKey] === "true");
+    } catch (error) {
+      console.error("Failed to fetch settings:", error);
+    }
+  };
 
   const daysInMonth = (date) =>
     new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -45,13 +75,19 @@ const AttendanceCalendar = ({
     // 2. Plot Attendance (Overrides Leave if present manually marked, though rare)
     attendance.forEach((record) => {
       const dateStr = record.date; // YYYY-MM-DD
-      map[dateStr] = { status: record.status.toLowerCase(), ...map[dateStr] }; // Keep leave type if needed
-      // If status is 'present', it overrides 'leave' visual? Usually 'present' is good.
-      // If status is 'leave' in attendance record, it confirms the leave.
+      map[dateStr] = {
+        ...map[dateStr],
+        status: record.status.toLowerCase(),
+      };
+    });
+
+    // 3. Plot Holidays
+    holidays.forEach((h) => {
+      map[h.date] = { status: "holiday", name: h.name };
     });
 
     return map;
-  }, [attendance, leaves]);
+  }, [attendance, leaves, holidays]);
 
   const renderDays = () => {
     const days = [];
@@ -72,7 +108,7 @@ const AttendanceCalendar = ({
     for (let d = 1; d <= totalDays; d++) {
       const dateStr = `${year}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const dayOfWeek = new Date(dateStr).getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sun, Sat
+      const isWeekend = dayOfWeek === 0 || (dayOfWeek === 6 && !isSatWorking); // Sun, or Non-working Sat
 
       const data = statusMap[dateStr];
       let status = data?.status || (isWeekend ? "weekend" : "unknown");
@@ -125,6 +161,14 @@ const AttendanceCalendar = ({
                   </span>
                   <span className="text-[10px] truncate text-yellow-600 dark:text-yellow-300">
                     {data.type}
+                  </span>
+                </div>
+              )}
+              {status === "holiday" && (
+                <div className="flex flex-col gap-1">
+                  <span className="badge badge-xs badge-info">Holiday</span>
+                  <span className="text-[10px] truncate text-blue-600 dark:text-blue-300">
+                    {data.name}
                   </span>
                 </div>
               )}
@@ -187,6 +231,9 @@ const AttendanceCalendar = ({
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 bg-gray-100 rounded-sm"></div> Weekend
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-blue-100 rounded-sm"></div> Holiday
         </div>
       </div>
     </div>

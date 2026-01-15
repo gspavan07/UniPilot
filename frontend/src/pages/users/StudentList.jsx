@@ -186,7 +186,7 @@ const StudentList = () => {
       a.setAttribute("href", url);
       a.setAttribute(
         "download",
-        `admissions_export_${new Date().toISOString().split("T")[0]}.csv`
+        `admissions_export_${new Date().toLocaleDateString("en-CA")}.csv`
       );
       document.body.appendChild(a);
       a.click();

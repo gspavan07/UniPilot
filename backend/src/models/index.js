@@ -38,6 +38,7 @@ const LeaveBalance = require("./LeaveBalance");
 const SalaryStructure = require("./SalaryStructure");
 const Payslip = require("./Payslip");
 const SalaryGrade = require("./SalaryGrade");
+const InstitutionSetting = require("./InstitutionSetting");
 
 const models = {
   User,
@@ -77,6 +78,7 @@ const models = {
   SalaryStructure,
   Payslip,
   SalaryGrade,
+  InstitutionSetting,
 };
 
 // Define associations

@@ -14,6 +14,9 @@ const feeRoutes = require("./fee");
 const libraryRoutes = require("./library");
 const timetableRoutes = require("./timetable");
 const admissionRoutes = require("./admission");
+const biometricRoutes = require("./biometricRoutes");
+const holidayRoutes = require("./holidayRoutes");
+const settingRoutes = require("./settingRoutes");
 
 const router = express.Router();
 
@@ -29,10 +32,7 @@ router.get("/", (req, res) => {
 // Auth routes (login, register, refresh token)
 router.use("/auth", authRoutes);
 
-// Super admin routes (will be added)
-// router.use('/super-admin', superAdminRoutes);
-
-// Tenant-specific routes (will be added)
+// Tenant-specific routes
 router.use("/users", userRoutes);
 router.use("/departments", departmentRoutes);
 router.use("/programs", programRoutes);
@@ -47,12 +47,8 @@ router.use("/fees", feeRoutes);
 router.use("/library", libraryRoutes);
 router.use("/timetable", timetableRoutes);
 router.use("/admission", admissionRoutes);
-// router.use('/attendance', attendanceRoutes);
-// router.use('/exams', examRoutes);
-// router.use('/fees', feeRoutes);
-// router.use('/proctor', proctorRoutes);
-// router.use('/promotion', promotionRoutes);
-// router.use('/graduation', graduationRoutes);
-// router.use('/alumni', alumniRoutes);
+router.use("/biometric", biometricRoutes);
+router.use("/holidays", holidayRoutes);
+router.use("/settings", settingRoutes);
 
 module.exports = router;

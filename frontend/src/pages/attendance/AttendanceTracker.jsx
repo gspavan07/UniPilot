@@ -33,7 +33,7 @@ const AttendanceTracker = () => {
   const { courses } = useSelector((state) => state.courses);
 
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toLocaleDateString("en-CA") // Returns YYYY-MM-DD in local time
   );
   const [selectedCourse, setSelectedCourse] = useState("");
   const [viewMode, setViewMode] = useState(

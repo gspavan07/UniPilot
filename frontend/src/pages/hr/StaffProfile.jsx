@@ -1445,7 +1445,11 @@ const StaffProfile = ({ isSelf }) => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold">Attendance Calendar</h3>
             </div>
-            <AttendanceCalendar attendance={myAttendance} leaves={myLeaves} />
+            <AttendanceCalendar
+              attendance={myAttendance}
+              leaves={myLeaves}
+              target={localUser?.role === "student" ? "student" : "staff"}
+            />
           </div>
         )}
       </div>
