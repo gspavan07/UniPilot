@@ -77,38 +77,6 @@ const AdmissionDashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      {/* Admission Operational Header */}
-      <div className="card p-8 bg-gradient-to-br from-primary-600 to-primary-700 text-white border-none shadow-xl shadow-primary-500/20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-black font-display tracking-tight">
-              Admission Operations
-            </h2>
-            <p className="text-primary-100 text-sm max-w-lg leading-relaxed font-medium">
-              Manage student verifications and core operational tasks from this
-              hub.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => setIsBulkNotifOpen(true)}
-              className="px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-2xl font-bold text-sm flex items-center justify-center hover:bg-white/20 transition-all active:scale-95 group"
-            >
-              <Send className="w-4 h-4 mr-3" />
-              Broadcast Updates
-            </button>
-            <Link
-              to="/students"
-              className="px-6 py-3 bg-white text-primary-600 rounded-2xl font-black text-sm flex items-center justify-center shadow-lg hover:bg-primary-50 transition-all active:scale-95"
-            >
-              <UserPlus className="w-4 h-4 mr-3" />
-              Register Student
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Student Verification Queue & Operations */}
       <div className="card overflow-hidden border-none shadow-xl">
         <div className="p-6 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <div>
@@ -120,9 +88,18 @@ const AdmissionDashboard = () => {
               letters
             </p>
           </div>
-          <Link to="/students" className="btn btn-secondary text-xs px-4">
-            Manage All Students
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link
+              to="/student/register"
+              className="px-6 py-3 bg-white text-primary-600 rounded-2xl font-black text-sm flex items-center justify-center shadow-lg hover:bg-primary-50 transition-all active:scale-95"
+            >
+              <UserPlus className="w-4 h-4 mr-3" />
+              Register Student
+            </Link>
+            <Link to="/students" className="btn btn-secondary text-xs px-4">
+              Manage All Students
+            </Link>
+          </div>
         </div>
         <div className="p-0 overflow-x-auto">
           <table className="w-full text-left border-collapse">

@@ -9,9 +9,9 @@ const LeaveDashboard = () => {
   const [approvals, setApprovals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isManager = ["admin", "hr", "hr_admin", "hod", "super_admin"].includes(
-    user?.role_data?.slug || user?.role
-  );
+  const hasPermission =
+    user?.role === "super_admin" ||
+    user?.permissions?.includes("hr:leaves:manage");
 
   useEffect(() => {
     fetchData();
@@ -111,18 +111,22 @@ const LeaveDashboard = () => {
                     </div>
                   </div>
                   <div className="flex flex-row md:flex-col gap-2 justify-center">
-                    <button
-                      onClick={() => handleDecision(req.id, "approved")}
-                      className="btn btn-sm btn-success text-white w-full md:w-32"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleDecision(req.id, "rejected")}
-                      className="btn btn-sm btn-error text-white w-full md:w-32"
-                    >
-                      Reject
-                    </button>
+                    {hasPermission && (
+                      <>
+                        <button
+                          onClick={() => handleDecision(req.id, "approved")}
+                          className="btn btn-sm btn-success text-white w-full md:w-32"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleDecision(req.id, "rejected")}
+                          className="btn btn-sm btn-error text-white w-full md:w-32"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

@@ -190,6 +190,21 @@ export const fetchActionPayslips = createAsyncThunk(
   }
 );
 
+// Add fetchPublishStats thunk
+export const fetchPublishStats = createAsyncThunk(
+  "hr/fetchPublishStats",
+  async ({ month, year, department_id }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/hr/payroll/publish/stats", {
+        params: { month, year, department_id },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || error.message);
+    }
+  }
+);
+
 export const publishPayroll = createAsyncThunk(
   "hr/publishPayroll",
   async (data, { rejectWithValue }) => {
@@ -423,9 +438,23 @@ const hrSlice = createSlice({
       .addCase(publishPayroll.rejected, (state, action) => {
         state.operationStatus = "failed";
         state.operationError = action.payload;
-      });
-
-    builder
+      })
+      // Publish Stats
+      .addCase(fetchPublishStats.pending, (state) => {
+        state.status = "loading";
+        state.publishStats = null;
+        state.error = null;
+      })
+      .addCase(fetchPublishStats.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.publishStats = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchPublishStats.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload;
+      })
+      // Confirm Payout
       .addCase(confirmPayout.pending, (state) => {
         state.operationStatus = "loading";
       })

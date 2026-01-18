@@ -21,6 +21,16 @@ const InstitutionSetting = sequelize.define(
     description: {
       type: DataTypes.TEXT,
     },
+    current_admission_sequence: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      allowNull: false,
+    },
+    admission_number_prefix: {
+      type: DataTypes.STRING,
+      defaultValue: "ADM",
+      allowNull: false,
+    },
   },
   {
     tableName: "institution_settings",

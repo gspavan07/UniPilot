@@ -41,7 +41,7 @@ const FeeWaiver = sequelize.define(
     tableName: "fee_waivers",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = FeeWaiver;

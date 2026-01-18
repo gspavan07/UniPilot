@@ -435,7 +435,10 @@ exports.createUser = async (req, res) => {
 
     // Auto-generate Student ID/Admission Number if not provided for students
     if (role === "student" && (!student_id || !admission_number)) {
-      const { generateStudentId } = require("../services/admissionService");
+      const {
+        generateStudentId,
+        generateGlobalAdmissionNumber,
+      } = require("../services/admissionService");
       try {
         const batchYear = userData.batch_year || new Date().getFullYear();
         if (!userData.admission_date) {
@@ -451,11 +454,7 @@ exports.createUser = async (req, res) => {
           });
         }
         if (!admission_number) {
-          // Typically Admission Number can follow the same or different sequence
-          // Use temporary ID format for admission number if not provided?
-          // Or just use the same student_id for simplicity as common in some colleges
-          userData.admission_number =
-            userData.student_id || `ADM-${Date.now()}`;
+          userData.admission_number = await generateGlobalAdmissionNumber();
         }
       } catch (err) {
         logger.error("Failed to auto-generate student ID:", err);

@@ -21,7 +21,7 @@ router.get(
 router.get(
   "/attendance",
   authenticate,
-  checkPermission("hr:attendance:manage"),
+  checkPermission("hr:attendance:view"),
   staffAttendanceController.getStats
 );
 router.get(
@@ -33,7 +33,7 @@ router.get(
 router.get(
   "/dashboard/stats",
   authenticate,
-  checkPermission("hr:staff:manage"),
+  checkPermission("hr:staff:view"),
   hrDashboardController.getDashboardStats
 );
 
@@ -41,6 +41,7 @@ router.get(
 router.get(
   "/leave/approvals",
   authenticate,
+  checkPermission("hr:leaves:manage"),
   staffAttendanceController.getPendingApprovals
 );
 router.get(
@@ -107,7 +108,7 @@ router.get("/payroll/payslips", authenticate, payrollController.getPayslips); //
 router.get(
   "/payroll/stats",
   authenticate,
-  checkPermission("hr:payroll:manage"),
+  checkPermission("hr:payroll:view"),
   payrollController.getPayrollStats
 );
 router.get(
@@ -116,16 +117,22 @@ router.get(
   checkPermission("hr:payroll:manage"),
   payrollController.exportBankTransferFile
 );
+router.get(
+  "/payroll/publish/stats",
+  authenticate,
+  checkPermission("hr:payroll:publish"),
+  payrollController.getPublishStats
+);
 router.post(
   "/payroll/publish-payout",
   authenticate,
-  checkPermission("hr:payroll:manage"),
+  checkPermission("hr:payroll:publish"),
   payrollController.publishPayslips
 );
 router.post(
   "/payroll/confirm-payout",
   authenticate,
-  checkPermission("hr:payroll:manage"),
+  checkPermission("hr:payroll:publish"),
   payrollController.confirmPayment
 );
 

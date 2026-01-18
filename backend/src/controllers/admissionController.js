@@ -597,3 +597,107 @@ exports.getGenderStats = async (req, res) => {
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };
+// @desc    Get preview of next Student ID and Admission Number
+// @route   GET /api/admission/id-previews
+// @access  Private (Admission Admin/Staff)
+exports.getIdPreviews = async (req, res) => {
+  try {
+    const { batch_year, program_id, is_temporary } = req.query;
+
+    if (!batch_year || !program_id) {
+      return res.status(400).json({
+        success: false,
+        error: "Batch Year and Program ID are required",
+      });
+    }
+
+    const {
+      AdmissionConfig,
+      Program,
+      InstitutionSetting,
+    } = require("../models");
+
+    // 1. Preview Student ID (Temp)
+    let tempIdPreview = "N/A";
+    const config = await AdmissionConfig.findOne({
+      where: { batch_year: batch_year, is_active: true },
+    });
+
+    const program = await Program.findByPk(program_id);
+
+    if (config && program) {
+      const isTemp = is_temporary === "true" || is_temporary === true;
+      const format = isTemp ? config.temp_id_format : config.id_format; // Default to ID format if not temp ?? logic check
+      // Actually user asked for Temp ID preview specifically for registration form
+      // But let's support both based on flag, defaulting to Temp for registration usage
+      const targetFormat =
+        is_temporary !== "false" ? config.temp_id_format : config.id_format;
+
+      const yearShort = batch_year.toString().slice(-2);
+      const sequence = config.current_sequence.toString().padStart(3, "0");
+      const univCode = config.university_code;
+      const branchCode = program.code?.split("-")[1] || program.code || "XX";
+
+      tempIdPreview = targetFormat
+        .replace("{YY}", yearShort)
+        .replace("{UNIV}", univCode)
+        .replace("{BRANCH}", branchCode)
+        .replace("{SEQ}", sequence);
+    }
+
+    // 2. Preview Admission Number (Global)
+    let admissionNumberPreview = "N/A";
+    const setting = await InstitutionSetting.findOne({
+      where: { setting_key: "global_config" }, // Or just grab the first one if key unknown/migrated differently
+    });
+    // Wait, my service used create if not exists.
+    // Ideally userController/service should have created it by now if used.
+    // If not, we fall back to defaults: ADM-0001
+
+    // Actually, let's look at how I implemented the service again.
+    // I relied on `findOne` first.
+    // Here we can do the same but readonly.
+
+    // Better: let's re-use the InstitutionSetting logic cleanly.
+    // If row doesn't exist, we assume 1.
+
+    // If setting found:
+    let nextSeq = 1;
+    let prefix = "ADM";
+
+    // Since I added columns to the TABLE, I don't necessarily need 'setting_key'="global_config".
+    // I might have just added columns to the schema.
+    // But rows need to exist.
+    // My service code: `setting = await InstitutionSetting.create({ setting_key: "global_config", ... })`
+    // So yes, I expect a row with `setting_key: "global_config"`.
+
+    let globalSetting = null;
+    if (setting) globalSetting = setting;
+    else {
+      // Find ANY row? Or specifically global_config
+      globalSetting = await InstitutionSetting.findOne();
+    }
+
+    if (globalSetting) {
+      nextSeq = globalSetting.current_admission_sequence || 1;
+      prefix = globalSetting.admission_number_prefix || "ADM";
+    }
+
+    const paddedSeq = nextSeq.toString().padStart(4, "0");
+    admissionNumberPreview = `${prefix}-${paddedSeq}`;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        temp_id: tempIdPreview,
+        admission_number: admissionNumberPreview,
+      },
+    });
+  } catch (error) {
+    logger.error("Error in getIdPreviews:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};

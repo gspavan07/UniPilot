@@ -134,7 +134,7 @@ const User = sequelize.define(
         "detained",
         "semester_back",
         "graduated",
-        "dropout"
+        "dropout",
       ),
       defaultValue: "active",
     },
@@ -302,7 +302,7 @@ const User = sequelize.define(
           user.academic_status = user.academic_status.toLowerCase();
       },
     },
-  }
+  },
 );
 
 // Instance methods

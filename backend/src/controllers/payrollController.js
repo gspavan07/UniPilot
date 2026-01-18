@@ -516,7 +516,7 @@ exports.bulkGeneratePayslips = async (req, res) => {
 // @access  Private
 exports.getPayslips = async (req, res) => {
   try {
-    const { user_id, year, month, department_id } = req.query;
+    const { user_id, year, month, department_id, status } = req.query;
     const requesterRole = req.user.role;
     const privilegedRoles = ["admin", "super_admin", "hr", "hr_admin"];
     const isPrivileged = privilegedRoles.includes(requesterRole);
@@ -540,6 +540,7 @@ exports.getPayslips = async (req, res) => {
     // 2. Apply Filters
     if (year) where.year = year;
     if (month) where.month = month;
+    if (status) where.status = status;
 
     if (department_id && department_id !== "all") {
       userWhere.department_id = department_id;
@@ -842,6 +843,93 @@ exports.confirmPayment = async (req, res) => {
     if (t) await t.rollback();
     logger.error("Error confirming payment:", error);
     res.status(500).json({ error: "Payment confirmation failed" });
+  }
+};
+
+// @desc    Get Publish Stats (Preview)
+// @route   GET /api/hr/payroll/publish/stats
+// @access  Private/Admin
+exports.getPublishStats = async (req, res) => {
+  try {
+    const { month, year, department_id } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({ error: "Month and Year are required" });
+    }
+
+    const whereUser = {};
+    if (department_id && department_id !== "all") {
+      whereUser.department_id = department_id;
+    }
+
+    // 1. Fetch eligible drafts
+    const drafts = await Payslip.findAll({
+      where: {
+        month: parseInt(month),
+        year: parseInt(year),
+        status: "draft",
+      },
+      include: [
+        {
+          model: User,
+          as: "staff",
+          where: whereUser,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "bank_details",
+            "employee_id",
+          ],
+          include: [
+            { model: Department, as: "department", attributes: ["name"] },
+          ],
+        },
+      ],
+    });
+
+    const total = drafts.length;
+    let readyCount = 0;
+    const notReadyList = [];
+
+    // 2. Validate
+    for (const slip of drafts) {
+      const bank = slip.staff?.bank_details || {};
+      const missing = [];
+
+      const accNum = String(bank.account_number || "").trim();
+
+      if (!bank.account_number || accNum.length < 5)
+        missing.push("Account Number");
+      if (!bank.ifsc_code) missing.push("IFSC Code");
+      if (!bank.bank_name) missing.push("Bank Name");
+      if (!bank.holder_name) missing.push("Account Holder Name");
+
+      if (missing.length === 0) {
+        readyCount++;
+      } else {
+        notReadyList.push({
+          id: slip.staff.id,
+          employee_id: slip.staff.employee_id,
+          name: `${slip.staff.first_name} ${slip.staff.last_name}`,
+          department: slip.staff.department?.name || "N/A",
+          missing_fields: missing,
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        total_drafts: total,
+        ready_count: readyCount, // Valid
+        not_ready_count: notReadyList.length, // Invalid
+      },
+      details: notReadyList,
+    });
+  } catch (error) {
+    logger.error("Error fetching publish stats:", error);
+    res.status(500).json({ error: "Failed to fetch stats" });
   }
 };
 

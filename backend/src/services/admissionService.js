@@ -59,6 +59,57 @@ const generateStudentId = async ({
   }
 };
 
+/**
+ * Generates a global sequential admission number
+ * Format: {PREFIX}-{SEQUENCE_PADDED} (e.g., ADM-0001)
+ * Independent of batch or program.
+ * @returns {Promise<string>}
+ */
+const generateGlobalAdmissionNumber = async () => {
+  const { InstitutionSetting } = require("../models");
+  const transaction = await sequelize.transaction();
+  try {
+    // 1. Get Settings (Lock Row if possible, but for singleton row it's tricky without ID)
+    // We assume there's only one relevant row or we pick the first one.
+    // Ideally we should have a singleton config.
+    // For now we will findOne. If not exists, create default.
+    let setting = await InstitutionSetting.findOne({
+      transaction,
+      lock: true,
+    });
+
+    if (!setting) {
+      setting = await InstitutionSetting.create(
+        {
+          setting_key: "global_config",
+          setting_value: "{}",
+          current_admission_sequence: 1,
+          admission_number_prefix: "ADM",
+        },
+        { transaction }
+      );
+    }
+
+    // 2. Generate Number
+    const prefix = setting.admission_number_prefix || "ADM";
+    const sequence = setting.current_admission_sequence || 1;
+    const paddedSeq = sequence.toString().padStart(4, "0"); // ADM-0001
+    const admissionNumber = `${prefix}-${paddedSeq}`;
+
+    // 3. Increment
+    setting.current_admission_sequence = sequence + 1;
+    await setting.save({ transaction });
+
+    await transaction.commit();
+    return admissionNumber;
+  } catch (error) {
+    await transaction.rollback();
+    logger.error("Error in generateGlobalAdmissionNumber:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateStudentId,
+  generateGlobalAdmissionNumber,
 };

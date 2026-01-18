@@ -1019,7 +1019,7 @@ const PayrollTab = ({
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
             <h3 className="text-lg font-bold whitespace-nowrap">
-              Payroll History
+              My Payslips & Receipts
             </h3>
 
             {/* Search Filters - Available to everyone */}
@@ -1160,12 +1160,13 @@ const PayrollTab = ({
                   </div>
 
                   <div className="flex items-center gap-3">
+                    {/* Download Button - Enhanced Visibility */}
                     <button
                       onClick={() => handleDownload(slip.id)}
-                      className="btn btn-circle btn-ghost text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 tooltip tooltip-bottom transition-colors"
-                      data-tip="Download Slip"
+                      className="btn btn-sm btn-outline btn-primary rounded-lg flex items-center gap-2 transition-transform active:scale-95"
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download PDF</span>
                     </button>
                     <button
                       onClick={() => {

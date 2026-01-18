@@ -10,7 +10,8 @@ const {
   getGeoStats,
   reuploadDocument,
   verifyStudent,
-  getGenderStats, // Added
+  getGenderStats,
+  getIdPreviews,
 } = require("../controllers/admissionController");
 const {
   getAdmissionConfigs,
@@ -21,6 +22,12 @@ const {
   previewBulkIds,
   commitBulkIds,
 } = require("../controllers/admissionIdController");
+
+// Correction: I added the function to admissionController.js (file viewed above).
+// But 'previewBulkIds' is in 'admissionIdController'.
+// I need to import getIdPreviews from 'admissionController'
+// Let me verify where I added it. I added it to 'admissionController.js' in the previous step.
+// So I should import it from there.
 const bulkUploadController = require("../controllers/bulkUploadController");
 const profileUpload = require("../middleware/profileUpload");
 const studentUpload = require("../middleware/studentUpload");
@@ -59,6 +66,8 @@ router.post(
   verifyStudent
 );
 
+router.get("/id-previews", checkPermission("admissions:manage"), getIdPreviews);
+
 // Batch Configurations
 router.get("/configs", checkPermission("admissions:view"), getAdmissionConfigs);
 router.post(
@@ -83,7 +92,7 @@ router.post("/ids/commit", checkPermission("admissions:manage"), commitBulkIds);
 // Document Re-upload
 router.post(
   "/documents/:documentId/reupload",
-  checkPermission("students:edit"), // Admission can also verify this
+  checkPermission("users:manage"), // Admission can also verify this
   studentUpload.single("document"),
   reuploadDocument
 );

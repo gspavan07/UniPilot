@@ -23,11 +23,7 @@ router.use(authenticate);
 router.get("/my-results", getMyResults);
 
 // Admin/Faculty routes
-router.get(
-  "/cycles",
-  checkPermission("academics:exams:results:view"),
-  getExamCycles
-);
+router.get("/cycles", checkPermission("exams:results:view"), getExamCycles);
 router.post(
   "/cycles",
   checkPermission("academics:exams:manage"),
@@ -68,14 +64,10 @@ router.post(
   checkPermission("academics:exams:manage"),
   autoGenerateTimetable
 );
-router.post(
-  "/marks/bulk",
-  checkPermission("academics:exams:manage"),
-  enterMarks
-);
+router.post("/marks/bulk", checkPermission("exams:manage"), enterMarks);
 router.post(
   "/hall-ticket/generate",
-  checkPermission("academics:exams:manage"),
+  checkPermission("exams:manage"),
   generateHallTickets
 );
 

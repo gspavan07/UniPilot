@@ -14,6 +14,7 @@ import { fetchPrograms } from "../../store/slices/programSlice";
 import api from "../../utils/api";
 import UserForm from "./UserForm";
 import StudentDetailModal from "./StudentDetailModal";
+import EditStudentDrawer from "./EditStudentDrawer";
 import BulkImportModal from "./BulkImportModal";
 import DocumentVerificationModal from "../../components/admission/DocumentVerificationModal";
 import BulkCommunicationModal from "../../components/admission/BulkCommunicationModal";
@@ -34,6 +35,8 @@ import {
   FileDown,
   Mail,
   Eye,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 
 const StudentList = () => {
@@ -55,6 +58,7 @@ const StudentList = () => {
   const [batchFilter, setBatchFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isBulkNotifOpen, setIsBulkNotifOpen] = useState(false);
@@ -103,7 +107,7 @@ const StudentList = () => {
       fetchStudentSections({
         department_id: deptFilter,
         batch_year: batchFilter,
-      })
+      }),
     );
   }, [dispatch, deptFilter, batchFilter]);
 
@@ -116,7 +120,7 @@ const StudentList = () => {
           department_id: deptFilter,
           batch_year: batchFilter,
           section: sectionFilter,
-        })
+        }),
       );
     }, 500);
 
@@ -126,7 +130,7 @@ const StudentList = () => {
   const handleDeleteUser = async (id) => {
     if (
       window.confirm(
-        "Are you sure you want to remove this student? This action cannot be undone."
+        "Are you sure you want to remove this student? This action cannot be undone.",
       )
     ) {
       await dispatch(deleteUser(id));
@@ -136,7 +140,7 @@ const StudentList = () => {
   const handleSave = async (formData) => {
     if (selectedUser) {
       await dispatch(
-        updateUser({ id: selectedUser.id, data: formData })
+        updateUser({ id: selectedUser.id, data: formData }),
       ).unwrap();
     } else {
       await dispatch(createUser(formData)).unwrap();
@@ -150,7 +154,7 @@ const StudentList = () => {
 
   const openEditForm = (user) => {
     setSelectedUser(user);
-    setIsFormOpen(true);
+    setIsEditDrawerOpen(true);
   };
 
   // Handle Data Export for Admissions
@@ -175,7 +179,7 @@ const StudentList = () => {
         ...data.map((row) =>
           Object.values(row)
             .map((v) => `"${v}"`)
-            .join(",")
+            .join(","),
         ),
       ].join("\n");
 
@@ -186,7 +190,7 @@ const StudentList = () => {
       a.setAttribute("href", url);
       a.setAttribute(
         "download",
-        `admissions_export_${new Date().toLocaleDateString("en-CA")}.csv`
+        `admissions_export_${new Date().toLocaleDateString("en-CA")}.csv`,
       );
       document.body.appendChild(a);
       a.click();
@@ -224,7 +228,18 @@ const StudentList = () => {
     if (roleSlug === "admission_admin" || roleSlug === "admission_staff") {
       return true;
     }
-    // HOD/Faculty/Staff usually cannot create students directly in this context unless specified
+    // Check specific permission
+    if (currentUser?.permissions?.includes("students:manage")) {
+      return true;
+    }
+    if (
+      currentUser?.role_data?.permissions?.some(
+        (p) => p.slug === "students:manage",
+      )
+    ) {
+      return true;
+    }
+
     return false;
   })();
 
@@ -251,6 +266,19 @@ const StudentList = () => {
 
     if (myRoleSlug.includes("_staff") || myRoleSlug.includes("_admin")) {
       return currentUser.department_id === targetUser.department_id;
+    }
+
+    // Check specific permission
+    if (currentUser?.permissions?.includes("students:manage")) {
+      return true;
+    }
+    // Also check nested permissions if structure is different (safe fallback)
+    if (
+      currentUser?.role_data?.permissions?.some(
+        (p) => p.slug === "students:manage",
+      )
+    ) {
+      return true;
     }
 
     return false;
@@ -290,7 +318,8 @@ const StudentList = () => {
         </div>
         {(canCreate ||
           (currentUser?.role_data?.slug || "").includes("admission") ||
-          currentUser?.role === "super_admin") && (
+          currentUser?.role === "super_admin" ||
+          hasPermission("students:manage")) && (
           <div className="flex gap-3">
             {((currentUser?.role_data?.slug || "").includes("admission") ||
               currentUser?.role === "super_admin") && (
@@ -556,7 +585,7 @@ const StudentList = () => {
                           currentUser?.role === "super_admin") && (
                           <>
                             {((currentUser?.role_data?.slug || "").includes(
-                              "admission"
+                              "admission",
                             ) ||
                               currentUser?.role === "super_admin") && (
                               <>
@@ -601,6 +630,21 @@ const StudentList = () => {
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleStatusChange(user)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                user.is_active
+                                  ? "hover:bg-warning-50 dark:hover:bg-warning-900/30 text-warning-600"
+                                  : "hover:bg-success-50 dark:hover:bg-success-900/30 text-success-600"
+                              }`}
+                              title={user.is_active ? "Deactivate" : "Activate"}
+                            >
+                              {user.is_active ? (
+                                <UserX className="w-4 h-4" />
+                              ) : (
+                                <UserCheck className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
                               onClick={() => handleDeleteUser(user.id)}
                               className="p-1.5 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg text-error-600 transition-colors"
                             >
@@ -627,6 +671,17 @@ const StudentList = () => {
         programList={programs}
         roleList={roles}
         forcedRole="student"
+      />
+
+      <EditStudentDrawer
+        isOpen={isEditDrawerOpen}
+        onClose={() => {
+          setIsEditDrawerOpen(false);
+          dispatch(fetchUsers({ role: "student", department_id: deptFilter }));
+        }}
+        user={selectedUser}
+        departmentList={departments}
+        programList={programs}
       />
 
       <BulkImportModal

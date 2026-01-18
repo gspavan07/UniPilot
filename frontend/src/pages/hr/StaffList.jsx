@@ -18,13 +18,16 @@ import {
   Plus,
   Edit2,
   Trash2,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import UserForm from "../users/UserForm";
+import EditEmployeeDrawer from "./EditEmployeeDrawer";
 
 const StaffList = () => {
   const dispatch = useDispatch();
   const { users, status, error, userStats } = useSelector(
-    (state) => state.users
+    (state) => state.users,
   );
   const { departments } = useSelector((state) => state.departments);
   const { roles } = useSelector((state) => state.roles);
@@ -33,6 +36,7 @@ const StaffList = () => {
   const [deptFilter, setDeptFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
@@ -50,7 +54,7 @@ const StaffList = () => {
           department_id: deptFilter,
           role: roleFilter, // API should handle filtering multiple roles if needed, or we filter client side
           // tailored for staff/faculty
-        })
+        }),
       );
     }, 500);
     return () => clearTimeout(timer);
@@ -58,7 +62,7 @@ const StaffList = () => {
 
   // Filter out students on client side if API returns mixed
   const staffUsers = users.filter(
-    (u) => u.role !== "student" && (!roleFilter || u.role === roleFilter)
+    (u) => u.role !== "student" && (!roleFilter || u.role === roleFilter),
   );
 
   const getProfileImageUrl = (user) => {
@@ -73,7 +77,7 @@ const StaffList = () => {
     try {
       if (selectedUser) {
         await dispatch(
-          updateUser({ id: selectedUser.id, data: formData })
+          updateUser({ id: selectedUser.id, data: formData }),
         ).unwrap();
       } else {
         await dispatch(createUser(formData)).unwrap();
@@ -94,7 +98,35 @@ const StaffList = () => {
 
   const openEditForm = (user) => {
     setSelectedUser(user);
-    setIsFormOpen(true);
+    setIsEditDrawerOpen(true);
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (
+      window.confirm(
+        "Are you sure you want to remove this staff member? This action cannot be undone.",
+      )
+    ) {
+      await dispatch(deleteUser(id));
+      dispatch(fetchUsers({ role: roleFilter }));
+    }
+  };
+
+  const handleStatusChange = async (user) => {
+    const newStatus = !user.is_active;
+    const action = newStatus ? "activate" : "deactivate";
+    if (
+      window.confirm(`Are you sure you want to ${action} this staff member?`)
+    ) {
+      try {
+        await dispatch(
+          updateUser({ id: user.id, data: { is_active: newStatus } }),
+        ).unwrap();
+        // Refresh list to reflect changes if needed, though slice likely updates state
+      } catch (err) {
+        console.error("Failed to update status:", err);
+      }
+    }
   };
 
   return (
@@ -102,7 +134,7 @@ const StaffList = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-display">
-            Staff Directory
+            Employee Directory
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             Manage employee records, attendance, and payroll.
@@ -110,13 +142,13 @@ const StaffList = () => {
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={openAddForm}
+          <Link
+            to="/hr/onboard"
             className="btn btn-primary flex items-center shadow-lg shadow-primary-500/20"
           >
             <Plus className="w-5 h-5 mr-2" />
             Register Staff
-          </button>
+          </Link>
           <button className="btn btn-secondary flex items-center">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
@@ -255,12 +287,47 @@ const StaffList = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Link
-                      to={`/hr/staff/${user.id}`}
-                      className="btn btn-sm btn-ghost"
-                    >
-                      <Eye className="w-4 h-4 text-primary-500" />
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => openEditForm(user)}
+                        className="btn btn-sm btn-ghost p-1 hover:bg-primary-50 text-primary-600 transition-colors"
+                        title="Edit Details"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleStatusChange(user)}
+                        className={`btn btn-sm btn-ghost p-1 transition-colors ${
+                          user.is_active
+                            ? "hover:bg-warning-50 text-warning-600"
+                            : "hover:bg-success-50 text-success-600"
+                        }`}
+                        title={user.is_active ? "Deactivate" : "Activate"}
+                      >
+                        {user.is_active ? (
+                          <UserX className="w-4 h-4" />
+                        ) : (
+                          <UserCheck className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      <Link
+                        to={`/employee/${user.id}`}
+                        className="btn btn-sm btn-ghost p-1 hover:bg-gray-100 text-gray-500"
+                        title="View Profile"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="btn btn-sm btn-ghost p-1 hover:bg-error-50 text-error-600 transition-colors"
+                        title="Delete Staff"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -286,6 +353,15 @@ const StaffList = () => {
         departmentList={departments}
         roleList={roles.filter((r) => r.slug !== "student")}
         forcedRole="staff"
+      />
+      <EditEmployeeDrawer
+        isOpen={isEditDrawerOpen}
+        onClose={() => {
+          setIsEditDrawerOpen(false);
+          dispatch(fetchUsers({ role: roleFilter })); // Refresh after edit
+        }}
+        user={selectedUser}
+        departmentList={departments}
       />
     </div>
   );

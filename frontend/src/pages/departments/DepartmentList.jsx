@@ -22,13 +22,13 @@ import {
 const DepartmentList = () => {
   const dispatch = useDispatch();
   const { departments, status, error } = useSelector(
-    (state) => state.departments
+    (state) => state.departments,
   );
   const { accessToken } = useSelector((state) => state.auth);
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
+  const [filterType, setFilterType] = useState("academic");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDept, setSelectedDept] = useState(null);
 
@@ -39,7 +39,7 @@ const DepartmentList = () => {
   const handleDelete = async (id) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this department? This will NOT delete programs or users associated with it."
+        "Are you sure you want to delete this department? This will NOT delete programs or users associated with it.",
       )
     ) {
       await dispatch(deleteDepartment(id));
@@ -49,7 +49,7 @@ const DepartmentList = () => {
   const handleSave = async (formData) => {
     if (selectedDept) {
       await dispatch(
-        updateDepartment({ id: selectedDept.id, data: formData })
+        updateDepartment({ id: selectedDept.id, data: formData }),
       ).unwrap();
     } else {
       await dispatch(createDepartment(formData)).unwrap();
@@ -122,12 +122,6 @@ const DepartmentList = () => {
         </div>
         <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <button
-            onClick={() => setFilterType("all")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "all" ? "bg-white dark:bg-gray-700 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
-          >
-            All Units
-          </button>
-          <button
             onClick={() => setFilterType("academic")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "academic" ? "bg-white dark:bg-gray-700 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
           >
@@ -140,10 +134,6 @@ const DepartmentList = () => {
             Administrative
           </button>
         </div>
-        <button className="btn bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center">
-          <Filter className="w-5 h-5 mr-2" />
-          More
-        </button>
       </div>
 
       {/* Table/List */}
@@ -191,7 +181,7 @@ const DepartmentList = () => {
                     Department Name & Code
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Administrative Head (HOD)
+                    Administrative Head
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Status

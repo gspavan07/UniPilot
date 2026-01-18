@@ -38,6 +38,7 @@ import {
   publishPayroll,
   confirmPayout,
   resetOperationStatus,
+  fetchPublishStats,
 } from "../../store/slices/hrSlice";
 import { fetchUsers } from "../../store/slices/userSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
@@ -55,6 +56,11 @@ const PayrollDashboard = () => {
   } = useSelector((state) => state.hr);
   const { users } = useSelector((state) => state.users);
   const { departments } = useSelector((state) => state.departments);
+  const { user } = useSelector((state) => state.auth);
+
+  const hasPermission = (perm) => {
+    return user?.role === "super_admin" || user?.permissions?.includes(perm);
+  };
 
   const [period, setPeriod] = useState({
     month: new Date().getMonth() + 1,
@@ -65,6 +71,8 @@ const PayrollDashboard = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishPreview, setShowPublishPreview] = useState(false);
   const [showPayoutConfirm, setShowPayoutConfirm] = useState(false);
+  const [showPublishStats, setShowPublishStats] = useState(false);
+  const { publishStats } = useSelector((state) => state.hr);
   const [selectedPayslips, setSelectedPayslips] = useState([]);
   const [transactionRef, setTransactionRef] = useState("");
 
@@ -164,16 +172,15 @@ const PayrollDashboard = () => {
   };
 
   const handlePublishAll = () => {
-    dispatch(resetOperationStatus()); // Reset before showing modal
+    dispatch(resetOperationStatus());
     dispatch(
-      fetchActionPayslips({
+      fetchPublishStats({
         month: period.month,
         year: period.year,
         department_id: selectedDept === "all" ? null : selectedDept,
-        status: "draft",
       })
     );
-    setShowPublishPreview(true);
+    setShowPublishStats(true);
   };
 
   const handleFinalizePublish = () => {
@@ -184,8 +191,14 @@ const PayrollDashboard = () => {
         department_id: selectedDept === "all" ? null : selectedDept,
       })
     ).then(() => {
-      setShowPublishPreview(false);
+      setShowPublishStats(false); // Close stats modal
       dispatch(fetchPayrollStats());
+      dispatch(
+        // Refresh payslips list
+        fetchPayslips({
+          department_id: selectedDept === "all" ? null : selectedDept,
+        })
+      );
     });
   };
 
@@ -386,92 +399,94 @@ const PayrollDashboard = () => {
       {/* Main Operations & Quick Actions - Professional Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Bulk Payroll Generation - Modern Card */}
-        <div className="lg:col-span-2 relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl shadow-xl">
-          {/* Decorative Background */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/10 dark:to-indigo-900/10 rounded-full blur-3xl -mr-48 -mt-48 opacity-60"></div>
+        {hasPermission("hr:payroll:manage") && (
+          <div className="lg:col-span-2 relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl shadow-xl">
+            {/* Decorative Background */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/10 dark:to-indigo-900/10 rounded-full blur-3xl -mr-48 -mt-48 opacity-60"></div>
 
-          <div className="relative z-10 p-8 space-y-8">
-            {/* Header */}
-            <div className="flex items-start gap-4">
-              <div className="p-4 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl shadow-lg">
-                <DollarSign className="w-8 h-8 text-white" />
+            <div className="relative z-10 p-8 space-y-8">
+              {/* Header */}
+              <div className="flex items-start gap-4">
+                <div className="p-4 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl shadow-lg">
+                  <DollarSign className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+                    Bulk Payroll Generation
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Calculate salaries, allowances, and deductions for all
+                    configured staff members. Draft payslips will be created for
+                    review before publishing.
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-                  Bulk Payroll Generation
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Calculate salaries, allowances, and deductions for all
-                  configured staff members. Draft payslips will be created for
-                  review before publishing.
+
+              {/* Controls */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                    Select Department
+                  </label>
+                  <select
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    value={selectedDept}
+                    onChange={(e) => setSelectedDept(e.target.value)}
+                  >
+                    <option value="all">🏢 All Personnel</option>
+                    <optgroup label="📚 Academic Departments">
+                      {departments
+                        .filter((d) => d.type === "academic" || !d.type)
+                        .map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="⚙️ Administration Teams">
+                      {departments
+                        .filter((d) => d.type === "administrative")
+                        .map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                <button
+                  onClick={handleShowPreview}
+                  disabled={operationStatus === "loading"}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-primary-500/30 hover:shadow-2xl hover:shadow-primary-500/40 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+                >
+                  {operationStatus === "loading" ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Checking Eligibility...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-5 h-5" />
+                      <span>Review & Run Payroll</span>
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Info Banner */}
+              <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/30 rounded-2xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-primary-800 dark:text-primary-200">
+                  <strong>Tip:</strong> You can review all draft payslips before
+                  publishing them for bank transfer. This allows you to verify
+                  calculations and make adjustments if needed.
                 </p>
               </div>
             </div>
-
-            {/* Controls */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                  Select Department
-                </label>
-                <select
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                  value={selectedDept}
-                  onChange={(e) => setSelectedDept(e.target.value)}
-                >
-                  <option value="all">🏢 All Personnel</option>
-                  <optgroup label="📚 Academic Departments">
-                    {departments
-                      .filter((d) => d.type === "academic" || !d.type)
-                      .map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="⚙️ Administration Teams">
-                    {departments
-                      .filter((d) => d.type === "administrative")
-                      .map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              <button
-                onClick={handleShowPreview}
-                disabled={operationStatus === "loading"}
-                className="w-full px-6 py-4 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-primary-500/30 hover:shadow-2xl hover:shadow-primary-500/40 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
-              >
-                {operationStatus === "loading" ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Checking Eligibility...</span>
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-5 h-5" />
-                    <span>Review & Run Payroll</span>
-                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Info Banner */}
-            <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/30 rounded-2xl p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-primary-800 dark:text-primary-200">
-                <strong>Tip:</strong> You can review all draft payslips before
-                publishing them for bank transfer. This allows you to verify
-                calculations and make adjustments if needed.
-              </p>
-            </div>
           </div>
-        </div>
+        )}
 
         {/* Quick Actions Sidebar - Modern Design */}
         <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-900 dark:via-gray-800 dark:to-black rounded-3xl shadow-2xl border border-gray-700">
@@ -489,65 +504,71 @@ const PayrollDashboard = () => {
             </div>
 
             <div className="space-y-3">
-              <button
-                onClick={handlePublishAll}
-                className="w-full group relative overflow-hidden bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 hover:border-white/30 rounded-2xl p-5 transition-all duration-300 hover:scale-105 hover:shadow-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg group-hover:shadow-indigo-500/50 transition-shadow">
-                    <CheckCircle className="w-6 h-6 text-white" />
+              {hasPermission("hr:payroll:publish") && (
+                <button
+                  onClick={handlePublishAll}
+                  className="w-full group relative overflow-hidden bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 hover:border-white/30 rounded-2xl p-5 transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg group-hover:shadow-indigo-500/50 transition-shadow">
+                      <CheckCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-white text-sm mb-0.5">
+                        Publish All Drafts
+                      </p>
+                      <p className="text-xs text-gray-300">
+                        Make ready for bank transfer
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-white text-sm mb-0.5">
-                      Publish All Drafts
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      Make ready for bank transfer
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </button>
+                </button>
+              )}
 
-              <button
-                onClick={handleBankExport}
-                className="w-full group relative overflow-hidden bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 hover:border-white/30 rounded-2xl p-5 transition-all duration-300 hover:scale-105 hover:shadow-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg group-hover:shadow-emerald-500/50 transition-shadow">
-                    <Download className="w-6 h-6 text-white" />
+              {hasPermission("hr:payroll:manage") && (
+                <button
+                  onClick={handleBankExport}
+                  className="w-full group relative overflow-hidden bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 hover:border-white/30 rounded-2xl p-5 transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg group-hover:shadow-emerald-500/50 transition-shadow">
+                      <Download className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-white text-sm mb-0.5">
+                        Export Bank File
+                      </p>
+                      <p className="text-xs text-gray-300">
+                        Download CSV for transfer
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-white text-sm mb-0.5">
-                      Export Bank File
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      Download CSV for transfer
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </button>
+                </button>
+              )}
 
-              <button
-                onClick={handleConfirmPayout}
-                className="w-full group relative overflow-hidden bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 hover:border-white/30 rounded-2xl p-5 transition-all duration-300 hover:scale-105 hover:shadow-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:shadow-amber-500/50 transition-shadow">
-                    <CheckCircle className="w-6 h-6 text-white" />
+              {hasPermission("hr:payroll:publish") && (
+                <button
+                  onClick={handleConfirmPayout}
+                  className="w-full group relative overflow-hidden bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 hover:border-white/30 rounded-2xl p-5 transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:shadow-amber-500/50 transition-shadow">
+                      <CheckCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-white text-sm mb-0.5">
+                        Confirm Payout
+                      </p>
+                      <p className="text-xs text-gray-300">
+                        Mark as paid & notify
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-white text-sm mb-0.5">
-                      Confirm Payout
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      Mark as paid & notify
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </button>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -793,6 +814,14 @@ const PayrollDashboard = () => {
           )}
         </div>
       </div>
+
+      <PublishStatsModal
+        isOpen={showPublishStats}
+        onClose={() => setShowPublishStats(false)}
+        stats={publishStats?.stats ? publishStats : null}
+        onConfirm={handleFinalizePublish}
+        loading={operationStatus === "loading"}
+      />
 
       <PreviewModal
         isOpen={showPreview}
@@ -1207,4 +1236,125 @@ const PreviewModal = ({
     </div>
   );
 };
+const PublishStatsModal = ({ isOpen, onClose, stats, onConfirm, loading }) => {
+  if (!isOpen || !stats) return null;
+
+  const { stats: numbers, details } = stats;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 dark:border-gray-700 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <CheckCircle className="w-6 h-6 text-indigo-500" />
+            Publish Payroll
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Review validation status before publishing.
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto flex-1">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-xl text-center">
+              <p className="text-xs text-gray-500 uppercase font-bold">
+                Total Drafts
+              </p>
+              <p className="text-2xl font-black text-gray-800 dark:text-white">
+                {numbers.total_drafts}
+              </p>
+            </div>
+            <div className="bg-success-50 dark:bg-success-900/20 p-4 rounded-xl text-center border border-success-100 dark:border-success-800/30">
+              <p className="text-xs text-success-600 uppercase font-bold">
+                Ready to Publish
+              </p>
+              <p className="text-2xl font-black text-success-600">
+                {numbers.ready_count}
+              </p>
+            </div>
+            <div className="bg-error-50 dark:bg-error-900/20 p-4 rounded-xl text-center border border-error-100 dark:border-error-800/30">
+              <p className="text-xs text-error-600 uppercase font-bold">
+                Needs Attention
+              </p>
+              <p className="text-2xl font-black text-error-600">
+                {numbers.not_ready_count}
+              </p>
+            </div>
+          </div>
+
+          {/* Error List */}
+          {numbers.not_ready_count > 0 && (
+            <div className="bg-error-50 dark:bg-error-900/10 rounded-xl p-4 border border-error-100 dark:border-error-800/20">
+              <h4 className="text-sm font-bold text-error-700 dark:text-error-400 mb-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                Staff Missing Bank Details ({numbers.not_ready_count})
+              </h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                {details.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-error-100 dark:border-error-800/30 text-sm flex justify-between items-start"
+                  >
+                    <div>
+                      <p className="font-bold text-gray-800 dark:text-gray-200">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-gray-500">{item.department}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-error-600 font-medium">
+                        Missing: {item.missing_fields.join(", ")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-error-600 mt-3 italic">
+                * These {numbers.not_ready_count} users will remain as drafts
+                and will NOT be published.
+              </p>
+            </div>
+          )}
+
+          {numbers.not_ready_count === 0 && (
+            <div className="bg-success-50 dark:bg-success-900/10 text-success-700 p-4 rounded-xl flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm font-medium">
+                All drafts are valid and ready to publish!
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+          <button onClick={onClose} className="btn btn-ghost rounded-xl">
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={numbers.ready_count === 0 || loading}
+            className="btn btn-primary rounded-xl shadow-lg shadow-indigo-500/20"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Publish {numbers.ready_count} Valid Payslips
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default PayrollDashboard;

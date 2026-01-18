@@ -42,76 +42,83 @@ const MainLayout = () => {
   const { user } = useSelector((state) => state.auth);
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-
     {
-      name: "Onboard Employee",
-      href: "/hr/onboard",
-      icon: UserPlus,
-      roles: ["hr", "hr_admin", "admin", "super_admin"],
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      permission: "dashboard:view",
     },
     {
-      name: "Admissions",
+      name: "Admission Analytics",
       href: "/admission/dashboard",
       icon: ClipboardCheck,
-      roles: ["super_admin", "admission_admin", "admission_staff"],
+      permission: "admissions:view",
     },
     {
       name: "Departments",
       href: "/departments",
       icon: BookOpen,
-      permission: "academics:courses:manage",
+      permission: "academics:dept:manage", // Students/Faculty need to see this
     },
     {
       name: "Programs",
       href: "/programs",
       icon: GraduationCap,
-      permission: "academics:courses:manage",
+      permission: "academics:programs:manage",
     },
     {
       name: "Courses",
       href: "/courses",
       icon: FileText,
-      permission: "academics:courses:view",
-      roles: ["admin", "staff", "faculty", "super_admin", "hod"], // Catalogue view for staff
+      permission: "academics:courses:manage",
     },
     {
-      name: "My Courses",
-      href: "/my-courses",
-      icon: BookOpen,
-      roles: ["student"], // Specific view for students
+      name: "Onboard Employee",
+      href: "/hr/onboard",
+      icon: UserPlus,
+      permission: "emp:onboarding:access",
     },
     {
-      name: "User Management",
-      href: "/users",
-      icon: Users,
-      permission: "users:view",
-      roles: ["super_admin", "admin", "administrator"], // Exclude HR
-    },
-    {
-      name: "Staff Management",
-      href: "/hr/staff",
+      name: "Employees",
+      href: "/employees",
       icon: Briefcase,
-      roles: ["admin", "administrator", "super_admin", "hr", "hod", "hr_admin"],
+      permission: "hr:staff:view",
     },
     {
-      name: "Payroll Dashboard",
-      href: "/hr/payroll",
-      icon: Wallet,
-      roles: ["admin", "super_admin", "hr", "hr_admin"],
-    },
-    {
-      name: "Salary Grades",
-      href: "/hr/payroll/grades",
-      icon: Layers,
-      roles: ["admin", "super_admin", "hr", "hr_admin"],
+      name: "Register Student",
+      href: "/student/register",
+      icon: UserPlus,
+      permission: "admissions:manage",
     },
     {
       name: "Students",
       href: "/students",
       icon: GraduationCap,
-      permission: "users:view",
-      roles: ["super_admin", "admin", "administrator"], // Exclude HR
+      permission: "students:view",
+    },
+    {
+      name: "My Courses",
+      href: "/my-courses",
+      icon: BookOpen,
+      roles: ["student"],
+    },
+    // {
+    //   name: "User Management",
+    //   href: "/users",
+    //   icon: Users,
+    //   permission: "users:manage",
+    // },
+    {
+      name: "Payroll Dashboard",
+      href: "/hr/payroll",
+      icon: Wallet,
+      permission: "hr:payroll:view",
+    },
+    {
+      name: "Salary Grades",
+      href: "/hr/payroll/grades",
+      icon: Layers,
+      permission: "hr:payroll:manage",
     },
     {
       name: "Schedule Management",
@@ -130,13 +137,12 @@ const MainLayout = () => {
       href: "/timetable/my",
       icon: Clock,
       permission: "academics:timetable:view",
-      roles: ["student", "faculty"], // Explicitly for these roles only
     },
     {
       name: "My HR",
       href: "/hr/my-profile",
       icon: UserIcon,
-      roles: ["staff", "faculty", "hr", "hr_admin", "admin", "super_admin"],
+      permission: "hr:leaves:view", // Staff/Faculty have this, Students don't
     },
     {
       name: "Proctoring",
@@ -154,51 +160,49 @@ const MainLayout = () => {
       name: "Attendance",
       href: "/attendance",
       icon: ClipboardCheck,
-      permission: "academics:attendance:view",
+      permission: ["academics:attendance:view", "academics:attendance:manage"], // Students view, Faculty manage
     },
     {
       name: "Leave Approvals",
       href: "/hr/leaves",
       icon: PlaneTakeoff,
-      roles: ["admin", "super_admin", "hr", "hr_admin", "hod"],
+      permission: "hr:leaves:manage",
     },
     {
       name: "Staff Attendance",
       href: "/hr/attendance",
       icon: Users,
-      roles: ["hr", "hr_admin", "admin", "super_admin"],
+      permission: "hr:attendance:view",
     },
     {
       name: "Staff Calendar",
       href: "/hr/calendar",
       icon: CalendarIcon,
-      roles: ["hr", "hr_admin", "admin", "super_admin"],
+      permission: "hr:staff:view",
     },
     {
       name: "Exams & Grading",
       href: "/exams",
       icon: GraduationCap,
-      permission: "academics:exams:manage",
+      permission: "exams:manage",
     },
     {
       name: "My Results",
       href: "/results",
       icon: Award,
-      permission: "academics:exams:results:view",
-      roles: ["student"], // Only students have results
+      roles: ["student"],
     },
     {
       name: "Fee Management",
       href: "/fees",
       icon: Wallet,
-      permission: "finance:fees:admin",
+      permission: "finance:fees:manage",
     },
     {
       name: "My Fees",
       href: "/my-fees",
       icon: Coins,
-      permission: "finance:fees:view",
-      roles: ["student", "staff", "faculty"], // Students and Employees
+      roles: ["student"],
     },
     {
       name: "Library",
@@ -210,8 +214,7 @@ const MainLayout = () => {
       name: "My Library",
       href: "/my-library",
       icon: BookOpen,
-      permission: "library:books:view",
-      roles: ["student", "faculty"],
+      roles: ["student"],
     },
     {
       name: "Settings",
@@ -225,20 +228,26 @@ const MainLayout = () => {
       icon: Sliders,
       permission: "admissions:manage",
     },
+    // Example of role-based restricted item:
+    // {
+    //   name: "Role Restricted",
+    //   href: "/restricted",
+    //   icon: Shield,
+    //   roles: ["admin", "super_admin"], // Only these roles can see this
+    // },
   ];
 
-  // Logic to filter navigation based on user role and permissions
+  // Logic to filter navigation based STRICTLY on user permissions
   const filteredNavigation = navigation.filter((item) => {
-    // 1. If 'roles' is defined, STRICTLY check against user role. Admin bypass does NOT apply here.
-    if (item.roles && !item.roles.includes(user?.role)) {
-      return false;
+    // 1. Super Admin Bypass
+    // if (user?.role === "super_admin") return true;
+
+    // 2. Role Check (Optional)
+    if (item.roles && Array.isArray(item.roles)) {
+      if (!item.roles.includes(user?.role)) return false;
     }
 
-    // 2. Admin bypass for general permission items (that don't have strict roles)
-    // Only super_admin gets full bypass. Regular admins must have specific permissions.
-    if (user?.role === "super_admin") return true;
-
-    // 3. Check permissions
+    // 3. Strict Permission Check
     if (item.permission) {
       if (Array.isArray(item.permission)) {
         return item.permission.some((p) => user?.permissions?.includes(p));
@@ -246,6 +255,7 @@ const MainLayout = () => {
       return user?.permissions?.includes(item.permission);
     }
 
+    // 3. Fallback: If no permission specified, it's public (but better to specify 'dashboard:view')
     return true;
   });
 
@@ -326,7 +336,7 @@ const MainLayout = () => {
                   ? user.profile_picture.startsWith("http")
                     ? user.profile_picture
                     : `${user.profile_picture}?token=${localStorage.getItem(
-                        "accessToken"
+                        "accessToken",
                       )}`
                   : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
               }

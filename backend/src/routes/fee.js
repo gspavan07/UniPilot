@@ -60,12 +60,12 @@ router.post(
 );
 router.post(
   "/payments",
-  checkPermission("finance:fees:collect"),
+  checkPermission("finance:fees:manage"),
   collectPayment
 );
 router.get(
   "/summary/:studentId",
-  checkPermission("finance:fees:oversight"),
+  checkPermission("finance:fees:view"),
   getStudentFeeStatus
 );
 

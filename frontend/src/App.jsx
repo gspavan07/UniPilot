@@ -11,6 +11,7 @@ import DepartmentList from "./pages/departments/DepartmentList";
 import ProgramList from "./pages/programs/ProgramList";
 import UserList from "./pages/users/UserList";
 import StudentList from "./pages/users/StudentList";
+import StudentRegistration from "./pages/users/StudentRegistration";
 import CourseList from "./pages/courses/CourseList";
 import MyCourses from "./pages/courses/MyCourses";
 import RoleManagement from "./pages/settings/RoleManagement";
@@ -39,6 +40,7 @@ import EmployeeOnboarding from "./pages/hr/EmployeeOnboarding";
 import AcademicCalendar from "./pages/hr/AcademicCalendar";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
 
 function App() {
   const dispatch = useDispatch();
@@ -73,9 +75,10 @@ function App() {
           <Route path="/courses" element={<CourseList />} />
           <Route path="/faculty" element={<UserList role="faculty" />} />
           <Route path="/students" element={<StudentList />} />
+          <Route path="/student/register" element={<StudentRegistration />} />
           <Route path="/staff" element={<UserList role="staff" />} />
           <Route path="/admins" element={<UserList role="admin" />} />
-          <Route path="/admission/dashboard" element={<AdmissionDashboard />} />
+          <Route path="/admission/dashboard" element={<AdmissionAnalytics />} />
           <Route path="/admission/settings" element={<AdmissionSettings />} />
           <Route path="/users" element={<UserList />} />
           <Route path="/timetable/manage" element={<TimetableManager />} />
@@ -93,8 +96,8 @@ function App() {
           <Route path="/library" element={<LibraryDashboard />} />
           <Route path="/my-library" element={<MyLibrary />} />
           <Route path="/hr/onboard" element={<EmployeeOnboarding />} />
-          <Route path="/hr/staff" element={<StaffList />} />
-          <Route path="/hr/staff/:id" element={<StaffProfile />} />
+          <Route path="/employees" element={<StaffList />} />
+          <Route path="/employee/:id" element={<StaffProfile />} />
           <Route path="/hr/payroll" element={<PayrollDashboard />} />
           <Route path="/hr/payroll/grades" element={<GradeManagement />} />
           <Route path="/hr/leaves" element={<LeaveDashboard />} />
