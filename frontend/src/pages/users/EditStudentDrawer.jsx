@@ -14,6 +14,7 @@ import {
   Mail,
   Phone,
   Calendar,
+  CreditCard,
   MapPin,
   GraduationCap,
   Book,
@@ -36,6 +37,12 @@ const schema = yup.object().shape({
   phone: yup.string().optional(),
   gender: yup.string().optional(),
   date_of_birth: yup.string().optional(),
+  aadhaar_number: yup.string().optional(),
+  pan_number: yup.string().optional(),
+  passport_number: yup.string().optional(),
+  religion: yup.string().optional(),
+  caste: yup.string().optional(),
+  nationality: yup.string().optional(),
 
   // Address
   address: yup.string().optional(),
@@ -67,11 +74,15 @@ const schema = yup.object().shape({
       father_name: yup.string().optional(),
       father_mobile: yup.string().optional(),
       father_email: yup.string().email("Invalid email").optional().nullable(),
-      father_occupation: yup.string().optional(),
+      father_job: yup.string().optional(),
       mother_name: yup.string().optional(),
       mother_mobile: yup.string().optional(),
+      mother_email: yup.string().email("Invalid email").optional().nullable(),
+      mother_job: yup.string().optional(),
       guardian_name: yup.string().optional(),
       guardian_mobile: yup.string().optional(),
+      guardian_email: yup.string().email("Invalid email").optional().nullable(),
+      guardian_job: yup.string().optional(),
     })
     .optional(),
 
@@ -80,6 +91,7 @@ const schema = yup.object().shape({
     .array()
     .of(
       yup.object().shape({
+        qualification: yup.string().required("Qualification is required"),
         school: yup.string().required("Institution is required"),
         board: yup.string().optional(),
         percentage: yup.string().optional(),
@@ -159,22 +171,46 @@ const EditStudentDrawer = ({
     }
   }, [user, isOpen, reset, regulations, dispatch]);
 
+  const getInputClass = (fieldName) => {
+    const hasError = fieldName
+      .split(".")
+      .reduce((obj, key) => obj?.[key], errors);
+    const baseClass =
+      "form-input w-full rounded-xl transition-all dark:text-white";
+    const normalClass =
+      "bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 dark:bg-gray-800 dark:border-gray-700";
+    const errorClass =
+      "bg-error-50 border-error-500 focus:bg-white focus:border-error-500 focus:ring-4 focus:ring-error-500/10 dark:bg-error-900/10 dark:border-error-500";
+
+    return `${baseClass} ${hasError ? errorClass : normalClass}`;
+  };
+
   const onError = (errors) => {
     console.error("Validation Errors:", errors);
     const errorCount = Object.keys(errors).length;
     setError(`Please fix the ${errorCount} error(s) highlighted in red.`);
 
-    // Auto-switch to tab with error if needed (simple heuristic)
-    if (errors.parent_details && activeTab !== "family") setActiveTab("family");
-    if (errors.previous_academics && activeTab !== "history")
-      setActiveTab("history");
+    // Auto-switch to tab with error
     if (
-      (errors.program_id || errors.regulation_id || errors.student_id) &&
+      (errors.program_id ||
+        errors.regulation_id ||
+        errors.student_id ||
+        errors.admission_number ||
+        errors.batch_year ||
+        errors.current_semester) &&
       activeTab !== "academic"
-    )
+    ) {
       setActiveTab("academic");
-
-    // Find first error field and focus? (Optional but nice)
+    } else if (
+      (errors.first_name || errors.last_name || errors.email) &&
+      activeTab !== "personal"
+    ) {
+      setActiveTab("personal");
+    } else if (errors.parent_details && activeTab !== "family") {
+      setActiveTab("family");
+    } else if (errors.previous_academics && activeTab !== "history") {
+      setActiveTab("history");
+    }
   };
 
   const onSubmit = async (data) => {
@@ -215,10 +251,37 @@ const EditStudentDrawer = ({
   };
 
   const tabs = [
-    { id: "academic", label: "Academic Info", icon: GraduationCap },
-    { id: "personal", label: "Personal Details", icon: User },
-    { id: "family", label: "Family / Guardian", icon: Users },
-    { id: "history", label: "History", icon: History },
+    {
+      id: "academic",
+      label: "Academic Info",
+      icon: GraduationCap,
+      hasError: !!(
+        errors.program_id ||
+        errors.regulation_id ||
+        errors.student_id ||
+        errors.admission_number ||
+        errors.batch_year ||
+        errors.current_semester
+      ),
+    },
+    {
+      id: "personal",
+      label: "Personal Details",
+      icon: User,
+      hasError: !!(errors.first_name || errors.last_name || errors.email),
+    },
+    {
+      id: "family",
+      label: "Family / Guardian",
+      icon: Users,
+      hasError: !!errors.parent_details,
+    },
+    {
+      id: "history",
+      label: "History",
+      icon: History,
+      hasError: !!errors.previous_academics,
+    },
   ];
 
   if (!isOpen) return null;
@@ -286,7 +349,9 @@ const EditStudentDrawer = ({
                     ${
                       isActive
                         ? "text-secondary-600 bg-secondary-50 dark:bg-secondary-900/20 dark:text-secondary-400 ring-1 ring-secondary-500/10"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+                        : tab.hasError
+                          ? "text-error-600 bg-error-50 dark:bg-error-900/10 dark:text-error-400 ring-1 ring-error-500/10"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
                     }
                   `}
                 >
@@ -294,7 +359,10 @@ const EditStudentDrawer = ({
                     className={`w-4 h-4 ${isActive ? "stroke-2" : "stroke-[1.5px]"}`}
                   />
                   {tab.label}
-                  {isActive && (
+                  {tab.hasError && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-error-500 rounded-full border-2 border-white dark:border-gray-900 animate-pulse" />
+                  )}
+                  {isActive && !tab.hasError && (
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-secondary-500 translate-y-2 opacity-0 group-hover:translate-y-1 group-hover:opacity-100 transition-all" />
                   )}
                 </button>
@@ -332,7 +400,7 @@ const EditStudentDrawer = ({
                       </label>
                       <select
                         {...register("program_id")}
-                        className="form-select w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={`form-select ${getInputClass("program_id")}`}
                       >
                         <option value="">Select Program...</option>
                         {programList.map((p) => (
@@ -353,7 +421,7 @@ const EditStudentDrawer = ({
                       </label>
                       <select
                         {...register("regulation_id")}
-                        className="form-select w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={`form-select ${getInputClass("regulation_id")}`}
                       >
                         <option value="">Select Regulation...</option>
                         {regulations?.map((r) => (
@@ -375,7 +443,7 @@ const EditStudentDrawer = ({
                       </label>
                       <select
                         {...register("department_id")}
-                        className="form-select w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={`form-select ${getInputClass("department_id")}`}
                       >
                         <option value="">Select Department...</option>
                         {departmentList.map((d) => (
@@ -393,8 +461,13 @@ const EditStudentDrawer = ({
                       <input
                         type="number"
                         {...register("batch_year")}
-                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={getInputClass("batch_year")}
                       />
+                      {errors.batch_year && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.batch_year.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </section>
@@ -413,8 +486,13 @@ const EditStudentDrawer = ({
                       </label>
                       <input
                         {...register("student_id")}
-                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-mono"
+                        className={`${getInputClass("student_id")} font-mono`}
                       />
+                      {errors.student_id && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.student_id.message}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
@@ -422,8 +500,13 @@ const EditStudentDrawer = ({
                       </label>
                       <input
                         {...register("admission_number")}
-                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-mono"
+                        className={`${getInputClass("admission_number")} font-mono`}
                       />
+                      {errors.admission_number && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.admission_number.message}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
@@ -441,8 +524,13 @@ const EditStudentDrawer = ({
                       <input
                         type="number"
                         {...register("current_semester")}
-                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={getInputClass("current_semester")}
                       />
+                      {errors.current_semester && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.current_semester.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </section>
@@ -463,8 +551,13 @@ const EditStudentDrawer = ({
                       </label>
                       <input
                         {...register("first_name")}
-                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={getInputClass("first_name")}
                       />
+                      {errors.first_name && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.first_name.message}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
@@ -472,8 +565,13 @@ const EditStudentDrawer = ({
                       </label>
                       <input
                         {...register("last_name")}
-                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        className={getInputClass("last_name")}
                       />
+                      {errors.last_name && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.last_name.message}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
@@ -483,9 +581,14 @@ const EditStudentDrawer = ({
                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           {...register("email")}
-                          className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 pl-10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                          className={`${getInputClass("email")} pl-10`}
                         />
                       </div>
+                      {errors.email && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.email.message}
+                        </p>
+                      )}
                     </div>
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
@@ -506,6 +609,73 @@ const EditStudentDrawer = ({
                       <input
                         type="date"
                         {...register("date_of_birth")}
+                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <div className="h-px bg-gray-100 dark:bg-gray-800" />
+
+                <section className="space-y-4">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-warning-500" />
+                    Identity & Verification
+                  </h3>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Aadhaar Number
+                      </label>
+                      <input
+                        {...register("aadhaar_number")}
+                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        placeholder="12-digit number"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        PAN Number
+                      </label>
+                      <input
+                        {...register("pan_number")}
+                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                        placeholder="ABCDE1234F"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Passport Number
+                      </label>
+                      <input
+                        {...register("passport_number")}
+                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Nationality
+                      </label>
+                      <input
+                        {...register("nationality")}
+                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Religion
+                      </label>
+                      <input
+                        {...register("religion")}
+                        className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Caste / Category
+                      </label>
+                      <input
+                        {...register("caste")}
                         className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                       />
                     </div>
@@ -578,35 +748,122 @@ const EditStudentDrawer = ({
                       </label>
                       <input
                         {...register("parent_details.father_name")}
+                        className={getInputClass("parent_details.father_name")}
+                      />
+                      {errors.parent_details?.father_name && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.parent_details.father_name.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-1">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Father's Mobile
+                      </label>
+                      <input
+                        {...register("parent_details.father_mobile")}
+                        className={getInputClass(
+                          "parent_details.father_mobile",
+                        )}
+                      />
+                      {errors.parent_details?.father_mobile && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.parent_details.father_mobile.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-1">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Father's Occupation
+                      </label>
+                      <input
+                        {...register("parent_details.father_job")}
                         className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                       />
                     </div>
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
-                        Mobile
+                        Father's Email
                       </label>
                       <input
-                        {...register("parent_details.father_mobile")}
+                        {...register("parent_details.father_email")}
                         className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                       />
                     </div>
+
+                    <div className="col-span-2 h-px bg-gray-100 dark:bg-gray-800 my-2" />
+
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
                         Mother's Name
                       </label>
                       <input
                         {...register("parent_details.mother_name")}
+                        className={getInputClass("parent_details.mother_name")}
+                      />
+                      {errors.parent_details?.mother_name && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.parent_details.mother_name.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-1">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Mother's Mobile
+                      </label>
+                      <input
+                        {...register("parent_details.mother_mobile")}
+                        className={getInputClass(
+                          "parent_details.mother_mobile",
+                        )}
+                      />
+                      {errors.parent_details?.mother_mobile && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.parent_details.mother_mobile.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-1">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Mother's Occupation
+                      </label>
+                      <input
+                        {...register("parent_details.mother_job")}
                         className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                       />
                     </div>
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
-                        Mobile
+                        Mother's Email
                       </label>
                       <input
-                        {...register("parent_details.mother_mobile")}
+                        {...register("parent_details.mother_email")}
                         className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                       />
+                    </div>
+
+                    <div className="col-span-2 h-px bg-gray-100 dark:bg-gray-800 my-2" />
+
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Guardian Details (Optional)
+                      </label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <input
+                            {...register("parent_details.guardian_name")}
+                            className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                            placeholder="Guardian Name"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            {...register("parent_details.guardian_mobile")}
+                            className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                            placeholder="Guardian Mobile"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -651,12 +908,51 @@ const EditStudentDrawer = ({
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                            Qualification
+                          </label>
+                          <select
+                            {...register(
+                              `previous_academics.${index}.qualification`,
+                            )}
+                            className={`form-select ${getInputClass(`previous_academics.${index}.qualification`)}`}
+                          >
+                            <option value="">Select Qualification</option>
+                            <option value="10th">10th Class / SSC</option>
+                            <option value="12th">
+                              12th Class / Inter / PUC
+                            </option>
+                            <option value="Diploma">Diploma</option>
+                            <option value="Graduation">Graduation (UG)</option>
+                            <option value="Post Graduation">
+                              Post Graduation (PG)
+                            </option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.previous_academics?.[index]
+                            ?.qualification && (
+                            <p className="text-[10px] text-error-500 mt-1 ml-1">
+                              {
+                                errors.previous_academics[index].qualification
+                                  .message
+                              }
+                            </p>
+                          )}
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
                             Institute / School Name
                           </label>
                           <input
                             {...register(`previous_academics.${index}.school`)}
-                            className="form-input w-full rounded-xl bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all"
+                            className={getInputClass(
+                              `previous_academics.${index}.school`,
+                            )}
                           />
+                          {errors.previous_academics?.[index]?.school && (
+                            <p className="text-[10px] text-error-500 mt-1 ml-1">
+                              {errors.previous_academics[index].school.message}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">

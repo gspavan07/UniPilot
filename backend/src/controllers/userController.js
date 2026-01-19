@@ -5,6 +5,7 @@ const {
   Role,
   SalaryStructure,
   SalaryGrade,
+  Regulation,
 } = require("../models");
 const { Op } = require("sequelize");
 const logger = require("../utils/logger");
@@ -141,6 +142,11 @@ exports.getAllUsers = async (req, res) => {
           model: Program,
           as: "program",
           attributes: ["id", "name", "code"],
+        },
+        {
+          model: Regulation,
+          as: "regulation",
+          attributes: ["id", "name", "academic_year"],
         },
         {
           model: Role,
@@ -301,6 +307,11 @@ exports.getUser = async (req, res) => {
           model: Program,
           as: "program",
           attributes: ["id", "name", "code"],
+        },
+        {
+          model: Regulation,
+          as: "regulation",
+          attributes: ["id", "name", "academic_year"],
         },
         {
           model: Role,

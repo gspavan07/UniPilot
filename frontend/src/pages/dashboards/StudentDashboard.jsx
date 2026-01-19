@@ -21,7 +21,7 @@ const StudentDashboard = () => {
   const { myStatus } = useSelector((state) => state.fee);
   const { currentTimetable } = useSelector((state) => state.timetable);
   const { summary: attendanceSummary } = useSelector(
-    (state) => state.attendance
+    (state) => state.attendance,
   );
   const { myResults, cycles, gpa } = useSelector((state) => state.exam);
 
@@ -47,7 +47,7 @@ const StudentDashboard = () => {
 
   // Upcoming Active Exam Cycle
   const upcomingExam = cycles?.find(
-    (c) => c.status === "published" || c.status === "ongoing"
+    (c) => c.status === "published" || c.status === "ongoing",
   );
 
   const stats = [
@@ -92,8 +92,9 @@ const StudentDashboard = () => {
             Hello, {user?.first_name}! 🎓
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            {user?.program?.name || "Student"} • Semester{" "}
-            {user?.current_semester || 1}
+            {user?.program?.name || "Student"} • Batch{" "}
+            {user?.batch_year || "N/A"} • {user?.regulation?.name || "N/A"} •
+            Semester {user?.current_semester || 1}
           </p>
         </div>
         <div className="hidden md:block text-right">

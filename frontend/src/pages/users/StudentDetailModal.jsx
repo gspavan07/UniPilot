@@ -103,7 +103,7 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                     ? student.profile_picture.startsWith("http")
                       ? student.profile_picture
                       : `${student.profile_picture}?token=${localStorage.getItem(
-                          "accessToken"
+                          "accessToken",
                         )}`
                     : `https://ui-avatars.com/api/?name=${student.first_name}+${student.last_name}&background=random&size=128`
                 }
@@ -210,34 +210,24 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-6">
-                  <div>
-                    <SectionTitle title="Current Status" />
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase mb-1">
-                          Academic Status
-                        </p>
-                        <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                          {student.academic_status || "Active"}
-                        </p>
-                      </div>
-                      <InfoRow
-                        icon={Users}
-                        label="Religion"
-                        value={student.religion}
-                      />
-                      <InfoRow
-                        icon={Users}
-                        label="Caste"
-                        value={student.caste}
-                      />
-                      <InfoRow
-                        icon={MapPin}
-                        label="Nationality"
-                        value={student.nationality}
-                      />
-                    </div>
+                <div>
+                  <SectionTitle title="Identity Documents" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <InfoRow
+                      icon={CreditCard}
+                      label="Aadhaar Number"
+                      value={student.aadhaar_number}
+                    />
+                    <InfoRow
+                      icon={CreditCard}
+                      label="PAN Number"
+                      value={student.pan_number}
+                    />
+                    <InfoRow
+                      icon={CreditCard}
+                      label="Passport Number"
+                      value={student.passport_number}
+                    />
                   </div>
                 </div>
               </div>
@@ -276,27 +266,32 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                     <InfoRow
                       icon={Briefcase}
                       label="Father's Occupation"
-                      value={student.parent_details?.father_occupation}
-                    />
-                    <InfoRow
-                      icon={User}
-                      label="Mother's Name"
-                      value={student.parent_details?.mother_name}
+                      value={student.parent_details?.father_job}
                     />
                     <InfoRow
                       icon={Briefcase}
                       label="Mother's Occupation"
-                      value={student.parent_details?.mother_occupation}
+                      value={student.parent_details?.mother_job}
                     />
                     <InfoRow
                       icon={Phone}
-                      label="Parent Mobile"
-                      value={student.parent_details?.primary_mobile}
+                      label="Father's Mobile"
+                      value={student.parent_details?.father_mobile}
+                    />
+                    <InfoRow
+                      icon={Phone}
+                      label="Mother's Mobile"
+                      value={student.parent_details?.mother_mobile}
                     />
                     <InfoRow
                       icon={Mail}
-                      label="Parent Email"
-                      value={student.parent_details?.primary_email}
+                      label="Father's Email"
+                      value={student.parent_details?.father_email}
+                    />
+                    <InfoRow
+                      icon={Mail}
+                      label="Mother's Email"
+                      value={student.parent_details?.mother_email}
                     />
                   </div>
                 </div>
@@ -341,6 +336,14 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                     </p>
                     <p className="font-bold text-blue-700 dark:text-blue-300">
                       {student.batch_year || "N/A"}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800">
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase mb-1">
+                      Regulation
+                    </p>
+                    <p className="font-bold text-indigo-700 dark:text-indigo-300">
+                      {student.regulation?.name || "N/A"}
                     </p>
                   </div>
                   <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800">
@@ -502,7 +505,7 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                               </div>
                             </div>
                           );
-                        }
+                        },
                       )}
                     </div>
                   )}

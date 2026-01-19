@@ -70,6 +70,7 @@ class AuthService {
         include: [
           { association: "department" },
           { association: "program" },
+          { association: "regulation" },
           {
             model: Role,
             as: "role_data",
@@ -90,7 +91,7 @@ class AuthService {
       // Verify password
       const isValidPassword = await comparePassword(
         password,
-        user.password_hash
+        user.password_hash,
       );
 
       if (!isValidPassword) {
@@ -110,7 +111,7 @@ class AuthService {
           email: user.email,
           role: user.role,
         },
-        tokenExpiry
+        tokenExpiry,
       );
 
       const refreshToken = generateRefreshToken({
@@ -128,6 +129,7 @@ class AuthService {
           role: user.role,
           department: user.department,
           program: user.program,
+          regulation: user.regulation,
           // Add missing student/employee fields
           current_semester: user.current_semester,
           student_id: user.student_id,
@@ -152,6 +154,8 @@ class AuthService {
         include: [
           { association: "department" },
           { association: "program" },
+          { association: "regulation" },
+          { association: "documents" },
           {
             model: Role,
             as: "role_data",

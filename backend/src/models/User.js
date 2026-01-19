@@ -182,6 +182,9 @@ const User = sequelize.define(
     aadhaar_number: {
       type: DataTypes.STRING(20),
     },
+    pan_number: {
+      type: DataTypes.STRING(20),
+    },
     passport_number: {
       type: DataTypes.STRING(20),
     },

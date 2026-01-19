@@ -80,6 +80,7 @@ const models = {
   Payslip,
   SalaryGrade,
   InstitutionSetting,
+  Regulation,
 };
 
 // Define associations
@@ -121,6 +122,14 @@ User.belongsTo(Program, {
 Program.hasMany(User, {
   as: "students",
   foreignKey: "program_id",
+});
+User.belongsTo(Regulation, {
+  as: "regulation",
+  foreignKey: "regulation_id",
+});
+Regulation.hasMany(User, {
+  as: "students",
+  foreignKey: "regulation_id",
 });
 
 // Course <-> Department
@@ -427,5 +436,4 @@ module.exports = {
   sequelize,
   Block,
   Room,
-  Regulation,
 };

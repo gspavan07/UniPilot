@@ -558,7 +558,12 @@ const StudentList = () => {
                             {user.program.name}
                           </span>
                         )}
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {user.regulation && (
+                            <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded border border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
+                              {user.regulation.name}
+                            </span>
+                          )}
                           {user.batch_year && (
                             <span className="text-[10px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
                               '{user.batch_year.toString().slice(-2)}

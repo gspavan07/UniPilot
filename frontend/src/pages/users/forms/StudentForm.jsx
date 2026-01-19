@@ -36,6 +36,7 @@ import { baseUserSchema, baseDefaultValues } from "./baseSchema";
 import useFieldConfig from "../../../hooks/useFieldConfig";
 import { fetchDepartments } from "../../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../../store/slices/programSlice";
+import { fetchRegulations } from "../../../store/slices/regulationSlice";
 import api from "../../../utils/api";
 
 const studentSchema = yup.object().shape({
@@ -45,6 +46,7 @@ const studentSchema = yup.object().shape({
   role: yup.string().default("student"),
   role_id: yup.string().required(),
   program_id: yup.string().required("Program is required"),
+  regulation_id: yup.string().required("Regulation is required"),
   student_id: yup.string().when("auto_generate", {
     is: true,
     then: (schema) => schema.optional(),
@@ -78,20 +80,21 @@ const studentSchema = yup.object().shape({
   mother_job: yup.string().optional(),
   mother_income: yup.string().optional(),
   mother_email: yup.string().email("Invalid email").optional().nullable(),
-  mother_mobile: yup.string().optional(),
-  guardian_name: yup.string().optional(),
-  guardian_job: yup.string().optional(),
-  guardian_email: yup.string().email("Invalid email").optional().nullable(),
-  guardian_mobile: yup.string().optional(),
+  aadhaar_number: yup.string().optional(),
+  pan_number: yup.string().optional(),
+  passport_number: yup.string().optional(),
+  religion: yup.string().optional(),
+  caste: yup.string().optional(),
   previous_academics: yup
     .array()
     .of(
       yup.object().shape({
-        school: yup.string().required("School name is required"),
+        qualification: yup.string().required("Qualification is required"),
+        school: yup.string().required("Institution name is required"),
         board: yup.string().required("Board is required"),
         percentage: yup.string().required("Percentage is required"),
         year: yup.string().required("Year is required"),
-      })
+      }),
     )
     .optional(),
 });
@@ -110,6 +113,7 @@ const StudentForm = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [registeredStudent, setRegisteredStudent] = useState(null);
   const [error, setError] = useState(null);
+  const { regulations } = useSelector((state) => state.regulations);
 
   const [previewId, setPreviewId] = useState("---");
   const [admissionConfig, setAdmissionConfig] = useState(null);
@@ -144,6 +148,7 @@ const StudentForm = ({
       role: "student",
       role_id: roleId,
       program_id: "",
+      regulation_id: "",
       student_id: "",
       admission_number: "",
       current_semester: 1,
@@ -248,7 +253,7 @@ const StudentForm = ({
 
             // Fetch Seat Matrix for this batch
             const seatRes = await api.get(
-              `/admission/seat-matrix?year=${activeConfig.batch_year}`
+              `/admission/seat-matrix?year=${activeConfig.batch_year}`,
             );
             setSeatMatrix(seatRes.data.data);
           }
@@ -259,6 +264,7 @@ const StudentForm = ({
 
       dispatch(fetchDepartments());
       dispatch(fetchPrograms());
+      dispatch(fetchRegulations());
       fetchConfigAndSeats();
     }
 
@@ -315,6 +321,7 @@ const StudentForm = ({
         guardian_email: user.parent_details?.guardian_email || "",
         guardian_mobile: user.parent_details?.guardian_mobile || "",
         previous_academics: parsedPreviousAcademics,
+        regulation_id: user.regulation_id || "",
       });
     }
   }, [dispatch, isOpen, user, reset, roleId]);
@@ -362,13 +369,13 @@ const StudentForm = ({
         guardian_job: data.guardian_job,
         guardian_email: data.guardian_email,
         guardian_mobile: data.guardian_mobile,
-      })
+      }),
     );
 
     // 4. Previous Academics
     formData.append(
       "previous_academics",
-      JSON.stringify(data.previous_academics || [])
+      JSON.stringify(data.previous_academics || []),
     );
 
     // 5. Custom Fields
@@ -420,6 +427,7 @@ const StudentForm = ({
       fieldsToValidate = [
         "department_id",
         "program_id",
+        "regulation_id",
         "batch_year",
         "current_semester",
         "admission_type",
@@ -656,7 +664,7 @@ const StudentForm = ({
                           "academic",
                           "department_id",
                           "Department",
-                          true
+                          true,
                         )}
                         <select
                           {...register("department_id")}
@@ -682,7 +690,7 @@ const StudentForm = ({
                           "academic",
                           "program_id",
                           "Program",
-                          true
+                          true,
                         )}
                         <select
                           {...register("program_id")}
@@ -691,7 +699,7 @@ const StudentForm = ({
                           <option value="">Select Program</option>
                           {programList.map((prog) => {
                             const seatInfo = seatMatrix.find(
-                              (s) => s.id === prog.id
+                              (s) => s.id === prog.id,
                             );
                             const isFull =
                               seatInfo && seatInfo.available_seats <= 0;
@@ -714,6 +722,34 @@ const StudentForm = ({
                         {errors.program_id && (
                           <p className="text-error-500 text-[10px] mt-1">
                             {errors.program_id.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {isFieldVisible("academic", "regulation_id") && (
+                      <div className="col-span-2">
+                        {renderFieldLabel(
+                          "academic",
+                          "regulation_id",
+                          "Regulation",
+                          true,
+                        )}
+                        <select
+                          {...register("regulation_id")}
+                          className={getInputClass("regulation_id")}
+                        >
+                          <option value="">Select Regulation...</option>
+                          {regulations
+                            ?.filter((r) => r.is_active)
+                            .map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name} ({r.academic_year})
+                              </option>
+                            ))}
+                        </select>
+                        {errors.regulation_id && (
+                          <p className="text-error-500 text-[10px] mt-1">
+                            {errors.regulation_id.message}
                           </p>
                         )}
                       </div>
@@ -757,7 +793,7 @@ const StudentForm = ({
                         "personal",
                         "student_id",
                         "Student ID",
-                        true
+                        true,
                       )}
                       <input
                         {...register("student_id")}
@@ -778,7 +814,7 @@ const StudentForm = ({
                         "personal",
                         "admission_number",
                         "Admission No.",
-                        true
+                        true,
                       )}
                       <input
                         {...register("admission_number")}
@@ -799,7 +835,7 @@ const StudentForm = ({
                         "academic",
                         "batch_year",
                         "Batch Year",
-                        true
+                        true,
                       )}
                       <input
                         {...register("batch_year")}
@@ -818,7 +854,7 @@ const StudentForm = ({
                         "academic",
                         "current_semester",
                         "Semester",
-                        true
+                        true,
                       )}
                       <input
                         {...register("current_semester")}
@@ -836,7 +872,7 @@ const StudentForm = ({
                         "academic",
                         "admission_type",
                         "Seat Type",
-                        true
+                        true,
                       )}
                       <select
                         {...register("admission_type")}
@@ -882,7 +918,7 @@ const StudentForm = ({
                           "personal",
                           "first_name",
                           "First Name",
-                          true
+                          true,
                         )}
                         <input
                           {...register("first_name")}
@@ -902,7 +938,7 @@ const StudentForm = ({
                           "personal",
                           "last_name",
                           "Last Name",
-                          true
+                          true,
                         )}
                         <input
                           {...register("last_name")}
@@ -925,7 +961,7 @@ const StudentForm = ({
                           "personal",
                           "email",
                           "Email Address",
-                          true
+                          true,
                         )}
                         <div className="relative group">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
@@ -947,7 +983,7 @@ const StudentForm = ({
                         {renderFieldLabel(
                           "personal",
                           "phone",
-                          "Personal Mobile"
+                          "Personal Mobile",
                         )}
                         <div className="relative group">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
@@ -964,7 +1000,7 @@ const StudentForm = ({
                         {renderFieldLabel(
                           "personal",
                           "date_of_birth",
-                          "Date of Birth"
+                          "Date of Birth",
                         )}
                         <div className="relative group">
                           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
@@ -994,7 +1030,7 @@ const StudentForm = ({
                         {renderFieldLabel(
                           "personal",
                           "nationality",
-                          "Nationality"
+                          "Nationality",
                         )}
                         <div className="relative group">
                           <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
@@ -1063,7 +1099,7 @@ const StudentForm = ({
                         {renderFieldLabel(
                           "personal",
                           "aadhaar_number",
-                          "Aadhaar Number"
+                          "Aadhaar Number",
                         )}
                         <input
                           {...register("aadhaar_number")}
@@ -1077,12 +1113,31 @@ const StudentForm = ({
                         )}
                       </div>
                     )}
+                    {isFieldVisible("personal", "pan_number") && (
+                      <div>
+                        {renderFieldLabel(
+                          "personal",
+                          "pan_number",
+                          "PAN Number",
+                        )}
+                        <input
+                          {...register("pan_number")}
+                          className={getInputClass("pan_number")}
+                          placeholder="ABCDE1234F"
+                        />
+                        {errors.pan_number && (
+                          <p className="error-text">
+                            {errors.pan_number.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {isFieldVisible("personal", "passport_number") && (
                       <div>
                         {renderFieldLabel(
                           "personal",
                           "passport_number",
-                          "Passport Number"
+                          "Passport Number",
                         )}
                         <input
                           {...register("passport_number")}
@@ -1110,7 +1165,7 @@ const StudentForm = ({
                         {renderFieldLabel(
                           "personal",
                           "caste",
-                          "Caste / Category"
+                          "Caste / Category",
                         )}
                         <input
                           {...register("caste")}
@@ -1134,7 +1189,7 @@ const StudentForm = ({
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         {Object.entries(
-                          admissionConfig.field_config.custom
+                          admissionConfig.field_config.custom,
                         ).map(
                           ([key, config]) =>
                             config.visible !== false && (
@@ -1148,7 +1203,7 @@ const StudentForm = ({
                                   "custom",
                                   key,
                                   config.label,
-                                  config.required
+                                  config.required,
                                 )}
                                 {config.type === "textarea" ? (
                                   <textarea
@@ -1170,7 +1225,7 @@ const StudentForm = ({
                                   </p>
                                 )}
                               </div>
-                            )
+                            ),
                         )}
                       </div>
                     </div>
@@ -1392,9 +1447,43 @@ const StudentForm = ({
                         <div className="col-span-2">
                           {renderFieldLabel(
                             "history",
+                            "qualification",
+                            "Qualification",
+                            true,
+                          )}
+                          <select
+                            {...register(
+                              `previous_academics.${i}.qualification`,
+                            )}
+                            className={`${getInputClass(`previous_academics.${i}.qualification`)} text-xs`}
+                          >
+                            <option value="">Select Qualification</option>
+                            <option value="10th">10th Class / SSC</option>
+                            <option value="12th">
+                              12th Class / Inter / PUC
+                            </option>
+                            <option value="Diploma">Diploma</option>
+                            <option value="Graduation">Graduation (UG)</option>
+                            <option value="Post Graduation">
+                              Post Graduation (PG)
+                            </option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.previous_academics?.[i]?.qualification && (
+                            <p className="text-[10px] text-error-500">
+                              {
+                                errors.previous_academics[i].qualification
+                                  .message
+                              }
+                            </p>
+                          )}
+                        </div>
+                        <div className="col-span-2">
+                          {renderFieldLabel(
+                            "history",
                             "school",
                             "Institution Name",
-                            true
+                            true,
                           )}
                           <input
                             {...register(`previous_academics.${i}.school`)}
@@ -1412,7 +1501,7 @@ const StudentForm = ({
                             "history",
                             "board",
                             "Board / University",
-                            true
+                            true,
                           )}
                           <input
                             {...register(`previous_academics.${i}.board`)}
@@ -1429,7 +1518,7 @@ const StudentForm = ({
                             "history",
                             "year",
                             "Passing Year",
-                            true
+                            true,
                           )}
                           <input
                             {...register(`previous_academics.${i}.year`)}
@@ -1446,7 +1535,7 @@ const StudentForm = ({
                             "history",
                             "percentage",
                             "Marks / CGPA",
-                            true
+                            true,
                           )}
                           <input
                             {...register(`previous_academics.${i}.percentage`)}
@@ -1506,7 +1595,7 @@ const StudentForm = ({
                         ])
                   ).map((doc) => {
                     const existingDoc = existingDocuments.find(
-                      (d) => d.type === doc
+                      (d) => d.type === doc,
                     );
                     const isNewUploaded = !!selectedFiles[doc];
 
