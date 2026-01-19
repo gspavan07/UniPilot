@@ -51,7 +51,6 @@ const schema = yup.object().shape({
   employee_id: yup.string().required("Employee ID is required"),
   joining_date: yup.string().required("Joining date is required"),
 
-  // Step 3: Statutory (Indian Context)
   aadhaar_number: yup
     .string()
     .matches(/^\d{12}$/, "Must be 12 digits")
@@ -60,7 +59,13 @@ const schema = yup.object().shape({
     .string()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format")
     .optional(),
+  passport_number: yup.string().optional(),
+  religion: yup.string().optional(),
+  caste: yup.string().optional(),
   uan_number: yup.string().optional(),
+  city: yup.string().optional(),
+  state: yup.string().optional(),
+  zip_code: yup.string().optional(),
 
   // Step 4: Academic (Array)
   previous_academics: yup.array().of(
@@ -68,11 +73,11 @@ const schema = yup.object().shape({
       school: yup.string().required("Institution required"),
       board: yup.string().required("Degree/Board required"),
       year: yup.string().required("Year required"),
-    })
+    }),
   ),
 
   // Step 5: Payroll (Now Mandatory)
-  salary_grade_id: yup.string().required("Salary Grade is required"),
+  salary_grade_id: yup.string().optional(),
   bank_details: yup.object().shape({
     bank_name: yup.string().required("Bank Name is required"),
     account_number: yup.string().required("Account Number is required"),
@@ -90,6 +95,7 @@ const steps = [
   { id: 3, title: "Statutory", icon: Shield, desc: "Legal & Compliance" },
   { id: 4, title: "History", icon: GraduationCap, desc: "Qualifications" },
   { id: 5, title: "Payroll", icon: Wallet, desc: "Bank Accounts" },
+  { id: 6, title: "Docs", icon: Upload, desc: "Uploads" },
 ];
 
 const EmployeeOnboarding = () => {
@@ -102,6 +108,7 @@ const EmployeeOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState({});
 
   // Filter roles to exclude students for this wizard
   const staffRoles = roles.filter((r) => r.slug !== "student");
@@ -177,25 +184,38 @@ const EmployeeOnboarding = () => {
     setLoading(true);
     setSubmitError(null);
     try {
-      // Format data for backend
-      const payload = {
-        ...data,
-        password: data.password || "Welcome@123",
-        role: selectedRoleObj?.slug || "staff",
-        custom_fields: {
+      // Use FormData for file uploads
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (key === "bank_details" || key === "previous_academics") {
+          formData.append(key, JSON.stringify(data[key]));
+        } else {
+          formData.append(key, data[key]);
+        }
+      });
+
+      formData.append("role", selectedRoleObj?.slug || "staff");
+      formData.append(
+        "custom_fields",
+        JSON.stringify({
           pan_number: data.pan_number,
           uan_number: data.uan_number,
-          research_areas: data.research_areas, // If captured
-        },
-        salary_grade_id: data.salary_grade_id, // Explicitly sending this
-      };
+          research_areas: data.research_areas,
+        }),
+      );
 
-      await dispatch(createUser(payload)).unwrap();
-      navigate("/hr/staff"); // Redirect to directory on success
+      // Append files
+      Object.keys(selectedFiles).forEach((type) => {
+        formData.append("documents", selectedFiles[type]);
+        formData.append("document_types", type);
+      });
+
+      await dispatch(createUser(formData)).unwrap();
+      navigate("/employees"); // Redirect to directory on success
     } catch (err) {
       console.error(err);
       setSubmitError(
-        err.message || "Failed to onboard employee. Please try again."
+        err.message || "Failed to onboard employee. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -214,6 +234,15 @@ const EmployeeOnboarding = () => {
 
   const labelClass =
     "block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1";
+
+  const handleFileChange = (e, type) => {
+    if (e.target.files?.[0]) {
+      setSelectedFiles((prev) => ({
+        ...prev,
+        [type]: e.target.files[0],
+      }));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 pb-20 animate-fade-in">
@@ -312,7 +341,9 @@ const EmployeeOnboarding = () => {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className={labelClass}>First Name</label>
+                        <label className={labelClass}>
+                          First Name<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("first_name")}
                           className={inputClass("first_name")}
@@ -325,7 +356,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Last Name</label>
+                        <label className={labelClass}>
+                          Last Name<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("last_name")}
                           className={inputClass("last_name")}
@@ -341,7 +374,9 @@ const EmployeeOnboarding = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className={labelClass}>Email Address</label>
+                        <label className={labelClass}>
+                          Email Address<span className="text-red-500">*</span>
+                        </label>
                         <div className="relative">
                           <Mail className="absolute left-4 top-3.5 w-4 h-4 text-gray-400" />
                           <input
@@ -357,7 +392,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Mobile Number</label>
+                        <label className={labelClass}>
+                          Mobile Number<span className="text-red-500">*</span>
+                        </label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-3.5 w-4 h-4 text-gray-400" />
                           <input
@@ -377,7 +414,9 @@ const EmployeeOnboarding = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className={labelClass}>Date of Birth</label>
+                        <label className={labelClass}>
+                          Date of Birth<span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="date"
                           {...register("date_of_birth")}
@@ -390,7 +429,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Gender</label>
+                        <label className={labelClass}>
+                          Gender<span className="text-red-500">*</span>
+                        </label>
                         <div className="flex gap-4 mt-2">
                           {["Male", "Female", "Other"].map((g) => (
                             <label
@@ -419,14 +460,83 @@ const EmployeeOnboarding = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className={labelClass}>Residential Address</label>
-                      <textarea
-                        {...register("address")}
-                        rows={3}
-                        className={inputClass("address")}
-                        placeholder="Full address with pin code"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className={labelClass}>
+                          Religion<span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          {...register("religion")}
+                          className={inputClass("religion")}
+                        >
+                          <option value="">Select Religion...</option>
+                          <option value="Hindu">Hindu</option>
+                          <option value="Muslim">Muslim</option>
+                          <option value="Christian">Christian</option>
+                          <option value="Sikh">Sikh</option>
+                          <option value="Jain">Jain</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>
+                          Caste / Category
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          {...register("caste")}
+                          className={inputClass("caste")}
+                        >
+                          <option value="">Select Category...</option>
+                          <option value="OC">OC (General)</option>
+                          <option value="BC-A">BC-A</option>
+                          <option value="BC-B">BC-B</option>
+                          <option value="BC-C">BC-C</option>
+                          <option value="BC-D">BC-D</option>
+                          <option value="BC-E">BC-E</option>
+                          <option value="SC">SC</option>
+                          <option value="ST">ST</option>
+                          <option value="EWS">EWS</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <label className={labelClass}>
+                        Communication Address
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <textarea
+                            {...register("address")}
+                            rows={2}
+                            className={inputClass("address")}
+                            placeholder="Street Address, House No."
+                          />
+                        </div>
+                        <div>
+                          <input
+                            {...register("city")}
+                            className={inputClass("city")}
+                            placeholder="City"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            {...register("state")}
+                            className={inputClass("state")}
+                            placeholder="State"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <input
+                            {...register("zip_code")}
+                            className={inputClass("zip_code")}
+                            placeholder="Pincode / Zip Code"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -435,7 +545,10 @@ const EmployeeOnboarding = () => {
                 {currentStep === 2 && (
                   <div className="space-y-6">
                     <div>
-                      <label className={labelClass}>Organizational Role</label>
+                      <label className={labelClass}>
+                        Organizational Role
+                        <span className="text-red-500">*</span>
+                      </label>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {staffRoles.map((role) => (
                           <label
@@ -508,6 +621,7 @@ const EmployeeOnboarding = () => {
                       <div>
                         <label className={labelClass}>
                           Job Title / Designation
+                          <span className="text-red-500">*</span>
                         </label>
                         <input
                           {...register("designation")}
@@ -528,7 +642,9 @@ const EmployeeOnboarding = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className={labelClass}>Employee ID</label>
+                        <label className={labelClass}>
+                          Employee ID<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("employee_id")}
                           className={inputClass("employee_id")}
@@ -541,7 +657,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Date of Joining</label>
+                        <label className={labelClass}>
+                          Date of Joining<span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="date"
                           {...register("joining_date")}
@@ -595,18 +713,23 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>PAN Number</label>
+                        <label className={labelClass}>
+                          PAN Number<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("pan_number")}
                           className={`${inputClass("pan_number")} uppercase tracking-widest`}
                           placeholder="ABCDE1234F"
                           maxLength={10}
                         />
-                        {errors.pan_number && (
-                          <p className="text-xs text-red-500 mt-1">
-                            {errors.pan_number.message}
-                          </p>
-                        )}
+                      </div>
+                      <div>
+                        <label className={labelClass}>Passport Number</label>
+                        <input
+                          {...register("passport_number")}
+                          className={`${inputClass("passport_number")} uppercase`}
+                          placeholder="L1234567"
+                        />
                       </div>
                     </div>
 
@@ -659,7 +782,7 @@ const EmployeeOnboarding = () => {
                               <label className={labelClass}>Institution</label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.school`
+                                  `previous_academics.${index}.school`,
                                 )}
                                 className={inputClass("")}
                                 placeholder="University/College Name"
@@ -669,7 +792,7 @@ const EmployeeOnboarding = () => {
                               <label className={labelClass}>Degree/Board</label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.board`
+                                  `previous_academics.${index}.board`,
                                 )}
                                 className={inputClass("")}
                                 placeholder="e.g. B.Tech, PhD"
@@ -679,7 +802,7 @@ const EmployeeOnboarding = () => {
                               <label className={labelClass}>Passing Year</label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.year`
+                                  `previous_academics.${index}.year`,
                                 )}
                                 className={inputClass("")}
                                 placeholder="e.g. 2022"
@@ -757,9 +880,7 @@ const EmployeeOnboarding = () => {
                     </div>
 
                     <div>
-                      <label className={labelClass}>
-                        Salary Grade <span className="text-red-500">*</span>
-                      </label>
+                      <label className={labelClass}>Salary Grade</label>
                       <select
                         {...register("salary_grade_id")}
                         className={inputClass("salary_grade_id")}
@@ -783,6 +904,7 @@ const EmployeeOnboarding = () => {
                       <div className="md:col-span-2">
                         <label className={labelClass}>
                           Account Holder Name
+                          <span className="text-red-500">*</span>
                         </label>
                         <input
                           {...register("bank_details.holder_name")}
@@ -796,7 +918,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Bank Name</label>
+                        <label className={labelClass}>
+                          Bank Name<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("bank_details.bank_name")}
                           className={inputClass("bank_details.bank_name")}
@@ -809,7 +933,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Account Number</label>
+                        <label className={labelClass}>
+                          Account Number<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("bank_details.account_number")}
                           className={inputClass("bank_details.account_number")}
@@ -822,7 +948,9 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>IFSC Code</label>
+                        <label className={labelClass}>
+                          IFSC Code<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("bank_details.ifsc_code")}
                           className={`${inputClass("bank_details.ifsc_code")} uppercase`}
@@ -836,13 +964,87 @@ const EmployeeOnboarding = () => {
                         )}
                       </div>
                       <div>
-                        <label className={labelClass}>Branch Name</label>
+                        <label className={labelClass}>
+                          Branch Name<span className="text-red-500">*</span>
+                        </label>
                         <input
                           {...register("bank_details.branch_name")}
                           className={inputClass("bank_details.branch_name")}
                           placeholder="e.g. Kakinada Main"
                         />
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 6: DOCS */}
+                {currentStep === 6 && (
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl flex gap-3 items-start mb-6">
+                      <Upload className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-bold text-blue-800 dark:text-blue-200">
+                          Document Upload
+                        </h4>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          Upload digital copies of employee credentials. Max
+                          file size: 5MB per file.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {[
+                        { id: "photo", label: "Profile Photo" },
+                        { id: "aadhaar_card", label: "Aadhaar Card" },
+                        { id: "pan_card", label: "PAN Card" },
+                        { id: "experience_letter", label: "Experience Letter" },
+                        { id: "degree_certificate", label: "Highest Degree" },
+                        { id: "payslip_previous", label: "Last Month Payslip" },
+                      ].map((doc) => (
+                        <div
+                          key={doc.id}
+                          className={`
+                                            p-6 rounded-2xl border-2 border-dashed transition-all
+                                            ${selectedFiles[doc.id] ? "border-emerald-500 bg-emerald-50/30" : "border-gray-200 dark:border-gray-700 bg-gray-50/30 hover:border-indigo-300"}
+                                        `}
+                        >
+                          <div className="flex flex-col items-center text-center">
+                            <div
+                              className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${selectedFiles[doc.id] ? "bg-emerald-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}
+                            >
+                              {selectedFiles[doc.id] ? (
+                                <CheckCircle2 className="w-6 h-6" />
+                              ) : (
+                                <Upload className="w-6 h-6" />
+                              )}
+                            </div>
+                            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                              {doc.label}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-1 mb-4">
+                              {selectedFiles[doc.id]
+                                ? (selectedFiles[doc.id].size / 1024).toFixed(
+                                    1,
+                                  ) + " KB"
+                                : "No file selected"}
+                            </p>
+                            <label className="cursor-pointer">
+                              <span className="btn btn-sm btn-secondary text-[10px] uppercase tracking-wider py-1.5 px-4 rounded-lg">
+                                {selectedFiles[doc.id]
+                                  ? "Change File"
+                                  : "Choose File"}
+                              </span>
+                              <input
+                                type="file"
+                                className="hidden"
+                                onChange={(e) => handleFileChange(e, doc.id)}
+                                accept="image/*,.pdf"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

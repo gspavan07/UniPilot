@@ -147,6 +147,10 @@ const User = sequelize.define(
       ),
       defaultValue: "active",
     },
+    designation: {
+      type: DataTypes.STRING(100),
+      comment: "Job title or designation of the employee",
+    },
 
     // Contact Information
     date_of_birth: {

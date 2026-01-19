@@ -430,20 +430,20 @@ exports.createUser = async (req, res) => {
     const userData = { ...req.body };
 
     // Parse JSON fields if they come from FormData (as strings)
-    if (typeof userData.parent_details === "string") {
-      try {
-        userData.parent_details = JSON.parse(userData.parent_details);
-      } catch (e) {
-        userData.parent_details = {};
+    [
+      "parent_details",
+      "previous_academics",
+      "bank_details",
+      "custom_fields",
+    ].forEach((field) => {
+      if (typeof userData[field] === "string") {
+        try {
+          userData[field] = JSON.parse(userData[field]);
+        } catch (e) {
+          userData[field] = field === "previous_academics" ? [] : {};
+        }
       }
-    }
-    if (typeof userData.previous_academics === "string") {
-      try {
-        userData.previous_academics = JSON.parse(userData.previous_academics);
-      } catch (e) {
-        userData.previous_academics = [];
-      }
-    }
+    });
 
     // Hash password if provided, otherwise use a default one
     const rawPassword = password || "University@123";
@@ -581,7 +581,25 @@ exports.updateUser = async (req, res) => {
     // Use a separate change-password endpoint
     const updateData = { ...req.body };
     delete updateData.password;
-    delete updateData.email; // Usually emails shouldn't be changed easily
+    // Note: Email updates are now allowed. Ensure uniqueness is validated.
+    // delete updateData.email;
+
+    // Parse JSON fields if they come from FormData (as strings)
+    [
+      "parent_details",
+      "previous_academics",
+      "bank_details",
+      "custom_fields",
+    ].forEach((field) => {
+      if (typeof updateData[field] === "string") {
+        try {
+          updateData[field] = JSON.parse(updateData[field]);
+        } catch (e) {
+          // Keep current value if parsing fails, or reset based on type
+          console.error(`Failed to parse ${field}:`, e);
+        }
+      }
+    });
 
     user = await user.update(updateData);
 
