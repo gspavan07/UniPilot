@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form"; // Added useFieldArray
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { updateUser } from "../../store/slices/userSlice";
+import { fetchRegulations } from "../../store/slices/regulationSlice";
 import {
   X,
   Save,
@@ -47,6 +48,7 @@ const schema = yup.object().shape({
   admission_number: yup.string().required("Admission Number is required"),
   program_id: yup.string().required("Program is required"),
   department_id: yup.string().optional(), // Often linked to program
+  regulation_id: yup.string().required("Regulation is required"),
   batch_year: yup
     .number()
     .typeError("Batch Year must be a number")
@@ -95,6 +97,7 @@ const EditStudentDrawer = ({
   programList = [],
 }) => {
   const dispatch = useDispatch();
+  const { regulations } = useSelector((state) => state.regulations);
   const [activeTab, setActiveTab] = useState("academic"); // Default to academic for students
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -125,31 +128,54 @@ const EditStudentDrawer = ({
 
   useEffect(() => {
     if (user && isOpen) {
-      // Parse JSON fields if they come as strings
-      let parsedParent = user.parent_details || {};
-      if (typeof parsedParent === "string") {
-        try {
-          parsedParent = JSON.parse(parsedParent);
-        } catch (e) {}
-      }
+      if (!regulations.length) dispatch(fetchRegulations());
 
-      let parsedAcademics = user.previous_academics || [];
-      if (typeof parsedAcademics === "string") {
+      const parseJSON = (data, fallback) => {
         try {
-          parsedAcademics = JSON.parse(parsedAcademics);
-        } catch (e) {}
-      }
+          if (!data) return fallback;
+          if (typeof data === "object") return data;
+          const parsed = JSON.parse(data);
+          // Handle double-stringification
+          if (typeof parsed === "string") return JSON.parse(parsed);
+          return parsed;
+        } catch (e) {
+          console.error("JSON Parse Error:", e);
+          return fallback;
+        }
+      };
+
+      const parsedParent = parseJSON(user.parent_details, {});
+      const parsedAcademics = parseJSON(user.previous_academics, []);
 
       reset({
         ...user,
         department_id: user.department_id || "",
         program_id: user.program?.id || user.program_id || "",
+        regulation_id: user.regulation_id || "",
         parent_details: parsedParent,
         previous_academics: parsedAcademics,
       });
       setError(null);
     }
-  }, [user, isOpen, reset]);
+  }, [user, isOpen, reset, regulations, dispatch]);
+
+  const onError = (errors) => {
+    console.error("Validation Errors:", errors);
+    const errorCount = Object.keys(errors).length;
+    setError(`Please fix the ${errorCount} error(s) highlighted in red.`);
+
+    // Auto-switch to tab with error if needed (simple heuristic)
+    if (errors.parent_details && activeTab !== "family") setActiveTab("family");
+    if (errors.previous_academics && activeTab !== "history")
+      setActiveTab("history");
+    if (
+      (errors.program_id || errors.regulation_id || errors.student_id) &&
+      activeTab !== "academic"
+    )
+      setActiveTab("academic");
+
+    // Find first error field and focus? (Optional but nice)
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -281,7 +307,7 @@ const EditStudentDrawer = ({
         <div className="flex-1 overflow-y-auto px-8 py-8">
           <form
             id="edit-student-form"
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(onSubmit, onError)}
             className="space-y-8 max-w-3xl mx-auto"
           >
             {error && (
@@ -318,6 +344,27 @@ const EditStudentDrawer = ({
                       {errors.program_id && (
                         <p className="text-xs text-error-500 mt-1 ml-1">
                           {errors.program_id.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Regulation
+                      </label>
+                      <select
+                        {...register("regulation_id")}
+                        className="form-select w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                      >
+                        <option value="">Select Regulation...</option>
+                        {regulations?.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} ({r.academic_year})
+                          </option>
+                        ))}
+                      </select>
+                      {errors.regulation_id && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.regulation_id.message}
                         </p>
                       )}
                     </div>

@@ -14,6 +14,7 @@ import libraryReducer from "./slices/librarySlice";
 import timetableReducer from "./slices/timetableSlice";
 import hrReducer from "./slices/hrSlice";
 import infrastructureReducer from "./slices/infrastructureSlice";
+import regulationReducer from "./slices/regulationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -32,6 +33,7 @@ export const store = configureStore({
     timetable: timetableReducer,
     hr: hrReducer,
     infrastructure: infrastructureReducer,
+    regulations: regulationReducer,
   },
 });
 

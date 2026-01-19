@@ -5,6 +5,7 @@ const User = require("./User");
 const Department = require("./Department");
 const Program = require("./Program");
 const Course = require("./Course");
+const Regulation = require("./Regulation");
 const Role = require("./Role");
 const Permission = require("./Permission");
 const ProctorAssignment = require("./ProctorAssignment");
@@ -140,6 +141,16 @@ Course.belongsTo(Program, {
 Program.hasMany(Course, {
   as: "courses",
   foreignKey: "program_id",
+});
+
+// Regulation <-> Course (One Regulation has Many Courses)
+Regulation.hasMany(Course, {
+  as: "courses",
+  foreignKey: "regulation_id",
+});
+Course.belongsTo(Regulation, {
+  as: "regulation",
+  foreignKey: "regulation_id",
 });
 
 // Self-referencing for parent-child departments
@@ -416,4 +427,5 @@ module.exports = {
   sequelize,
   Block,
   Room,
+  Regulation,
 };

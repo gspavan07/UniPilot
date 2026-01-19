@@ -68,12 +68,27 @@ const Course = sequelize.define(
       type: DataTypes.STRING(500),
       comment: "S3 URL or file path to syllabus PDF",
     },
+    syllabus_data: {
+      type: DataTypes.JSONB,
+      defaultValue: [], // Structure: [{ unit: 1, title: "Intro", topics: ["Topic A", "Topic B"] }]
+      comment: "Structured syllabus (Units and Topics)",
+    },
 
     // Prerequisites
     prerequisites: {
       type: DataTypes.JSONB,
       defaultValue: [],
       comment: "Array of course IDs that are prerequisites",
+    },
+
+    // Regulation Link
+    regulation_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "regulations",
+        key: "id",
+      },
     },
 
     // Status
@@ -100,9 +115,10 @@ const Course = sequelize.define(
       { fields: ["code"], unique: true },
       { fields: ["department_id"] },
       { fields: ["program_id"] },
+      { fields: ["regulation_id"] },
       { fields: ["is_active"] },
     ],
-  }
+  },
 );
 
 module.exports = Course;

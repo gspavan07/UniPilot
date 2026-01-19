@@ -18,6 +18,7 @@ const biometricRoutes = require("./biometricRoutes");
 const holidayRoutes = require("./holidayRoutes");
 const settingRoutes = require("./settingRoutes");
 const infrastructureRoutes = require("./infrastructure"); // Infrastructure Management
+const regulationRoutes = require("./regulations");
 
 const router = express.Router();
 
@@ -52,5 +53,6 @@ router.use("/biometric", biometricRoutes);
 router.use("/holidays", holidayRoutes);
 router.use("/settings", settingRoutes);
 router.use("/infrastructure", infrastructureRoutes);
+router.use("/regulations", regulationRoutes);
 
 module.exports = router;

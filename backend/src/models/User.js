@@ -101,6 +101,15 @@ const User = sequelize.define(
       },
       comment: "For students - their enrolled program",
     },
+    regulation_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "regulations",
+        key: "id",
+      },
+      comment: "For students - their academic regulation (e.g., R23)",
+    },
     batch_year: {
       type: DataTypes.INTEGER,
       comment: "Year of admission for students",
@@ -322,6 +331,10 @@ User.associate = (models) => {
   User.belongsTo(models.Program, {
     foreignKey: "program_id",
     as: "program",
+  });
+  User.belongsTo(models.Regulation, {
+    foreignKey: "regulation_id",
+    as: "regulation",
   });
 };
 

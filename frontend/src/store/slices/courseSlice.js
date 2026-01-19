@@ -11,16 +11,16 @@ const initialState = {
 // Async thunks
 export const fetchCourses = createAsyncThunk(
   "courses/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get("/courses");
+      const response = await api.get("/courses", { params });
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch courses"
+        error.response?.data?.error || "Failed to fetch courses",
       );
     }
-  }
+  },
 );
 
 export const fetchMyCourses = createAsyncThunk(
@@ -31,10 +31,10 @@ export const fetchMyCourses = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch your courses"
+        error.response?.data?.error || "Failed to fetch your courses",
       );
     }
-  }
+  },
 );
 
 export const createCourse = createAsyncThunk(
@@ -45,10 +45,10 @@ export const createCourse = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to create course"
+        error.response?.data?.error || "Failed to create course",
       );
     }
-  }
+  },
 );
 
 export const updateCourse = createAsyncThunk(
@@ -59,10 +59,10 @@ export const updateCourse = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to update course"
+        error.response?.data?.error || "Failed to update course",
       );
     }
-  }
+  },
 );
 
 export const deleteCourse = createAsyncThunk(
@@ -73,10 +73,10 @@ export const deleteCourse = createAsyncThunk(
       return id;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to delete course"
+        error.response?.data?.error || "Failed to delete course",
       );
     }
-  }
+  },
 );
 
 export const courseSlice = createSlice({
@@ -119,7 +119,7 @@ export const courseSlice = createSlice({
       })
       .addCase(updateCourse.fulfilled, (state, action) => {
         const index = state.courses.findIndex(
-          (c) => c.id === action.payload.id
+          (c) => c.id === action.payload.id,
         );
         if (index !== -1) {
           state.courses[index] = action.payload;

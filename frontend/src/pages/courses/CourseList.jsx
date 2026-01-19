@@ -8,6 +8,7 @@ import {
 } from "../../store/slices/courseSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
+import { fetchRegulations } from "../../store/slices/regulationSlice";
 import CourseForm from "./CourseForm";
 import {
   Plus,
@@ -34,6 +35,7 @@ const CourseList = () => {
   } = useSelector((state) => state.courses);
   const { departments } = useSelector((state) => state.departments);
   const { programs } = useSelector((state) => state.programs);
+  const { regulations } = useSelector((state) => state.regulations);
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,12 +46,13 @@ const CourseList = () => {
     dispatch(fetchCourses());
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
+    dispatch(fetchRegulations());
   }, [dispatch]);
 
   const handleDelete = async (id) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this course from the catalog?"
+        "Are you sure you want to delete this course from the catalog?",
       )
     ) {
       await dispatch(deleteCourse(id));
@@ -59,7 +62,7 @@ const CourseList = () => {
   const handleSave = async (formData) => {
     if (selectedCourse) {
       await dispatch(
-        updateCourse({ id: selectedCourse.id, data: formData })
+        updateCourse({ id: selectedCourse.id, data: formData }),
       ).unwrap();
     } else {
       await dispatch(createCourse(formData)).unwrap();
@@ -80,7 +83,7 @@ const CourseList = () => {
     (course) =>
       course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.department?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      course.department?.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -238,6 +241,7 @@ const CourseList = () => {
         course={selectedCourse}
         departmentList={departments}
         programList={programs}
+        regulationList={regulations}
       />
     </div>
   );

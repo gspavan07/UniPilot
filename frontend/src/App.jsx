@@ -43,6 +43,8 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
 import BlockList from "./pages/infrastructure/BlockList";
 import BlockDetails from "./pages/infrastructure/BlockDetails";
+import RegulationList from "./pages/academics/RegulationList";
+import RegulationViewer from "./pages/academics/RegulationViewer";
 
 function App() {
   const dispatch = useDispatch();
@@ -74,6 +76,11 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/departments" element={<DepartmentList />} />
           <Route path="/programs" element={<ProgramList />} />
+          <Route path="/regulations" element={<RegulationList />} />
+          <Route
+            path="/regulations/:id/curriculum"
+            element={<RegulationViewer />}
+          />
           <Route path="/courses" element={<CourseList />} />
           <Route path="/faculty" element={<UserList role="faculty" />} />
           <Route path="/students" element={<StudentList />} />

@@ -25,6 +25,7 @@ import { baseUserSchema, baseDefaultValues } from "./forms/baseSchema";
 import api from "../../utils/api";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
+import { fetchRegulations } from "../../store/slices/regulationSlice";
 
 // --- SCHEMA & CONFIG ---
 const studentSchema = yup.object().shape({
@@ -34,6 +35,7 @@ const studentSchema = yup.object().shape({
   role: yup.string().default("student"),
   role_id: yup.string().required(),
   program_id: yup.string().required("Program is required"),
+  regulation_id: yup.string().required("Regulation is required"),
   student_id: yup.string().when("auto_generate", {
     is: true,
     then: (schema) => schema.optional(),
@@ -82,7 +84,7 @@ const studentSchema = yup.object().shape({
         board: yup.string().required("Board is required"),
         percentage: yup.string().required("Percentage is required"),
         year: yup.string().required("Year is required"),
-      })
+      }),
     )
     .optional(),
 });
@@ -101,6 +103,7 @@ const StudentRegistration = () => {
   const navigate = useNavigate();
   const { departments } = useSelector((state) => state.departments);
   const { programs } = useSelector((state) => state.programs);
+  const { regulations } = useSelector((state) => state.regulations);
   const { roles } = useSelector((state) => state.roles);
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -118,6 +121,7 @@ const StudentRegistration = () => {
   useEffect(() => {
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
+    dispatch(fetchRegulations());
 
     // Find Student Role ID
     // We assume 'roles' might not be fully loaded here if not dispatched?
@@ -145,7 +149,7 @@ const StudentRegistration = () => {
           const activeConfig = configRes.data.data[0];
           setAdmissionConfig(activeConfig);
           const seatRes = await api.get(
-            `/admission/seat-matrix?year=${activeConfig.batch_year}`
+            `/admission/seat-matrix?year=${activeConfig.batch_year}`,
           );
           setSeatMatrix(seatRes.data.data);
         }
@@ -172,6 +176,7 @@ const StudentRegistration = () => {
       role: "student",
       role_id: studentRoleId || "", // Will update when loaded
       program_id: "",
+      regulation_id: "",
       student_id: "",
       admission_number: "",
       current_semester: 1,
@@ -209,7 +214,7 @@ const StudentRegistration = () => {
       if (batchYear && programId) {
         try {
           const res = await api.get(
-            `/admission/id-previews?batch_year=${batchYear}&program_id=${programId}&is_temporary=true`
+            `/admission/id-previews?batch_year=${batchYear}&program_id=${programId}&is_temporary=true`,
           );
           setNextIds(res.data.data);
         } catch (error) {
@@ -227,6 +232,7 @@ const StudentRegistration = () => {
       fieldsToValidate = [
         "department_id",
         "program_id",
+        "regulation_id",
         "batch_year",
         "current_semester",
         "admission_type",
@@ -300,7 +306,7 @@ const StudentRegistration = () => {
       // Previous Academics
       formData.append(
         "previous_academics",
-        JSON.stringify(data.previous_academics || [])
+        JSON.stringify(data.previous_academics || []),
       );
 
       // Documents
@@ -321,7 +327,7 @@ const StudentRegistration = () => {
       setShowSuccess(true);
     } catch (err) {
       setError(
-        err?.response?.data?.error || err.message || "Registration failed"
+        err?.response?.data?.error || err.message || "Registration failed",
       );
     } finally {
       setLoading(false);
@@ -484,7 +490,7 @@ const StudentRegistration = () => {
                             <option value="">Select Program...</option>
                             {programs?.map((p) => {
                               const seatInfo = seatMatrix.find(
-                                (s) => s.id === p.id
+                                (s) => s.id === p.id,
                               );
                               const isFull =
                                 seatInfo && seatInfo.available_seats <= 0;
@@ -498,6 +504,24 @@ const StudentRegistration = () => {
                                 </option>
                               );
                             })}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className={labelClass}>Regulation</label>
+                          <select
+                            {...register("regulation_id")}
+                            className={inputClass("regulation_id")}
+                          >
+                            <option value="">Select Regulation...</option>
+                            {regulations
+                              ?.filter((r) => r.is_active)
+                              .map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name} ({r.academic_year})
+                                </option>
+                              ))}
                           </select>
                         </div>
                       </div>
@@ -688,7 +712,7 @@ const StudentRegistration = () => {
                                 />
                                 {type}
                               </label>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
@@ -754,7 +778,7 @@ const StudentRegistration = () => {
                               </label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.school`
+                                  `previous_academics.${index}.school`,
                                 )}
                                 className={inputClass("")}
                               />
@@ -763,7 +787,7 @@ const StudentRegistration = () => {
                               <label className={labelClass}>Board/Degree</label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.board`
+                                  `previous_academics.${index}.board`,
                                 )}
                                 className={inputClass("")}
                               />
@@ -774,7 +798,7 @@ const StudentRegistration = () => {
                               </label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.percentage`
+                                  `previous_academics.${index}.percentage`,
                                 )}
                                 className={inputClass("")}
                               />
@@ -783,7 +807,7 @@ const StudentRegistration = () => {
                               <label className={labelClass}>Year</label>
                               <input
                                 {...register(
-                                  `previous_academics.${index}.year`
+                                  `previous_academics.${index}.year`,
                                 )}
                                 className={inputClass("")}
                               />

@@ -11,7 +11,15 @@ const logger = require("../utils/logger");
 // @access  Private
 exports.getAllCourses = async (req, res) => {
   try {
+    const { regulation_id } = req.query;
+    const whereClause = {};
+
+    if (regulation_id) {
+      whereClause.regulation_id = regulation_id;
+    }
+
     const courses = await Course.findAll({
+      where: whereClause,
       include: [
         {
           model: Department,
@@ -24,7 +32,10 @@ exports.getAllCourses = async (req, res) => {
           attributes: ["id", "name", "code"],
         },
       ],
-      order: [["name", "ASC"]],
+      order: [
+        ["semester", "ASC"],
+        ["name", "ASC"],
+      ],
     });
 
     res.status(200).json({
@@ -188,11 +199,18 @@ exports.getMyCourses = async (req, res) => {
     }
 
     // 2. Fetch courses for their program and semester
+    const whereClause = {
+      program_id: student.program_id,
+      semester: student.current_semester || 1,
+    };
+
+    // If student has a regulation assigned, strictly filter by it
+    if (student.regulation_id) {
+      whereClause.regulation_id = student.regulation_id;
+    }
+
     const courses = await Course.findAll({
-      where: {
-        program_id: student.program_id,
-        semester: student.current_semester || 1,
-      },
+      where: whereClause,
       include: [
         {
           model: Department,

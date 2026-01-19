@@ -23,6 +23,7 @@ import {
   CalendarIcon,
   LifeBuoy,
   RefreshCcw,
+  Book,
   UserPlus,
   ClipboardCheck,
   PlaneTakeoff,
@@ -53,7 +54,7 @@ const MainLayout = () => {
       name: "Admission Analytics",
       href: "/admission/dashboard",
       icon: ClipboardCheck,
-      permission: "admission:view",
+      permission: "admissions:view",
     },
     {
       name: "Departments",
@@ -72,6 +73,12 @@ const MainLayout = () => {
       href: "/programs",
       icon: GraduationCap,
       permission: "academics:programs:manage",
+    },
+    {
+      name: "Regulations",
+      href: "/regulations",
+      icon: Book,
+      permission: "academics:programs:manage", // Same as programs for now
     },
     {
       name: "Courses",
