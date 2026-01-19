@@ -56,7 +56,7 @@ const ProgramForm = ({
       code: "",
       description: "",
       department_id: "",
-      degree_type: "Bachelor",
+      degree_type: "",
       duration_years: 4,
       total_semesters: 8,
       admission_criteria: "",
@@ -71,7 +71,7 @@ const ProgramForm = ({
         code: program.code || "",
         description: program.description || "",
         department_id: program.department_id || "",
-        degree_type: program.degree_type || "Bachelor",
+        degree_type: program.degree_type || "",
         duration_years: program.duration_years || 4,
         total_semesters: program.total_semesters || 8,
         admission_criteria: program.admission_criteria || "",
@@ -83,7 +83,7 @@ const ProgramForm = ({
         code: "",
         description: "",
         department_id: "",
-        degree_type: "Bachelor",
+        degree_type: "",
         duration_years: 4,
         total_semesters: 8,
         admission_criteria: "",
@@ -108,14 +108,7 @@ const ProgramForm = ({
 
   if (!isOpen) return null;
 
-  const degreeTypes = [
-    "Diploma",
-    "Associate",
-    "Bachelor",
-    "Master",
-    "PhD",
-    "Certificate",
-  ];
+  const degreeTypes = ["diploma", "undergraduate", "postgraduate", "doctoral"];
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -127,7 +120,7 @@ const ProgramForm = ({
 
       {/* Slide-over */}
       <div className="absolute inset-y-0 right-0 max-w-full flex">
-        <div className="relative w-screen max-w-md transform transition ease-in-out duration-500 sm:duration-700">
+        <div className="relative w-screen max-w-2xl transform transition ease-in-out duration-500 sm:duration-700">
           <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-2xl rounded-l-3xl overflow-hidden">
             {/* Header */}
             <div className="px-6 py-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
@@ -202,6 +195,7 @@ const ProgramForm = ({
                     <div>
                       <label className="label">Degree Type</label>
                       <select {...register("degree_type")} className="input">
+                        <option value="">Select Degree Type</option>
                         {degreeTypes.map((type) => (
                           <option key={type} value={type}>
                             {type}

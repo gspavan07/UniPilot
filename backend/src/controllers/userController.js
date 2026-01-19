@@ -445,6 +445,35 @@ exports.createUser = async (req, res) => {
       }
     });
 
+    // Convert empty strings to null for UUID fields (prevents "invalid input syntax for type uuid" error)
+    const uuidFields = [
+      "department_id",
+      "program_id",
+      "regulation_id",
+      "role_id",
+      "salary_grade_id",
+    ];
+    uuidFields.forEach((field) => {
+      if (userData[field] === "" || userData[field] === undefined) {
+        userData[field] = null;
+      }
+    });
+
+    // Convert empty strings to null for unique fields (prevents unique constraint violations)
+    const uniqueFields = [
+      "passport_number",
+      "pan_number",
+      "aadhaar_number",
+      "biometric_device_id",
+      "employee_id",
+      "student_id",
+    ];
+    uniqueFields.forEach((field) => {
+      if (userData[field] === "" || userData[field] === undefined) {
+        userData[field] = null;
+      }
+    });
+
     // Hash password if provided, otherwise use a default one
     const rawPassword = password || "University@123";
     userData.password_hash = await hashPassword(rawPassword);

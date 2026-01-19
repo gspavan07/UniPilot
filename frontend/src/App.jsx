@@ -87,7 +87,7 @@ function App() {
           <Route path="/student/register" element={<StudentRegistration />} />
           <Route path="/staff" element={<UserList role="staff" />} />
           <Route path="/admins" element={<UserList role="admin" />} />
-          <Route path="/admission/dashboard" element={<AdmissionAnalytics />} />
+          <Route path="/admission/dashboard" element={<AdmissionDashboard />} />
           <Route path="/admission/settings" element={<AdmissionSettings />} />
           <Route path="/users" element={<UserList />} />
           <Route path="/timetable/manage" element={<TimetableManager />} />

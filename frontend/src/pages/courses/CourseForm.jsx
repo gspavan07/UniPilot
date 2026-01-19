@@ -108,7 +108,7 @@ const CourseForm = ({
       regulation_id: "",
       program_id: "",
       credits: 3,
-      course_type: "Core",
+      course_type: "theory",
       semester: 1,
       prerequisites: "",
       description: "",
@@ -132,7 +132,7 @@ const CourseForm = ({
           regulation_id: course.regulation_id || "",
           program_id: course.program_id || "",
           credits: course.credits ?? 3,
-          course_type: course.course_type || "Core",
+          course_type: course.course_type || "theory",
           semester: course.semester ?? 1,
           prerequisites: course.prerequisites || "",
           description: course.description || "",
@@ -147,7 +147,7 @@ const CourseForm = ({
           regulation_id: "",
           program_id: "",
           credits: 3,
-          course_type: "Core",
+          course_type: "theory",
           semester: 1,
           prerequisites: "",
           description: "",
@@ -596,7 +596,7 @@ const CourseForm = ({
                         {...register("course_type")}
                         className={`form-select w-full rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white ${errors.course_type ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""}`}
                       >
-                        {["Core", "Elective", "Lab", "Project"].map((t) => (
+                        {["theory", "lab", "project"].map((t) => (
                           <option key={t} value={t}>
                             {t}
                           </option>

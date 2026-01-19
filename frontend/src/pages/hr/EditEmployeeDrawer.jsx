@@ -41,8 +41,8 @@ const schema = yup.object().shape({
   religion: yup.string().optional(),
   caste: yup.string().optional(),
   aadhaar_number: yup.string().optional(),
-  pan_number: yup.string().optional(),
-  passport_number: yup.string().optional(),
+  pan_number: yup.string().optional().nullable(),
+  passport_number: yup.string().optional().nullable(),
   uan_number: yup.string().optional(),
   zip_code: yup.string().optional(),
 

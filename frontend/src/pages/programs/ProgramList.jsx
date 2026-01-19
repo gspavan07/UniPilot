@@ -51,7 +51,7 @@ const ProgramList = () => {
   const handleSave = async (formData) => {
     if (selectedProgram) {
       await dispatch(
-        updateProgram({ id: selectedProgram.id, data: formData })
+        updateProgram({ id: selectedProgram.id, data: formData }),
       ).unwrap();
     } else {
       await dispatch(createProgram(formData)).unwrap();
@@ -72,7 +72,7 @@ const ProgramList = () => {
     (prog) =>
       prog.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prog.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      prog.department?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      prog.department?.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -98,7 +98,7 @@ const ProgramList = () => {
       </div>
 
       {/* Stats Quick View */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card p-6 bg-gradient-to-br from-primary-500 to-primary-600 border-none">
           <div className="flex items-center justify-between text-white">
             <div>
@@ -150,7 +150,7 @@ const ProgramList = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Table/List Section */}
       <div className="card overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm">
@@ -166,12 +166,12 @@ const ProgramList = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <button className="btn bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center">
               <Filter className="w-5 h-5 mr-2" />
               Advanced Filters
             </button>
-          </div>
+          </div> */}
         </div>
 
         {programStatus === "loading" && programs.length === 0 ? (
@@ -214,6 +214,9 @@ const ProgramList = () => {
                 <tr>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Program Details
+                    <span className="font-black mt-1 font-display">
+                      ({programs.length})
+                    </span>
                   </th>
                   <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Department

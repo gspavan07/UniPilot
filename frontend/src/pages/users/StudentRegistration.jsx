@@ -26,6 +26,7 @@ import api from "../../utils/api";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
 import { fetchRegulations } from "../../store/slices/regulationSlice";
+import { fetchRoles } from "../../store/slices/roleSlice";
 
 // --- SCHEMA & CONFIG ---
 const studentSchema = yup.object().shape({
@@ -60,6 +61,18 @@ const studentSchema = yup.object().shape({
   guardian_type: yup.string().default("Both Parents"),
   single_parent_type: yup.string().optional(),
 
+  // Identity & Demographics
+  religion: yup.string().optional(),
+  caste: yup.string().optional(),
+  aadhaar_number: yup.string().optional().nullable(),
+  pan_number: yup.string().optional().nullable(),
+  passport_number: yup.string().optional().nullable(),
+
+  // Address Components
+  city: yup.string().optional(),
+  state: yup.string().optional(),
+  zip_code: yup.string().optional(),
+
   // Parent Details
   father_name: yup.string().optional(),
   father_job: yup.string().optional(),
@@ -80,10 +93,11 @@ const studentSchema = yup.object().shape({
     .array()
     .of(
       yup.object().shape({
-        school: yup.string().required("School name is required"),
-        board: yup.string().required("Board is required"),
-        percentage: yup.string().required("Percentage is required"),
-        year: yup.string().required("Year is required"),
+        level: yup.string().required("Education level is required"),
+        school: yup.string().required("Institution name is required"),
+        board: yup.string().required("Board/University is required"),
+        percentage: yup.string().required("Percentage/CGPA is required"),
+        year: yup.string().required("Year of passing is required"),
       }),
     )
     .optional(),
@@ -122,14 +136,7 @@ const StudentRegistration = () => {
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
     dispatch(fetchRegulations());
-
-    // Find Student Role ID
-    // We assume 'roles' might not be fully loaded here if not dispatched?
-    // Usually main layout does it, but let's be safe.
-    // If not in Redux, we might need to fetch.
-    // For now assuming roles state contains it or we fetch it.
-    // Actually, let's fetch roles if empty?
-    // dispatch(fetchRoles()); // Assuming this action exists and is imported
+    dispatch(fetchRoles()); // Fetch roles to get student role ID
   }, [dispatch]);
 
   // Find student role from list
@@ -208,6 +215,14 @@ const StudentRegistration = () => {
   const isLateral = watch("is_lateral");
   const batchYear = watch("batch_year");
 
+  // Update role_id when studentRoleId is loaded
+  useEffect(() => {
+    if (studentRoleId) {
+      setValue("role_id", studentRoleId);
+      console.log("✅ Set role_id to:", studentRoleId);
+    }
+  }, [studentRoleId, setValue]);
+
   // Fetch ID Previews
   useEffect(() => {
     const fetchPreviews = async () => {
@@ -267,6 +282,7 @@ const StudentRegistration = () => {
   };
 
   const onSubmit = async (data) => {
+    console.log("✅ Form submitted successfully with data:", data);
     setLoading(true);
     setError(null);
     try {
@@ -349,7 +365,7 @@ const StudentRegistration = () => {
   `;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 pb-20 animate-fade-in">
+    <div className=" bg-gray-50/50 dark:bg-gray-900 animate-fade-in">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-30 shadow-sm backdrop-blur-xl bg-white/80 dark:bg-gray-800/80">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -452,7 +468,12 @@ const StudentRegistration = () => {
             ) : (
               <div className="p-8 flex-1">
                 <form
-                  onSubmit={handleSubmit(onSubmit)}
+                  onSubmit={(e) => {
+                    console.log("📤 Form onSubmit event triggered");
+                    console.log("� Form errors:", errors);
+                    console.log("📝 Form values:", getValues());
+                    handleSubmit(onSubmit)(e);
+                  }}
                   className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500"
                 >
                   {error && (
@@ -678,13 +699,111 @@ const StudentRegistration = () => {
                           />
                         </div>
                       </div>
+
+                      {/* Demographics */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className={labelClass}>Religion</label>
+                          <select
+                            {...register("religion")}
+                            className={inputClass("religion")}
+                          >
+                            <option value="">Select Religion...</option>
+                            <option value="Hindu">Hindu</option>
+                            <option value="Muslim">Muslim</option>
+                            <option value="Christian">Christian</option>
+                            <option value="Sikh">Sikh</option>
+                            <option value="Jain">Jain</option>
+                            <option value="Buddhist">Buddhist</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelClass}>Caste / Category</label>
+                          <select
+                            {...register("caste")}
+                            className={inputClass("caste")}
+                          >
+                            <option value="">Select Category...</option>
+                            <option value="OC">OC (General)</option>
+                            <option value="BC-A">BC-A</option>
+                            <option value="BC-B">BC-B</option>
+                            <option value="BC-C">BC-C</option>
+                            <option value="BC-D">BC-D</option>
+                            <option value="BC-E">BC-E</option>
+                            <option value="SC">SC</option>
+                            <option value="ST">ST</option>
+                            <option value="EWS">EWS</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Identity Numbers */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <label className={labelClass}>Aadhaar Number</label>
+                          <input
+                            {...register("aadhaar_number")}
+                            className={inputClass("aadhaar_number")}
+                            placeholder="12-digit number"
+                            maxLength="12"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>PAN Number</label>
+                          <input
+                            {...register("pan_number")}
+                            className={`${inputClass("pan_number")} uppercase`}
+                            placeholder="ABCDE1234F"
+                            maxLength="10"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Passport Number</label>
+                          <input
+                            {...register("passport_number")}
+                            className={`${inputClass("passport_number")} uppercase`}
+                            placeholder="L1234567"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Address - Split into components */}
                       <div>
-                        <label className={labelClass}>Address</label>
+                        <label className={labelClass}>Street Address</label>
                         <textarea
                           {...register("address")}
-                          rows={3}
+                          rows={2}
                           className={inputClass("address")}
+                          placeholder="House No., Street, Locality"
                         />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <label className={labelClass}>City</label>
+                          <input
+                            {...register("city")}
+                            className={inputClass("city")}
+                            placeholder="City"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>State</label>
+                          <input
+                            {...register("state")}
+                            className={inputClass("state")}
+                            placeholder="State"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Pincode</label>
+                          <input
+                            {...register("zip_code")}
+                            className={inputClass("zip_code")}
+                            placeholder="6-digit pincode"
+                            maxLength="6"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -717,37 +836,315 @@ const StudentRegistration = () => {
                         </div>
                       </div>
 
-                      {/* Dynamic Detail Fields based on watcher - Simplified for brevity */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Single Parent Type Selection */}
+                      {watch("guardian_type") === "Single Parent" && (
                         <div>
-                          <label className={labelClass}>Father Name</label>
-                          <input
-                            {...register("father_name")}
-                            className={inputClass("father_name")}
-                          />
+                          <label className={labelClass}>
+                            Single Parent Type
+                          </label>
+                          <div className="flex gap-4">
+                            {["Father", "Mother"].map((type) => (
+                              <label
+                                key={type}
+                                className={`
+                                  px-4 py-2 rounded-xl text-sm font-medium cursor-pointer border transition-all
+                                  ${watch("single_parent_type") === type ? "bg-primary-50 border-primary-500 text-primary-700" : "bg-white border-gray-200 text-gray-600"}
+                                `}
+                              >
+                                <input
+                                  type="radio"
+                                  value={type}
+                                  {...register("single_parent_type")}
+                                  className="hidden"
+                                />
+                                {type}
+                              </label>
+                            ))}
+                          </div>
                         </div>
-                        <div>
-                          <label className={labelClass}>Mother Name</label>
-                          <input
-                            {...register("mother_name")}
-                            className={inputClass("mother_name")}
-                          />
+                      )}
+
+                      {/* Both Parents Details */}
+                      {watch("guardian_type") === "Both Parents" && (
+                        <div className="space-y-6">
+                          <h4 className="font-semibold text-gray-700">
+                            Father's Details
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className={labelClass}>
+                                Father's Name
+                              </label>
+                              <input
+                                {...register("father_name")}
+                                className={inputClass("father_name")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Father's Mobile
+                              </label>
+                              <input
+                                {...register("father_mobile")}
+                                className={inputClass("father_mobile")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Father's Email
+                              </label>
+                              <input
+                                type="email"
+                                {...register("father_email")}
+                                className={inputClass("father_email")}
+                                placeholder="father@example.com"
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Father's Occupation
+                              </label>
+                              <input
+                                {...register("father_job")}
+                                className={inputClass("father_job")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Father's Annual Income
+                              </label>
+                              <input
+                                {...register("father_income")}
+                                className={inputClass("father_income")}
+                                placeholder="₹"
+                              />
+                            </div>
+                          </div>
+
+                          <h4 className="font-semibold text-gray-700 pt-4">
+                            Mother's Details
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className={labelClass}>
+                                Mother's Name
+                              </label>
+                              <input
+                                {...register("mother_name")}
+                                className={inputClass("mother_name")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Mother's Mobile
+                              </label>
+                              <input
+                                {...register("mother_mobile")}
+                                className={inputClass("mother_mobile")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Mother's Email
+                              </label>
+                              <input
+                                type="email"
+                                {...register("mother_email")}
+                                className={inputClass("mother_email")}
+                                placeholder="mother@example.com"
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Mother's Occupation
+                              </label>
+                              <input
+                                {...register("mother_job")}
+                                className={inputClass("mother_job")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Mother's Annual Income
+                              </label>
+                              <input
+                                {...register("mother_income")}
+                                className={inputClass("mother_income")}
+                                placeholder="₹"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label className={labelClass}>Father Mobile</label>
-                          <input
-                            {...register("father_mobile")}
-                            className={inputClass("father_mobile")}
-                          />
+                      )}
+
+                      {/* Single Parent - Father */}
+                      {watch("guardian_type") === "Single Parent" &&
+                        watch("single_parent_type") === "Father" && (
+                          <div className="space-y-6">
+                            <h4 className="font-semibold text-gray-700">
+                              Father's Details
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <label className={labelClass}>
+                                  Father's Name
+                                </label>
+                                <input
+                                  {...register("father_name")}
+                                  className={inputClass("father_name")}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Father's Mobile
+                                </label>
+                                <input
+                                  {...register("father_mobile")}
+                                  className={inputClass("father_mobile")}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Father's Email
+                                </label>
+                                <input
+                                  type="email"
+                                  {...register("father_email")}
+                                  className={inputClass("father_email")}
+                                  placeholder="father@example.com"
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Father's Occupation
+                                </label>
+                                <input
+                                  {...register("father_job")}
+                                  className={inputClass("father_job")}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Father's Annual Income
+                                </label>
+                                <input
+                                  {...register("father_income")}
+                                  className={inputClass("father_income")}
+                                  placeholder="₹"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Single Parent - Mother */}
+                      {watch("guardian_type") === "Single Parent" &&
+                        watch("single_parent_type") === "Mother" && (
+                          <div className="space-y-6">
+                            <h4 className="font-semibold text-gray-700">
+                              Mother's Details
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <label className={labelClass}>
+                                  Mother's Name
+                                </label>
+                                <input
+                                  {...register("mother_name")}
+                                  className={inputClass("mother_name")}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Mother's Mobile
+                                </label>
+                                <input
+                                  {...register("mother_mobile")}
+                                  className={inputClass("mother_mobile")}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Mother's Email
+                                </label>
+                                <input
+                                  type="email"
+                                  {...register("mother_email")}
+                                  className={inputClass("mother_email")}
+                                  placeholder="mother@example.com"
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Mother's Occupation
+                                </label>
+                                <input
+                                  {...register("mother_job")}
+                                  className={inputClass("mother_job")}
+                                />
+                              </div>
+                              <div>
+                                <label className={labelClass}>
+                                  Mother's Annual Income
+                                </label>
+                                <input
+                                  {...register("mother_income")}
+                                  className={inputClass("mother_income")}
+                                  placeholder="₹"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Guardian Details */}
+                      {watch("guardian_type") === "Guardian" && (
+                        <div className="space-y-6">
+                          <h4 className="font-semibold text-gray-700">
+                            Guardian's Details
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className={labelClass}>
+                                Guardian's Name
+                              </label>
+                              <input
+                                {...register("guardian_name")}
+                                className={inputClass("guardian_name")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Guardian's Mobile
+                              </label>
+                              <input
+                                {...register("guardian_mobile")}
+                                className={inputClass("guardian_mobile")}
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Guardian's Email
+                              </label>
+                              <input
+                                type="email"
+                                {...register("guardian_email")}
+                                className={inputClass("guardian_email")}
+                                placeholder="guardian@example.com"
+                              />
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Guardian's Occupation
+                              </label>
+                              <input
+                                {...register("guardian_job")}
+                                className={inputClass("guardian_job")}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label className={labelClass}>Mother Mobile</label>
-                          <input
-                            {...register("mother_mobile")}
-                            className={inputClass("mother_mobile")}
-                          />
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
@@ -759,7 +1156,13 @@ const StudentRegistration = () => {
                         <button
                           type="button"
                           onClick={() =>
-                            appendAcademic({ school: "", board: "", year: "" })
+                            appendAcademic({
+                              level: "",
+                              school: "",
+                              board: "",
+                              percentage: "",
+                              year: "",
+                            })
                           }
                           className="text-sm font-bold text-primary-600 hover:underline flex items-center gap-1"
                         >
@@ -774,6 +1177,34 @@ const StudentRegistration = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="col-span-2">
                               <label className={labelClass}>
+                                Education Level
+                              </label>
+                              <select
+                                {...register(
+                                  `previous_academics.${index}.level`,
+                                )}
+                                className={inputClass("")}
+                              >
+                                <option value="">Select Level...</option>
+                                <option value="10th">10th / SSC</option>
+                                <option value="12th">
+                                  12th / Intermediate
+                                </option>
+                                <option value="Diploma">Diploma</option>
+                                <option value="Graduation">
+                                  Graduation / Bachelor's
+                                </option>
+                                <option value="Post Graduation">
+                                  Post Graduation / Master's
+                                </option>
+                                <option value="Doctorate">
+                                  Doctorate / PhD
+                                </option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                            <div className="col-span-2">
+                              <label className={labelClass}>
                                 Institution Name
                               </label>
                               <input
@@ -781,15 +1212,19 @@ const StudentRegistration = () => {
                                   `previous_academics.${index}.school`,
                                 )}
                                 className={inputClass("")}
+                                placeholder="School/College/University Name"
                               />
                             </div>
                             <div>
-                              <label className={labelClass}>Board/Degree</label>
+                              <label className={labelClass}>
+                                Board/University
+                              </label>
                               <input
                                 {...register(
                                   `previous_academics.${index}.board`,
                                 )}
                                 className={inputClass("")}
+                                placeholder="e.g., CBSE, State Board, University Name"
                               />
                             </div>
                             <div>
@@ -801,15 +1236,19 @@ const StudentRegistration = () => {
                                   `previous_academics.${index}.percentage`,
                                 )}
                                 className={inputClass("")}
+                                placeholder="e.g., 85% or 8.5 CGPA"
                               />
                             </div>
                             <div>
-                              <label className={labelClass}>Year</label>
+                              <label className={labelClass}>
+                                Year of Passing
+                              </label>
                               <input
                                 {...register(
                                   `previous_academics.${index}.year`,
                                 )}
                                 className={inputClass("")}
+                                placeholder="YYYY"
                               />
                             </div>
                           </div>

@@ -57,7 +57,7 @@ const schema = yup.object().shape({
     .optional(),
   pan_number: yup
     .string()
-    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format")
+    // .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format")
     .optional(),
   passport_number: yup.string().optional(),
   religion: yup.string().optional(),

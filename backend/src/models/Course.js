@@ -34,7 +34,7 @@ const Course = sequelize.define(
       defaultValue: 3,
     },
     course_type: {
-      type: DataTypes.ENUM("theory", "practical", "theory_practical"),
+      type: DataTypes.ENUM("theory", "lab", "project"),
       defaultValue: "theory",
     },
 
