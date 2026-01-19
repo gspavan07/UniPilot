@@ -50,6 +50,12 @@ exports.getAllUsers = async (req, res) => {
             allowedSlugs.push("student");
           }
 
+          // Special Case: Academics Admin needs to see Faculty and HODs
+          if (modulePrefix === "academics") {
+            allowedSlugs.push("faculty");
+            allowedSlugs.push("hod");
+          }
+
           roleScopeFilter = {
             slug: {
               [Op.or]: allowedSlugs,
@@ -466,10 +472,10 @@ exports.createUser = async (req, res) => {
     // Process Uploaded Documents (Now using StudentDocument model)
     if (req.files && req.files.length > 0) {
       logger.info(
-        `Processing ${req.files.length} documents for user ${user.id}`
+        `Processing ${req.files.length} documents for user ${user.id}`,
       );
       logger.info(
-        `Document Types received: ${JSON.stringify(req.body.document_types)}`
+        `Document Types received: ${JSON.stringify(req.body.document_types)}`,
       );
 
       const { StudentDocument } = require("../models");
@@ -485,8 +491,8 @@ exports.createUser = async (req, res) => {
             file_url: `/uploads/student_docs/${file.filename}`, // Using filename from multer
             type: documentTypes[index] || "Other",
             status: "pending",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -504,7 +510,7 @@ exports.createUser = async (req, res) => {
             effective_from: new Date(),
           });
           logger.info(
-            `Created default Salary Structure for user ${user.id} using grade ${grade.name}`
+            `Created default Salary Structure for user ${user.id} using grade ${grade.name}`,
           );
         }
       } catch (err) {
@@ -564,7 +570,7 @@ exports.updateUser = async (req, res) => {
     // Process Uploaded Documents (Now using StudentDocument model)
     if (req.files && req.files.length > 0) {
       logger.info(
-        `Processing ${req.files.length} documents for user update ${user.id}`
+        `Processing ${req.files.length} documents for user update ${user.id}`,
       );
       const { StudentDocument } = require("../models");
       const documentTypes = Array.isArray(req.body.document_types)
@@ -579,8 +585,8 @@ exports.updateUser = async (req, res) => {
             file_url: `/uploads/student_docs/${file.filename}`,
             type: documentTypes[index] || "Other",
             status: "pending",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -632,7 +638,7 @@ exports.deleteUser = async (req, res) => {
       try {
         await User.update(
           { is_active: false },
-          { where: { id: req.params.id } }
+          { where: { id: req.params.id } },
         );
         return res.status(200).json({
           success: true,
@@ -830,7 +836,7 @@ exports.updateBankDetails = async (req, res) => {
     const requesterSlug = requester?.role_data?.slug;
 
     const isHR = ["admin", "super_admin", "hr", "hr_admin"].includes(
-      requesterSlug
+      requesterSlug,
     );
     const isSelf = requesterId === id;
 

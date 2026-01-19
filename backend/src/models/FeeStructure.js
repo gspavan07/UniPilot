@@ -49,7 +49,7 @@ const FeeStructure = sequelize.define(
     tableName: "fee_structures",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = FeeStructure;

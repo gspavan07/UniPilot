@@ -52,7 +52,7 @@ const MainLayout = () => {
       name: "Admission Analytics",
       href: "/admission/dashboard",
       icon: ClipboardCheck,
-      permission: "admissions:view",
+      permission: "admission:view",
     },
     {
       name: "Departments",

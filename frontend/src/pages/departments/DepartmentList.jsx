@@ -6,6 +6,7 @@ import {
   createDepartment,
   updateDepartment,
 } from "../../store/slices/departmentSlice";
+import { fetchUsers } from "../../store/slices/userSlice";
 import DepartmentForm from "./DepartmentForm";
 import {
   Plus,
@@ -24,7 +25,15 @@ const DepartmentList = () => {
   const { departments, status, error } = useSelector(
     (state) => state.departments,
   );
-  const { accessToken } = useSelector((state) => state.auth);
+  const { accessToken, user } = useSelector((state) => state.auth);
+  const { users: facultyList } = useSelector((state) => state.users);
+
+  // Permission Logic
+  const canViewAdministrative = user?.permissions?.includes(
+    "departments:view_administrative",
+  );
+
+  const canCreate = user?.permissions?.includes("departments:create");
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,7 +43,15 @@ const DepartmentList = () => {
 
   useEffect(() => {
     dispatch(fetchDepartments());
+    dispatch(fetchUsers({ role: "faculty" }));
   }, [dispatch]);
+
+  // Enforce filter type for restricted users
+  useEffect(() => {
+    if (!canViewAdministrative) {
+      setFilterType("academic");
+    }
+  }, [canViewAdministrative]);
 
   const handleDelete = async (id) => {
     if (
@@ -99,13 +116,15 @@ const DepartmentList = () => {
             Manage academic departments and their administrative heads.
           </p>
         </div>
-        <button
-          onClick={openAddForm}
-          className="btn btn-primary flex items-center shadow-lg shadow-primary-500/20"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Department
-        </button>
+        {canCreate && (
+          <button
+            onClick={openAddForm}
+            className="btn btn-primary flex items-center shadow-lg shadow-primary-500/20"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Department
+          </button>
+        )}
       </div>
 
       {/* Filters & Search */}
@@ -120,20 +139,22 @@ const DepartmentList = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-          <button
-            onClick={() => setFilterType("academic")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "academic" ? "bg-white dark:bg-gray-700 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
-          >
-            Academic
-          </button>
-          <button
-            onClick={() => setFilterType("administrative")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "administrative" ? "bg-white dark:bg-gray-700 text-secondary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
-          >
-            Administrative
-          </button>
-        </div>
+        {canViewAdministrative && (
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            <button
+              onClick={() => setFilterType("academic")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "academic" ? "bg-white dark:bg-gray-700 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            >
+              Academic
+            </button>
+            <button
+              onClick={() => setFilterType("administrative")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filterType === "administrative" ? "bg-white dark:bg-gray-700 text-secondary-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            >
+              Administrative
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table/List */}
@@ -218,7 +239,11 @@ const DepartmentList = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {dept.hod ? (
+                      {dept.type === "administrative" ? (
+                        <span className="text-xs text-gray-400 font-medium italic">
+                          Not Applicable
+                        </span>
+                      ) : dept.hod ? (
                         <div className="flex items-center">
                           <img
                             src={getProfileImageUrl(dept.hod)}
@@ -287,7 +312,7 @@ const DepartmentList = () => {
         onSave={handleSave}
         department={selectedDept}
         departmentList={departments}
-        facultyList={[]} // Will populate from faculty store later
+        facultyList={facultyList}
       />
     </div>
   );
