@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -11,10 +11,16 @@ import {
   Building,
   Hash,
   Mail,
-  MapPin,
   Calendar,
+  MapPin,
   User as UserIcon,
+  Building2,
+  DoorOpen,
 } from "lucide-react";
+import {
+  fetchBlocks,
+  fetchBlockDetails,
+} from "../../store/slices/infrastructureSlice";
 
 const schema = yup.object().shape({
   name: yup
@@ -48,6 +54,16 @@ const schema = yup.object().shape({
   established_date: yup.string().optional(),
   type: yup.string().oneOf(["academic", "administrative"]).default("academic"),
   is_active: yup.boolean().default(true),
+  block_id: yup
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
+  room_id: yup
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
 });
 
 const DepartmentForm = ({
@@ -59,8 +75,21 @@ const DepartmentForm = ({
   departmentList = [],
 }) => {
   const { user } = useSelector((state) => state.auth);
+  const {
+    blocks,
+    currentBlock,
+    status: infraStatus,
+  } = useSelector((state) => state.infrastructure);
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Fetch blocks on mount
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(fetchBlocks());
+    }
+  }, [isOpen, dispatch]);
 
   // Permission Logic
   const canViewAdministrative = user?.permissions?.includes(
@@ -87,8 +116,18 @@ const DepartmentForm = ({
       established_date: "",
       type: "academic",
       is_active: true,
+      block_id: "",
+      room_id: "",
     },
   });
+
+  // Watch block_id changes to fetch rooms
+  const selectedBlockId = watch("block_id");
+  useEffect(() => {
+    if (selectedBlockId) {
+      dispatch(fetchBlockDetails(selectedBlockId));
+    }
+  }, [selectedBlockId, dispatch]);
 
   useEffect(() => {
     if (department && isOpen) {
@@ -104,7 +143,13 @@ const DepartmentForm = ({
         established_date: department.established_date || "",
         type: department.type || "academic",
         is_active: department.is_active ?? true,
+        block_id: department.block_id || "",
+        room_id: department.room_id || "",
       });
+      // Fetch details for the existing block to populate rooms
+      if (department.block_id) {
+        dispatch(fetchBlockDetails(department.block_id));
+      }
     } else if (isOpen) {
       reset({
         name: "",
@@ -118,6 +163,8 @@ const DepartmentForm = ({
         established_date: "",
         type: "academic",
         is_active: true,
+        block_id: "",
+        room_id: "",
       });
     }
     setError(null);
@@ -386,6 +433,51 @@ const DepartmentForm = ({
                         className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
                         placeholder="Block A, 3rd Floor"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Block
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <select
+                          {...register("block_id")}
+                          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
+                        >
+                          <option value="">Select Block...</option>
+                          {blocks.map((block) => (
+                            <option key={block.id} value={block.id}>
+                              {block.name} ({block.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Room
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                          <DoorOpen className="w-4 h-4" />
+                        </div>
+                        <select
+                          {...register("room_id")}
+                          disabled={!watch("block_id")}
+                          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Room...</option>
+                          {currentBlock?.rooms?.map((room) => (
+                            <option key={room.id} value={room.id}>
+                              {room.room_number} - {room.name || room.type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </section>

@@ -41,6 +41,8 @@ import AcademicCalendar from "./pages/hr/AcademicCalendar";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
+import BlockList from "./pages/infrastructure/BlockList";
+import BlockDetails from "./pages/infrastructure/BlockDetails";
 
 function App() {
   const dispatch = useDispatch();
@@ -110,6 +112,8 @@ function App() {
             path="/academic/calendar"
             element={<AcademicCalendar target="student" />}
           />
+          <Route path="/infrastructure" element={<BlockList />} />
+          <Route path="/infrastructure/blocks/:id" element={<BlockDetails />} />
           <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route

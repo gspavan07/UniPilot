@@ -397,8 +397,23 @@ SalaryGrade.hasMany(SalaryStructure, {
   foreignKey: "grade_id",
 });
 
+// Infrastructure
+const Block = require("./Block");
+const Room = require("./Room");
+
+// Infrastructure Associations
+Block.hasMany(Room, { foreignKey: "block_id", as: "rooms" });
+Room.belongsTo(Block, { foreignKey: "block_id", as: "block" });
+
+Department.belongsTo(Block, { foreignKey: "block_id", as: "block" });
+Department.belongsTo(Room, { foreignKey: "room_id", as: "room" });
+Block.hasMany(Department, { foreignKey: "block_id", as: "departments" });
+Room.hasOne(Department, { foreignKey: "room_id", as: "department" });
+
 // Export models and sequelize instance
 module.exports = {
   ...models,
   sequelize,
+  Block,
+  Room,
 };

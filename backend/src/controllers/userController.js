@@ -96,7 +96,14 @@ exports.getAllUsers = async (req, res) => {
 
     const where = {};
     if (role_id && role_id !== "undefined") where.role_id = role_id;
-    if (role && role !== "undefined") where.role = role.toLowerCase();
+    if (role && role !== "undefined") {
+      const roles = role.split(",");
+      if (roles.length > 1) {
+        where.role = { [Op.in]: roles.map((r) => r.toLowerCase().trim()) };
+      } else {
+        where.role = role.toLowerCase();
+      }
+    }
     if (department_id && department_id !== "undefined")
       where.department_id = department_id;
     if (req.query.batch_year && req.query.batch_year !== "undefined") {

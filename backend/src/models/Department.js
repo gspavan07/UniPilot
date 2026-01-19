@@ -66,6 +66,23 @@ const Department = sequelize.define(
     },
     office_location: {
       type: DataTypes.STRING(200),
+      comment: "Legacy field, verify if can be removed later",
+    },
+    block_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "blocks",
+        key: "id",
+      },
+    },
+    room_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "rooms",
+        key: "id",
+      },
     },
 
     // Status
@@ -99,7 +116,7 @@ const Department = sequelize.define(
       { fields: ["hod_id"] },
       { fields: ["is_active"] },
     ],
-  }
+  },
 );
 
 module.exports = Department;

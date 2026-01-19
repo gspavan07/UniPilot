@@ -43,7 +43,7 @@ const DepartmentList = () => {
 
   useEffect(() => {
     dispatch(fetchDepartments());
-    dispatch(fetchUsers({ role: "faculty" }));
+    dispatch(fetchUsers({ role: "faculty,hod" }));
   }, [dispatch]);
 
   // Enforce filter type for restricted users

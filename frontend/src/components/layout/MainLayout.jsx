@@ -32,6 +32,7 @@ import {
   Library,
   Sliders,
   Briefcase,
+  Building,
 } from "lucide-react";
 
 const MainLayout = () => {
@@ -59,6 +60,12 @@ const MainLayout = () => {
       href: "/departments",
       icon: BookOpen,
       permission: "academics:dept:manage", // Students/Faculty need to see this
+    },
+    {
+      name: "Infrastructure",
+      href: "/infrastructure",
+      icon: Building,
+      roles: ["admin", "super_admin"], // Visible to Admins
     },
     {
       name: "Programs",
