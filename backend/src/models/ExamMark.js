@@ -23,12 +23,26 @@ const ExamMark = sequelize.define(
       type: DataTypes.DECIMAL(5, 2),
       allowNull: true,
     },
+    component_scores: {
+      type: DataTypes.JSONB,
+      defaultValue: null,
+      comment:
+        "Component-wise scores: {assignment: 4, objective: 9, descriptive: 13}",
+    },
     grade: {
       type: DataTypes.STRING(5),
     },
-    status: {
+    attendance_status: {
       type: DataTypes.ENUM("present", "absent", "malpractice"),
       defaultValue: "present",
+    },
+    moderation_status: {
+      type: DataTypes.ENUM("draft", "verified", "approved", "locked"),
+      defaultValue: "draft",
+    },
+    moderation_history: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
     },
     remarks: {
       type: DataTypes.TEXT,
@@ -42,7 +56,7 @@ const ExamMark = sequelize.define(
     tableName: "exam_marks",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = ExamMark;

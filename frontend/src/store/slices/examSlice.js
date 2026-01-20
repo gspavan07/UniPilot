@@ -21,10 +21,10 @@ export const fetchExamCycles = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch cycles"
+        error.response?.data?.error || "Failed to fetch cycles",
       );
     }
-  }
+  },
 );
 
 export const createExamCycle = createAsyncThunk(
@@ -35,10 +35,10 @@ export const createExamCycle = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to create exam cycle"
+        error.response?.data?.error || "Failed to create exam cycle",
       );
     }
-  }
+  },
 );
 
 export const updateExamCycle = createAsyncThunk(
@@ -49,10 +49,10 @@ export const updateExamCycle = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to update exam cycle"
+        error.response?.data?.error || "Failed to update exam cycle",
       );
     }
-  }
+  },
 );
 
 export const deleteExamCycle = createAsyncThunk(
@@ -63,10 +63,10 @@ export const deleteExamCycle = createAsyncThunk(
       return id;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to delete exam cycle"
+        error.response?.data?.error || "Failed to delete exam cycle",
       );
     }
-  }
+  },
 );
 
 export const enterBulkMarks = createAsyncThunk(
@@ -77,10 +77,10 @@ export const enterBulkMarks = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to enter marks"
+        error.response?.data?.error || "Failed to enter marks",
       );
     }
-  }
+  },
 );
 
 export const fetchExamSchedules = createAsyncThunk(
@@ -91,10 +91,10 @@ export const fetchExamSchedules = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch schedules"
+        error.response?.data?.error || "Failed to fetch schedules",
       );
     }
-  }
+  },
 );
 
 export const addExamSchedule = createAsyncThunk(
@@ -105,10 +105,10 @@ export const addExamSchedule = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to add schedule"
+        error.response?.data?.error || "Failed to add schedule",
       );
     }
-  }
+  },
 );
 
 export const updateExamSchedule = createAsyncThunk(
@@ -119,10 +119,10 @@ export const updateExamSchedule = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to update schedule"
+        error.response?.data?.error || "Failed to update schedule",
       );
     }
-  }
+  },
 );
 
 export const deleteExamSchedule = createAsyncThunk(
@@ -133,10 +133,10 @@ export const deleteExamSchedule = createAsyncThunk(
       return id;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to delete schedule"
+        error.response?.data?.error || "Failed to delete schedule",
       );
     }
-  }
+  },
 );
 
 export const autoGenerateTimetable = createAsyncThunk(
@@ -147,10 +147,10 @@ export const autoGenerateTimetable = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to auto-generate timetable"
+        error.response?.data?.error || "Failed to auto-generate timetable",
       );
     }
-  }
+  },
 );
 
 export const fetchMyResults = createAsyncThunk(
@@ -161,10 +161,147 @@ export const fetchMyResults = createAsyncThunk(
       return response.data; // Return full response including gpa
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch results"
+        error.response?.data?.error || "Failed to fetch results",
       );
     }
-  }
+  },
+);
+
+export const fetchMyExamSchedules = createAsyncThunk(
+  "exam/fetchMySchedules",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/exam/my-schedules");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch your schedules",
+      );
+    }
+  },
+);
+
+export const fetchScheduleMarks = createAsyncThunk(
+  "exam/fetchScheduleMarks",
+  async (scheduleId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/exam/marks/${scheduleId}`);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch marks",
+      );
+    }
+  },
+);
+
+export const fetchMarkEntryData = createAsyncThunk(
+  "exam/fetchMarkEntryData",
+  async (scheduleId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/exam/marks/entry-data/${scheduleId}`);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch mark entry data",
+      );
+    }
+  },
+);
+
+export const updateModerationStatus = createAsyncThunk(
+  "exam/updateModeration",
+  async (moderationData, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/exam/marks/moderation", moderationData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to update status",
+      );
+    }
+  },
+);
+
+export const fetchConsolidatedResults = createAsyncThunk(
+  "exam/fetchConsolidated",
+  async (filters, { rejectWithValue }) => {
+    try {
+      const { program_id, semester, batch_year, section, exam_cycle_id } =
+        filters;
+      let url = `/exam/consolidated-results?semester=${semester}&batch_year=${batch_year}`;
+      if (program_id) url += `&program_id=${program_id}`;
+      if (section) url += `&section=${section}`;
+      if (exam_cycle_id) url += `&exam_cycle_id=${exam_cycle_id}`;
+
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch consolidated results",
+      );
+    }
+  },
+);
+
+export const bulkImportMarks = createAsyncThunk(
+  "exam/bulkImport",
+  async ({ exam_cycle_id, file }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("exam_cycle_id", exam_cycle_id);
+      formData.append("file", file);
+
+      const response = await api.post("/exam/marks/bulk-import", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to import marks",
+      );
+    }
+  },
+);
+
+export const downloadTemplate = createAsyncThunk(
+  "exam/downloadTemplate",
+  async (exam_cycle_id, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/exam/marks/template`, {
+        params: { exam_cycle_id },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Marks_Import_Template.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      return true;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to download template",
+      );
+    }
+  },
+);
+
+export const bulkPublishResults = createAsyncThunk(
+  "exam/bulkPublish",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/exam/marks/bulk-publish", data);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to publish results",
+      );
+    }
+  },
 );
 
 export const examSlice = createSlice({
@@ -204,6 +341,11 @@ export const examSlice = createSlice({
         };
       })
       .addCase(fetchExamSchedules.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.schedules = action.payload;
+      })
+      .addCase(fetchMyExamSchedules.fulfilled, (state, action) => {
+        state.status = "succeeded";
         state.schedules = action.payload;
       })
       .addCase(addExamSchedule.fulfilled, (state, action) => {
@@ -211,7 +353,7 @@ export const examSlice = createSlice({
       })
       .addCase(updateExamSchedule.fulfilled, (state, action) => {
         const index = state.schedules.findIndex(
-          (s) => s.id === action.payload.id
+          (s) => s.id === action.payload.id,
         );
         if (index !== -1) {
           // Merge with existing to keep course details
@@ -223,7 +365,7 @@ export const examSlice = createSlice({
       })
       .addCase(deleteExamSchedule.fulfilled, (state, action) => {
         state.schedules = state.schedules.filter(
-          (s) => s.id !== action.payload
+          (s) => s.id !== action.payload,
         );
       })
       .addCase(autoGenerateTimetable.fulfilled, (state, action) => {

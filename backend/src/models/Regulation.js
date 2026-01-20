@@ -37,6 +37,17 @@ const Regulation = sequelize.define(
     description: {
       type: DataTypes.TEXT,
     },
+    exam_structure: {
+      type: DataTypes.JSONB,
+      defaultValue: {},
+      comment:
+        "Defines exam types, components, and calculation formulas for this regulation",
+    },
+    grade_scale: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+      comment: "Array of grade mappings: [{grade, min, max, points}]",
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

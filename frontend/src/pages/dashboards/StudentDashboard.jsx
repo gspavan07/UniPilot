@@ -13,7 +13,11 @@ import { Link } from "react-router-dom";
 import { fetchMyFeeStatus } from "../../store/slices/feeSlice";
 import { fetchTimetable } from "../../store/slices/timetableSlice";
 import { fetchMyAttendance } from "../../store/slices/attendanceSlice";
-import { fetchMyResults, fetchExamCycles } from "../../store/slices/examSlice";
+import {
+  fetchMyResults,
+  fetchExamCycles,
+  fetchMyExamSchedules,
+} from "../../store/slices/examSlice";
 
 const StudentDashboard = () => {
   const dispatch = useDispatch();
@@ -23,16 +27,19 @@ const StudentDashboard = () => {
   const { summary: attendanceSummary } = useSelector(
     (state) => state.attendance,
   );
-  const { myResults, cycles, gpa } = useSelector((state) => state.exam);
+  const { myResults, cycles, schedules, gpa } = useSelector(
+    (state) => state.exam,
+  );
 
   useEffect(() => {
     // 1. Fetch Fees
     dispatch(fetchMyFeeStatus());
     // 2. Fetch Attendance
     dispatch(fetchMyAttendance());
-    // 3. Fetch Results & Exam Cycles
+    // 3. Fetch Results & Exam Cycles & Schedules
     dispatch(fetchMyResults());
     dispatch(fetchExamCycles());
+    dispatch(fetchMyExamSchedules());
   }, [dispatch]);
 
   // Calculate Real Stats
@@ -177,26 +184,56 @@ const StudentDashboard = () => {
         {/* Quick Actions / Notices */}
         <div className="space-y-6">
           {/* Dynamic Upcoming Exam Card */}
-          {upcomingExam ? (
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/30">
-              <h3 className="font-bold text-lg mb-2">Upcoming Exam</h3>
-              <p className="text-indigo-100 text-sm mb-4">
-                {upcomingExam.name}
-              </p>
-              <div className="flex items-center justify-between text-xs font-medium bg-white/10 p-3 rounded-lg">
-                <span>
-                  starts{" "}
-                  {new Date(upcomingExam.start_date).toLocaleDateString()}
-                </span>
-                <BookOpen className="w-4 h-4" />
-              </div>
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/30">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg">Upcoming Exams</h3>
+              <Link
+                to="/my-exams"
+                className="text-[10px] font-black uppercase text-white/60 hover:text-white transition-colors"
+              >
+                View All
+              </Link>
             </div>
-          ) : (
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/30 opacity-80">
-              <h3 className="font-bold text-lg mb-2">No Upcoming Exams</h3>
-              <p className="text-indigo-100 text-sm">Focus on your classes!</p>
+
+            <div className="space-y-3">
+              {schedules && schedules.length > 0 ? (
+                schedules.slice(0, 3).map((s, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/5"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="max-w-[70%]">
+                        <h4 className="font-bold text-sm truncate">
+                          {s.course?.name}
+                        </h4>
+                        <p className="text-[10px] text-indigo-200 uppercase font-black">
+                          {s.cycle?.cycle_type?.replace("_", " ")}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-black">
+                          {new Date(s.exam_date).toLocaleDateString("en-US", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
+                        <p className="text-[10px] text-white/60">
+                          {s.start_time.substring(0, 5)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 bg-white/5 rounded-xl border border-dashed border-white/10">
+                  <p className="text-sm text-indigo-100/50">
+                    No upcoming exams
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
             <h3 className="font-bold mb-4">Recent Results</h3>

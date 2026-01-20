@@ -21,8 +21,12 @@ import AdmissionSettings from "./pages/settings/AdmissionSettings";
 import PromotionManager from "./pages/promotion/PromotionManager";
 import AttendanceTracker from "./pages/attendance/AttendanceTracker";
 import LeaveManager from "./pages/attendance/LeaveManager";
-import ExamManagement from "./pages/exam/ExamManagement";
+import ExamSchedules from "./pages/exam/ExamSchedules";
+import MarksEntry from "./pages/exam/MarksEntry";
+import PublishMarks from "./pages/exam/PublishMarks";
 import StudentResults from "./pages/exam/StudentResults";
+import MyExams from "./pages/exam/MyExams";
+import MarkEntry from "./pages/exam/MarkEntry";
 import FeeManagement from "./pages/fee/FeeManagement";
 import MyFees from "./pages/fee/MyFees";
 import LibraryDashboard from "./pages/library/LibraryDashboard";
@@ -45,6 +49,7 @@ import BlockList from "./pages/infrastructure/BlockList";
 import BlockDetails from "./pages/infrastructure/BlockDetails";
 import RegulationList from "./pages/academics/RegulationList";
 import RegulationViewer from "./pages/academics/RegulationViewer";
+import RegulationManager from "./pages/admin/RegulationManager";
 import SectionManager from "./pages/academics/SectionManager";
 
 function App() {
@@ -82,6 +87,10 @@ function App() {
             path="/regulations/:id/curriculum"
             element={<RegulationViewer />}
           />
+          <Route
+            path="/regulations/:id/exams"
+            element={<RegulationManager />}
+          />
           <Route path="/courses" element={<CourseList />} />
           <Route path="/faculty" element={<UserList role="faculty" />} />
           <Route path="/students" element={<StudentList />} />
@@ -98,7 +107,11 @@ function App() {
           <Route path="/lifecycle" element={<PromotionManager />} />
           <Route path="/attendance" element={<AttendanceTracker />} />
           <Route path="/leave" element={<LeaveManager />} />
-          <Route path="/exams" element={<ExamManagement />} />
+          <Route path="/exams/schedules" element={<ExamSchedules />} />
+          <Route path="/exams/marks-entry" element={<MarksEntry />} />
+          <Route path="/exams/publish" element={<PublishMarks />} />
+          <Route path="/my-exams" element={<MyExams />} />
+          <Route path="/marks-entry/:scheduleId" element={<MarkEntry />} />
           <Route path="/results" element={<StudentResults />} />
           <Route path="/fees" element={<FeeManagement />} />
           <Route path="/my-fees" element={<MyFees />} />

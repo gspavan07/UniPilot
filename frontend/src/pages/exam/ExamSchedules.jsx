@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FileText,
@@ -19,6 +20,8 @@ import {
   Edit,
   Trash2,
   Zap,
+  LayoutDashboard,
+  Lock,
 } from "lucide-react";
 import {
   fetchExamCycles,
@@ -31,12 +34,16 @@ import {
   updateExamSchedule,
   deleteExamSchedule,
   autoGenerateTimetable,
+  fetchScheduleMarks,
+  updateModerationStatus,
+  fetchConsolidatedResults,
 } from "../../store/slices/examSlice";
 import { fetchCourses } from "../../store/slices/courseSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
+import { fetchRegulations } from "../../store/slices/regulationSlice";
 import api from "../../utils/api";
 
-const ExamManagement = () => {
+const ExamSchedules = () => {
   const dispatch = useDispatch();
   const {
     cycles,
@@ -45,13 +52,33 @@ const ExamManagement = () => {
   } = useSelector((state) => state.exam);
   const { courses } = useSelector((state) => state.courses);
   const { programs } = useSelector((state) => state.programs);
+  const { regulations } = useSelector((state) => state.regulations);
   const { user } = useSelector((state) => state.auth);
 
   const [viewMode, setViewMode] = useState("list"); // list, details
-  const [activeTab, setActiveTab] = useState("timetable"); // timetable, marks, tickets
+  const [activeTab, setActiveTab] = useState("timetable"); // timetable, marks, tickets, tabulation
   const [selectedCycle, setSelectedCycle] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState("");
+  const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
+
+  // Derive unique batch years and semesters from cycles
+  const uniqueBatches = [
+    ...new Set(cycles.map((c) => c.batch_year).filter(Boolean)),
+  ].sort((a, b) => b - a);
+  const uniqueSemesters = [
+    ...new Set(cycles.map((c) => c.semester).filter(Boolean)),
+  ].sort((a, b) => a - b);
+
+  // Filter cycles based on selected batch and semester
+  const filteredCycles = cycles.filter((c) => {
+    const matchesBatch =
+      !selectedBatch || c.batch_year === parseInt(selectedBatch, 10);
+    const matchesSemester =
+      !selectedSemester || c.semester === parseInt(selectedSemester, 10);
+    return matchesBatch && matchesSemester;
+  });
 
   // Create Cycle Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -61,7 +88,9 @@ const ExamManagement = () => {
     end_date: "",
     batch_year: 2025,
     semester: 1,
-    exam_type: "semester_end",
+    regulation_id: "",
+    cycle_type: "",
+    instance_number: 1,
   });
   const [editingCycle, setEditingCycle] = useState(null);
 
@@ -108,10 +137,58 @@ const ExamManagement = () => {
   });
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
 
+  // Tabulation State
+  const [tabulationData, setTabulationData] = useState([]);
+  const [loadingTabulation, setLoadingTabulation] = useState(false);
+
+  // Derive available batch years from regulations
+  const availableYears = [
+    ...(new Set(
+      regulations.map((r) => {
+        const year = r.academic_year?.split("-")[0];
+        return year ? parseInt(year) : null;
+      }),
+    ) || []),
+  ]
+    .filter(Boolean)
+    .sort((a, b) => b - a);
+
+  const selectedRegObj = regulations.find(
+    (r) => r.id === cycleForm.regulation_id,
+  );
+  const midTermCount =
+    selectedRegObj?.exam_structure?.theory_courses?.mid_terms?.count || 3;
+
+  const fetchTabulationData = async () => {
+    if (
+      !selectedProgram ||
+      !viewingCycle?.semester ||
+      !viewingCycle?.batch_year
+    )
+      return;
+    setLoadingTabulation(true);
+    try {
+      const res = await dispatch(
+        fetchConsolidatedResults({
+          program_id: selectedProgram,
+          semester: viewingCycle.semester,
+          batch_year: viewingCycle.batch_year,
+          section: examSection,
+        }),
+      ).unwrap();
+      setTabulationData(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTabulation(false);
+    }
+  };
+
   useEffect(() => {
     dispatch(fetchExamCycles());
     dispatch(fetchCourses());
     dispatch(fetchPrograms());
+    dispatch(fetchRegulations());
   }, [dispatch]);
 
   useEffect(() => {
@@ -120,19 +197,61 @@ const ExamManagement = () => {
     }
   }, [viewMode, selectedCycle, dispatch]);
 
-  const fetchStudentsForMarks = async (courseId) => {
+  const [activeSchedule, setActiveSchedule] = useState(null);
+  const [examSection, setExamSection] = useState("");
+  const [sheetStatus, setSheetStatus] = useState("draft");
+
+  const fetchStudentsForMarks = async (courseId, section = "") => {
     if (!courseId) return;
     setLoadingStudents(true);
+    setMarksData({});
+    setSheetStatus("draft");
+
+    // 1. Find the schedule
+    const schedule = schedules.find(
+      (s) => s.course_id === courseId && s.exam_cycle_id === selectedCycle,
+    );
+    setActiveSchedule(schedule || null);
+
+    if (!schedule) {
+      setLoadingStudents(false);
+      return;
+    }
+
     try {
-      const response = await api.get(
-        `/users?role=student&department_id=${user.department_id}`
-      );
-      setStudentList(response.data.data);
+      // 2. Fetch Students
+      const course = courses.find((c) => c.id === courseId);
+      let url = `/users?role=student&department_id=${user.department_id}`;
+
+      if (course?.program_id) url += `&program_id=${course.program_id}`;
+      if (course?.semester) url += `&semester=${course.semester}`;
+      if (section) url += `&section=${section}`;
+
+      const response = await api.get(url);
+      const students = response.data.data;
+      setStudentList(students);
+
+      // 3. Fetch Existing Marks
+      const existingMarks = await dispatch(
+        fetchScheduleMarks(schedule.id),
+      ).unwrap();
+
+      // 4. Merge Data & Status
       const initial = {};
-      response.data.data.forEach((s) => (initial[s.id] = ""));
+      if (existingMarks.length > 0) {
+        setSheetStatus(existingMarks[0].moderation_status || "draft");
+      }
+
+      students.forEach((s) => {
+        const record = existingMarks.find((r) => r.student_id === s.id);
+        initial[s.id] = {
+          marks_obtained: record ? record.marks_obtained : "",
+          component_scores: record?.component_scores || {},
+        };
+      });
       setMarksData(initial);
     } catch (error) {
-      console.error("Failed to fetch students", error);
+      console.error("Failed to fetch students/marks", error);
     } finally {
       setLoadingStudents(false);
     }
@@ -142,7 +261,7 @@ const ExamManagement = () => {
     e.preventDefault();
     if (editingCycle) {
       dispatch(
-        updateExamCycle({ id: editingCycle.id, cycleData: cycleForm })
+        updateExamCycle({ id: editingCycle.id, cycleData: cycleForm }),
       ).then((res) => {
         if (!res.error) {
           setShowCreateModal(false);
@@ -159,9 +278,11 @@ const ExamManagement = () => {
             name: "",
             start_date: "",
             end_date: "",
-            batch_year: 2025,
+            batch_year: availableYears[0] || 2024,
             semester: 1,
-            exam_type: "semester_end",
+            regulation_id: "",
+            cycle_type: "",
+            instance_number: 1,
           });
           alert("Exam cycle created successfully!");
         }
@@ -172,7 +293,7 @@ const ExamManagement = () => {
   const handleDeleteCycle = (id) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this exam cycle? This will also delete all associated exam schedules and marks."
+        "Are you sure you want to delete this exam cycle? This will also delete all associated exam schedules and marks.",
       )
     ) {
       dispatch(deleteExamCycle(id)).then((res) => {
@@ -196,8 +317,8 @@ const ExamManagement = () => {
       start_time: "",
       end_time: "",
       venue: "",
-      max_marks: 100,
-      passing_marks: 35,
+      max_marks: viewingCycle?.max_marks || 100,
+      passing_marks: viewingCycle?.passing_marks || 35,
       branches: [],
     });
     setShowScheduleModal(true);
@@ -210,7 +331,7 @@ const ExamManagement = () => {
         updateExamSchedule({
           id: editingSchedule.id,
           scheduleData: scheduleForm,
-        })
+        }),
       ).then((res) => {
         if (!res.error) {
           setShowScheduleModal(false);
@@ -244,7 +365,7 @@ const ExamManagement = () => {
   const handleAutoGenerate = (e) => {
     e.preventDefault();
     dispatch(
-      autoGenerateTimetable({ ...autoForm, exam_cycle_id: selectedCycle })
+      autoGenerateTimetable({ ...autoForm, exam_cycle_id: selectedCycle }),
     ).then((res) => {
       if (!res.error) {
         setShowAutoModal(false);
@@ -255,20 +376,44 @@ const ExamManagement = () => {
   };
 
   const handleMarksSubmit = () => {
+    if (sheetStatus === "locked")
+      return alert("Marks are locked and cannot be edited.");
+
     const marks_data = Object.keys(marksData).map((sid) => ({
       student_id: sid,
-      marks_obtained: parseFloat(marksData[sid]) || 0,
-      status: "present",
+      marks_obtained: parseFloat(marksData[sid]?.marks_obtained) || 0,
+      component_scores: marksData[sid]?.component_scores || {},
+      attendance_status: "present",
+      remarks: "",
     }));
 
     dispatch(
       enterBulkMarks({
-        exam_schedule_id: "PLACEHOLDER_SCHEDULE_ID", // In a real app, this would be selected
+        exam_schedule_id: activeSchedule?.id,
         marks_data,
-      })
-    ).then(() => {
-      alert("Marks entered successfully");
+      }),
+    ).then((res) => {
+      if (!res.error) {
+        alert("Marks saved as Draft successfully");
+        setSheetStatus("draft");
+      }
     });
+  };
+
+  const handleModeration = async (newStatus) => {
+    if (!activeSchedule) return;
+    try {
+      await dispatch(
+        updateModerationStatus({
+          exam_schedule_id: activeSchedule.id,
+          status: newStatus,
+        }),
+      ).unwrap();
+      setSheetStatus(newStatus);
+      alert(`Results marked as ${newStatus} successfully`);
+    } catch (err) {
+      alert("Failed to update status");
+    }
   };
 
   return (
@@ -280,9 +425,9 @@ const ExamManagement = () => {
             <ClipboardList className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Examination Control</h1>
+            <h1 className="text-2xl font-bold">Exam Schedules</h1>
             <p className="text-gray-500 dark:text-gray-400">
-              Schedule exams, enter marks, and manage hall tickets
+              Create and manage exam cycles and timetables
             </p>
           </div>
         </div>
@@ -298,7 +443,9 @@ const ExamManagement = () => {
                     end_date: viewingCycle.end_date,
                     batch_year: viewingCycle.batch_year,
                     semester: viewingCycle.semester,
-                    exam_type: viewingCycle.exam_type,
+                    regulation_id: viewingCycle.regulation_id || "",
+                    cycle_type: viewingCycle.cycle_type || "",
+                    instance_number: viewingCycle.instance_number || 1,
                   });
                   setShowCreateModal(true);
                 }}
@@ -314,125 +461,187 @@ const ExamManagement = () => {
               </button>
             </div>
           )}
-          {viewMode === "details" && activeTab === "timetable" && (
-            <div className="flex gap-2">
+          {viewMode === "details" &&
+            activeTab === "timetable" &&
+            (user?.role === "super_admin" ||
+              user?.permissions?.includes("exams:manage")) && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setAutoForm({
+                      ...autoForm,
+                      max_marks: viewingCycle?.max_marks || 100,
+                      passing_marks: viewingCycle?.passing_marks || 35,
+                    });
+                    setShowAutoModal(true);
+                  }}
+                  className="flex items-center px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                >
+                  <Zap className="w-4 h-4 mr-2" /> Auto-Generate
+                </button>
+                <button
+                  onClick={handleAddScheduleBtn}
+                  className="flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Add Schedule
+                </button>
+              </div>
+            )}
+          {viewMode === "list" &&
+            (user?.role === "super_admin" ||
+              user?.permissions?.includes("exams:manage")) && (
               <button
-                onClick={() => setShowAutoModal(true)}
-                className="flex items-center px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
-              >
-                <Zap className="w-4 h-4 mr-2" /> Auto-Generate
-              </button>
-              <button
-                onClick={handleAddScheduleBtn}
+                onClick={() => setShowCreateModal(true)}
                 className="flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
               >
-                <Plus className="w-4 h-4 mr-2" /> Add Schedule
+                <Plus className="w-4 h-4 mr-2" /> Create Exam Cycle
               </button>
-            </div>
-          )}
-          {viewMode === "list" && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
-            >
-              <Plus className="w-4 h-4 mr-2" /> Create Exam Cycle
-            </button>
-          )}
+            )}
         </div>
       </header>
 
       {/* View Mode Switching */}
       {viewMode === "list" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cycles?.map((cycle) => (
-            <div
-              key={cycle.id}
-              className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group"
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 text-gray-400 mr-2">
+              <Filter className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase">
+                Quick Filters:
+              </span>
+            </div>
+            <select
+              value={selectedBatch}
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg py-2 px-4 text-xs font-bold focus:ring-2 focus:ring-indigo-500"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg text-indigo-600">
-                  <Calendar className="w-6 h-6" />
+              <option value="">All Batches</option>
+              {uniqueBatches.map((year) => (
+                <option key={year} value={year}>
+                  {year} Batch
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg py-2 px-4 text-xs font-bold focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">All Semesters</option>
+              {uniqueSemesters.map((sem) => (
+                <option key={sem} value={sem}>
+                  Semester {sem}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCycles?.map((cycle) => (
+              <div
+                key={cycle.id}
+                className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all group"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg text-indigo-600">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <div className="flex gap-2">
+                    {(user?.role === "super_admin" ||
+                      user?.permissions?.includes("exams:manage")) && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingCycle(cycle);
+                            setCycleForm({
+                              name: cycle.name,
+                              start_date: cycle.start_date,
+                              end_date: cycle.end_date,
+                              batch_year: cycle.batch_year,
+                              semester: cycle.semester,
+                              regulation_id: cycle.regulation_id || "",
+                              cycle_type: cycle.cycle_type || "",
+                              instance_number: cycle.instance_number || 1,
+                            });
+                            setShowCreateModal(true);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    <span
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
+                        cycle.status === "scheduled"
+                          ? "bg-blue-100 text-blue-600"
+                          : cycle.status === "ongoing"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {cycle.status}
+                    </span>
+                    {(user?.role === "super_admin" ||
+                      user?.permissions?.includes("exams:manage")) && (
+                      <button
+                        onClick={() => handleDeleteCycle(cycle.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2">
+                <h3 className="font-bold text-lg mb-1">{cycle.name}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500">
+                    Batch {cycle.batch_year}
+                  </span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500">
+                    Sem {cycle.semester}
+                  </span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded text-indigo-600">
+                    {cycle.exam_type?.replace("_", " ")}
+                  </span>
+                  {cycle.regulation && (
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded text-blue-600">
+                      {cycle.regulation.name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-500 text-sm mb-4">
+                  {cycle.start_date} to {cycle.end_date}
+                </p>
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                   <button
                     onClick={() => {
-                      setEditingCycle(cycle);
-                      setCycleForm({
-                        name: cycle.name,
-                        start_date: cycle.start_date,
-                        end_date: cycle.end_date,
-                        batch_year: cycle.batch_year,
-                        semester: cycle.semester,
-                        exam_type: cycle.exam_type,
-                      });
-                      setShowCreateModal(true);
+                      setViewingCycle(cycle);
+                      setSelectedCycle(cycle.id);
+                      setViewMode("details");
                     }}
-                    className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                    className="text-indigo-600 text-sm font-bold flex items-center group-hover:underline"
                   >
-                    <Edit className="w-4 h-4" />
+                    Manage Cycle <ChevronRight className="w-4 h-4 ml-1" />
                   </button>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
-                      cycle.status === "scheduled"
-                        ? "bg-blue-100 text-blue-600"
-                        : cycle.status === "ongoing"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {cycle.status}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteCycle(cycle.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gray-200"
+                      ></div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <h3 className="font-bold text-lg mb-1">{cycle.name}</h3>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500">
-                  Batch {cycle.batch_year}
-                </span>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500">
-                  Sem {cycle.semester}
-                </span>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded text-indigo-600">
-                  {cycle.exam_type?.replace("_", " ")}
-                </span>
+            ))}
+            {filteredCycles?.length === 0 && (
+              <div className="col-span-full p-12 text-center text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200">
+                <RefreshCw className="w-12 h-12 mx-auto mb-3 opacity-10 animate-spin-slow" />
+                <p>No active exam cycles found.</p>
               </div>
-              <p className="text-gray-500 text-sm mb-4">
-                {cycle.start_date} to {cycle.end_date}
-              </p>
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
-                <button
-                  onClick={() => {
-                    setViewingCycle(cycle);
-                    setSelectedCycle(cycle.id);
-                    setViewMode("details");
-                  }}
-                  className="text-indigo-600 text-sm font-bold flex items-center group-hover:underline"
-                >
-                  Manage Cycle <ChevronRight className="w-4 h-4 ml-1" />
-                </button>
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gray-200"
-                    ></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-          {cycles?.length === 0 && (
-            <div className="col-span-full p-12 text-center text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200">
-              <RefreshCw className="w-12 h-12 mx-auto mb-3 opacity-10 animate-spin-slow" />
-              <p>No active exam cycles found.</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ) : (
         /* Details View Mode */
@@ -462,29 +671,21 @@ const ExamManagement = () => {
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
                 {[
                   { id: "timetable", label: "Timetable", icon: Clock },
-                  { id: "marks", label: "Mark Entry", icon: FileText },
-                  {
-                    id: "tickets",
-                    label: "Hall Tickets",
-                    icon: ShieldCheck,
-                    show: viewingCycle?.exam_type === "semester_end",
-                  },
-                ]
-                  .filter((t) => t.show !== false)
-                  .map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                        activeTab === tab.id
-                          ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      <tab.icon className="w-4 h-4 mr-2" />
-                      {tab.label}
-                    </button>
-                  ))}
+                  // Mark Entry and Tabulation removed - moved to separate pages
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      activeTab === tab.id
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4 mr-2" />
+                    {tab.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -519,7 +720,6 @@ const ExamManagement = () => {
                         <th className="px-6 py-4">Course Name</th>
                         <th className="px-6 py-4">Date</th>
                         <th className="px-6 py-4">Time</th>
-                        <th className="px-6 py-4">Venue</th>
                         <th className="px-6 py-4">Max Marks</th>
                         <th className="px-6 py-4 text-right">Actions</th>
                       </tr>
@@ -529,12 +729,14 @@ const ExamManagement = () => {
                         ?.filter(
                           (s) =>
                             !selectedProgram ||
-                            s.branches?.includes(selectedProgram) ||
-                            s.course?.program_id === selectedProgram
+                            !s.branches ||
+                            s.branches.length === 0 ||
+                            s.branches.includes(selectedProgram) ||
+                            s.course?.program_id === selectedProgram,
                         )
                         ?.map((s) => {
                           const prog = programs.find(
-                            (p) => p.id === s.course?.program_id
+                            (p) => p.id === s.course?.program_id,
                           );
                           return (
                             <tr
@@ -546,7 +748,7 @@ const ExamManagement = () => {
                                   {s.branches && s.branches.length > 0 ? (
                                     s.branches.map((bId) => {
                                       const bProg = programs.find(
-                                        (p) => p.id === bId
+                                        (p) => p.id === bId,
                                       );
                                       return (
                                         <span
@@ -561,7 +763,7 @@ const ExamManagement = () => {
                                     })
                                   ) : (
                                     <span className="text-[10px] px-1.5 py-0.5 bg-gray-50 dark:bg-gray-700 text-gray-500 font-bold rounded-md uppercase">
-                                      {prog?.code || prog?.name || "Common"}
+                                      Common
                                     </span>
                                   )}
                                 </div>
@@ -576,54 +778,74 @@ const ExamManagement = () => {
                               </td>
                               <td className="px-6 py-4 text-sm font-medium">
                                 {new Date(s.exam_date).toLocaleDateString(
-                                  "en-GB"
+                                  "en-GB",
                                 )}
                               </td>
                               <td className="px-6 py-4 text-sm font-medium">
                                 {s.start_time.substring(0, 5)} -{" "}
                                 {s.end_time.substring(0, 5)}
                               </td>
-                              <td className="px-6 py-4 text-sm font-medium">
-                                {s.venue}
-                              </td>
+
                               <td className="px-6 py-4 text-sm font-bold text-indigo-600">
                                 {s.max_marks}
                               </td>
                               <td className="px-6 py-4 text-right">
                                 <div className="flex justify-end gap-2">
-                                  <button
-                                    onClick={() => {
-                                      setEditingSchedule(s);
-                                      setScheduleForm({
-                                        exam_cycle_id: s.exam_cycle_id,
-                                        course_id: s.course_id,
-                                        exam_date: s.exam_date,
-                                        start_time: s.start_time,
-                                        end_time: s.end_time,
-                                        venue: s.venue,
-                                        max_marks: s.max_marks,
-                                        passing_marks: s.passing_marks,
-                                        branches: s.branches || [],
-                                      });
-                                      const course = courses.find(
-                                        (c) => c.id === s.course_id
-                                      );
-                                      setModalFilters({
-                                        program_id: course?.program_id || "",
-                                        semester: course?.semester || "",
-                                      });
-                                      setShowScheduleModal(true);
-                                    }}
-                                    className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteSchedule(s.id)}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  {s.is_teaching && (
+                                    <Link
+                                      to={`/marks-entry/${s.id}`}
+                                      className="p-1.5 text-gray-400 hover:text-green-600 transition-colors"
+                                      title="Enter Marks"
+                                    >
+                                      <ClipboardList className="w-4 h-4" />
+                                    </Link>
+                                  )}
+
+                                  {(user?.role === "super_admin" ||
+                                    user?.permissions?.includes(
+                                      "exams:manage",
+                                    )) && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setEditingSchedule(s);
+                                          setScheduleForm({
+                                            exam_cycle_id: s.exam_cycle_id,
+                                            course_id: s.course_id,
+                                            exam_date: s.exam_date,
+                                            start_time: s.start_time,
+                                            end_time: s.end_time,
+                                            venue: s.venue,
+                                            max_marks: s.max_marks,
+                                            passing_marks: s.passing_marks,
+                                            branches: s.branches || [],
+                                          });
+                                          const course = courses.find(
+                                            (c) => c.id === s.course_id,
+                                          );
+                                          setModalFilters({
+                                            program_id:
+                                              course?.program_id || "",
+                                            semester: course?.semester || "",
+                                          });
+                                          setShowScheduleModal(true);
+                                        }}
+                                        className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                                        title="Edit Schedule"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleDeleteSchedule(s.id)
+                                        }
+                                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                        title="Delete Schedule"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -648,7 +870,7 @@ const ExamManagement = () => {
 
             {activeTab === "marks" && (
               <div className="space-y-6">
-                <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-400 mb-1.5">
                       Select Course / Subject
@@ -657,7 +879,7 @@ const ExamManagement = () => {
                       value={selectedCourse}
                       onChange={(e) => {
                         setSelectedCourse(e.target.value);
-                        fetchStudentsForMarks(e.target.value);
+                        fetchStudentsForMarks(e.target.value, examSection);
                       }}
                       className="w-full px-4 py-2 bg-white dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                     >
@@ -669,13 +891,101 @@ const ExamManagement = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-end">
-                    <button className="flex items-center px-6 py-2 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold text-sm border border-gray-100 dark:border-gray-600 hover:bg-gray-50 transition-all">
-                      <Download className="w-4 h-4 mr-2" /> Import Excel
-                      Template
-                    </button>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1.5">
+                      Section filter
+                    </label>
+                    <select
+                      value={examSection}
+                      onChange={(e) => {
+                        setExamSection(e.target.value);
+                        if (selectedCourse) {
+                          fetchStudentsForMarks(selectedCourse, e.target.value);
+                        }
+                      }}
+                      className="w-full px-4 py-2 bg-white dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                    >
+                      <option value="">All Sections</option>
+                      {["A", "B", "C", "D", "E"].map((sec) => (
+                        <option key={sec} value={sec}>
+                          Section {sec}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1.5">
+                      Sheet Status
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          sheetStatus === "locked"
+                            ? "bg-red-100 text-red-600"
+                            : sheetStatus === "approved"
+                              ? "bg-green-100 text-green-600"
+                              : sheetStatus === "verified"
+                                ? "bg-blue-100 text-blue-600"
+                                : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {sheetStatus}
+                      </span>
+                      {activeSchedule && (
+                        <span className="text-[10px] text-gray-400 font-medium italic">
+                          {activeSchedule.max_marks} Max /{" "}
+                          {activeSchedule.passing_marks} Pass
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {selectedCourse && !activeSchedule && (
+                  <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-4 rounded-xl flex items-center text-amber-800 dark:text-amber-200">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-800/50 rounded-lg mr-3">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold">Exam Not Scheduled</h4>
+                      <p className="text-sm opacity-80">
+                        Please add an exam schedule for this course in the
+                        current cycle before entering marks.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedCourse && activeSchedule && (
+                  <div className="flex gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-indigo-400 uppercase">
+                        Max Marks
+                      </p>
+                      <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                        {activeSchedule.max_marks}
+                      </p>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-indigo-400 uppercase">
+                        Passing Marks
+                      </p>
+                      <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                        {activeSchedule.passing_marks}
+                      </p>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-indigo-400 uppercase">
+                        Date
+                      </p>
+                      <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                        {new Date(
+                          activeSchedule.exam_date,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
                   <table className="w-full text-left">
@@ -683,42 +993,120 @@ const ExamManagement = () => {
                       <tr>
                         <th className="px-6 py-4">Student</th>
                         <th className="px-6 py-4">Roll No</th>
-                        <th className="px-6 py-4 w-40">Marks</th>
+                        {activeSchedule?.cycle?.component_breakdown?.map(
+                          (comp, idx) => (
+                            <th key={idx} className="px-6 py-4 text-center">
+                              {comp.name} ({comp.max_marks})
+                            </th>
+                          ),
+                        )}
+                        <th className="px-6 py-4 text-center w-40">
+                          Total Marks
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {studentList?.map((student) => (
-                        <tr
-                          key={student.id}
-                          className="hover:bg-gray-50 dark:hover:bg-gray-700/30"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-sm">
-                              {student.first_name} {student.last_name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {student.email}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm font-medium">
-                            {student.student_id}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <input
-                              type="number"
-                              value={marksData[student.id] || ""}
-                              onChange={(e) =>
-                                setMarksData({
-                                  ...marksData,
-                                  [student.id]: e.target.value,
-                                })
-                              }
-                              className="w-24 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold"
-                              placeholder="0.0"
-                            />
-                          </td>
-                        </tr>
-                      ))}
+                      {studentList?.map((student) => {
+                        const hasComponents =
+                          activeSchedule?.cycle?.component_breakdown?.length >
+                          0;
+                        const data = marksData[student.id] || {
+                          marks_obtained: "",
+                          component_scores: {},
+                        };
+
+                        return (
+                          <tr
+                            key={student.id}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-sm">
+                                {student.first_name} {student.last_name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {student.email}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm font-medium">
+                              {student.student_id}
+                            </td>
+
+                            {activeSchedule?.cycle?.component_breakdown?.map(
+                              (comp, idx) => (
+                                <td key={idx} className="px-6 py-4 text-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={comp.max_marks}
+                                    disabled={
+                                      !activeSchedule ||
+                                      sheetStatus === "locked"
+                                    }
+                                    value={
+                                      data.component_scores?.[comp.name] || ""
+                                    }
+                                    onChange={(e) => {
+                                      const newVal = e.target.value;
+                                      const newComponentScores = {
+                                        ...data.component_scores,
+                                        [comp.name]: newVal,
+                                      };
+
+                                      // Auto-calculate total
+                                      const newTotal = Object.values(
+                                        newComponentScores,
+                                      ).reduce(
+                                        (sum, val) =>
+                                          sum + parseFloat(val || 0),
+                                        0,
+                                      );
+
+                                      setMarksData({
+                                        ...marksData,
+                                        [student.id]: {
+                                          ...data,
+                                          component_scores: newComponentScores,
+                                          marks_obtained: newTotal,
+                                        },
+                                      });
+                                    }}
+                                    className="w-20 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-medium disabled:opacity-50"
+                                    placeholder="0"
+                                  />
+                                </td>
+                              ),
+                            )}
+
+                            <td className="px-6 py-4 text-center">
+                              <input
+                                type="number"
+                                disabled={
+                                  !activeSchedule ||
+                                  sheetStatus === "locked" ||
+                                  hasComponents
+                                }
+                                value={data.marks_obtained || ""}
+                                onChange={(e) =>
+                                  setMarksData({
+                                    ...marksData,
+                                    [student.id]: {
+                                      ...data,
+                                      marks_obtained: e.target.value,
+                                    },
+                                  })
+                                }
+                                className={`w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold disabled:opacity-50 ${
+                                  hasComponents
+                                    ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
+                                    : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                }`}
+                                placeholder="0.0"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {studentList.length === 0 && !loadingStudents && (
                         <tr>
                           <td
@@ -734,15 +1122,208 @@ const ExamManagement = () => {
                   </table>
                 </div>
 
-                <div className="flex justify-end p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                  <button
-                    onClick={handleMarksSubmit}
-                    disabled={!selectedCourse || studentList.length === 0}
-                    className="px-12 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl transition-all font-bold shadow-lg shadow-indigo-500/20"
-                  >
-                    Post Results
-                  </button>
+                <div className="flex flex-wrap items-center justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                  {/* Phase 1: Faculty Entry */}
+                  {(user.role === "faculty" ||
+                    user.role === "admin" ||
+                    user.role === "super_admin") &&
+                    (sheetStatus === "draft" || sheetStatus === "verified") && (
+                      <button
+                        onClick={handleMarksSubmit}
+                        disabled={
+                          !selectedCourse ||
+                          !activeSchedule ||
+                          studentList.length === 0
+                        }
+                        className="px-6 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-indigo-500 text-gray-700 dark:text-gray-300 rounded-xl transition-all font-bold shadow-sm"
+                      >
+                        Save as Draft
+                      </button>
+                    )}
+
+                  {/* Phase 2: HOD Verification */}
+                  {(user.role === "hod" ||
+                    user.role === "admin" ||
+                    user.role === "super_admin") &&
+                    sheetStatus === "draft" && (
+                      <button
+                        onClick={() => handleModeration("verified")}
+                        disabled={
+                          !selectedCourse ||
+                          !activeSchedule ||
+                          studentList.length === 0
+                        }
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-blue-500/20"
+                      >
+                        Verify Mark Sheet
+                      </button>
+                    )}
+
+                  {/* Phase 3: CoE Approval */}
+                  {(user.role === "admin" || user.role === "super_admin") &&
+                    sheetStatus === "verified" && (
+                      <button
+                        onClick={() => handleModeration("approved")}
+                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-green-500/20"
+                      >
+                        Approve Results
+                      </button>
+                    )}
+
+                  {/* Phase 4: Locking */}
+                  {(user.role === "admin" || user.role === "super_admin") &&
+                    sheetStatus === "approved" && (
+                      <button
+                        onClick={() => handleModeration("locked")}
+                        className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-red-500/20"
+                      >
+                        Lock & Finalize
+                      </button>
+                    )}
+
+                  {sheetStatus === "locked" && (
+                    <div className="flex items-center gap-2 text-red-600 font-bold px-4 py-2 bg-red-50 rounded-lg">
+                      <Lock className="w-4 h-4" />
+                      Results are Locked
+                    </div>
+                  )}
                 </div>
+              </div>
+            )}
+
+            {activeTab === "tabulation" && (
+              <div className="space-y-6">
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm font-bold uppercase text-gray-500">
+                      Filters:
+                    </span>
+                  </div>
+                  <select
+                    value={selectedProgram}
+                    onChange={(e) => setSelectedProgram(e.target.value)}
+                    className="px-4 py-2 bg-white dark:bg-gray-700 border-none rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Choose Program</option>
+                    {programs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={examSection}
+                    onChange={(e) => setExamSection(e.target.value)}
+                    className="px-4 py-2 bg-white dark:bg-gray-700 border-none rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">All Sections</option>
+                    {["A", "B", "C", "D", "E"].map((s) => (
+                      <option key={s} value={s}>
+                        Section {s}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={fetchTabulationData}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+                  >
+                    <RefreshCw
+                      className={`w-4 h-4 ${loadingTabulation ? "animate-spin" : ""}`}
+                    />
+                    {loadingTabulation
+                      ? "Processing..."
+                      : "Generate Tabulation"}
+                  </button>
+
+                  {tabulationData.length > 0 && (
+                    <button className="px-6 py-2.5 bg-white dark:bg-gray-700 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold hover:bg-indigo-50 transition-all flex items-center gap-2">
+                      <Download className="w-4 h-4" /> Export Result Sheet
+                    </button>
+                  )}
+                </div>
+
+                {tabulationData.length > 0 && (
+                  <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-700 text-gray-400 uppercase text-[10px] tracking-wider font-bold">
+                          <th className="px-6 py-4">Student Details</th>
+                          <th className="px-6 py-4">
+                            Course-wise Performance (Weighted)
+                          </th>
+                          <th className="px-6 py-4 text-center">
+                            Semester SGPA
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {tabulationData.map((row) => (
+                          <tr
+                            key={row.id}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-sm text-gray-900 dark:text-white">
+                                {row.first_name} {row.last_name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {row.student_id} | Sec {row.section}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-2">
+                                {row.courses.map((c) => (
+                                  <div
+                                    key={c.course_code}
+                                    className="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600 min-w-[140px]"
+                                  >
+                                    <div className="text-[10px] font-bold text-gray-500 uppercase">
+                                      {c.course_code}
+                                    </div>
+                                    <div className="flex justify-between items-center mt-1">
+                                      <span className="text-xs font-bold">
+                                        {c.grade}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {c.totalScore}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span
+                                className={`px-4 py-1.5 rounded-xl font-bold text-sm ${
+                                  parseFloat(row.sgpa) >= 8
+                                    ? "bg-green-100 text-green-700"
+                                    : parseFloat(row.sgpa) >= 6
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-indigo-100 text-indigo-700"
+                                }`}
+                              >
+                                {row.sgpa}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {tabulationData.length === 0 && !loadingTabulation && (
+                  <div className="flex flex-col items-center justify-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                    <LayoutDashboard className="w-16 h-16 text-indigo-100 mb-4" />
+                    <h3 className="text-lg font-bold">No Tabulation Data</h3>
+                    <p className="text-gray-500 max-w-sm text-center">
+                      Select a program and section, then click Generate to
+                      process final semester results.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -796,8 +1377,87 @@ const ExamManagement = () => {
                   onChange={(e) =>
                     setCycleForm({ ...cycleForm, name: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none mb-4"
                 />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Regulation
+                    </label>
+                    <select
+                      value={cycleForm.regulation_id}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          regulation_id: e.target.value,
+                          cycle_type: "", // Reset cycle type when regulation changes
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Select Regulation</option>
+                      {regulations.map((reg) => (
+                        <option key={reg.id} value={reg.id}>
+                          {reg.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Cycle Type
+                    </label>
+                    <select
+                      value={cycleForm.cycle_type}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          cycle_type: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="mid_term">Mid-Term</option>
+                      <option value="end_semester">End Semester</option>
+                      <option value="internal_lab">Internal Lab</option>
+                      <option value="external_lab">External Lab</option>
+                      <option value="project_review">Project Review</option>
+                    </select>
+                  </div>
+                </div>
+
+                {cycleForm.cycle_type === "mid_term" && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Mid-Term Instance
+                    </label>
+                    <select
+                      value={cycleForm.instance_number}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          instance_number: parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      {Array.from({ length: midTermCount }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          {i === 0
+                            ? "1st"
+                            : i === 1
+                              ? "2nd"
+                              : i === 2
+                                ? "3rd"
+                                : `${i + 1}th`}{" "}
+                          Mid-Term
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -834,8 +1494,7 @@ const ExamManagement = () => {
                   <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
                     Batch Year
                   </label>
-                  <input
-                    type="number"
+                  <select
                     required
                     value={cycleForm.batch_year}
                     onChange={(e) =>
@@ -845,7 +1504,20 @@ const ExamManagement = () => {
                       })
                     }
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
+                  >
+                    <option value="">Select Year</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                    {/* Fallback for cases where regulation might not exist for a year */}
+                    {!availableYears.includes(new Date().getFullYear()) && (
+                      <option value={new Date().getFullYear()}>
+                        {new Date().getFullYear()}
+                      </option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
@@ -869,23 +1541,7 @@ const ExamManagement = () => {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                  Exam Type
-                </label>
-                <select
-                  value={cycleForm.exam_type}
-                  onChange={(e) =>
-                    setCycleForm({ ...cycleForm, exam_type: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="mid_term">Mid Term</option>
-                  <option value="semester_end">Semester End</option>
-                  <option value="re_exam">Re-Exam</option>
-                  <option value="internal">Internal</option>
-                </select>
-              </div>
+              {/* Legacy Weightage and Exam Type removed - derived from regulation/cycle_type */}
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
@@ -997,7 +1653,7 @@ const ExamManagement = () => {
                       })
                       ?.map((c) => {
                         const prog = programs.find(
-                          (p) => p.id === c.program_id
+                          (p) => p.id === c.program_id,
                         );
                         return (
                           <option key={c.id} value={c.id}>
@@ -1033,7 +1689,7 @@ const ExamManagement = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               const branches = scheduleForm.branches.filter(
-                                (id) => id !== bId
+                                (id) => id !== bId,
                               );
                               setScheduleForm({ ...scheduleForm, branches });
                             }}
@@ -1140,57 +1796,7 @@ const ExamManagement = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Venue (Room/Block)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Lab 1, Block A"
-                    value={scheduleForm.venue}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        venue: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Max Marks
-                  </label>
-                  <input
-                    type="number"
-                    value={scheduleForm.max_marks}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        max_marks: parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Pass Marks
-                  </label>
-                  <input
-                    type="number"
-                    value={scheduleForm.passing_marks}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        passing_marks: parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
+              {/* Max Marks derived from Exam Cycle */}
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
@@ -1409,4 +2015,4 @@ const ExamManagement = () => {
   );
 };
 
-export default ExamManagement;
+export default ExamSchedules;

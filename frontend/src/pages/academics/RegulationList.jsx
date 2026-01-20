@@ -18,6 +18,7 @@ import {
   Edit2,
   X,
   FileText,
+  Settings,
 } from "lucide-react";
 
 const RegulationList = () => {
@@ -92,7 +93,7 @@ const RegulationList = () => {
             Academic Regulations
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Manage curriculum versions (e.g., R18, R23) and grading rules.
+            Manage curriculum versions and exam structures (e.g., R18, R23).
           </p>
         </div>
         <button
@@ -162,13 +163,20 @@ const RegulationList = () => {
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 grid grid-cols-2 gap-3">
                 <button
                   onClick={() => navigate(`/regulations/${reg.id}/curriculum`)}
-                  className="w-full py-2.5 rounded-xl border border-primary-100 dark:border-primary-900/30 text-primary-600 dark:text-primary-400 font-bold text-sm bg-primary-50/50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 transition-all flex items-center justify-center gap-2"
+                  className="py-2.5 rounded-xl border border-blue-100 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-sm bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all flex items-center justify-center gap-2"
                 >
                   <BookOpen className="w-4 h-4" />
-                  View Courses
+                  Courses
+                </button>
+                <button
+                  onClick={() => navigate(`/regulations/${reg.id}/exams`)}
+                  className="py-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-sm bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Exams
                 </button>
               </div>
             </div>

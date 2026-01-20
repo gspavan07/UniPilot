@@ -42,6 +42,7 @@ const SalaryGrade = require("./SalaryGrade");
 const InstitutionSetting = require("./InstitutionSetting");
 const Block = require("./Block");
 const Room = require("./Room");
+const SemesterResult = require("./SemesterResult");
 
 const models = {
   User,
@@ -85,6 +86,7 @@ const models = {
   Regulation,
   Block,
   Room,
+  SemesterResult,
 };
 
 // Define associations
@@ -313,6 +315,14 @@ ExamCycle.hasMany(ExamSchedule, {
   foreignKey: "exam_cycle_id",
 });
 ExamSchedule.belongsTo(ExamCycle, { as: "cycle", foreignKey: "exam_cycle_id" });
+ExamCycle.belongsTo(Regulation, {
+  as: "regulation",
+  foreignKey: "regulation_id",
+});
+Regulation.hasMany(ExamCycle, {
+  as: "exam_cycles",
+  foreignKey: "regulation_id",
+});
 
 ExamSchedule.belongsTo(Course, { as: "course", foreignKey: "course_id" });
 Course.hasMany(ExamSchedule, { as: "exam_schedules", foreignKey: "course_id" });
@@ -329,6 +339,22 @@ User.hasMany(ExamMark, { as: "exam_marks", foreignKey: "student_id" });
 HallTicket.belongsTo(ExamCycle, { as: "cycle", foreignKey: "exam_cycle_id" });
 HallTicket.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(HallTicket, { as: "hall_tickets", foreignKey: "student_id" });
+
+// Semester Result Associations
+SemesterResult.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(SemesterResult, {
+  as: "semester_results",
+  foreignKey: "student_id",
+});
+
+SemesterResult.belongsTo(ExamCycle, {
+  as: "cycle",
+  foreignKey: "exam_cycle_id",
+});
+ExamCycle.hasMany(SemesterResult, {
+  as: "semester_results",
+  foreignKey: "exam_cycle_id",
+});
 
 // Fee Management Associations
 FeeStructure.belongsTo(FeeCategory, {
