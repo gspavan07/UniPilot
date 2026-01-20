@@ -111,7 +111,13 @@ exports.getAllUsers = async (req, res) => {
       where.batch_year = req.query.batch_year;
     }
     if (req.query.section && req.query.section !== "undefined") {
-      where.section = req.query.section;
+      where.section = { [Op.iLike]: req.query.section };
+    }
+    if (req.query.semester && req.query.semester !== "undefined") {
+      where.current_semester = parseInt(req.query.semester, 10);
+    }
+    if (req.query.program_id && req.query.program_id !== "undefined") {
+      where.program_id = req.query.program_id;
     }
 
     // Faculty Restriction Override
@@ -253,7 +259,7 @@ exports.getUserStats = async (req, res) => {
 // @access  Private
 exports.getStudentSections = async (req, res) => {
   try {
-    const { department_id, batch_year } = req.query;
+    const { department_id, batch_year, semester } = req.query;
     const where = {
       role: "student",
       section: { [Op.ne]: null }, // Only sections that are not null
@@ -261,6 +267,7 @@ exports.getStudentSections = async (req, res) => {
 
     if (department_id) where.department_id = department_id;
     if (batch_year) where.batch_year = batch_year;
+    if (semester) where.current_semester = semester;
 
     // We use findAll with group and attributes to simulate DISTINCT
     const sections = await User.findAll({
@@ -291,6 +298,45 @@ exports.getStudentSections = async (req, res) => {
   }
 };
 
+// @desc    Get distinct batch years for students
+// @route   GET /api/users/batch-years
+// @access  Private
+exports.getBatchYears = async (req, res) => {
+  try {
+    const { department_id } = req.query;
+    const where = {
+      role: "student",
+      batch_year: { [Op.ne]: null },
+    };
+
+    if (department_id) where.department_id = department_id;
+
+    const batches = await User.findAll({
+      attributes: [
+        [
+          User.sequelize.fn("DISTINCT", User.sequelize.col("batch_year")),
+          "batch_year",
+        ],
+      ],
+      where,
+      order: [["batch_year", "DESC"]],
+      raw: true,
+    });
+
+    const batchList = batches.map((b) => b.batch_year).filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      data: batchList,
+    });
+  } catch (error) {
+    logger.error("Error in getBatchYears:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
 // @desc    Get single user
 // @route   GET /api/users/:id
 // @access  Private
@@ -504,6 +550,8 @@ exports.createUser = async (req, res) => {
             isTemporary:
               req.body.is_temporary_id === "true" ||
               req.body.is_temporary_id === true,
+            isLateral:
+              req.body.is_lateral === "true" || req.body.is_lateral === true,
           });
         }
         if (!admission_number) {
@@ -956,6 +1004,79 @@ exports.updateBankDetails = async (req, res) => {
     });
   } catch (error) {
     logger.error("Error in updateBankDetails:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+// @desc    Bulk update student sections
+// @route   POST /api/users/bulk-update-sections
+// @access  Private/Admin/HOD
+exports.bulkUpdateSections = async (req, res) => {
+  try {
+    const { userIds, section } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "User IDs are required",
+      });
+    }
+
+    // Permission Check
+    if (req.user && req.user.userId) {
+      const requester = await User.findByPk(req.user.userId, {
+        include: [{ model: Role, as: "role_data" }],
+      });
+      const requesterSlug = requester?.role_data?.slug;
+
+      if (requesterSlug !== "admin" && requesterSlug !== "super_admin") {
+        if (requesterSlug === "hod") {
+          // Check if all users belong to the same department
+          const users = await User.findAll({
+            where: {
+              id: { [Op.in]: userIds },
+              role: "student",
+            },
+            attributes: ["department_id"],
+          });
+
+          const unauthorized = users.some(
+            (u) => u.department_id !== requester.department_id,
+          );
+          if (unauthorized) {
+            return res.status(403).json({
+              success: false,
+              error: "You can only manage students in your own department",
+            });
+          }
+        } else {
+          return res.status(403).json({
+            success: false,
+            error: "Permission denied",
+          });
+        }
+      }
+    }
+
+    await User.update(
+      { section: section || null },
+      {
+        where: {
+          id: { [Op.in]: userIds },
+          role: "student",
+        },
+      },
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully updated ${userIds.length} students`,
+    });
+  } catch (error) {
+    logger.error("Error in bulkUpdateSections:", error);
     res.status(500).json({
       success: false,
       error: "Server Error",

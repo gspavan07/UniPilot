@@ -11,6 +11,7 @@ const {
   deleteBlock,
   updateRoom,
   deleteRoom,
+  getAllRooms,
 } = require("../controllers/infrastructureController");
 
 // Base path: /api/infrastructure
@@ -24,6 +25,7 @@ router.put("/blocks/:id", authenticate, updateBlock);
 router.delete("/blocks/:id", authenticate, deleteBlock);
 
 // Room routes
+router.get("/rooms", authenticate, getAllRooms);
 router.put("/rooms/:id", authenticate, updateRoom);
 router.delete("/rooms/:id", authenticate, deleteRoom);
 

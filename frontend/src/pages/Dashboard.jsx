@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import AdminDashboard from "./dashboards/AdminDashboard";
 import StudentDashboard from "./dashboards/StudentDashboard";
 import FacultyDashboard from "./dashboards/FacultyDashboard";
+import HodDashboard from "./dashboards/HodDashboard";
 import AdmissionAnalytics from "./dashboards/AdmissionAnalytics";
 import HRDashboard from "./hr/HRDashboard";
 
@@ -17,6 +18,8 @@ const Dashboard = () => {
       return <StudentDashboard />;
     case "faculty":
       return <FacultyDashboard />;
+    case "hod":
+      return <HodDashboard />;
     case "admission_admin":
     case "admission_staff":
       return <AdmissionAnalytics />;

@@ -119,7 +119,6 @@ const StudentRegistration = () => {
   const { programs } = useSelector((state) => state.programs);
   const { regulations } = useSelector((state) => state.regulations);
   const { roles } = useSelector((state) => state.roles);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -1267,30 +1266,43 @@ const StudentRegistration = () => {
                   {/* STEP 5: DOCS */}
                   {currentStep === 5 && (
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {[
-                          "photo",
-                          "aadhar",
-                          "marksheet_10",
-                          "marksheet_12",
-                          "transfer_certificate",
-                        ].map((docType) => (
-                          <div
-                            key={docType}
-                            className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary-300 transition-colors bg-gray-50/50"
-                          >
-                            <Upload className="w-8 h-8 text-gray-300 mb-3" />
-                            <p className="text-xs font-bold uppercase text-gray-500 mb-2">
-                              {docType.replace("_", " ")}
-                            </p>
-                            <input
-                              type="file"
-                              onChange={(e) => handleFileChange(e, docType)}
-                              className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-                            />
-                          </div>
-                        ))}
-                      </div>
+                      {admissionConfig?.required_documents &&
+                      admissionConfig.required_documents.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {admissionConfig.required_documents.map((docType) => {
+                            // Convert document name to a key format (e.g., "Photo ID" -> "photo_id")
+                            const docKey = docType
+                              .toLowerCase()
+                              .replace(/\s+/g, "_");
+                            return (
+                              <div
+                                key={docKey}
+                                className="border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary-300 transition-colors bg-gray-50/50"
+                              >
+                                <Upload className="w-8 h-8 text-gray-300 mb-3" />
+                                <p className="text-xs font-bold uppercase text-gray-500 mb-2">
+                                  {docType}
+                                </p>
+                                <input
+                                  type="file"
+                                  onChange={(e) => handleFileChange(e, docKey)}
+                                  className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10">
+                          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500">
+                            No required documents configured for this batch.
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Configure documents in Admission Settings.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 

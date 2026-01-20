@@ -8,12 +8,31 @@ const generateId = (config, batchYear, program, sequence, isLateral) => {
     ? config.lateral_id_format || "L{YY}{UNIV}{BRANCH}{SEQ}"
     : config.id_format || "{YY}{UNIV}{BRANCH}{SEQ}";
 
+  // Extract 2-letter branch code (e.g., "AIML" -> "AI", "CSE" -> "CS")
+  let branchCode = program.code?.toUpperCase().substring(0, 2) || "XX";
+  if (branchCode.length < 2) {
+    branchCode = branchCode.padEnd(2, "X");
+  }
+
+  // Determine sequence padding for 10-char length based on format
+  // Temp: {YY}{BRANCH}T{SEQ} = 2 + 2 + 1 + 5 = 10
+  // Lateral: {YY}{UNIV}{BRANCH}L{SEQ} = 2 + 3 + 2 + 1 + 2 = 10
+  // Permanent: {YY}{UNIV}{BRANCH}{SEQ} = 2 + 3 + 2 + 3 = 10
+  let sequencePadding;
+  if (format.includes("T{SEQ}")) {
+    // Temporary format
+    sequencePadding = 5;
+  } else if (format.includes("L{SEQ}")) {
+    // Lateral format
+    sequencePadding = 2;
+  } else {
+    // Permanent format
+    sequencePadding = 3;
+  }
+
   const yearShort = batchYear.toString().slice(-2);
-  const seqStr = sequence.toString().padStart(3, "0");
-  const univCode = config.university_code || "UPU";
-  const branchCode = program.code
-    ? program.code.split("-")[1] || program.code
-    : "XX";
+  const seqStr = sequence.toString().padStart(sequencePadding, "0");
+  const univCode = config.university_code || "B11";
 
   return format
     .replace("{YY}", yearShort)
@@ -38,12 +57,10 @@ exports.previewBulkIds = async (req, res) => {
     // 1. Fetch Config
     const config = await AdmissionConfig.findOne({ where: { batch_year } });
     if (!config) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: "Admission Config not found for this batch",
-        });
+      return res.status(404).json({
+        success: false,
+        error: "Admission Config not found for this batch",
+      });
     }
 
     // 2. Fetch Program
@@ -94,7 +111,7 @@ exports.previewBulkIds = async (req, res) => {
         batch_year,
         program,
         currentSeq,
-        isLateral
+        isLateral,
       );
       const item = {
         id: student.id,
@@ -152,7 +169,7 @@ exports.commitBulkIds = async (req, res) => {
           // Let's assume Updating student_id is the key.
           is_temporary_id: false,
         },
-        { where: { id: item.id }, transaction: t }
+        { where: { id: item.id }, transaction: t },
       );
       if (item.sequence > lastSequence) lastSequence = item.sequence;
     }
@@ -164,7 +181,7 @@ exports.commitBulkIds = async (req, res) => {
 
     await config.update(
       { program_sequences: newSequences },
-      { transaction: t }
+      { transaction: t },
     );
 
     await t.commit();

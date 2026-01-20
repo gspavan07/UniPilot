@@ -26,10 +26,11 @@ import api from "../../utils/api";
 const TimetableManager = () => {
   const dispatch = useDispatch();
   const { currentTimetable, status, error } = useSelector(
-    (state) => state.timetable
+    (state) => state.timetable,
   );
   const { departments } = useSelector((state) => state.departments);
   const { programs: allPrograms } = useSelector((state) => state.programs);
+  const { user } = useSelector((state) => state.auth);
 
   // Search Criteria
   const [criteria, setCriteria] = useState({
@@ -46,22 +47,58 @@ const TimetableManager = () => {
     start_time: "09:00",
     end_time: "10:30",
     course_id: "",
+    activity_name: "",
+    is_activity: false,
     faculty_id: "",
-    room_number: "",
+    block_id: "",
+    room_id: "",
   });
 
   const [courses, setCourses] = useState([]);
   const [faculty, setFaculty] = useState([]);
+  const [blocks, setBlocks] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [isSatWorking, setIsSatWorking] = useState(false);
 
   useEffect(() => {
+    dispatch(clearCurrentTimetable());
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
-    api.get("/users?role=faculty").then((res) => setFaculty(res.data.data));
+    // Fetch both faculty and HODs for instructor selection
+    Promise.all([
+      api.get("/users?role=faculty"),
+      api.get("/users?role=hod"),
+      api.get("/infrastructure/blocks"),
+      api.get("/settings?keys=student_saturday_working"),
+    ]).then(([facultyRes, hodRes, blocksRes, settingsRes]) => {
+      const allInstructors = [...facultyRes.data.data, ...hodRes.data.data];
+      setFaculty(allInstructors);
+      setBlocks(blocksRes.data.data || []);
+      setIsSatWorking(
+        settingsRes.data.data.student_saturday_working === "true",
+      );
+    });
   }, [dispatch]);
+
+  // Set default department for HOD
+  useEffect(() => {
+    if (user?.role === "hod" && user.department_id && !criteria.department_id) {
+      setCriteria((prev) => ({ ...prev, department_id: user.department_id }));
+    }
+  }, [user, criteria.department_id]);
+
+  // Filter academic departments (and restrict to HOD's own dept if applicable)
+  const academicDepartments = departments.filter((d) => {
+    const isAcademic = d.type === "academic";
+    if (user?.role === "hod") {
+      return isAcademic && d.id === user.department_id;
+    }
+    return isAcademic;
+  });
 
   // Filter programs by department
   const filteredPrograms = allPrograms.filter(
-    (p) => p.department_id === criteria.department_id
+    (p) => p.department_id === criteria.department_id,
   );
 
   // Fetch courses when program/semester changes
@@ -69,11 +106,22 @@ const TimetableManager = () => {
     if (criteria.program_id) {
       api
         .get(
-          `/courses?program_id=${criteria.program_id}&semester=${criteria.semester}`
+          `/courses?program_id=${criteria.program_id}&semester=${criteria.semester}`,
         )
         .then((res) => setCourses(res.data.data));
     }
   }, [criteria.program_id, criteria.semester]);
+
+  // Fetch rooms when block changes
+  useEffect(() => {
+    if (slotForm.block_id) {
+      api
+        .get(`/infrastructure/rooms?block_id=${slotForm.block_id}`)
+        .then((res) => setRooms(res.data.data || []));
+    } else {
+      setRooms([]);
+    }
+  }, [slotForm.block_id]);
 
   const handleSearch = () => {
     if (!criteria.program_id || !criteria.semester || !criteria.academic_year)
@@ -87,34 +135,71 @@ const TimetableManager = () => {
 
   const handleAddSlot = (e) => {
     e.preventDefault();
-    if (!currentTimetable) return;
+    if (!currentTimetable || currentTimetable.id === "faculty-view") {
+      alert("Please search and load a specific timetable first.");
+      return;
+    }
 
     dispatch(addSlot({ ...slotForm, timetable_id: currentTimetable.id })).then(
       (res) => {
         if (!res.error) {
+          // Refresh the timetable to show the new slot
+          dispatch(findTimetable(criteria));
+
           // Reset form basics
           setSlotForm((prev) => ({
             ...prev,
             course_id: "",
+            activity_name: "",
+            is_activity: false,
             faculty_id: "",
-            room_number: "",
+            block_id: "",
+            room_id: "",
           }));
         }
-      }
+      },
     );
   };
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-  const times = [
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "01:00",
-    "02:00",
-    "03:00",
-    "04:00",
-  ];
+  if (isSatWorking) days.push("Saturday");
+
+  // Dynamic time slots based on actual timetable data
+  const generateTimeSlots = () => {
+    if (
+      !currentTimetable ||
+      !currentTimetable.slots ||
+      currentTimetable.slots.length === 0
+    ) {
+      // Default time slots if no timetable exists
+      return [
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "01:00",
+        "02:00",
+        "03:00",
+        "04:00",
+      ];
+    }
+
+    // Extract unique start times from existing slots
+    const uniqueTimes = new Set();
+    currentTimetable.slots.forEach((slot) => {
+      const hour = slot.start_time.substring(0, 5); // Get HH:MM
+      uniqueTimes.add(hour);
+    });
+
+    // Sort times chronologically
+    return Array.from(uniqueTimes).sort();
+  };
+
+  const times = generateTimeSlots();
+
+  // Dynamic grid columns: 1 for time + 2 for each day
+  const gridCols = 1 + days.length * 2;
+  const gridColsClass = `grid-cols-${gridCols}`;
 
   return (
     <div className="space-y-6 animate-fade-in pb-10 max-w-7xl mx-auto text-gray-900 dark:text-white">
@@ -135,8 +220,9 @@ const TimetableManager = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-grow max-w-4xl">
             <select
-              className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
               value={criteria.department_id}
+              disabled={user?.role === "hod"}
               onChange={(e) =>
                 setCriteria({
                   ...criteria,
@@ -146,7 +232,7 @@ const TimetableManager = () => {
               }
             >
               <option value="">Department</option>
-              {departments.map((d) => (
+              {academicDepartments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
@@ -290,30 +376,95 @@ const TimetableManager = () => {
                   </div>
                 </div>
 
+                {/* Activity Toggle */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Subject
+                    Type
                   </label>
-                  <select
-                    className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
-                    value={slotForm.course_id}
-                    onChange={(e) =>
-                      setSlotForm({ ...slotForm, course_id: e.target.value })
-                    }
-                    required
-                  >
-                    <option value="">Select Course</option>
-                    {courses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSlotForm({
+                          ...slotForm,
+                          is_activity: false,
+                          activity_name: "",
+                        })
+                      }
+                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${
+                        !slotForm.is_activity
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-50 dark:bg-gray-900 text-gray-600"
+                      }`}
+                    >
+                      Course
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSlotForm({
+                          ...slotForm,
+                          is_activity: true,
+                          course_id: "",
+                        })
+                      }
+                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${
+                        slotForm.is_activity
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-50 dark:bg-gray-900 text-gray-600"
+                      }`}
+                    >
+                      Activity
+                    </button>
+                  </div>
                 </div>
+
+                {/* Course or Activity Name */}
+                {!slotForm.is_activity ? (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+                      Subject
+                    </label>
+                    <select
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                      value={slotForm.course_id}
+                      onChange={(e) =>
+                        setSlotForm({ ...slotForm, course_id: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Select Course</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+                      Activity Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Coding Training, Sports, Assembly"
+                      value={slotForm.activity_name}
+                      onChange={(e) =>
+                        setSlotForm({
+                          ...slotForm,
+                          activity_name: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Faculty
+                    Faculty {slotForm.is_activity && "(Optional)"}
                   </label>
                   <select
                     className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
@@ -321,7 +472,7 @@ const TimetableManager = () => {
                     onChange={(e) =>
                       setSlotForm({ ...slotForm, faculty_id: e.target.value })
                     }
-                    required
+                    required={!slotForm.is_activity}
                   >
                     <option value="">Select Instructor</option>
                     {faculty.map((f) => (
@@ -334,17 +485,50 @@ const TimetableManager = () => {
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Venue
+                    Block
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Lab 3, LH-101"
-                    value={slotForm.room_number}
-                    onChange={(e) =>
-                      setSlotForm({ ...slotForm, room_number: e.target.value })
-                    }
+                  <select
                     className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
-                  />
+                    value={slotForm.block_id}
+                    onChange={(e) =>
+                      setSlotForm({
+                        ...slotForm,
+                        block_id: e.target.value,
+                        room_id: "",
+                      })
+                    }
+                    required
+                  >
+                    <option value="">Select Block</option>
+                    {blocks.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+                    Room
+                  </label>
+                  <select
+                    className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                    value={slotForm.room_id}
+                    onChange={(e) =>
+                      setSlotForm({ ...slotForm, room_id: e.target.value })
+                    }
+                    disabled={!slotForm.block_id}
+                    required
+                  >
+                    <option value="">Select Room</option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.room_number} - {r.name || r.type} (Capacity:{" "}
+                        {r.capacity})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <button
@@ -385,12 +569,17 @@ const TimetableManager = () => {
             <div className="overflow-x-auto scrollbar-hide pb-4">
               <div className="min-w-[900px]">
                 {/* Day Labels */}
-                <div className="grid grid-cols-11 gap-4 mb-6">
-                  <div className="col-span-1"></div>
+                <div
+                  className={`grid gap-4 mb-6`}
+                  style={{
+                    gridTemplateColumns: `60px repeat(${days.length}, 1fr)`,
+                  }}
+                >
+                  <div></div>
                   {days.map((d) => (
                     <div
                       key={d}
-                      className="col-span-2 text-center uppercase tracking-[0.2em] font-black text-[10px] text-gray-400"
+                      className="text-center uppercase tracking-[0.2em] font-black text-[10px] text-gray-400"
                     >
                       {d}
                     </div>
@@ -401,22 +590,25 @@ const TimetableManager = () => {
                 {times.map((time) => (
                   <div
                     key={time}
-                    className="grid grid-cols-11 gap-4 mb-4 items-stretch"
+                    className="grid gap-4 mb-4 items-stretch"
+                    style={{
+                      gridTemplateColumns: `60px repeat(${days.length}, 1fr)`,
+                    }}
                   >
-                    <div className="col-span-1 flex items-center justify-end pr-4 text-[10px] font-black text-gray-300 font-mono">
+                    <div className="flex items-center justify-end pr-4 text-[10px] font-black text-gray-300 font-mono">
                       {time}
                     </div>
                     {days.map((day) => {
                       const slot = currentTimetable.slots?.find(
                         (s) =>
                           s.day_of_week === day &&
-                          s.start_time.startsWith(time.split(":")[0])
+                          s.start_time.startsWith(time.split(":")[0]),
                       );
 
                       return (
                         <div
                           key={`${day}-${time}`}
-                          className={`col-span-2 min-h-[140px] rounded-2xl p-4 transition-all duration-300 border-2 ${
+                          className={`min-h-[140px] rounded-2xl p-4 transition-all duration-300 border-2 ${
                             slot
                               ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/20 shadow-sm"
                               : "bg-gray-50/30 dark:bg-gray-900/20 border-gray-50 dark:border-gray-800 border-dashed"
@@ -426,21 +618,32 @@ const TimetableManager = () => {
                             <div className="h-full flex flex-col justify-between">
                               <div>
                                 <h4 className="font-bold text-xs text-indigo-700 dark:text-indigo-400 leading-tight mb-1">
-                                  {slot.course?.name}
+                                  {slot.activity_name || slot.course?.name}
                                 </h4>
-                                <p className="text-[10px] text-gray-500 font-medium truncate italic">
-                                  {slot.course?.code}
-                                </p>
+                                {slot.course?.code && (
+                                  <p className="text-[10px] text-gray-500 font-medium truncate italic">
+                                    {slot.course.code}
+                                  </p>
+                                )}
+                                {slot.activity_name && (
+                                  <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
+                                    Activity
+                                  </p>
+                                )}
                               </div>
                               <div className="space-y-2">
-                                <div className="flex items-center text-[10px] text-gray-400">
-                                  <User className="w-3 h-3 mr-1.5 text-indigo-400" />{" "}
-                                  {slot.faculty?.name ||
-                                    slot.faculty_id.slice(0, 8)}
-                                </div>
+                                {slot.faculty_id && (
+                                  <div className="flex items-center text-[10px] text-gray-400">
+                                    <User className="w-3 h-3 mr-1.5 text-indigo-400" />{" "}
+                                    {slot.faculty?.name ||
+                                      slot.faculty_id.slice(0, 8)}
+                                  </div>
+                                )}
                                 <div className="flex items-center text-[10px] text-gray-400 font-bold">
                                   <MapPin className="w-3 h-3 mr-1.5 text-indigo-400" />{" "}
-                                  {slot.room_number || "TBD"}
+                                  {slot.room?.room_number ||
+                                    slot.room_number ||
+                                    "TBD"}
                                 </div>
                               </div>
                             </div>

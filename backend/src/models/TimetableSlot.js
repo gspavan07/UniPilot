@@ -16,12 +16,18 @@ const TimetableSlot = sequelize.define(
     },
     course_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Allow null for non-course activities
       references: { model: "courses", key: "id" },
+    },
+    activity_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment:
+        "For non-course activities like 'Coding Training', 'Sports', etc.",
     },
     faculty_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Optional for activities
       references: { model: "users", key: "id" },
     },
     day_of_week: {
@@ -32,7 +38,7 @@ const TimetableSlot = sequelize.define(
         "Thursday",
         "Friday",
         "Saturday",
-        "Sunday"
+        "Sunday",
       ),
       allowNull: false,
     },
@@ -44,15 +50,26 @@ const TimetableSlot = sequelize.define(
       type: DataTypes.TIME,
       allowNull: false,
     },
+    block_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "blocks", key: "id" },
+    },
+    room_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "rooms", key: "id" },
+    },
     room_number: {
       type: DataTypes.STRING,
+      comment: "Deprecated: Use room_id instead",
     },
   },
   {
     tableName: "timetable_slots",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = TimetableSlot;

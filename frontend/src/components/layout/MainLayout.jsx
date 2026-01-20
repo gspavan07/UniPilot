@@ -11,6 +11,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  Layout,
   Menu,
   X,
   Clock,
@@ -169,6 +170,12 @@ const MainLayout = () => {
       href: "/lifecycle",
       icon: RefreshCcw,
       permission: "academics:promotion:manage",
+    },
+    {
+      name: "Sections",
+      href: "/academic/sections",
+      icon: Layout,
+      permission: "academics:sections:manage",
     },
     {
       name: "Attendance",

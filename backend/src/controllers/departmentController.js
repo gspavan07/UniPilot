@@ -11,7 +11,12 @@ const logger = require("../utils/logger");
 // @access  Private/Admin/Faculty
 exports.getAllDepartments = async (req, res) => {
   try {
+    const { type } = req.query;
+    const where = {};
+    if (type) where.type = type;
+
     const departments = await Department.findAll({
+      where,
       include: [
         {
           model: User,

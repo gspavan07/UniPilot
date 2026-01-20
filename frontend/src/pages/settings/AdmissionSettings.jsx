@@ -79,32 +79,6 @@ const AdmissionSettings = () => {
       lateral_id_format: "L{YY}{UNIV}{BRANCH}{SEQ}",
       is_active: true,
       required_documents: ["Photo ID", "10th Marksheet", "12th Marksheet"],
-      field_config: {
-        personal: {
-          first_name: { visible: true, required: true },
-          last_name: { visible: true, required: true },
-          email: { visible: true, required: true },
-          phone: { visible: true, required: true },
-          date_of_birth: { visible: true, required: true },
-          gender: { visible: true, required: true },
-          nationality: { visible: true, required: true },
-          religion: { visible: true, required: false },
-          caste: { visible: true, required: false },
-          aadhaar_number: { visible: true, required: false },
-          passport_number: { visible: true, required: false },
-        },
-        academic: {
-          department_id: { visible: true, required: true },
-          program_id: { visible: true, required: true },
-          batch_year: { visible: true, required: true },
-          admission_type: { visible: true, required: true },
-        },
-        family: {
-          father_name: { visible: true, required: true },
-          mother_name: { visible: true, required: true },
-        },
-        custom: {},
-      },
       seat_matrix: {},
     });
     setActiveTab("general");
@@ -216,7 +190,6 @@ const AdmissionSettings = () => {
                 { id: "general", label: "General", icon: Settings },
                 { id: "seats", label: "Seats", icon: Users2 },
                 { id: "docs", label: "Documents", icon: ListChecks },
-                { id: "fields", label: "Fields", icon: Layout },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -468,164 +441,9 @@ const AdmissionSettings = () => {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                      )
+                      ),
                     )}
                   </div>
-                </div>
-              )}
-
-              {activeTab === "fields" && (
-                <div className="space-y-6">
-                  {["personal", "academic", "family", "history", "custom"].map(
-                    (section) => (
-                      <div key={section} className="space-y-3">
-                        <div className="flex items-center justify-between border-b border-primary-100 dark:border-primary-900 pb-1">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-primary-600 dark:text-primary-400">
-                            {section} Fields
-                          </h4>
-                          {section === "custom" && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const label = prompt(
-                                  "Field Label (e.g. Blood Group):"
-                                );
-                                if (label) {
-                                  const key = label
-                                    .toLowerCase()
-                                    .replace(/\s+/g, "_");
-                                  setEditingConfig({
-                                    ...editingConfig,
-                                    field_config: {
-                                      ...editingConfig.field_config,
-                                      custom: {
-                                        ...editingConfig.field_config.custom,
-                                        [key]: {
-                                          label,
-                                          visible: true,
-                                          required: false,
-                                          type: "text",
-                                        },
-                                      },
-                                    },
-                                  });
-                                }
-                              }}
-                              className="text-[10px] font-bold text-primary-600 flex items-center"
-                            >
-                              <Plus className="w-3 h-3 mr-1" /> Add Custom
-                            </button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          {Object.keys(
-                            editingConfig.field_config?.[section] || {}
-                          ).map((field) => (
-                            <div
-                              key={field}
-                              className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900 rounded-xl group"
-                            >
-                              <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 capitalize">
-                                {editingConfig.field_config[section][field]
-                                  .label || field.replace(/_/g, " ")}
-                              </span>
-                              <div className="flex space-x-1">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const current =
-                                      editingConfig.field_config[section][field]
-                                        .visible;
-                                    setEditingConfig({
-                                      ...editingConfig,
-                                      field_config: {
-                                        ...editingConfig.field_config,
-                                        [section]: {
-                                          ...editingConfig.field_config[
-                                            section
-                                          ],
-                                          [field]: {
-                                            ...editingConfig.field_config[
-                                              section
-                                            ][field],
-                                            visible: !current,
-                                          },
-                                        },
-                                      },
-                                    });
-                                  }}
-                                  className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
-                                    editingConfig.field_config[section][field]
-                                      .visible
-                                      ? "bg-primary-600 text-white"
-                                      : "bg-gray-200 text-gray-400"
-                                  }`}
-                                  title="Toggle Visibility"
-                                >
-                                  <Layout className="w-3 h-3" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const current =
-                                      editingConfig.field_config[section][field]
-                                        .required;
-                                    setEditingConfig({
-                                      ...editingConfig,
-                                      field_config: {
-                                        ...editingConfig.field_config,
-                                        [section]: {
-                                          ...editingConfig.field_config[
-                                            section
-                                          ],
-                                          [field]: {
-                                            ...editingConfig.field_config[
-                                              section
-                                            ][field],
-                                            required: !current,
-                                          },
-                                        },
-                                      },
-                                    });
-                                  }}
-                                  className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
-                                    editingConfig.field_config[section][field]
-                                      .required
-                                      ? "bg-amber-500 text-white"
-                                      : "bg-gray-200 text-gray-400"
-                                  }`}
-                                  title="Toggle Required"
-                                >
-                                  <Shield className="w-3 h-3" />
-                                </button>
-                                {section === "custom" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newConfig = {
-                                        ...editingConfig.field_config.custom,
-                                      };
-                                      delete newConfig[field];
-                                      setEditingConfig({
-                                        ...editingConfig,
-                                        field_config: {
-                                          ...editingConfig.field_config,
-                                          custom: newConfig,
-                                        },
-                                      });
-                                    }}
-                                    className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 text-gray-400 hover:bg-error-50 hover:text-error-500 transition-all opacity-0 group-hover:opacity-100"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  )}
                 </div>
               )}
 

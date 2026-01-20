@@ -125,29 +125,45 @@ const MyTimetable = () => {
                     daySlots.map((slot) => (
                       <div
                         key={slot.id}
-                        className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-l-4 border-l-purple-500 border-gray-100 dark:border-gray-700 hover:shadow-md transition-all"
+                        className={`bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-l-4 ${slot.activity_name ? "border-l-amber-500" : "border-l-purple-500"} border-gray-100 dark:border-gray-700 hover:shadow-md transition-all`}
                       >
                         <div className="flex items-center text-xs font-bold text-gray-400 mb-2">
                           <Clock className="w-3 h-3 mr-1" />
                           {slot.start_time.slice(0, 5)} -{" "}
                           {slot.end_time.slice(0, 5)}
                         </div>
-                        <h4 className="font-bold text-lg mb-1">
-                          {slot.course?.code}
+                        <h4 className="font-bold text-lg mb-1 leading-tight">
+                          {slot.activity_name || slot.course?.name}
                         </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-1">
-                          {slot.course?.name}
-                        </p>
+
+                        {slot.course?.code && (
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-1">
+                            {slot.course.code}
+                          </p>
+                        )}
+
+                        {slot.activity_name && (
+                          <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider mb-3">
+                            Activity
+                          </p>
+                        )}
 
                         <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span className="flex items-center bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-lg">
+                          <span className="flex items-center bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-lg font-mono font-bold">
                             <MapPin className="w-3 h-3 mr-1" />{" "}
-                            {slot.room_number}
+                            {slot.room?.room_number ||
+                              slot.room_number ||
+                              "TBD"}
                           </span>
-                          <span className="flex items-center">
-                            <User className="w-3 h-3 mr-1" />{" "}
-                            {slot.faculty?.name.split(" ")[0]}
-                          </span>
+
+                          {(slot.faculty?.name || slot.faculty_id) && (
+                            <span className="flex items-center">
+                              <User className="w-3 h-3 mr-1" />{" "}
+                              {slot.faculty?.name
+                                ? slot.faculty.name.split(" ")[0]
+                                : "Staff"}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))

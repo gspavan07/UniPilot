@@ -10,6 +10,12 @@ const initialState = {
   },
   courseWise: [],
   leaveRequests: [],
+  todayClasses: [],
+  stats: {
+    total_students: 0,
+    at_risk_count: 0,
+    students: [],
+  },
   status: "idle",
   error: null,
 };
@@ -22,10 +28,10 @@ export const fetchMyAttendance = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch attendance"
+        error.response?.data?.error || "Failed to fetch attendance",
       );
     }
-  }
+  },
 );
 
 export const markAttendance = createAsyncThunk(
@@ -36,10 +42,10 @@ export const markAttendance = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to mark attendance"
+        error.response?.data?.error || "Failed to mark attendance",
       );
     }
-  }
+  },
 );
 
 export const applyForLeave = createAsyncThunk(
@@ -50,10 +56,10 @@ export const applyForLeave = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Leave application failed"
+        error.response?.data?.error || "Leave application failed",
       );
     }
-  }
+  },
 );
 
 export const fetchLeaveRequests = createAsyncThunk(
@@ -64,10 +70,38 @@ export const fetchLeaveRequests = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch leave requests"
+        error.response?.data?.error || "Failed to fetch leave requests",
       );
     }
-  }
+  },
+);
+
+export const fetchTodayClasses = createAsyncThunk(
+  "attendance/fetchTodayClasses",
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/attendance/faculty/today", { params });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch today's classes",
+      );
+    }
+  },
+);
+
+export const fetchAttendanceStats = createAsyncThunk(
+  "attendance/fetchStats",
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/attendance/stats", { params });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch attendance stats",
+      );
+    }
+  },
 );
 
 export const attendanceSlice = createSlice({
@@ -95,6 +129,12 @@ export const attendanceSlice = createSlice({
       })
       .addCase(fetchLeaveRequests.fulfilled, (state, action) => {
         state.leaveRequests = action.payload;
+      })
+      .addCase(fetchTodayClasses.fulfilled, (state, action) => {
+        state.todayClasses = action.payload;
+      })
+      .addCase(fetchAttendanceStats.fulfilled, (state, action) => {
+        state.stats = action.payload;
       });
   },
 });

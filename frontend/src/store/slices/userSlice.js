@@ -4,6 +4,7 @@ import api from "../../utils/api";
 const initialState = {
   users: [],
   sections: [],
+  batchYears: [],
   userStats: null,
   currentUser: null,
   status: "idle",
@@ -31,10 +32,10 @@ export const fetchUsers = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch users"
+        error.response?.data?.error || "Failed to fetch users",
       );
     }
-  }
+  },
 );
 
 export const fetchUserStats = createAsyncThunk(
@@ -45,10 +46,10 @@ export const fetchUserStats = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch user stats"
+        error.response?.data?.error || "Failed to fetch user stats",
       );
     }
-  }
+  },
 );
 
 export const getUser = createAsyncThunk(
@@ -59,10 +60,10 @@ export const getUser = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch user"
+        error.response?.data?.error || "Failed to fetch user",
       );
     }
-  }
+  },
 );
 
 export const fetchStudentSections = createAsyncThunk(
@@ -75,10 +76,26 @@ export const fetchStudentSections = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch sections"
+        error.response?.data?.error || "Failed to fetch sections",
       );
     }
-  }
+  },
+);
+
+export const fetchBatchYears = createAsyncThunk(
+  "users/fetchBatchYears",
+  async ({ department_id } = {}, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/users/batch-years", {
+        params: { department_id },
+      });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch batch years",
+      );
+    }
+  },
 );
 
 export const createUser = createAsyncThunk(
@@ -93,10 +110,10 @@ export const createUser = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to create user"
+        error.response?.data?.error || "Failed to create user",
       );
     }
-  }
+  },
 );
 
 export const updateUser = createAsyncThunk(
@@ -111,10 +128,10 @@ export const updateUser = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to update user"
+        error.response?.data?.error || "Failed to update user",
       );
     }
-  }
+  },
 );
 
 export const deleteUser = createAsyncThunk(
@@ -125,10 +142,10 @@ export const deleteUser = createAsyncThunk(
       return id;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to delete user"
+        error.response?.data?.error || "Failed to delete user",
       );
     }
-  }
+  },
 );
 
 export const bulkImportUsers = createAsyncThunk(
@@ -146,10 +163,29 @@ export const bulkImportUsers = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to import users"
+        error.response?.data?.error || "Failed to import users",
       );
     }
-  }
+  },
+);
+
+export const bulkUpdateSections = createAsyncThunk(
+  "users/bulkUpdateSections",
+  async ({ userIds, section }, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await api.post("/users/bulk-update-sections", {
+        userIds,
+        section,
+      });
+      // Refresh the list after successful update
+      dispatch(fetchUsers({ role: "student" }));
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to update sections",
+      );
+    }
+  },
 );
 
 export const userSlice = createSlice({
@@ -195,6 +231,9 @@ export const userSlice = createSlice({
       })
       .addCase(fetchStudentSections.fulfilled, (state, action) => {
         state.sections = action.payload;
+      })
+      .addCase(fetchBatchYears.fulfilled, (state, action) => {
+        state.batchYears = action.payload;
       })
       .addCase(updateUser.fulfilled, (state, action) => {
         const index = state.users.findIndex((u) => u.id === action.payload.id);

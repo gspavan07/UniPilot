@@ -3,13 +3,14 @@ const logger = require("../utils/logger");
 
 /**
  * Generates a unique student ID based on batch configuration
- * @param {Object} params - { batchYear, programId, isTemporary }
+ * @param {Object} params - { batchYear, programId, isTemporary, isLateral }
  * @returns {Promise<string>}
  */
 const generateStudentId = async ({
   batchYear,
   programId,
   isTemporary = false,
+  isLateral = false,
 }) => {
   const transaction = await sequelize.transaction();
   try {
@@ -22,7 +23,7 @@ const generateStudentId = async ({
 
     if (!config) {
       throw new Error(
-        `Admission configuration not found for batch ${batchYear}`
+        `Admission configuration not found for batch ${batchYear}`,
       );
     }
 
@@ -32,19 +33,59 @@ const generateStudentId = async ({
       throw new Error("Program not found");
     }
 
-    // 3. Format ID
-    const format = isTemporary ? config.temp_id_format : config.id_format;
-    const yearShort = batchYear.toString().slice(-2);
-    const sequence = config.current_sequence.toString().padStart(3, "0");
-    const univCode = config.university_code;
-    const branchCode = program.code?.split("-")[1] || program.code || "XX";
+    // 3. Extract 2-letter branch code from program code
+    // Examples: "AIML" -> "AI", "CSE" -> "CS", "ECE" -> "EC"
+    let branchCode = program.code?.toUpperCase().substring(0, 2) || "XX";
+    if (branchCode.length < 2) {
+      branchCode = branchCode.padEnd(2, "X");
+    }
 
-    // Replace placeholders
+    // 4. Determine sequence padding based on ID type for 10-char length
+    // Temp: {YY}{BRANCH}T{SEQ} = 2 + 2 + 1 + 5 = 10 (e.g., 26CST00001)
+    // Permanent: {YY}{UNIV}{BRANCH}{SEQ} = 2 + 3 + 2 + 3 = 10 (e.g., 26B11CS001)
+    // Lateral: {YY}{UNIV}{BRANCH}L{SEQ} = 2 + 3 + 2 + 1 + 2 = 10 (e.g., 26B11CSL01)
+    let sequencePadding;
+    let format;
+
+    if (isTemporary) {
+      format = config.temp_id_format;
+    } else if (isLateral) {
+      format = config.lateral_id_format;
+    } else {
+      format = config.id_format;
+    }
+
+    // Detect format type by checking for T or L in the format string
+    if (format.includes("T{SEQ}")) {
+      // Temporary ID: {YY}{BRANCH}T{SEQ} = 2 + 2 + 1 + 5 = 10
+      sequencePadding = 5;
+    } else if (format.includes("L{SEQ}")) {
+      // Lateral ID: {YY}{UNIV}{BRANCH}L{SEQ} = 2 + 3 + 2 + 1 + 2 = 10
+      sequencePadding = 2;
+    } else {
+      // Permanent ID: {YY}{UNIV}{BRANCH}{SEQ} = 2 + 3 + 2 + 3 = 10
+      sequencePadding = 3;
+    }
+
+    const yearShort = batchYear.toString().slice(-2);
+    const sequence = config.current_sequence
+      .toString()
+      .padStart(sequencePadding, "0");
+    const univCode = config.university_code;
+
+    // 5. Replace placeholders
     let studentId = format
       .replace("{YY}", yearShort)
       .replace("{UNIV}", univCode)
       .replace("{BRANCH}", branchCode)
       .replace("{SEQ}", sequence);
+
+    // 6. Validate 10-character length
+    if (studentId.length !== 10) {
+      throw new Error(
+        `Generated ID "${studentId}" is ${studentId.length} characters, expected 10. Format: ${format}`,
+      );
+    }
 
     // 4. Increment Sequence
     config.current_sequence += 1;
@@ -53,7 +94,7 @@ const generateStudentId = async ({
     await transaction.commit();
     return studentId;
   } catch (error) {
-    await transaction.transactionRollback();
+    await transaction.rollback();
     logger.error("Error in generateStudentId:", error);
     throw error;
   }
@@ -86,7 +127,7 @@ const generateGlobalAdmissionNumber = async () => {
           current_admission_sequence: 1,
           admission_number_prefix: "ADM",
         },
-        { transaction }
+        { transaction },
       );
     }
 

@@ -40,6 +40,8 @@ const SalaryStructure = require("./SalaryStructure");
 const Payslip = require("./Payslip");
 const SalaryGrade = require("./SalaryGrade");
 const InstitutionSetting = require("./InstitutionSetting");
+const Block = require("./Block");
+const Room = require("./Room");
 
 const models = {
   User,
@@ -81,6 +83,8 @@ const models = {
   SalaryGrade,
   InstitutionSetting,
   Regulation,
+  Block,
+  Room,
 };
 
 // Define associations
@@ -285,6 +289,15 @@ Course.hasMany(Attendance, {
   foreignKey: "course_id",
 });
 
+Attendance.belongsTo(TimetableSlot, {
+  as: "slot",
+  foreignKey: "timetable_slot_id",
+});
+TimetableSlot.hasMany(Attendance, {
+  as: "attendance_records",
+  foreignKey: "timetable_slot_id",
+});
+
 Attendance.belongsTo(User, { as: "instructor", foreignKey: "marked_by" });
 
 LeaveRequest.belongsTo(User, { as: "student", foreignKey: "student_id" });
@@ -378,6 +391,10 @@ TimetableSlot.belongsTo(Timetable, {
 
 TimetableSlot.belongsTo(Course, { as: "course", foreignKey: "course_id" });
 TimetableSlot.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
+TimetableSlot.belongsTo(Block, { as: "block", foreignKey: "block_id" });
+TimetableSlot.belongsTo(Room, { as: "room", foreignKey: "room_id" });
+Block.hasMany(TimetableSlot, { as: "timetable_slots", foreignKey: "block_id" });
+Room.hasMany(TimetableSlot, { as: "timetable_slots", foreignKey: "room_id" });
 
 // Student Document Associations
 StudentDocument.belongsTo(User, { as: "student", foreignKey: "user_id" });
@@ -417,10 +434,6 @@ SalaryGrade.hasMany(SalaryStructure, {
   foreignKey: "grade_id",
 });
 
-// Infrastructure
-const Block = require("./Block");
-const Room = require("./Room");
-
 // Infrastructure Associations
 Block.hasMany(Room, { foreignKey: "block_id", as: "rooms" });
 Room.belongsTo(Block, { foreignKey: "block_id", as: "block" });
@@ -434,6 +447,4 @@ Room.hasOne(Department, { foreignKey: "room_id", as: "department" });
 module.exports = {
   ...models,
   sequelize,
-  Block,
-  Room,
 };

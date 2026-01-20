@@ -266,3 +266,41 @@ exports.generateRooms = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all rooms (with optional block filter)
+// @route   GET /api/infrastructure/rooms?block_id=xxx
+// @access  Private
+exports.getAllRooms = async (req, res) => {
+  try {
+    const where = {};
+    if (req.query.block_id) {
+      where.block_id = req.query.block_id;
+    }
+
+    const rooms = await Room.findAll({
+      where,
+      include: [
+        {
+          model: Block,
+          as: "block",
+          attributes: ["id", "name", "code"],
+        },
+      ],
+      order: [
+        ["floor_number", "ASC"],
+        ["room_number", "ASC"],
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: rooms,
+    });
+  } catch (error) {
+    logger.error("Error in getAllRooms:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};

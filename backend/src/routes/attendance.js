@@ -5,6 +5,9 @@ const {
   applyLeave,
   getLeaveRequests,
   updateLeaveStatus,
+  getTodayClasses,
+  getAttendanceStats,
+  getSessionAttendance,
 } = require("../controllers/attendanceController");
 const { authenticate, checkPermission } = require("../middleware/auth");
 
@@ -20,17 +23,34 @@ router.post("/leave/apply", applyLeave);
 router.post(
   "/mark",
   checkPermission("academics:attendance:manage"),
-  markAttendance
+  markAttendance,
+);
+router.get(
+  "/session/:id",
+  checkPermission("academics:attendance:manage"),
+  getSessionAttendance,
 );
 router.get(
   "/leave/requests",
   checkPermission("academics:attendance:manage"),
-  getLeaveRequests
+  getLeaveRequests,
 );
 router.put(
   "/leave/:id",
   checkPermission("academics:attendance:manage"),
-  updateLeaveStatus
+  updateLeaveStatus,
+);
+
+router.get(
+  "/faculty/today",
+  checkPermission("academics:attendance:manage"),
+  getTodayClasses,
+);
+
+router.get(
+  "/stats",
+  checkPermission("academics:attendance:manage"),
+  getAttendanceStats,
 );
 
 module.exports = router;

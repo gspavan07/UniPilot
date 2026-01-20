@@ -8,6 +8,8 @@ const {
   getUserStats,
   bulkImportUsers,
   updateBankDetails,
+  bulkUpdateSections,
+  getBatchYears,
 } = require("../controllers/userController");
 const upload = require("../middleware/upload");
 const studentUpload = require("../middleware/studentUpload");
@@ -69,6 +71,7 @@ router.get(
   checkDynamicPermission("view"),
   require("../controllers/userController").getStudentSections,
 );
+router.get("/batch-years", checkDynamicPermission("view"), getBatchYears);
 
 router
   .route("/")
@@ -88,6 +91,17 @@ router.post(
 
 // Bank details route (must be before /:id route)
 router.put("/:id/bank-details", authenticate, updateBankDetails);
+
+// Bulk update sections
+router.post(
+  "/bulk-update-sections",
+  checkPermission([
+    "users:manage",
+    "students:manage",
+    "academics:sections:manage",
+  ]),
+  bulkUpdateSections,
+);
 
 router
   .route("/:id")

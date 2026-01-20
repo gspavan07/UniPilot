@@ -35,12 +35,22 @@ const Attendance = sequelize.define(
       type: DataTypes.UUID,
       references: { model: "users", key: "id" },
     },
+    timetable_slot_id: {
+      type: DataTypes.UUID,
+      references: { model: "timetable_slots", key: "id" },
+    },
+    batch_year: {
+      type: DataTypes.INTEGER,
+    },
+    section: {
+      type: DataTypes.STRING,
+    },
   },
   {
     tableName: "attendance",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = Attendance;

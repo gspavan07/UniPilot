@@ -45,6 +45,7 @@ import BlockList from "./pages/infrastructure/BlockList";
 import BlockDetails from "./pages/infrastructure/BlockDetails";
 import RegulationList from "./pages/academics/RegulationList";
 import RegulationViewer from "./pages/academics/RegulationViewer";
+import SectionManager from "./pages/academics/SectionManager";
 
 function App() {
   const dispatch = useDispatch();
@@ -119,6 +120,7 @@ function App() {
             path="/academic/calendar"
             element={<AcademicCalendar target="student" />}
           />
+          <Route path="/academic/sections" element={<SectionManager />} />
           <Route path="/infrastructure" element={<BlockList />} />
           <Route path="/infrastructure/blocks/:id" element={<BlockDetails />} />
           <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />

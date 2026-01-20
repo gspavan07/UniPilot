@@ -4,6 +4,9 @@ const {
   User,
   Course,
   Holiday,
+  TimetableSlot,
+  Timetable,
+  Program,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
@@ -14,7 +17,8 @@ const { Op } = require("sequelize");
 // @access  Private/Faculty
 exports.markAttendance = async (req, res) => {
   try {
-    const { course_id, date, attendance_data } = req.body; // attendance_data: [{student_id, status, remarks}]
+    const { course_id, timetable_slot_id, date, attendance_data } = req.body;
+    // attendance_data: [{student_id, status, remarks}]
 
     if (!attendance_data || !Array.isArray(attendance_data)) {
       return res.status(400).json({ error: "Invalid attendance data" });
@@ -54,12 +58,24 @@ exports.markAttendance = async (req, res) => {
     const savedRecords = await sequelize.transaction(async (t) => {
       const records = [];
       for (const item of attendance_data) {
+        // Fetch student details to record batch/section at time of marking
+        const student = await User.findByPk(item.student_id, {
+          attributes: ["batch_year", "section"],
+        });
+
         const [record, created] = await Attendance.findOrCreate({
-          where: { student_id: item.student_id, date, course_id },
+          where: {
+            student_id: item.student_id,
+            date,
+            timetable_slot_id: timetable_slot_id || null,
+            course_id: course_id || null,
+          },
           defaults: {
             status: item.status,
             remarks: item.remarks,
             marked_by: req.user.userId,
+            batch_year: student?.batch_year,
+            section: student?.section,
           },
           transaction: t,
         });
@@ -71,7 +87,7 @@ exports.markAttendance = async (req, res) => {
               remarks: item.remarks,
               marked_by: req.user.userId,
             },
-            { transaction: t }
+            { transaction: t },
           );
         }
         records.push(record);
@@ -122,7 +138,14 @@ exports.getMyAttendance = async (req, res) => {
 
     const records = await Attendance.findAll({
       where,
-      include: [courseInclude],
+      include: [
+        courseInclude,
+        {
+          model: User,
+          as: "instructor",
+          attributes: ["first_name", "last_name", "role", "role_id"],
+        },
+      ],
       order: [["date", "DESC"]],
     });
 
@@ -265,5 +288,252 @@ exports.updateLeaveStatus = async (req, res) => {
   } catch (error) {
     logger.error("Error updating leave status:", error);
     res.status(500).json({ error: "Update failed" });
+  }
+};
+
+// @desc    Get faculty's classes for today
+// @route   GET /api/attendance/faculty/today
+// @access  Private/Faculty
+exports.getTodayClasses = async (req, res) => {
+  try {
+    const { role, userId, department_id: userDeptId } = req.user;
+    const { department_id, batch_year, semester, section } = req.query;
+
+    const isAdmin = ["admin", "super_admin"].includes(role);
+    const isHOD = role === "hod";
+
+    const today = new Date();
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const dayName = days[today.getDay()];
+    const dateStr = today.toISOString().split("T")[0];
+
+    const where = { day_of_week: dayName };
+    const timetableWhere = {};
+    if (section) timetableWhere.section = section;
+    if (semester) timetableWhere.semester = semester;
+    // Note: academic_year in Timetable is usually "2025-2026", while batch_year is "2024".
+    // We'll skip filtering Timetable by batch_year for now unless we have a mapping.
+
+    const timetableInclude = {
+      model: Timetable,
+      as: "timetable",
+      attributes: ["section", "program_id", "semester", "academic_year"],
+      where:
+        Object.keys(timetableWhere).length > 0 ? timetableWhere : undefined,
+      required: Object.keys(timetableWhere).length > 0,
+    };
+
+    // Role-based filtering
+    if (isAdmin) {
+      if (department_id) {
+        timetableInclude.include = [
+          {
+            model: Program,
+            as: "program",
+            where: { department_id },
+            required: true,
+          },
+        ];
+        timetableInclude.required = true;
+      }
+    } else if (isHOD) {
+      // HODs see everything in their department for today
+      // Safety check for department_id
+      if (!userDeptId) {
+        logger.error(`HOD ${userId} is missing department_id in session`);
+        return res
+          .status(403)
+          .json({ error: "Departmental context missing. Please re-login." });
+      }
+
+      timetableInclude.include = [
+        {
+          model: Program,
+          as: "program",
+          where: { department_id: userDeptId },
+          required: true,
+        },
+      ];
+      timetableInclude.required = true;
+    } else {
+      // Faculty only see their own classes
+      where.faculty_id = userId;
+    }
+
+    // Find all slots based on role scope
+    const slots = await TimetableSlot.findAll({
+      where,
+      include: [
+        { model: Course, as: "course", attributes: ["name", "code"] },
+        {
+          model: User,
+          as: "faculty",
+          attributes: ["id", "first_name", "last_name", "profile_picture"],
+        },
+        timetableInclude,
+        {
+          model: Attendance,
+          as: "attendance_records",
+          where: { date: dateStr },
+          required: false,
+          limit: 1, // Just to check if marked
+        },
+      ],
+      order: [["start_time", "ASC"]],
+    });
+
+    const results = slots.map((slot) => ({
+      id: slot.id,
+      course_id: slot.course_id,
+      course_name: slot.course?.name || slot.activity_name,
+      course_code: slot.course?.code,
+      faculty_name: slot.faculty
+        ? `${slot.faculty.first_name} ${slot.faculty.last_name}`
+        : "N/A",
+      section: slot.timetable?.section,
+      program_id: slot.timetable?.program_id,
+      semester: slot.timetable?.semester,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      is_marked: slot.attendance_records.length > 0,
+      type: slot.course_id ? "course" : "activity",
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: results,
+    });
+  } catch (error) {
+    logger.error("Error fetching today classes:", error);
+    res.status(500).json({ error: "Failed to fetch classes" });
+  }
+};
+
+// @desc    Get attendance analytics for HOD/Admin
+// @route   GET /api/attendance/stats
+// @access  Private/Admin/HOD
+exports.getAttendanceStats = async (req, res) => {
+  try {
+    const { department_id, batch_year, semester, section } = req.query;
+    const { role, department_id: userDeptId } = req.user;
+
+    const where = { role: "student" };
+
+    // Enforce Hierarchy
+    if (role === "hod") {
+      // HODs only see their department
+      if (!userDeptId) {
+        logger.error(
+          `HOD ${req.user.userId} is missing department_id in session`,
+        );
+        return res
+          .status(403)
+          .json({ error: "Departmental context missing. Please re-login." });
+      }
+      where.department_id = userDeptId;
+    } else if (["admin", "super_admin"].includes(role)) {
+      // Admins can filter by department, or see all if not specified
+      if (department_id) where.department_id = department_id;
+    } else {
+      // For faculty/others with manage permission, default to their dept if available
+      if (userDeptId) where.department_id = userDeptId;
+      else if (department_id) where.department_id = department_id;
+    }
+
+    if (batch_year) where.batch_year = batch_year;
+    if (semester) where.current_semester = semester;
+    if (section) where.section = section;
+
+    const students = await User.findAll({
+      where,
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "student_id",
+        "section",
+        "batch_year",
+      ],
+      include: [
+        {
+          model: Attendance,
+          as: "attendance_records",
+          attributes: ["status", "date"],
+        },
+      ],
+    });
+
+    const stats = students.map((student) => {
+      const total = student.attendance_records.length;
+      const present = student.attendance_records.filter(
+        (a) => a.status === "present",
+      ).length;
+      const percentage = total > 0 ? (present / total) * 100 : 0;
+
+      return {
+        id: student.id,
+        name: `${student.first_name} ${student.last_name}`,
+        student_id: student.student_id,
+        section: student.section,
+        batch_year: student.batch_year,
+        total,
+        present,
+        percentage: percentage.toFixed(2),
+        is_low: percentage < 75,
+      };
+    });
+
+    // Sort by percentage ASC to show at-risk students first
+    stats.sort((a, b) => a.percentage - b.percentage);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        total_students: stats.length,
+        at_risk_count: stats.filter((s) => s.is_low).length,
+        students: stats,
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching attendance stats:", error);
+    res.status(500).json({ error: "Failed to fetch stats" });
+  }
+};
+
+// @desc    Get attendance for a specific session (for editing)
+// @route   GET /api/attendance/session/:id
+// @access  Private/Faculty/Admin
+exports.getSessionAttendance = async (req, res) => {
+  try {
+    const { id } = req.params; // timetable_slot_id
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: "Date is required" });
+    }
+
+    const records = await Attendance.findAll({
+      where: {
+        timetable_slot_id: id,
+        date: date,
+      },
+      attributes: ["student_id", "status", "remarks"],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: records,
+    });
+  } catch (error) {
+    logger.error("Error fetching session attendance:", error);
+    res.status(500).json({ error: "Failed to fetch session attendance" });
   }
 };

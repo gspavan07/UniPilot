@@ -7,6 +7,7 @@ import {
   updateUser,
   fetchUserStats,
   fetchStudentSections,
+  fetchBatchYears,
 } from "../../store/slices/userSlice";
 import { fetchRoles } from "../../store/slices/roleSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
@@ -44,6 +45,7 @@ const StudentList = () => {
   const {
     users,
     sections,
+    batchYears,
     status: userStatus,
     error: userError,
     userStats,
@@ -53,8 +55,11 @@ const StudentList = () => {
   const { roles } = useSelector((state) => state.roles);
 
   // UI State
+  const { user: currentUser, accessToken } = useSelector((state) => state.auth);
   const [searchTerm, setSearchTerm] = useState("");
-  const [deptFilter, setDeptFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState(
+    currentUser?.role === "hod" ? currentUser?.department_id : "",
+  );
   const [batchFilter, setBatchFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -97,11 +102,13 @@ const StudentList = () => {
     dispatch(fetchPrograms());
     dispatch(fetchRoles());
     dispatch(fetchUserStats());
-    // Initial fetch of sections (optional, or wait for filters)
-    dispatch(fetchStudentSections({}));
   }, [dispatch]);
 
-  // Fetch sections when filters change
+  // Fetch sections and batch years when filters change
+  useEffect(() => {
+    dispatch(fetchBatchYears({ department_id: deptFilter }));
+  }, [dispatch, deptFilter]);
+
   useEffect(() => {
     dispatch(
       fetchStudentSections({
@@ -200,8 +207,7 @@ const StudentList = () => {
     }
   };
 
-  const { user: currentUser, accessToken } = useSelector((state) => state.auth);
-
+  // Skip duplicate declaration
   // ... (Permission Logic)
 
   const getProfileImageUrl = (user) => {
@@ -417,9 +423,10 @@ const StudentList = () => {
         </div>
         <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
         <select
-          className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
+          className={`bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer ${currentUser?.role === "hod" ? "opacity-50 cursor-not-allowed" : ""}`}
           value={deptFilter}
           onChange={(e) => setDeptFilter(e.target.value)}
+          disabled={currentUser?.role === "hod"}
         >
           <option value="">All Departments</option>
           {departments.map((dept) => (
@@ -435,14 +442,11 @@ const StudentList = () => {
           onChange={(e) => setBatchFilter(e.target.value)}
         >
           <option value="">All Batches</option>
-          {[...Array(5)].map((_, i) => {
-            const y = new Date().getFullYear() - i;
-            return (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            );
-          })}
+          {batchYears.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
         </select>
         <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
         <select

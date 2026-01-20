@@ -110,6 +110,7 @@ class AuthService {
           userId: user.id,
           email: user.email,
           role: user.role,
+          department_id: user.department_id,
         },
         tokenExpiry,
       );

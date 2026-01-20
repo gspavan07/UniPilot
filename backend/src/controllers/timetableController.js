@@ -4,6 +4,7 @@ const {
   Course,
   User,
   Program,
+  Room,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
@@ -146,6 +147,11 @@ exports.getTimetable = async (req, res) => {
           include: [
             { model: Course, as: "course", attributes: ["name", "code"] },
             { model: User, as: "faculty", attributes: ["name"] },
+            {
+              model: Room,
+              as: "room",
+              attributes: ["room_number", "type", "name"],
+            },
           ],
         },
         { model: Program, as: "program", attributes: ["name"] },
@@ -198,6 +204,16 @@ exports.getMyTimetable = async (req, res) => {
                 as: "faculty",
                 attributes: ["first_name", "last_name"],
               },
+              {
+                model: Room,
+                as: "room",
+                attributes: ["room_number", "type", "name"],
+              },
+              {
+                model: Room,
+                as: "room",
+                attributes: ["room_number", "type", "name"],
+              }, // Add Room
             ],
           },
           { model: Program, as: "program", attributes: ["name"] },
@@ -231,6 +247,11 @@ exports.getMyTimetable = async (req, res) => {
         where: { faculty_id: userId },
         include: [
           { model: Course, as: "course", attributes: ["name", "code"] },
+          {
+            model: Room,
+            as: "room",
+            attributes: ["room_number", "type", "name"],
+          },
           {
             model: Timetable,
             as: "timetable",
@@ -298,6 +319,11 @@ exports.getTimetableByCriteria = async (req, res) => {
               as: "faculty",
               attributes: ["first_name", "last_name"],
             },
+            {
+              model: Room,
+              as: "room",
+              attributes: ["room_number", "type", "name"],
+            },
           ],
         },
         { model: Program, as: "program", attributes: ["name"] },
@@ -309,12 +335,10 @@ exports.getTimetableByCriteria = async (req, res) => {
     });
 
     if (!timetable) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "No timetable found for these criteria",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "No timetable found for these criteria",
+      });
     }
 
     // Standardize faculty name for consistency

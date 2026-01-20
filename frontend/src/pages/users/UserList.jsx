@@ -27,9 +27,12 @@ const UserList = ({ role: forcedRole }) => {
   const { roles } = useSelector((state) => state.roles);
 
   // UI State
+  const { user: currentUser, accessToken } = useSelector((state) => state.auth);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState(forcedRole || "");
-  const [deptFilter, setDeptFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState(
+    currentUser?.role === "hod" ? currentUser?.department_id : "",
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -48,7 +51,7 @@ const UserList = ({ role: forcedRole }) => {
           search: searchTerm,
           role: forcedRole || roleFilter,
           department_id: deptFilter,
-        })
+        }),
       );
     }, 500);
 
@@ -76,7 +79,7 @@ const UserList = ({ role: forcedRole }) => {
   const handleDeleteUser = async (id) => {
     if (
       window.confirm(
-        "Are you sure you want to remove this user? This action cannot be undone."
+        "Are you sure you want to remove this user? This action cannot be undone.",
       )
     ) {
       await dispatch(deleteUser(id));
@@ -86,7 +89,7 @@ const UserList = ({ role: forcedRole }) => {
   const handleSave = async (formData) => {
     if (selectedUser) {
       await dispatch(
-        updateUser({ id: selectedUser.id, data: formData })
+        updateUser({ id: selectedUser.id, data: formData }),
       ).unwrap();
     } else {
       await dispatch(createUser(formData)).unwrap();
@@ -138,9 +141,7 @@ const UserList = ({ role: forcedRole }) => {
     }
   };
 
-  const { user: currentUser, accessToken } = useSelector((state) => state.auth);
-
-  // Permission Logic
+  // Permissions logic below
   const canCreate = (() => {
     let roleSlug = currentUser?.role_data?.slug;
 
@@ -295,9 +296,10 @@ const UserList = ({ role: forcedRole }) => {
         )}
         <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
         <select
-          className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
+          className={`bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer ${currentUser?.role === "hod" ? "opacity-50 cursor-not-allowed" : ""}`}
           value={deptFilter}
           onChange={(e) => setDeptFilter(e.target.value)}
+          disabled={currentUser?.role === "hod"}
         >
           <option value="">All Departments</option>
           {departments.map((dept) => (
