@@ -5,10 +5,15 @@ const initialState = {
   cycles: [],
   schedules: [],
   myResults: [],
+  backlogs: [],
+  registrations: [],
+  myRegistrations: [],
+  currentRegistration: null,
   gpa: {
     currentSemester: "0.00",
     overall: "0.00",
   },
+  activeCycleConfig: null,
   status: "idle",
   error: null,
 };
@@ -304,6 +309,121 @@ export const bulkPublishResults = createAsyncThunk(
   },
 );
 
+export const fetchBacklogs = createAsyncThunk(
+  "exam/fetchBacklogs",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/exam/backlogs");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch backlogs",
+      );
+    }
+  },
+);
+
+export const registerForExams = createAsyncThunk(
+  "exam/register",
+  async (regData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/exam/register", regData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Registration failed",
+      );
+    }
+  },
+);
+
+export const fetchRegistrationStatus = createAsyncThunk(
+  "exam/fetchRegistrationStatus",
+  async (cycleId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/exam/registration/status/${cycleId}`);
+      return response.data; // Return full object: { data: registration, cycle: config }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch registration status",
+      );
+    }
+  },
+);
+
+export const fetchRegistrations = createAsyncThunk(
+  "exam/fetchRegistrations",
+  async (cycleId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/exam/registrations/${cycleId}`);
+      return response.data; // Return full object: { data: registrations, cycle_config: config }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch registrations",
+      );
+    }
+  },
+);
+
+export const updateRegistrationStatus = createAsyncThunk(
+  "exam/updateRegistration",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/exam/registration/${id}`, data);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to update registration",
+      );
+    }
+  },
+);
+
+export const bulkUpdateRegistrationStatus = createAsyncThunk(
+  "exam/bulkUpdateRegistration",
+  async ({ student_ids, data }, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/exam/registrations/bulk-override", {
+        student_ids,
+        ...data,
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to bulk update registrations",
+      );
+    }
+  },
+);
+
+export const waiveExamFine = createAsyncThunk(
+  "exam/waiveFine",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/exam/registration/${id}/waive-fine`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to waive fine",
+      );
+    }
+  },
+);
+
+export const fetchMyRegistrations = createAsyncThunk(
+  "exam/fetchMyRegistrations",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/exam/my-registrations");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch my registrations",
+      );
+    }
+  },
+);
+
 export const examSlice = createSlice({
   name: "exam",
   initialState,
@@ -371,6 +491,35 @@ export const examSlice = createSlice({
       .addCase(autoGenerateTimetable.fulfilled, (state, action) => {
         // Auto-generation returns an array of new schedules
         state.schedules = [...state.schedules, ...action.payload];
+      })
+      .addCase(fetchBacklogs.fulfilled, (state, action) => {
+        state.backlogs = action.payload;
+      })
+      .addCase(fetchRegistrationStatus.fulfilled, (state, action) => {
+        state.currentRegistration = action.payload.data;
+        state.activeCycleConfig = action.payload.cycle;
+      })
+      .addCase(registerForExams.fulfilled, (state, action) => {
+        state.currentRegistration = action.payload.data || action.payload;
+      })
+      .addCase(fetchMyRegistrations.fulfilled, (state, action) => {
+        state.myRegistrations = action.payload;
+      })
+      .addCase(fetchRegistrations.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(fetchRegistrations.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.registrations = action.payload.data;
+        state.activeCycleConfig = action.payload.cycle_config;
+      })
+      .addCase(updateRegistrationStatus.fulfilled, (state, action) => {
+        const index = state.registrations.findIndex(
+          (r) => r.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.registrations[index] = action.payload;
+        }
       });
   },
 });

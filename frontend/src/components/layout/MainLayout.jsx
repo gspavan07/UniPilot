@@ -227,6 +227,12 @@ const MainLayout = () => {
       roles: ["student"],
     },
     {
+      name: "Exam Payments",
+      href: "/exams/payments",
+      icon: Wallet,
+      roles: ["student"],
+    },
+    {
       name: "My Results",
       href: "/results",
       icon: Award,

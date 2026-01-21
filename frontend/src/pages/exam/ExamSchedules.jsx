@@ -22,6 +22,13 @@ import {
   Zap,
   LayoutDashboard,
   Lock,
+  Settings,
+  AlertCircle,
+  MoreVertical,
+  XCircle,
+  User,
+  ShieldAlert,
+  Loader2,
 } from "lucide-react";
 import {
   fetchExamCycles,
@@ -37,6 +44,10 @@ import {
   fetchScheduleMarks,
   updateModerationStatus,
   fetchConsolidatedResults,
+  fetchRegistrations,
+  updateRegistrationStatus,
+  bulkUpdateRegistrationStatus,
+  waiveExamFine,
 } from "../../store/slices/examSlice";
 import { fetchCourses } from "../../store/slices/courseSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
@@ -48,6 +59,8 @@ const ExamSchedules = () => {
   const {
     cycles,
     schedules,
+    registrations,
+    activeCycleConfig,
     status: examStatus,
   } = useSelector((state) => state.exam);
   const { courses } = useSelector((state) => state.courses);
@@ -62,6 +75,27 @@ const ExamSchedules = () => {
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
+
+  // Ported Registration Management State
+  const [regSearchTerm, setRegSearchTerm] = useState("");
+  const [regStatusFilter, setRegStatusFilter] = useState("");
+  const [selectedStudents, setSelectedStudents] = useState([]); // For bulk actions
+  const [showBulkOverrideModal, setShowBulkOverrideModal] = useState(false);
+  const [bulkOverrideData, setBulkOverrideData] = useState({
+    is_condoned: false,
+    has_permission: false,
+    override_status: false,
+    override_remarks: "",
+  });
+  const [activeReg, setActiveReg] = useState(null);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideData, setOverrideData] = useState({
+    status: "submitted",
+    is_condoned: false,
+    has_permission: false,
+    override_status: false,
+    override_remarks: "",
+  });
 
   // Derive unique batch years and semesters from cycles
   const uniqueBatches = [
@@ -91,6 +125,17 @@ const ExamSchedules = () => {
     regulation_id: "",
     cycle_type: "",
     instance_number: 1,
+    reg_start_date: "",
+    reg_end_date: "",
+    reg_late_fee_date: "",
+    regular_fee: 0,
+    supply_fee_per_paper: 0,
+    late_fee_amount: 0,
+    is_attendance_checked: true,
+    is_fee_checked: true,
+    attendance_condonation_threshold: 75.0,
+    attendance_permission_threshold: 65.0,
+    exam_mode: "regular",
   });
   const [editingCycle, setEditingCycle] = useState(null);
 
@@ -197,6 +242,101 @@ const ExamSchedules = () => {
     }
   }, [viewMode, selectedCycle, dispatch]);
 
+  useEffect(() => {
+    if (viewMode === "details" && viewingCycle) {
+      setCycleForm({
+        name: viewingCycle.name || "",
+        start_date: viewingCycle.start_date || "",
+        end_date: viewingCycle.end_date || "",
+        batch_year: viewingCycle.batch_year || "",
+        semester: viewingCycle.semester || "",
+        regulation_id: viewingCycle.regulation_id || "",
+        cycle_type: viewingCycle.cycle_type || "",
+        instance_number: viewingCycle.instance_number || 1,
+        exam_mode: viewingCycle.exam_mode || "regular",
+        reg_start_date: viewingCycle.reg_start_date || "",
+        reg_end_date: viewingCycle.reg_end_date || "",
+        reg_late_fee_date: viewingCycle.reg_late_fee_date || "",
+        regular_fee: viewingCycle.regular_fee || 0,
+        supply_fee_per_paper: viewingCycle.supply_fee_per_paper || 0,
+        late_fee_amount: viewingCycle.late_fee_amount || 0,
+        is_attendance_checked: viewingCycle.is_attendance_checked ?? true,
+        is_fee_checked: viewingCycle.is_fee_checked ?? true,
+      });
+    }
+  }, [viewMode, viewingCycle]);
+
+  useEffect(() => {
+    if (activeTab === "registrations" && selectedCycle) {
+      dispatch(fetchRegistrations(selectedCycle));
+    }
+  }, [activeTab, selectedCycle, dispatch]);
+
+  const handleOverride = async () => {
+    if (!overrideData.override_remarks) {
+      alert("Please provide remarks for this action");
+      return;
+    }
+    try {
+      await dispatch(
+        updateRegistrationStatus({
+          id: activeReg.id,
+          data: overrideData,
+        }),
+      ).unwrap();
+      alert("Registration status updated successfully");
+      setShowOverrideModal(false);
+      setActiveReg(null);
+    } catch (err) {
+      alert(err || "Failed to update status");
+    }
+  };
+
+  const handleWaiveFine = async (reg) => {
+    if (
+      window.confirm(
+        "Are you sure you want to waive the late fee for this student?",
+      )
+    ) {
+      try {
+        await dispatch(waiveExamFine(reg.id)).unwrap();
+        alert("Fine waived successfully");
+        dispatch(fetchRegistrations(selectedCycle));
+      } catch (err) {
+        alert(err || "Failed to waive fine");
+      }
+    }
+  };
+
+  const filteredRegistrations = (registrations || []).filter((student) => {
+    const matchesSearch =
+      student.student?.name
+        ?.toLowerCase()
+        .includes(regSearchTerm.toLowerCase()) ||
+      student.student?.student_id
+        ?.toLowerCase()
+        .includes(regSearchTerm.toLowerCase()) ||
+      student.student?.email
+        ?.toLowerCase()
+        .includes(regSearchTerm.toLowerCase());
+
+    // New eligibility-based filtering
+    let matchesStatus = true;
+    if (regStatusFilter) {
+      if (regStatusFilter === "eligible") {
+        matchesStatus = student.eligibility?.is_eligible === true;
+      } else if (regStatusFilter === "blocked") {
+        matchesStatus = student.eligibility?.is_eligible === false;
+      } else if (regStatusFilter === "needs_condonation") {
+        matchesStatus = student.attendance?.tier === "needs_condonation";
+      } else if (regStatusFilter === "needs_permission") {
+        matchesStatus = student.attendance?.tier === "needs_permission";
+      }
+    }
+
+    return matchesSearch && matchesStatus;
+  });
+
   const [activeSchedule, setActiveSchedule] = useState(null);
   const [examSection, setExamSection] = useState("");
   const [sheetStatus, setSheetStatus] = useState("draft");
@@ -283,6 +423,7 @@ const ExamSchedules = () => {
             regulation_id: "",
             cycle_type: "",
             instance_number: 1,
+            exam_mode: "regular",
           });
           alert("Exam cycle created successfully!");
         }
@@ -446,6 +587,17 @@ const ExamSchedules = () => {
                     regulation_id: viewingCycle.regulation_id || "",
                     cycle_type: viewingCycle.cycle_type || "",
                     instance_number: viewingCycle.instance_number || 1,
+                    exam_mode: viewingCycle.exam_mode || "regular",
+                    reg_start_date: viewingCycle.reg_start_date || "",
+                    reg_end_date: viewingCycle.reg_end_date || "",
+                    reg_late_fee_date: viewingCycle.reg_late_fee_date || "",
+                    regular_fee: viewingCycle.regular_fee || 0,
+                    supply_fee_per_paper:
+                      viewingCycle.supply_fee_per_paper || 0,
+                    late_fee_amount: viewingCycle.late_fee_amount || 0,
+                    is_attendance_checked:
+                      viewingCycle.is_attendance_checked ?? true,
+                    is_fee_checked: viewingCycle.is_fee_checked ?? true,
                   });
                   setShowCreateModal(true);
                 }}
@@ -562,6 +714,7 @@ const ExamSchedules = () => {
                               regulation_id: cycle.regulation_id || "",
                               cycle_type: cycle.cycle_type || "",
                               instance_number: cycle.instance_number || 1,
+                              exam_mode: cycle.exam_mode || "regular",
                             });
                             setShowCreateModal(true);
                           }}
@@ -587,6 +740,7 @@ const ExamSchedules = () => {
                       <button
                         onClick={() => handleDeleteCycle(cycle.id)}
                         className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete Cycle"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -602,7 +756,7 @@ const ExamSchedules = () => {
                     Sem {cycle.semester}
                   </span>
                   <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded text-indigo-600">
-                    {cycle.exam_type?.replace("_", " ")}
+                    {cycle.cycle_type?.replace("_", " ")}
                   </span>
                   {cycle.regulation && (
                     <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded text-blue-600">
@@ -662,7 +816,7 @@ const ExamSchedules = () => {
                       Sem {viewingCycle?.semester}
                     </span>
                     <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 rounded text-indigo-600">
-                      {viewingCycle?.exam_type?.replace("_", " ")}
+                      {viewingCycle?.cycle_type?.replace("_", " ")}
                     </span>
                   </div>
                 </div>
@@ -671,7 +825,16 @@ const ExamSchedules = () => {
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
                 {[
                   { id: "timetable", label: "Timetable", icon: Clock },
-                  // Mark Entry and Tabulation removed - moved to separate pages
+                  ...(viewingCycle?.cycle_type === "end_semester"
+                    ? [
+                        {
+                          id: "registrations",
+                          label: "Students",
+                          icon: User,
+                        },
+                        { id: "config", label: "Settings", icon: Settings },
+                      ]
+                    : []),
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1326,25 +1489,777 @@ const ExamSchedules = () => {
                 )}
               </div>
             )}
+            {activeTab === "registrations" && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row gap-4 justify-between items-center">
+                  <div className="relative w-full md:w-96">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search student name or email..."
+                      value={regSearchTerm}
+                      onChange={(e) => setRegSearchTerm(e.target.value)}
+                      className="w-full bg-white dark:bg-gray-700 border-none rounded-xl pl-12 pr-6 py-2.5 text-sm focus:ring-2 focus:ring-indigo-600 shadow-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!regStatusFilter ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "bg-white dark:bg-gray-700 text-gray-400 hover:bg-gray-50"}`}
+                      onClick={() => setRegStatusFilter("")}
+                    >
+                      All Students
+                    </button>
+                    <button
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${regStatusFilter === "eligible" ? "bg-green-600 text-white shadow-lg shadow-green-500/20" : "bg-white dark:bg-gray-700 text-gray-400 hover:bg-gray-50"}`}
+                      onClick={() => setRegStatusFilter("eligible")}
+                    >
+                      Eligible
+                    </button>
+                    <button
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${regStatusFilter === "blocked" ? "bg-red-600 text-white shadow-lg shadow-red-500/20" : "bg-white dark:bg-gray-700 text-gray-400 hover:bg-gray-50"}`}
+                      onClick={() => setRegStatusFilter("blocked")}
+                    >
+                      Blocked
+                    </button>
+                    <button
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${regStatusFilter === "needs_condonation" ? "bg-yellow-600 text-white shadow-lg shadow-yellow-500/20" : "bg-white dark:bg-gray-700 text-gray-400 hover:bg-gray-50"}`}
+                      onClick={() => setRegStatusFilter("needs_condonation")}
+                    >
+                      Needs Cond.
+                    </button>
+                    <button
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${regStatusFilter === "needs_permission" ? "bg-orange-600 text-white shadow-lg shadow-orange-500/20" : "bg-white dark:bg-gray-700 text-gray-400 hover:bg-gray-50"}`}
+                      onClick={() => setRegStatusFilter("needs_permission")}
+                    >
+                      Needs HOD
+                    </button>
+                  </div>
+                </div>
 
-            {activeTab === "tickets" && (
-              <div className="flex flex-col items-center justify-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                <ShieldCheck className="w-16 h-16 text-indigo-300 mb-4" />
-                <h3 className="text-lg font-bold">Hall Ticket Generation</h3>
-                <p className="text-gray-500 mb-8 max-w-sm text-center">
-                  Generate and distribute hall tickets for all eligible students
-                  for the {viewingCycle?.name}.
-                </p>
-                <div className="flex gap-4">
-                  <button className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all">
-                    Generate All Tickets
-                  </button>
-                  <button className="px-6 py-2.5 bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-xl font-bold hover:bg-indigo-50 transition-all">
-                    Download PDF
-                  </button>
+                {/* Bulk Action Bar */}
+                {selectedStudents.length > 0 && (
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 border-2 border-indigo-200 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="px-3 py-1 bg-indigo-600 text-white rounded-lg font-black text-sm">
+                        {selectedStudents.length} Selected
+                      </div>
+                      <button
+                        onClick={() => setSelectedStudents([])}
+                        className="text-sm text-indigo-600 hover:underline font-bold"
+                      >
+                        Clear Selection
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setBulkOverrideData({
+                            is_condoned: false,
+                            has_permission: false,
+                            override_status: false,
+                            override_remarks: "",
+                          });
+                          setShowBulkOverrideModal(true);
+                        }}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Bulk Override
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 text-[10px] uppercase font-black tracking-widest">
+                        <th className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={
+                              selectedStudents.length ===
+                                filteredRegistrations.length &&
+                              filteredRegistrations.length > 0
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedStudents(
+                                  filteredRegistrations.map((s) => s.id),
+                                );
+                              } else {
+                                setSelectedStudents([]);
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                          />
+                        </th>
+                        <th className="px-8 py-4">Student</th>
+                        <th className="px-8 py-4">Type</th>
+                        <th className="px-8 py-4">Attendance</th>
+                        <th className="px-8 py-4">Fee Due</th>
+                        <th className="px-8 py-4 text-center">Eligibility</th>
+                        <th className="px-8 py-4">Exam Fee</th>
+                        <th className="px-8 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {examStatus === "loading" ? (
+                        <tr>
+                          <td colSpan="7" className="px-8 py-20 text-center">
+                            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
+                            <p className="font-bold text-gray-400">
+                              Loading students...
+                            </p>
+                          </td>
+                        </tr>
+                      ) : filteredRegistrations.length > 0 ? (
+                        filteredRegistrations.map((student) => (
+                          <tr
+                            key={student.id}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                          >
+                            {/* Checkbox */}
+                            <td className="px-4 py-6">
+                              <input
+                                type="checkbox"
+                                checked={selectedStudents.includes(student.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedStudents([
+                                      ...selectedStudents,
+                                      student.id,
+                                    ]);
+                                  } else {
+                                    setSelectedStudents(
+                                      selectedStudents.filter(
+                                        (id) => id !== student.id,
+                                      ),
+                                    );
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                              />
+                            </td>
+
+                            {/* Student Info */}
+                            <td className="px-8 py-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600">
+                                  <User className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className="font-black text-gray-900 dark:text-white leading-none mb-1">
+                                    {student.student?.name}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                                    {student.student?.student_id} • Sec{" "}
+                                    {student.student?.section}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Type */}
+                            <td className="px-8 py-6">
+                              <span
+                                className={`text-[9px] px-2 py-0.5 font-black rounded uppercase tracking-widest ${
+                                  student.type === "regular"
+                                    ? "bg-blue-50 text-blue-600"
+                                    : student.type === "supply"
+                                      ? "bg-purple-50 text-purple-600"
+                                      : "bg-orange-50 text-orange-600"
+                                }`}
+                              >
+                                {student.type}
+                              </span>
+                            </td>
+
+                            {/* Attendance */}
+                            <td className="px-8 py-6">
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`font-black text-sm ${
+                                      student.attendance?.tier === "clear"
+                                        ? "text-green-600"
+                                        : student.attendance?.tier ===
+                                            "needs_condonation"
+                                          ? "text-yellow-600"
+                                          : "text-orange-600"
+                                    }`}
+                                  >
+                                    {student.attendance?.percentage}%
+                                  </span>
+                                  {/* Tier Badge */}
+                                  {student.attendance?.tier !== "clear" && (
+                                    <span
+                                      className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                                        student.attendance?.tier ===
+                                        "needs_condonation"
+                                          ? "bg-yellow-50 text-yellow-700"
+                                          : "bg-orange-50 text-orange-700"
+                                      }`}
+                                    >
+                                      {student.attendance?.tier ===
+                                      "needs_condonation"
+                                        ? "Cond."
+                                        : "HOD"}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Override badges */}
+                                {student.overrides?.is_condoned && (
+                                  <span className="text-[8px] text-green-600 font-black uppercase tracking-tighter">
+                                    ✓ Condoned
+                                  </span>
+                                )}
+                                {student.overrides?.has_permission && (
+                                  <span className="text-[8px] text-green-600 font-black uppercase tracking-tighter">
+                                    ✓ HOD Approved
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Fee Due */}
+                            <td className="px-8 py-6">
+                              <div className="flex items-center gap-2">
+                                {student.fee_due?.status === "clear" ? (
+                                  <div className="flex items-center gap-1.5 text-green-500">
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span className="text-[9px] font-black uppercase">
+                                      Clear
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-black text-red-600">
+                                      ₹{student.fee_due?.amount || 0}
+                                    </span>
+                                    <span className="text-[8px] text-red-500 font-bold uppercase">
+                                      Pending
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Eligibility */}
+                            <td className="px-8 py-6 text-center">
+                              {student.eligibility?.is_eligible ? (
+                                <div className="flex items-center justify-center text-green-500 gap-1.5">
+                                  <CheckCircle className="w-5 h-5" />
+                                  <span className="text-[9px] font-black uppercase tracking-widest">
+                                    Eligible
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center text-red-500 gap-1.5">
+                                    <XCircle className="w-5 h-5" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">
+                                      Blocked
+                                    </span>
+                                  </div>
+                                  {/* Show blockers */}
+                                  <div className="flex flex-wrap gap-1 justify-center">
+                                    {student.eligibility?.blockers?.map(
+                                      (blocker, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="text-[7px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded font-black uppercase"
+                                        >
+                                          {blocker === "needs_hod_permission"
+                                            ? "HOD"
+                                            : blocker === "needs_condonation"
+                                              ? "Cond"
+                                              : blocker === "fee_pending"
+                                                ? "Fee"
+                                                : "Admin"}
+                                        </span>
+                                      ),
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Exam Fee Status */}
+                            <td className="px-8 py-6">
+                              {student.exam_fee_status?.paid ? (
+                                <div className="flex flex-col">
+                                  <span className="text-[9px] px-2 py-0.5 font-black rounded uppercase tracking-widest bg-green-50 text-green-600 inline-block text-center mb-1">
+                                    Paid
+                                  </span>
+                                  <span className="text-[8px] text-gray-400 font-mono">
+                                    {student.exam_fee_status?.transaction_id}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[9px] px-2 py-0.5 font-black rounded uppercase tracking-widest bg-orange-50 text-orange-600 inline-block text-center">
+                                  Pending
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-8 py-6 text-right">
+                              <button
+                                onClick={() => {
+                                  setActiveReg(student);
+                                  setOverrideData({
+                                    status: student.registration_status,
+                                    is_condoned:
+                                      student.overrides?.is_condoned || false,
+                                    has_permission:
+                                      student.overrides?.has_permission ||
+                                      false,
+                                    override_status:
+                                      student.overrides?.override_status ||
+                                      false,
+                                    override_remarks:
+                                      student.overrides?.override_remarks || "",
+                                  });
+                                  setShowOverrideModal(true);
+                                }}
+                                className="p-2 rounded-xl transition-colors bg-gray-50 dark:bg-gray-700 text-gray-400 hover:text-indigo-600"
+                              >
+                                <ShieldCheck className="w-5 h-5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" className="px-8 py-20 text-center">
+                            <Search className="w-12 h-12 text-gray-100 dark:text-gray-800 mx-auto mb-4" />
+                            <p className="font-bold text-gray-400 italic">
+                              No students found matching your filters.
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
+
+            {activeTab === "config" &&
+              viewingCycle?.cycle_type === "end_semester" && (
+                <div className="space-y-8 animate-fade-in">
+                  {/* Header Insight */}
+                  <div className="bg-indigo-900 text-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div>
+                        <h3 className="text-2xl font-black mb-2">
+                          Cycle Configuration
+                        </h3>
+                        <p className="text-indigo-200 text-sm max-w-md">
+                          Manage registration timelines, professional fee
+                          structures and automated eligibility policies for the
+                          end semester examinations.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          dispatch(
+                            updateExamCycle({
+                              id: viewingCycle.id,
+                              cycleData: cycleForm,
+                            }),
+                          ).then((res) => {
+                            if (!res.error)
+                              alert("Configuration updated successfully!");
+                          });
+                        }}
+                        className="px-8 py-3 bg-white text-indigo-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform"
+                      >
+                        Save Configuration
+                      </button>
+                    </div>
+                    <Settings className="absolute -right-8 -bottom-8 w-48 h-48 text-indigo-800 opacity-20 rotate-12" />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Timeline Card */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl space-y-6">
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-2xl">
+                          <Calendar className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-lg font-black uppercase tracking-tight">
+                          Registration Timeline
+                        </h4>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={cycleForm.reg_start_date}
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  reg_start_date: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-bold"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">
+                              End Date
+                            </label>
+                            <input
+                              type="date"
+                              value={cycleForm.reg_end_date}
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  reg_end_date: e.target.value,
+                                })
+                              }
+                              className="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-bold"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">
+                            Late Fee Deadline
+                          </label>
+                          <input
+                            type="date"
+                            value={cycleForm.reg_late_fee_date}
+                            onChange={(e) =>
+                              setCycleForm({
+                                ...cycleForm,
+                                reg_late_fee_date: e.target.value,
+                              })
+                            }
+                            className="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-bold"
+                          />
+                          <p className="text-[10px] text-gray-400 font-medium italic mt-1 px-1">
+                            * Students registering after this date will be
+                            charged the configured late fee.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fee Card */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl space-y-6">
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-2xl">
+                          <Download className="w-6 h-6 rotate-180" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest leading-none mb-1">
+                            Cycle Configuration
+                          </p>
+                          <h4 className="text-lg font-black uppercase tracking-tight">
+                            Fees & Policies
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                          <h4 className="text-sm font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest mb-4">
+                            Exam Mode
+                          </h4>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${
+                                viewingCycle.exam_mode === "regular"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : viewingCycle.exam_mode === "supplementary"
+                                    ? "bg-orange-100 text-orange-700"
+                                    : "bg-purple-100 text-purple-700"
+                              }`}
+                            >
+                              {viewingCycle.exam_mode === "combined"
+                                ? "Regular + Supplementary"
+                                : viewingCycle.exam_mode}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <h4 className="text-sm font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest mb-4">
+                          Professional Fees (₹)
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {(cycleForm.exam_mode === "regular" ||
+                            cycleForm.exam_mode === "combined") && (
+                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                                Regular Fee
+                              </span>
+                              <input
+                                type="number"
+                                value={cycleForm.regular_fee}
+                                onChange={(e) =>
+                                  setCycleForm({
+                                    ...cycleForm,
+                                    regular_fee: parseFloat(e.target.value),
+                                  })
+                                }
+                                className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
+                              />
+                            </div>
+                          )}
+                          {(cycleForm.exam_mode === "supplementary" ||
+                            cycleForm.exam_mode === "combined") && (
+                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
+                              <div className="flex flex-col text-left">
+                                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                                  Backlog Fee
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  (Per Paper)
+                                </span>
+                              </div>
+                              <input
+                                type="number"
+                                value={cycleForm.supply_fee_per_paper}
+                                onChange={(e) =>
+                                  setCycleForm({
+                                    ...cycleForm,
+                                    supply_fee_per_paper: parseFloat(
+                                      e.target.value,
+                                    ),
+                                  })
+                                }
+                                className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
+                            <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                              Late Fine
+                            </span>
+                            <input
+                              type="number"
+                              value={cycleForm.late_fee_amount}
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  late_fee_amount: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Eligibility Policies */}
+                  <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/30 text-purple-600 rounded-2xl">
+                          <ShieldCheck className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-lg font-black uppercase tracking-tight">
+                          Automated Eligibility Rules
+                        </h4>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex items-center justify-between p-6 bg-gray-50 dark:bg-gray-700/50 rounded-[2rem] border border-transparent hover:border-purple-200 transition-all group">
+                        <div className="max-w-[70%]">
+                          <p className="text-sm font-black uppercase tracking-wider mb-1">
+                            Attendance Check
+                          </p>
+                          <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                            Verify student attendance percentage against
+                            regulation requirements before allowing
+                            registration.
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={cycleForm.is_attendance_checked}
+                            onChange={(e) =>
+                              setCycleForm({
+                                ...cycleForm,
+                                is_attendance_checked: e.target.checked,
+                              })
+                            }
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+
+                      <div className="flex items-center justify-between p-6 bg-gray-50 dark:bg-gray-700/50 rounded-[2rem] border border-transparent hover:border-purple-200 transition-all group">
+                        <div className="max-w-[70%]">
+                          <p className="text-sm font-black uppercase tracking-wider mb-1">
+                            Fee Clearance Check
+                          </p>
+                          <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                            Auto-block hall ticket downloads if semester tuition
+                            fees or other academic dues are outstanding.
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={cycleForm.is_fee_checked}
+                            onChange={(e) =>
+                              setCycleForm({
+                                ...cycleForm,
+                                is_fee_checked: e.target.checked,
+                              })
+                            }
+                          />
+                          <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Attendance Thresholds */}
+                    {cycleForm.is_attendance_checked && (
+                      <div className="mt-6 p-6 bg-purple-50 dark:bg-purple-900/10 rounded-[2rem] border-2 border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-purple-600 text-white rounded-xl">
+                            <ShieldCheck className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h5 className="text-sm font-black uppercase tracking-wider">
+                              Attendance Thresholds
+                            </h5>
+                            <p className="text-xs text-gray-500 font-medium">
+                              Configure multi-tier attendance policy
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest px-1">
+                              Condonation Threshold (%)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={
+                                cycleForm.attendance_condonation_threshold || 75
+                              }
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  attendance_condonation_threshold: parseFloat(
+                                    e.target.value,
+                                  ),
+                                })
+                              }
+                              className="w-full bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-700 rounded-xl px-4 py-3 text-base font-bold text-purple-600 focus:ring-2 focus:ring-purple-600 outline-none"
+                            />
+                            <p className="text-xs text-purple-600 dark:text-purple-400 font-medium px-1">
+                              Below this requires admin condonation
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest px-1">
+                              HOD Permission Threshold (%)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={
+                                cycleForm.attendance_permission_threshold || 65
+                              }
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  attendance_permission_threshold: parseFloat(
+                                    e.target.value,
+                                  ),
+                                })
+                              }
+                              className="w-full bg-white dark:bg-gray-800 border-2 border-orange-200 dark:border-orange-700 rounded-xl px-4 py-3 text-base font-bold text-orange-600 focus:ring-2 focus:ring-orange-600 outline-none"
+                            />
+                            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium px-1">
+                              Below this requires condonation + HOD approval
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Visual Tier Explanation */}
+                        <div className="mt-4 grid grid-cols-3 gap-3">
+                          <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs font-black text-green-700 dark:text-green-400">
+                                CLEAR
+                              </span>
+                            </div>
+                            <p className="text-xs text-green-600 dark:text-green-500">
+                              ≥{" "}
+                              {cycleForm.attendance_condonation_threshold || 75}
+                              %
+                            </p>
+                          </div>
+
+                          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                              <span className="text-xs font-black text-yellow-700 dark:text-yellow-400">
+                                CONDONATION
+                              </span>
+                            </div>
+                            <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                              {cycleForm.attendance_permission_threshold || 65}%
+                              -{" "}
+                              {cycleForm.attendance_condonation_threshold || 75}
+                              %
+                            </p>
+                          </div>
+
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-xs font-black text-orange-700 dark:text-orange-400">
+                                HOD APPROVAL
+                              </span>
+                            </div>
+                            <p className="text-xs text-orange-600 dark:text-orange-500">
+                              &lt;{" "}
+                              {cycleForm.attendance_permission_threshold || 65}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-8 flex items-center justify-center p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/30 gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">
+                        Settings will only apply to End-Semester Examination
+                        cycles.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
           </div>
         </div>
       )}
@@ -1456,6 +2371,82 @@ const ExamSchedules = () => {
                         </option>
                       ))}
                     </select>
+                  </div>
+                )}
+
+                {cycleForm.cycle_type === "end_semester" && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Exam Mode
+                    </label>
+                    <select
+                      value={cycleForm.exam_mode}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          exam_mode: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="regular">Regular Only</option>
+                      <option value="supplementary">Supplementary Only</option>
+                      <option value="combined">Regular + Supplementary</option>
+                    </select>
+                  </div>
+                )}
+
+                {cycleForm.cycle_type === "end_semester" && (
+                  <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/30 space-y-4">
+                    <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest text-center">
+                      Fee Configuration
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {(cycleForm.exam_mode === "regular" ||
+                        cycleForm.exam_mode === "combined") && (
+                        <div>
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                            Regular Fee
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            placeholder="₹"
+                            value={cycleForm.regular_fee}
+                            onChange={(e) =>
+                              setCycleForm({
+                                ...cycleForm,
+                                regular_fee: parseFloat(e.target.value),
+                              })
+                            }
+                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                          />
+                        </div>
+                      )}
+                      {(cycleForm.exam_mode === "supplementary" ||
+                        cycleForm.exam_mode === "combined") && (
+                        <div>
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                            Backlog Fee
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            placeholder="₹"
+                            value={cycleForm.supply_fee_per_paper}
+                            onChange={(e) =>
+                              setCycleForm({
+                                ...cycleForm,
+                                supply_fee_per_paper: parseFloat(
+                                  e.target.value,
+                                ),
+                              })
+                            }
+                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -2008,6 +2999,283 @@ const ExamSchedules = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Manual Override Modal */}
+      {showOverrideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-[3rem] w-full max-w-lg shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col animate-slide-up">
+            <div className="p-8 bg-indigo-900 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black">Manual Override</h3>
+                <p className="text-sm font-medium text-indigo-300">
+                  Update eligibility for {activeReg?.student?.first_name}{" "}
+                  {activeReg?.student?.last_name}
+                </p>
+              </div>
+              <ShieldCheck className="w-10 h-10 text-indigo-400 opacity-50" />
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-3 gap-4">
+                <button
+                  onClick={() =>
+                    setOverrideData({
+                      ...overrideData,
+                      is_condoned: !overrideData.is_condoned,
+                    })
+                  }
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${overrideData.is_condoned ? "bg-yellow-50 border-yellow-600 text-yellow-900 dark:bg-yellow-900/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"}`}
+                >
+                  <ShieldCheck
+                    className={`w-8 h-8 ${overrideData.is_condoned ? "text-yellow-600" : ""}`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    Condone Attendance
+                  </span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setOverrideData({
+                      ...overrideData,
+                      has_permission: !overrideData.has_permission,
+                    })
+                  }
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${overrideData.has_permission ? "bg-orange-50 border-orange-600 text-orange-900 dark:bg-orange-900/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"}`}
+                >
+                  <ShieldAlert
+                    className={`w-8 h-8 ${overrideData.has_permission ? "text-orange-600" : ""}`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    Grant HOD Permission
+                  </span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setOverrideData({
+                      ...overrideData,
+                      override_status: !overrideData.override_status,
+                    })
+                  }
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${overrideData.override_status ? "bg-purple-50 border-purple-600 text-purple-900 dark:bg-purple-900/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"}`}
+                >
+                  <ShieldAlert
+                    className={`w-8 h-8 ${overrideData.override_status ? "text-purple-600" : ""}`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    Override Fee Block
+                  </span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block">
+                    Remarks (Mandatory)
+                  </label>
+                  <textarea
+                    value={overrideData.override_remarks}
+                    onChange={(e) =>
+                      setOverrideData({
+                        ...overrideData,
+                        override_remarks: e.target.value,
+                      })
+                    }
+                    placeholder="Enter reason for this override..."
+                    className="w-full bg-gray-50 dark:bg-gray-700/50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-600 min-h-[100px]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowOverrideModal(false);
+                    setActiveReg(null);
+                  }}
+                  className="flex-1 py-4 text-gray-500 font-black text-sm uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleOverride}
+                  className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all"
+                >
+                  Apply Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Override Modal */}
+      {showBulkOverrideModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] max-w-2xl w-full shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-xl font-black">Bulk Override</h3>
+                <p className="text-indigo-100 text-sm mt-1">
+                  Applying changes to {selectedStudents.length} student
+                  {selectedStudents.length > 1 ? "s" : ""}
+                </p>
+              </div>
+              <ShieldCheck className="absolute -right-8 -bottom-8 w-48 h-48 text-white opacity-10 rotate-12" />
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-black text-amber-900 dark:text-amber-400">
+                      Bulk Action Warning
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+                      This action will apply the same override settings to all{" "}
+                      {selectedStudents.length} selected students. Please ensure
+                      this is intentional.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <button
+                  onClick={() =>
+                    setBulkOverrideData({
+                      ...bulkOverrideData,
+                      is_condoned: !bulkOverrideData.is_condoned,
+                    })
+                  }
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${bulkOverrideData.is_condoned ? "bg-yellow-50 border-yellow-600 text-yellow-900 dark:bg-yellow-900/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"}`}
+                >
+                  <ShieldCheck
+                    className={`w-8 h-8 ${bulkOverrideData.is_condoned ? "text-yellow-600" : ""}`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    Condone Attendance
+                  </span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setBulkOverrideData({
+                      ...bulkOverrideData,
+                      has_permission: !bulkOverrideData.has_permission,
+                    })
+                  }
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${bulkOverrideData.has_permission ? "bg-orange-50 border-orange-600 text-orange-900 dark:bg-orange-900/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"}`}
+                >
+                  <ShieldAlert
+                    className={`w-8 h-8 ${bulkOverrideData.has_permission ? "text-orange-600" : ""}`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    Grant HOD Permission
+                  </span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setBulkOverrideData({
+                      ...bulkOverrideData,
+                      override_status: !bulkOverrideData.override_status,
+                    })
+                  }
+                  className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 ${bulkOverrideData.override_status ? "bg-purple-50 border-purple-600 text-purple-900 dark:bg-purple-900/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400"}`}
+                >
+                  <ShieldAlert
+                    className={`w-8 h-8 ${bulkOverrideData.override_status ? "text-purple-600" : ""}`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    Override Fee Block
+                  </span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block">
+                    Remarks (Mandatory for Bulk Override)
+                  </label>
+                  <textarea
+                    value={bulkOverrideData.override_remarks}
+                    onChange={(e) =>
+                      setBulkOverrideData({
+                        ...bulkOverrideData,
+                        override_remarks: e.target.value,
+                      })
+                    }
+                    placeholder={`Enter reason for overriding ${selectedStudents.length} students...`}
+                    className="w-full bg-gray-50 dark:bg-gray-700/50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-600 min-h-[100px]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowBulkOverrideModal(false);
+                    setBulkOverrideData({
+                      is_condoned: false,
+                      has_permission: false,
+                      override_status: false,
+                      override_remarks: "",
+                    });
+                  }}
+                  className="flex-1 py-4 text-gray-500 font-black text-sm uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!bulkOverrideData.override_remarks) {
+                      alert("Please provide remarks for this bulk action");
+                      return;
+                    }
+
+                    try {
+                      await dispatch(
+                        bulkUpdateRegistrationStatus({
+                          student_ids: selectedStudents,
+                          data: {
+                            ...bulkOverrideData,
+                            exam_cycle_id: selectedCycle,
+                          },
+                        }),
+                      ).unwrap();
+
+                      alert(
+                        `Successfully applied bulk override to ${selectedStudents.length} students`,
+                      );
+                      setShowBulkOverrideModal(false);
+                      setSelectedStudents([]);
+                      setBulkOverrideData({
+                        is_condoned: false,
+                        has_permission: false,
+                        override_status: false,
+                        override_remarks: "",
+                      });
+
+                      // Refresh registrations data
+                      if (selectedCycle) {
+                        dispatch(fetchRegistrations(selectedCycle));
+                      }
+                    } catch (err) {
+                      alert(err || "Failed to apply bulk override");
+                    }
+                  }}
+                  className="flex-1 py-4 bg-indigo-600 text-white font-black text-sm uppercase tracking-widest rounded-2xl hover:bg-indigo-700 transition-colors"
+                >
+                  Apply to {selectedStudents.length} Student
+                  {selectedStudents.length > 1 ? "s" : ""}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

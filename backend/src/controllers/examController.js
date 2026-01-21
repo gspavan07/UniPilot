@@ -3,12 +3,15 @@ const {
   ExamSchedule,
   ExamMark,
   HallTicket,
+  ExamRegistration,
+  Attendance,
   User,
   Course,
   Regulation,
   Timetable,
   TimetableSlot,
   SemesterResult,
+  Program,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
@@ -16,14 +19,39 @@ const { Op } = require("sequelize");
 const fs = require("fs");
 const xlsx = require("xlsx");
 const path = require("path");
+const PDFDocument = require("pdfkit");
 
 // @desc    Get all exam cycles
 // @route   GET /api/exam/cycles
 // @access  Private/Faculty/Admin
 exports.getExamCycles = async (req, res) => {
   try {
-    const { Regulation } = require("../models");
+    const { Regulation, User } = require("../models");
+    let where = {};
+
+    // For students, filter by their batch and semester
+    if (req.user.role === "student" || req.user.role === "Student") {
+      const student = await User.findByPk(req.user.userId);
+      if (student) {
+        const today = new Date().toISOString().split("T")[0];
+        where = {
+          batch_year: student.batch_year,
+          semester: student.current_semester,
+          // Only show cycles where registration window has at least started
+          reg_start_date: {
+            [Op.and]: [{ [Op.ne]: null }, { [Op.lte]: today }],
+          },
+          // And where it hasn't completely closed (end date or late fee date)
+          [Op.or]: [
+            { reg_end_date: { [Op.gte]: today } },
+            { reg_late_fee_date: { [Op.gte]: today } },
+          ],
+        };
+      }
+    }
+
     const cycles = await ExamCycle.findAll({
+      where,
       include: [
         {
           model: Regulation,
@@ -55,6 +83,15 @@ exports.createExamCycle = async (req, res) => {
       regulation_id,
       cycle_type,
       instance_number,
+      reg_start_date,
+      reg_end_date,
+      reg_late_fee_date,
+      regular_fee,
+      supply_fee_per_paper,
+      late_fee_amount,
+      is_attendance_checked,
+      is_fee_checked,
+      exam_mode,
     } = req.body;
 
     let component_breakdown = [];
@@ -104,6 +141,16 @@ exports.createExamCycle = async (req, res) => {
       component_breakdown,
       max_marks,
       passing_marks: Math.ceil(max_marks * 0.35), // Default passing marks to 35%
+      reg_start_date: reg_start_date || null,
+      reg_end_date: reg_end_date || null,
+      reg_late_fee_date: reg_late_fee_date || null,
+      regular_fee: regular_fee || 0,
+      supply_fee_per_paper: supply_fee_per_paper || 0,
+      late_fee_amount: late_fee_amount || 0,
+      is_attendance_checked:
+        is_attendance_checked !== undefined ? is_attendance_checked : true,
+      is_fee_checked: is_fee_checked !== undefined ? is_fee_checked : true,
+      exam_mode: exam_mode || "regular",
     });
 
     res.status(201).json({ success: true, data: cycle });
@@ -122,7 +169,61 @@ exports.updateExamCycle = async (req, res) => {
     const cycle = await ExamCycle.findByPk(id);
     if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
 
-    await cycle.update(req.body);
+    const {
+      name,
+      start_date,
+      end_date,
+      batch_year,
+      semester,
+      regulation_id,
+      cycle_type,
+      instance_number,
+      reg_start_date,
+      reg_end_date,
+      reg_late_fee_date,
+      regular_fee,
+      supply_fee_per_paper,
+      late_fee_amount,
+      is_attendance_checked,
+      is_fee_checked,
+      exam_mode,
+    } = req.body;
+
+    await cycle.update({
+      name: name !== undefined ? name : cycle.name,
+      start_date: start_date !== undefined ? start_date : cycle.start_date,
+      end_date: end_date !== undefined ? end_date : cycle.end_date,
+      batch_year: batch_year !== undefined ? batch_year : cycle.batch_year,
+      semester: semester !== undefined ? semester : cycle.semester,
+      regulation_id:
+        regulation_id !== undefined ? regulation_id : cycle.regulation_id,
+      cycle_type: cycle_type !== undefined ? cycle_type : cycle.cycle_type,
+      instance_number:
+        instance_number !== undefined ? instance_number : cycle.instance_number,
+      reg_start_date:
+        reg_start_date === "" ? null : reg_start_date || cycle.reg_start_date,
+      reg_end_date:
+        reg_end_date === "" ? null : reg_end_date || cycle.reg_end_date,
+      reg_late_fee_date:
+        reg_late_fee_date === ""
+          ? null
+          : reg_late_fee_date || cycle.reg_late_fee_date,
+      regular_fee: regular_fee !== undefined ? regular_fee : cycle.regular_fee,
+      supply_fee_per_paper:
+        supply_fee_per_paper !== undefined
+          ? supply_fee_per_paper
+          : cycle.supply_fee_per_paper,
+      late_fee_amount:
+        late_fee_amount !== undefined ? late_fee_amount : cycle.late_fee_amount,
+      is_attendance_checked:
+        is_attendance_checked !== undefined
+          ? is_attendance_checked
+          : cycle.is_attendance_checked,
+      is_fee_checked:
+        is_fee_checked !== undefined ? is_fee_checked : cycle.is_fee_checked,
+      exam_mode: exam_mode !== undefined ? exam_mode : cycle.exam_mode,
+    });
+
     res.status(200).json({ success: true, data: cycle });
   } catch (error) {
     logger.error("Error updating exam cycle:", error);
@@ -191,6 +292,16 @@ exports.addSchedule = async (req, res) => {
 exports.getExamSchedules = async (req, res) => {
   try {
     const { exam_cycle_id } = req.query;
+    const { Course, ExamCycle, User, TimetableSlot } = require("../models");
+
+    let studentDeptId = null;
+    if (req.user.role === "student" || req.user.role === "Student") {
+      const student = await User.findByPk(req.user.userId);
+      if (student) {
+        studentDeptId = student.department_id;
+      }
+    }
+
     const where = {};
     if (exam_cycle_id) where.exam_cycle_id = exam_cycle_id;
 
@@ -200,7 +311,22 @@ exports.getExamSchedules = async (req, res) => {
         {
           model: Course,
           as: "course",
-          attributes: ["id", "name", "code", "program_id", "semester"],
+          attributes: [
+            "id",
+            "name",
+            "code",
+            "program_id",
+            "semester",
+            "department_id",
+          ],
+          where: studentDeptId
+            ? {
+                [Op.or]: [
+                  { department_id: studentDeptId },
+                  { program_id: null }, // Common subjects across programs
+                ],
+              }
+            : {},
         },
         {
           model: ExamCycle,
@@ -229,7 +355,7 @@ exports.getExamSchedules = async (req, res) => {
     ].includes(req.user.role);
     let taughtCourseIds = new Set();
 
-    if (!isSuperUser) {
+    if (!isSuperUser && req.user.role === "faculty") {
       const slots = await TimetableSlot.findAll({
         where: { faculty_id: req.user.userId },
         attributes: ["course_id"],
@@ -1364,6 +1490,8 @@ exports.downloadImportTemplate = async (req, res) => {
     res.status(500).json({ error: "Failed to generate template" });
   }
 };
+// @desc    Generate Hall Tickets
+// @route   POST /api/exam/hall-ticket/generate
 // @access  Private/Admin
 exports.generateHallTickets = async (req, res) => {
   try {
@@ -1372,13 +1500,62 @@ exports.generateHallTickets = async (req, res) => {
     const tickets = await sequelize.transaction(async (t) => {
       const generated = [];
       for (const sid of student_ids) {
-        const ticket_number =
-          `HT-${Date.now()}-${sid.substring(0, 4)}`.toUpperCase();
-        const [ticket, created] = await HallTicket.findOrCreate({
+        // Check registration status
+        const registration = await ExamRegistration.findOne({
           where: { exam_cycle_id, student_id: sid },
-          defaults: { ticket_number },
           transaction: t,
         });
+
+        // Eligibility check
+        let is_blocked = false;
+        let block_reason = "";
+
+        if (!registration) {
+          is_blocked = true;
+          block_reason = "Student not registered for this exam cycle.";
+        } else if (registration.status === "blocked") {
+          is_blocked = true;
+          block_reason =
+            registration.override_remarks || "Registration blocked by admin.";
+        } else if (
+          registration.fee_status !== "paid" &&
+          !registration.override_status
+        ) {
+          is_blocked = true;
+          block_reason = "Exam fee payment pending.";
+        } else if (
+          registration.attendance_status === "low" &&
+          !registration.is_condoned &&
+          !registration.override_status
+        ) {
+          is_blocked = true;
+          block_reason = "Low attendance (Attendance Condonation required).";
+        }
+
+        const ticket_number =
+          `HT-${Date.now()}-${sid.substring(0, 4)}`.toUpperCase();
+
+        const [ticket, created] = await HallTicket.findOrCreate({
+          where: { exam_cycle_id, student_id: sid },
+          defaults: {
+            ticket_number,
+            is_blocked,
+            block_reason,
+          },
+          transaction: t,
+        });
+
+        if (!created) {
+          await ticket.update({ is_blocked, block_reason }, { transaction: t });
+        }
+
+        if (!is_blocked) {
+          await registration.update(
+            { hall_ticket_generated: true },
+            { transaction: t },
+          );
+        }
+
         generated.push(ticket);
       }
       return generated;
@@ -1388,6 +1565,373 @@ exports.generateHallTickets = async (req, res) => {
   } catch (error) {
     logger.error("Error generating hall tickets:", error);
     res.status(500).json({ error: "Hall ticket generation failed" });
+  }
+};
+
+// @desc    Get backlog subjects for a student
+// @route   GET /api/exam/backlogs
+// @access  Private/Student
+exports.getBacklogSubjects = async (req, res) => {
+  try {
+    const student_id = req.user.userId;
+
+    // A backlog is a subject where the student appeared (or was absent) and got 'F'
+    // in a locked final result (end_semester).
+    const backlogs = await ExamMark.findAll({
+      where: {
+        student_id,
+        grade: "F",
+        moderation_status: "locked",
+      },
+      include: [
+        {
+          model: ExamSchedule,
+          as: "schedule",
+          include: [
+            {
+              model: Course,
+              as: "course",
+              attributes: ["id", "name", "code", "credits"],
+            },
+          ],
+        },
+      ],
+    });
+
+    // Simplify response to unique courses
+    const uniqueBacklogs = [];
+    const seenCourses = new Set();
+
+    backlogs.forEach((mark) => {
+      const course = mark.schedule?.course;
+      if (course && !seenCourses.has(course.id)) {
+        uniqueBacklogs.push({
+          id: course.id,
+          name: course.name,
+          code: course.code,
+          credits: course.credits,
+          last_grade: mark.grade,
+          last_attempt_date: mark.schedule.exam_date,
+        });
+        seenCourses.add(course.id);
+      }
+    });
+
+    res.status(200).json({ success: true, data: uniqueBacklogs });
+  } catch (error) {
+    logger.error("Error fetching backlogs:", error);
+    res.status(500).json({ error: "Failed to fetch backlog subjects" });
+  }
+};
+
+// @desc    Register for exams (Regular & Supply)
+// @route   POST /api/exam/register
+// @access  Private/Student
+exports.registerForExams = async (req, res) => {
+  try {
+    const { exam_cycle_id, subjects } = req.body; // subjects: [{course_id, type: 'regular'|'supply'}]
+    const student_id = req.user.userId;
+
+    const cycle = await ExamCycle.findByPk(exam_cycle_id);
+    if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
+
+    // Check if registration is open
+    const today = new Date().toISOString().split("T")[0];
+    if (cycle.reg_start_date && today < cycle.reg_start_date) {
+      return res
+        .status(400)
+        .json({ error: "Registration has not started yet." });
+    }
+    if (
+      cycle.reg_end_date &&
+      today > cycle.reg_end_date &&
+      !cycle.reg_late_fee_date
+    ) {
+      return res.status(400).json({ error: "Registration is closed." });
+    }
+
+    // Calculate Fees
+    let total_fee = 0;
+    let late_fee = 0;
+    let reg_type = "regular";
+
+    const regularCount = subjects.filter((s) => s.type === "regular").length;
+    const supplyCount = subjects.filter((s) => s.type === "supply").length;
+
+    if (regularCount > 0 && supplyCount > 0) reg_type = "combined";
+    else if (supplyCount > 0) reg_type = "supply";
+
+    if (
+      regularCount > 0 ||
+      (subjects.length === 0 && cycle.exam_mode !== "supplementary")
+    )
+      total_fee += parseFloat(cycle.regular_fee || 0);
+    total_fee += supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
+
+    // Apply late fee if applicable
+    if (cycle.reg_end_date && today > cycle.reg_end_date) {
+      late_fee = parseFloat(cycle.late_fee_amount || 0);
+    }
+
+    // Check attendance (Simple auto-check)
+    const attendanceRecords = await Attendance.findAll({
+      where: { student_id },
+      attributes: ["status"],
+    });
+    const totalClasses = attendanceRecords.length;
+    const presentClasses = attendanceRecords.filter(
+      (r) => r.status === "present",
+    ).length;
+    const attendance_percentage =
+      totalClasses > 0 ? (presentClasses / totalClasses) * 100 : 100;
+
+    // Generate mock transaction ID for testing
+    const mockTransactionId = `TXN-${Date.now()}-${student_id.substring(0, 8).toUpperCase()}`;
+
+    const [registration, created] = await ExamRegistration.findOrCreate({
+      where: { exam_cycle_id, student_id },
+      defaults: {
+        registered_subjects: subjects,
+        registration_type: reg_type,
+        total_fee: total_fee + late_fee,
+        paid_amount: total_fee + late_fee, // Mock payment - set paid amount equal to total
+        late_fee,
+        attendance_percentage,
+        attendance_status: attendance_percentage < 75 ? "low" : "clear",
+        status: "approved", // Auto-approve for mock payment
+        fee_status: "paid", // Mock payment - mark as paid immediately
+        transaction_id: mockTransactionId, // Mock transaction ID
+      },
+    });
+
+    if (!created) {
+      await registration.update({
+        registered_subjects: subjects,
+        registration_type: reg_type,
+        total_fee: total_fee + late_fee,
+        paid_amount: total_fee + late_fee, // Mock payment - set paid amount equal to total
+        late_fee,
+        attendance_percentage,
+        attendance_status: attendance_percentage < 75 ? "low" : "clear",
+        status: "approved", // Auto-approve for mock payment
+        fee_status: "paid", // Mock payment - mark as paid immediately
+        transaction_id: mockTransactionId, // Mock transaction ID
+      });
+    }
+
+    res.status(200).json({ success: true, data: registration });
+  } catch (error) {
+    logger.error("Error registering for exams:", error);
+    res.status(500).json({ error: "Registration failed." });
+  }
+};
+
+// @desc    Admin update registration status (Overrides)
+// @route   PUT /api/exam/registration/:id
+// @access  Private/Admin
+exports.updateRegistrationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, is_condoned, override_status, override_remarks } = req.body;
+
+    const registration = await ExamRegistration.findByPk(id);
+    if (!registration)
+      return res.status(404).json({ error: "Registration not found" });
+
+    await registration.update({
+      status,
+      is_condoned,
+      override_status,
+      override_remarks: override_remarks || registration.override_remarks,
+    });
+
+    res.status(200).json({ success: true, data: registration });
+  } catch (error) {
+    logger.error("Error updating registration:", error);
+    res.status(500).json({ error: "Failed to update registration." });
+  }
+};
+
+// @desc    Bulk Update Registration Status (for multiple students)
+// @route   PUT /api/exam/registrations/bulk-override
+// @access  Private/Admin
+exports.bulkUpdateRegistrationStatus = async (req, res) => {
+  try {
+    const {
+      student_ids,
+      is_condoned,
+      has_permission,
+      override_status,
+      override_remarks,
+    } = req.body;
+
+    if (
+      !student_ids ||
+      !Array.isArray(student_ids) ||
+      student_ids.length === 0
+    ) {
+      return res.status(400).json({ error: "student_ids array is required" });
+    }
+
+    if (!override_remarks) {
+      return res
+        .status(400)
+        .json({ error: "override_remarks are mandatory for bulk actions" });
+    }
+
+    // We also need the exam_cycle_id to create registrations if needed
+    const { exam_cycle_id } = req.body;
+
+    if (!exam_cycle_id) {
+      return res
+        .status(400)
+        .json({ error: "exam_cycle_id is required for bulk override" });
+    }
+
+    // Process bulk update in transaction
+    const result = await sequelize.transaction(async (t) => {
+      const updated = [];
+      const created = [];
+      const failed = [];
+
+      for (const studentId of student_ids) {
+        try {
+          let registration;
+
+          // Check if this is a "temp-XXX" ID (student hasn't registered yet)
+          if (studentId.startsWith("temp-")) {
+            const actualUserId = studentId.replace("temp-", "");
+
+            // Try to find existing registration first
+            registration = await ExamRegistration.findOne({
+              where: {
+                student_id: actualUserId,
+                exam_cycle_id: exam_cycle_id,
+              },
+              transaction: t,
+            });
+
+            // If no registration exists, create one with override data
+            if (!registration) {
+              registration = await ExamRegistration.create(
+                {
+                  student_id: actualUserId,
+                  exam_cycle_id: exam_cycle_id,
+                  status: "approved", // Set to approved since admin is granting override
+                  registration_type: "regular",
+                  fee_status: "pending",
+                  total_fee: 0,
+                  is_condoned: is_condoned || false,
+                  has_permission: has_permission || false,
+                  override_status: override_status || false,
+                  override_remarks: override_remarks,
+                  registered_subjects: [],
+                },
+                { transaction: t },
+              );
+
+              created.push(studentId);
+            } else {
+              // Update existing registration
+              await registration.update(
+                {
+                  is_condoned:
+                    is_condoned !== undefined
+                      ? is_condoned
+                      : registration.is_condoned,
+                  has_permission:
+                    has_permission !== undefined
+                      ? has_permission
+                      : registration.has_permission,
+                  override_status:
+                    override_status !== undefined
+                      ? override_status
+                      : registration.override_status,
+                  override_remarks: override_remarks,
+                  status: "approved", // Approve on override
+                },
+                { transaction: t },
+              );
+
+              updated.push(studentId);
+            }
+          } else {
+            // Real registration ID - just update
+            registration = await ExamRegistration.findByPk(studentId, {
+              transaction: t,
+            });
+
+            if (registration) {
+              await registration.update(
+                {
+                  is_condoned:
+                    is_condoned !== undefined
+                      ? is_condoned
+                      : registration.is_condoned,
+                  has_permission:
+                    has_permission !== undefined
+                      ? has_permission
+                      : registration.has_permission,
+                  override_status:
+                    override_status !== undefined
+                      ? override_status
+                      : registration.override_status,
+                  override_remarks: override_remarks,
+                  status: "approved",
+                },
+                { transaction: t },
+              );
+
+              updated.push(studentId);
+            } else {
+              failed.push({ id: studentId, reason: "Registration not found" });
+            }
+          }
+        } catch (err) {
+          logger.error(`Error processing student ${studentId}:`, err);
+          failed.push({ id: studentId, reason: err.message });
+        }
+      }
+
+      return { updated, created, failed };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk override completed. ${result.updated.length} updated, ${result.created.length} created, ${result.failed.length} failed.`,
+      data: result,
+    });
+  } catch (error) {
+    logger.error("Error in bulk update:", error);
+    res.status(500).json({ error: "Bulk update failed." });
+  }
+};
+
+// @desc    Waive Exam Fine
+// @route   POST /api/exam/registration/:id/waive-fine
+// @access  Private/Admin
+exports.waiveExamFine = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const registration = await ExamRegistration.findByPk(id);
+    if (!registration)
+      return res.status(404).json({ error: "Registration not found" });
+
+    const new_total =
+      parseFloat(registration.total_fee) - parseFloat(registration.late_fee);
+
+    await registration.update({
+      total_fee: new_total,
+      late_fee: 0,
+      is_fine_waived: true,
+    });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Fine waived successfully." });
+  } catch (error) {
+    logger.error("Error waiving fine:", error);
+    res.status(500).json({ error: "Fine waiver failed." });
   }
 };
 
@@ -1614,5 +2158,1107 @@ exports.bulkPublishResults = async (req, res) => {
   } catch (error) {
     logger.error("Error bulk publishing results:", error);
     res.status(500).json({ error: "Failed to publish results" });
+  }
+};
+
+// @desc    Get registration status for a student in a cycle
+// @route   GET /api/exam/registration/status/:cycleId
+// @access  Private/Student
+// @desc    Get registration status for a student in a cycle
+// @route   GET /api/exam/registration/status/:cycleId
+// @access  Private/Student
+exports.getRegistrationStatus = async (req, res) => {
+  try {
+    const { cycleId } = req.params;
+    const student_id = req.user.userId;
+
+    let registration = await ExamRegistration.findOne({
+      where: { exam_cycle_id: cycleId, student_id },
+    });
+
+    const cycle = await ExamCycle.findByPk(cycleId, {
+      attributes: [
+        "id",
+        "name",
+        "is_attendance_checked",
+        "is_fee_checked",
+        "reg_start_date",
+        "reg_end_date",
+        "reg_late_fee_date",
+        "regular_fee",
+        "supply_fee_per_paper",
+        "late_fee_amount",
+        "attendance_condonation_threshold",
+        "attendance_permission_threshold",
+      ],
+    });
+
+    if (!cycle) {
+      return res.status(404).json({ error: "Exam cycle not found" });
+    }
+
+    // 1. Calculate Attendance (Live calculation for accurate status)
+    const attendanceRecords = await Attendance.findAll({
+      where: { student_id },
+      attributes: ["status"],
+    });
+    const totalClasses = attendanceRecords.length;
+    const presentClasses = attendanceRecords.filter(
+      (r) => r.status === "present",
+    ).length;
+    const attendance_percentage =
+      totalClasses > 0
+        ? parseFloat(((presentClasses / totalClasses) * 100).toFixed(2))
+        : 0;
+
+    // 2. Determine Attendance Tier
+    let attendance_tier = "clear";
+    if (cycle.is_attendance_checked) {
+      if (attendance_percentage < cycle.attendance_permission_threshold) {
+        attendance_tier = "needs_permission";
+      } else if (
+        attendance_percentage < cycle.attendance_condonation_threshold
+      ) {
+        attendance_tier = "needs_condonation";
+      }
+    }
+
+    // 3. Determine Blockers
+    const blockers = [];
+    const is_condoned = registration?.is_condoned || false;
+    const has_permission = registration?.has_permission || false;
+    const override_status = registration?.override_status || false;
+
+    // Fee status check
+    // If registered, use stored fee_status. If not, default to "pending"
+    // IMPORTANT: 'fee_status' here refers to the EXAM FEE for THIS registration.
+    const exam_fee_status = registration?.fee_status || "pending";
+
+    // For blocking, we usually check TUITION fees. Since we don't have a Tuition module linked yet,
+    // we assume Tuition is clear. If we check 'exam_fee_status' here, it creates a deadlock
+    // (can't register because haven't paid exam fee, can't pay exam fee because not registered).
+    const tuition_fee_status = "paid"; // Assume clear for now to allow testing
+
+    if (cycle.is_attendance_checked) {
+      if (
+        attendance_tier === "needs_permission" &&
+        !has_permission &&
+        !override_status
+      ) {
+        blockers.push("needs_hod_permission");
+      } else if (
+        attendance_tier === "needs_condonation" &&
+        !is_condoned &&
+        !override_status
+      ) {
+        blockers.push("needs_condonation");
+      }
+    }
+
+    // Here "fee_checked" usually refers to TUITION fee.
+    // If we don't have a Tuition Fee table, we might assume it's clear for now
+    // OR if the user wants us to simulating "fee due", we can use a flag on User model.
+    // For this specific 'exam' fee, it's always pending until they pay.
+    // The user requisition said "if ... fee is pending we will lock".
+    // Let's assume this refers to 'Tuition Fee'.
+    // We will assume tuition is clear for now unless we add a column to User.
+    // But for EXAM fee, it's obviously pending.
+    // FIX: Do NOT block on 'fee_status' (exam fee) being pending.
+    // Only block if we had a separate tuition check.
+    // blockers.push("fee_pending");
+    if (
+      cycle.is_fee_checked &&
+      tuition_fee_status === "pending" &&
+      !override_status
+    ) {
+      blockers.push("fee_pending");
+    }
+
+    if (registration?.status === "blocked") {
+      blockers.push("admin_blocked");
+    }
+
+    const is_eligible = blockers.length === 0;
+
+    // 4. Construct Response
+    let responseData;
+
+    if (!registration) {
+      // Virtual Registration Object for unregistered students
+      responseData = {
+        student_id,
+        exam_cycle_id: cycleId,
+        status: "not_registered",
+        fee_status: "pending",
+        total_fee: cycle.regular_fee, // Simplified
+        is_eligible,
+        blockers,
+        attendance: {
+          percentage: attendance_percentage,
+          tier: attendance_tier,
+        },
+        overrides: {
+          is_condoned: false,
+          has_permission: false,
+          override_status: false,
+        },
+      };
+    } else {
+      // Existing Registration enriched with live data
+      responseData = registration.toJSON();
+      responseData.attendance = {
+        percentage: attendance_percentage,
+        tier: attendance_tier,
+      };
+      responseData.blockers = blockers;
+      responseData.is_eligible = is_eligible;
+      responseData.overrides = {
+        is_condoned: registration.is_condoned,
+        has_permission: registration.has_permission,
+        override_status: registration.override_status,
+      };
+    }
+
+    res.status(200).json({ success: true, data: responseData, cycle });
+  } catch (error) {
+    logger.error("Error fetching registration status:", error);
+    res.status(500).json({ error: "Failed to fetch registration status." });
+  }
+};
+
+// @desc    Get all my registrations (Active & Past)
+// @route   GET /api/exam/my-registrations
+// @access  Private/Student
+exports.getMyRegistrations = async (req, res) => {
+  try {
+    const student_id = req.user.userId;
+
+    const registrations = await ExamRegistration.findAll({
+      where: { student_id },
+      include: [
+        {
+          model: ExamCycle,
+          as: "cycle",
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    // Also fetch "virtual" registrations for active cycles not yet registered?
+    // For now, let's keep it simple: returns list of what's in DB.
+    // The frontend "Active Payments" tab should query 'Active Cycles' and then check status for each.
+    // BUT we need a way to see "Past Payments". This endpoint serves that nicely.
+
+    res.status(200).json({ success: true, data: registrations });
+  } catch (error) {
+    logger.error("Error fetching my registrations:", error);
+    res.status(500).json({ error: "Failed to fetch my registrations." });
+  }
+};
+
+// @desc    Download Payment Receipt
+// @route   GET /api/exam/registration/:id/receipt
+// @access  Private/Student
+exports.downloadReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const registration = await ExamRegistration.findByPk(id, {
+      include: [
+        { model: ExamCycle, as: "cycle" },
+        {
+          model: User,
+          as: "student",
+          attributes: ["first_name", "last_name", "student_id", "email"],
+        },
+      ],
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: "Registration not found" });
+    }
+
+    if (
+      registration.fee_status !== "paid" &&
+      registration.fee_status !== "waived"
+    ) {
+      return res.status(400).json({ error: "Payment not completed yet" });
+    }
+
+    // Generate PDF
+    const doc = new PDFDocument({ margin: 50 });
+    // Set response headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Receipt-${registration.student.student_id}-${registration.cycle.name}.pdf`,
+    );
+
+    doc.pipe(res);
+
+    // Header
+    doc
+      .fontSize(24)
+      .font("Helvetica-Bold")
+      .text("UniPilot University", { align: "center" });
+    doc
+      .fontSize(10)
+      .font("Helvetica")
+      .text("Excellence in Education", { align: "center" });
+    doc.moveDown();
+    doc
+      .moveTo(50, doc.y)
+      .lineTo(550, doc.y)
+      .strokeColor("#cccccc")
+      .stroke()
+      .moveDown();
+
+    // Receipt Title
+    doc
+      .fontSize(18)
+      .font("Helvetica-Bold")
+      .fillColor("#4f46e5")
+      .text("OFFICIAL PAYMENT RECEIPT", { align: "center" })
+      .fillColor("black");
+    doc.moveDown();
+
+    // Box for details
+    const startY = doc.y;
+    doc.rect(50, startY, 500, 260).strokeColor("#e5e7eb").stroke();
+
+    const leftX = 70;
+    const valueX = 220;
+    let currentY = startY + 20;
+
+    // Helper for rows
+    const drawRow = (label, value) => {
+      doc.fontSize(10).font("Helvetica-Bold").text(label, leftX, currentY);
+      doc.font("Helvetica").text(value, valueX, currentY);
+      currentY += 25;
+    };
+
+    drawRow(
+      "Receipt Number:",
+      registration.transaction_id ||
+        `REC-${registration.id.split("-")[0].toUpperCase()}`,
+    );
+    drawRow("Date:", new Date(registration.updatedAt).toLocaleDateString());
+    drawRow(
+      "Student Name:",
+      `${registration.student.first_name} ${registration.student.last_name}`,
+    );
+    drawRow("Student ID:", registration.student.student_id);
+    drawRow("Email:", registration.student.email);
+
+    doc
+      .moveTo(70, currentY)
+      .lineTo(530, currentY)
+      .strokeColor("#e5e7eb")
+      .stroke();
+    currentY += 20;
+
+    doc.fontSize(14).text("Exam Details");
+    doc.fontSize(10).text(`Cycle: ${registration.cycle.name}`);
+    doc.text(`Session: ${registration.cycle.month} ${registration.cycle.year}`);
+    drawRow("Payment Status:", registration.fee_status.toUpperCase());
+
+    doc
+      .moveTo(70, currentY)
+      .lineTo(530, currentY)
+      .strokeColor("#e5e7eb")
+      .stroke();
+    currentY += 20;
+
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .text("Amount Paid:", leftX, currentY);
+    doc
+      .fontSize(12)
+      .fillColor("#16a34a")
+      .text(`Rs. ${registration.total_fee}`, valueX, currentY)
+      .fillColor("black");
+
+    // Footer
+    doc.moveDown(10);
+    doc
+      .fontSize(10)
+      .font("Helvetica-Oblique")
+      .text(
+        "This is a computer-generated receipt and does not require a physical signature.",
+        { align: "center", color: "gray" },
+      );
+    doc
+      .fontSize(8)
+      .text(`Generated on ${new Date().toLocaleString()}`, { align: "center" });
+
+    doc.end();
+  } catch (error) {
+    logger.error("Error generating receipt:", error);
+    res.status(500).json({ error: "Failed to generate receipt." });
+  }
+};
+
+// @desc    Get all registrations for a cycle (Admin)
+// @route   GET /api/exam/registrations/:cycleId
+// @access  Private/Admin
+exports.getRegistrations = async (req, res) => {
+  try {
+    const { cycleId } = req.params;
+    const { program_id, status: filterStatus } = req.query;
+
+    const cycle = await ExamCycle.findByPk(cycleId);
+    if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
+
+    // 1. Get all students who SHOULD be in this cycle
+    const studentWhere = { role: "student", is_active: true };
+    if (cycle.batch_year) studentWhere.batch_year = cycle.batch_year;
+    if (cycle.semester && cycle.exam_type !== "re_exam") {
+      studentWhere.current_semester = cycle.semester;
+    }
+    if (program_id) studentWhere.program_id = program_id;
+
+    const students = await User.findAll({
+      where: studentWhere,
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "email",
+        "batch_year",
+        "section",
+        "student_id",
+      ],
+      include: [
+        {
+          model: Program,
+          as: "program",
+          attributes: ["name"],
+        },
+        {
+          model: ExamRegistration,
+          as: "exam_registrations",
+          where: { exam_cycle_id: cycleId },
+          required: false, // LEFT JOIN to get all students
+        },
+      ],
+      order: [["student_id", "ASC"]],
+    });
+
+    // 2. Process each student with live calculations
+    const enrichedStudents = await Promise.all(
+      students.map(async (student) => {
+        const registration = student.exam_registrations?.[0];
+
+        // Calculate LIVE attendance
+        const attendanceRecords = await Attendance.findAll({
+          where: { student_id: student.id },
+          attributes: ["status"],
+        });
+        const totalClasses = attendanceRecords.length;
+        const presentClasses = attendanceRecords.filter(
+          (r) => r.status === "present",
+        ).length;
+        const attendance_percentage =
+          totalClasses > 0
+            ? parseFloat(((presentClasses / totalClasses) * 100).toFixed(2))
+            : 0;
+
+        // Determine attendance tier
+        let attendance_tier = "clear";
+        let requires_action = "none";
+
+        if (cycle.is_attendance_checked) {
+          if (attendance_percentage < cycle.attendance_permission_threshold) {
+            attendance_tier = "needs_permission";
+            requires_action = "hod_permission";
+          } else if (
+            attendance_percentage < cycle.attendance_condonation_threshold
+          ) {
+            attendance_tier = "needs_condonation";
+            requires_action = "condonation";
+          }
+        }
+
+        // TODO: Calculate fee dues from actual fee system
+        // For now, mock as 0 (implement when fee module exists)
+        const fee_due = {
+          amount: 0,
+          status: "clear", // "clear" or "pending"
+        };
+
+        // Determine exam registration type
+        let registration_type = "regular";
+        if (registration?.registered_subjects) {
+          const hasBacklogs = registration.registered_subjects.some(
+            (s) => s.type === "supply",
+          );
+          const hasRegular = registration.registered_subjects.some(
+            (s) => s.type === "regular",
+          );
+          if (hasBacklogs && hasRegular) registration_type = "combined";
+          else if (hasBacklogs) registration_type = "supply";
+        }
+
+        // Check if student has overrides
+        const is_condoned = registration?.is_condoned || false;
+        const has_permission = registration?.has_permission || false; // New field
+        const override_status = registration?.override_status || false;
+
+        // Determine final eligibility
+        const blockers = [];
+
+        // Attendance check
+        if (cycle.is_attendance_checked) {
+          if (
+            attendance_tier === "needs_permission" &&
+            !has_permission &&
+            !override_status
+          ) {
+            blockers.push("needs_hod_permission");
+          } else if (
+            attendance_tier === "needs_condonation" &&
+            !is_condoned &&
+            !override_status
+          ) {
+            blockers.push("needs_condonation");
+          }
+        }
+
+        // Fee dues check
+        if (
+          cycle.is_fee_checked &&
+          fee_due.status === "pending" &&
+          !override_status
+        ) {
+          blockers.push("fee_pending");
+        }
+
+        // Admin manual block
+        if (registration?.status === "blocked") {
+          blockers.push("admin_blocked");
+        }
+
+        const is_eligible = blockers.length === 0;
+
+        // Exam fee status
+        const exam_fee_status = {
+          paid: registration?.fee_status === "paid",
+          transaction_id: registration?.transaction_id || null,
+          amount: registration?.total_fee || 0,
+          late_fee: registration?.late_fee || 0,
+          is_fine_waived: registration?.is_fine_waived || false,
+        };
+
+        return {
+          id: registration?.id || `temp-${student.id}`,
+          student: {
+            id: student.id,
+            name: `${student.first_name} ${student.last_name}`,
+            first_name: student.first_name,
+            last_name: student.last_name,
+            student_id: student.student_id,
+            email: student.email,
+            section: student.section,
+            program: student.program?.name || "N/A",
+          },
+          type: registration_type,
+          attendance: {
+            percentage: attendance_percentage,
+            total_classes: totalClasses,
+            present: presentClasses,
+            tier: attendance_tier, // "clear", "needs_condonation", "needs_permission"
+            status:
+              attendance_percentage >= cycle.attendance_condonation_threshold
+                ? "clear"
+                : "low",
+          },
+          fee_due,
+          eligibility: {
+            is_eligible,
+            blockers,
+            requires_action, // "none", "condonation", "hod_permission"
+          },
+          exam_fee_status,
+          overrides: {
+            is_condoned,
+            has_permission,
+            override_status,
+            override_remarks: registration?.override_remarks || "",
+          },
+          registration_status: registration?.status || "not_registered",
+          registered_at: registration?.created_at || null,
+        };
+      }),
+    );
+
+    // Apply filter if specified
+    const filteredStudents = filterStatus
+      ? enrichedStudents.filter((s) => s.registration_status === filterStatus)
+      : enrichedStudents;
+
+    res.status(200).json({
+      success: true,
+      count: filteredStudents.length,
+      data: filteredStudents,
+      cycle_config: {
+        is_attendance_checked: cycle.is_attendance_checked,
+        is_fee_checked: cycle.is_fee_checked,
+        attendance_condonation_threshold:
+          cycle.attendance_condonation_threshold,
+        attendance_permission_threshold: cycle.attendance_permission_threshold,
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching registrations:", error);
+    res.status(500).json({ error: "Failed to fetch registrations." });
+  }
+};
+
+// @desc    Download Hall Ticket PDF
+// @route   GET /api/exam/registration/:cycleId/download-hall-ticket
+// @access  Private/Student
+exports.downloadHallTicket = async (req, res) => {
+  try {
+    const { cycleId } = req.params;
+    const student_id = req.user.userId;
+
+    // 1. Fetch registration and check eligibility
+    const registration = await ExamRegistration.findOne({
+      where: { exam_cycle_id: cycleId, student_id },
+      include: [
+        {
+          model: User,
+          as: "student",
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "batch_year",
+            "section",
+            "student_id",
+          ],
+        },
+        {
+          model: ExamCycle,
+          as: "cycle",
+          attributes: ["name", "semester", "start_date"],
+        },
+      ],
+    });
+
+    if (!registration) {
+      return res.status(404).json({ error: "Exam registration not found" });
+    }
+
+    const isEligible =
+      registration.status !== "blocked" &&
+      (registration.fee_status === "paid" || registration.override_status) &&
+      (registration.attendance_status === "clear" ||
+        registration.is_condoned ||
+        registration.override_status);
+
+    if (!isEligible) {
+      return res.status(403).json({
+        error: "Not eligible for Hall Ticket. Please check status.",
+      });
+    }
+
+    // 2. Fetch schedules for this student
+    const schedules = await ExamSchedule.findAll({
+      where: { exam_cycle_id: cycleId },
+      include: [
+        {
+          model: Course,
+          as: "course",
+          attributes: ["name", "code"],
+        },
+      ],
+      order: [["exam_date", "ASC"]],
+    });
+
+    // 3. Generate PDF
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
+
+    // Set response headers
+    const filename = `HallTicket_${registration.student.student_id || student_id.substring(0, 8)}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+
+    doc.pipe(res);
+
+    // -- Header Design --
+    doc
+      .fillColor("#1e1b4b")
+      .fontSize(22)
+      .font("Helvetica-Bold")
+      .text("UNIPILOT TECHNICAL UNIVERSITY", { align: "center" });
+
+    doc.fontSize(10).fillColor("#4f46e5").text("EXAMINATION HALL TICKET", {
+      align: "center",
+      characterSpacing: 2,
+    });
+
+    doc.moveDown(1);
+    doc
+      .strokeColor("#e2e8f0")
+      .lineWidth(1)
+      .moveTo(50, doc.y)
+      .lineTo(545, doc.y)
+      .stroke();
+    doc.moveDown(1.5);
+
+    // -- Student Info --
+    const startY = doc.y;
+    doc
+      .fillColor("#64748b")
+      .fontSize(9)
+      .font("Helvetica-Bold")
+      .text("STUDENT NAME", 50, startY);
+    doc
+      .fillColor("#111827")
+      .fontSize(11)
+      .text(
+        `${registration.student.first_name} ${registration.student.last_name}`.toUpperCase(),
+        50,
+        startY + 14,
+      );
+
+    doc.fillColor("#64748b").fontSize(9).text("ROLL NUMBER", 350, startY);
+    doc
+      .fillColor("#111827")
+      .fontSize(11)
+      .text(
+        (registration.student.student_id || student_id).toUpperCase(),
+        350,
+        startY + 14,
+      );
+
+    doc.moveDown(2.5);
+
+    const nextY = doc.y;
+    doc.fillColor("#64748b").fontSize(9).text("PROGRAM & SECTION", 50, nextY);
+    doc
+      .fillColor("#111827")
+      .fontSize(11)
+      .text(`B.TECH - ${registration.student.section}`, 50, nextY + 14);
+
+    doc.fillColor("#64748b").fontSize(9).text("EXAM CYCLE", 350, nextY);
+    doc
+      .fillColor("#111827")
+      .fontSize(11)
+      .text(registration.cycle.name, 350, nextY + 14);
+
+    doc.moveDown(3);
+
+    // -- Schedule Table --
+    doc
+      .fillColor("#1e1b4b")
+      .fontSize(14)
+      .font("Helvetica-Bold")
+      .text("EXAMINATION SCHEDULE", 50, doc.y);
+    doc.moveDown(1);
+
+    const tableTop = doc.y;
+    const col1 = 50,
+      col2 = 120,
+      col3 = 300,
+      col4 = 400,
+      col5 = 480;
+
+    // Table Header
+    doc.fillColor("#f8fafc").rect(50, tableTop, 495, 25).fill();
+    doc.fillColor("#1e1b4b").fontSize(9).font("Helvetica-Bold");
+    doc.text("CODE", col1 + 5, tableTop + 8);
+    doc.text("SUBJECT NAME", col2 + 5, tableTop + 8);
+    doc.text("DATE", col3 + 5, tableTop + 8);
+    doc.text("TIME", col4 + 5, tableTop + 8);
+    doc.text("VENUE", col5 + 5, tableTop + 8);
+
+    let rowY = tableTop + 25;
+    doc.font("Helvetica");
+
+    schedules.forEach((s, idx) => {
+      // Background for alternating rows
+      if (idx % 2 === 1) {
+        doc.fillColor("#f1f5f9").rect(50, rowY, 495, 35).fill();
+      }
+
+      doc.fillColor("#111827").fontSize(8);
+      doc.text(s.course.code, col1 + 5, rowY + 10);
+      doc.text(s.course.name, col2 + 5, rowY + 10, { width: 170 });
+      doc.text(new Date(s.exam_date).toLocaleDateString(), col3 + 5, rowY + 10);
+      doc.text(
+        `${s.start_time.substring(0, 5)} - ${s.end_time.substring(0, 5)}`,
+        col4 + 5,
+        rowY + 10,
+      );
+      doc.text(s.venue || "Ex Hall", col5 + 5, rowY + 10);
+
+      rowY += 35;
+    });
+
+    // -- Footer --
+    doc.moveDown(4);
+    const footerY = doc.page.height - 100;
+    doc
+      .strokeColor("#e2e8f0")
+      .lineWidth(1)
+      .moveTo(50, footerY)
+      .lineTo(545, footerY)
+      .stroke();
+
+    doc
+      .fontSize(8)
+      .fillColor("#94a3b8")
+      .text(`Generated on: ${new Date().toLocaleString()}`, 50, footerY + 10);
+
+    doc
+      .fontSize(9)
+      .fillColor("#059669")
+      .font("Helvetica-Bold")
+      .text("DIGITALLY VERIFIED BY EXAMINATION CELL", 350, footerY + 10);
+
+    doc.end();
+
+    // 4. Update download status
+    await HallTicket.update(
+      { download_status: true },
+      { where: { exam_cycle_id: cycleId, student_id } },
+    );
+  } catch (error) {
+    logger.error("Error generating hall ticket PDF:", error);
+    res.status(500).json({ error: "Failed to generate Hall Ticket PDF." });
+  }
+};
+
+// @desc    Faculty Results Report - Download Excel
+// @route   GET /api/exam/faculty/results-report
+// @access  Private/Faculty
+exports.getFacultyResultsReport = async (req, res) => {
+  try {
+    const { exam_cycle_id, course_id, section } = req.query;
+    const faculty_id = req.user.userId;
+
+    if (!exam_cycle_id || !course_id) {
+      return res.status(400).json({ error: "Exam cycle and course are required" });
+    }
+
+    // Verify faculty teaches this course
+    const teachingAssignment = await TimetableSlot.findOne({
+      where: {
+        faculty_id,
+        course_id,
+        ...(section && { section }),
+      },
+    });
+
+    if (!teachingAssignment) {
+      return res.status(403).json({ error: "You are not assigned to teach this course/section" });
+    }
+
+    // Fetch exam cycle and course details
+    const cycle = await ExamCycle.findByPk(exam_cycle_id);
+    const course = await Course.findByPk(course_id);
+
+    if (!cycle || !course) {
+      return res.status(404).json({ error: "Cycle or course not found" });
+    }
+
+    // Fetch all exam schedules for this cycle and course
+    const schedules = await ExamSchedule.findAll({
+      where: { exam_cycle_id, course_id },
+    });
+
+    if (schedules.length === 0) {
+      return res.status(404).json({ error: "No exam schedules found" });
+    }
+
+    // Fetch all marks for these schedules
+    const marks = await ExamMark.findAll({
+      where: {
+        exam_schedule_id: schedules.map((s) => s.id),
+        ...(section && { "$student.section$": section }),
+      },
+      include: [
+        {
+          model: User,
+          as: "student",
+          attributes: ["id", "student_id", "first_name", "last_name", "section", "batch_year"],
+        },
+        {
+          model: ExamSchedule,
+          as: "schedule",
+          attributes: ["id", "exam_type", "max_marks"],
+        },
+      ],
+      order: [["student", "student_id", "ASC"]],
+    });
+
+    // Get regulation for grade calculation
+    const regulation = await Regulation.findByPk(cycle.regulation_id);
+    const gradeScale = regulation?.grade_scale || [];
+
+    // Group marks by student
+    const studentMarks = {};
+    marks.forEach((mark) => {
+      const studentId = mark.student.student_id;
+      if (!studentMarks[studentId]) {
+        studentMarks[studentId] = {
+          student_id: studentId,
+          name: `${mark.student.first_name} ${mark.student.last_name}`,
+          section: mark.student.section,
+          batch_year: mark.student.batch_year,
+          marks: {},
+          total: 0,
+        };
+      }
+      studentMarks[studentId].marks[mark.schedule.exam_type] = mark.marks_obtained;
+      studentMarks[studentId].total += parseFloat(mark.marks_obtained || 0);
+    });
+
+    // Calculate grades
+    Object.values(studentMarks).forEach((student) => {
+      const percentage = (student.total / (schedules.reduce((sum, s) => sum + s.max_marks, 0))) * 100;
+      
+      // Find grade from scale
+      let grade = "F";
+      for (const gradeEntry of gradeScale) {
+        if (percentage >= gradeEntry.min_percentage) {
+          grade = gradeEntry.grade;
+          break;
+        }
+      }
+      
+      student.percentage = percentage.toFixed(2);
+      student.grade = grade;
+      student.result = grade !== "F" ? "PASS" : "FAIL";
+    });
+
+    // Create Excel workbook
+    const workbook = xlsx.utils.book_new();
+
+    // Prepare data for Excel
+    const excelData = Object.values(studentMarks).map((student) => ({
+      "Roll No": student.student_id,
+      "Name": student.name,
+      "Section": student.section,
+      "Batch": student.batch_year,
+      ...Object.keys(student.marks).reduce((acc, examType) => {
+        acc[examType] = student.marks[examType];
+        return acc;
+      }, {}),
+      "Total": student.total,
+      "Percentage": student.percentage,
+      "Grade": student.grade,
+      "Result": student.result,
+    }));
+
+    // Add summary statistics
+    const totalStudents = excelData.length;
+    const passedStudents = excelData.filter((s) => s.Result === "PASS").length;
+    const failedStudents = totalStudents - passedStudents;
+    const passPercentage = ((passedStudents / totalStudents) * 100).toFixed(2);
+
+    const summaryData = [
+      { Metric: "Total Students", Value: totalStudents },
+      { Metric: "Passed", Value: passedStudents },
+      { Metric: "Failed", Value: failedStudents },
+      { Metric: "Pass %", Value: passPercentage },
+    ];
+
+    // Create worksheets
+    const summarySheet = xlsx.utils.json_to_sheet(summaryData);
+    const resultsSheet = xlsx.utils.json_to_sheet(excelData);
+
+    xlsx.utils.book_append_sheet(workbook, summarySheet, "Summary");
+    xlsx.utils.book_append_sheet(workbook, resultsSheet, "Results");
+
+    // Generate buffer
+    const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    // Set headers and send file
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=Results_${course.code}_${cycle.name.replace(/\s/g, "_")}.xlsx`);
+    res.send(buffer);
+  } catch (error) {
+    logger.error("Error generating faculty results report:", error);
+    res.status(500).json({ error: "Failed to generate results report" });
+  }
+};
+
+// @desc    HOD Results Report - Download Excel
+// @route   GET /api/exam/hod/results-report
+// @access  Private/HOD
+exports.getHODResultsReport = async (req, res) => {
+  try {
+    const { exam_cycle_id, batch_year, semester, section } = req.query;
+    const hod_id = req.user.userId;
+
+    if (!exam_cycle_id) {
+      return res.status(400).json({ error: "Exam cycle is required" });
+    }
+
+    // Get HOD's department
+    const { Department } = require("../models");
+    const hod = await User.findByPk(hod_id, {
+      attributes: ["department_id"],
+      include: [{ model: Department, as: "department", attributes: ["name"] }],
+    });
+
+    if (!hod || !hod.department_id) {
+      return res.status(403).json({ error: "HOD department not found" });
+    }
+
+    const departmentId = hod.department_id;
+    const departmentName = hod.department.name;
+
+    // Fetch exam cycle
+    const cycle = await ExamCycle.findByPk(exam_cycle_id);
+    if (!cycle) {
+      return res.status(404).json({ error: "Exam cycle not found" });
+    }
+
+    // Build student filter
+    const studentWhere = {
+      department_id: departmentId,
+      role: "student",
+      ...(batch_year && { batch_year: parseInt(batch_year) }),
+      ...(semester && { current_semester: parseInt(semester) }),
+      ...(section && { section }),
+    };
+
+    // Fetch all students in department
+    const students = await User.findAll({
+      where: studentWhere,
+      attributes: ["id", "student_id", "first_name", "last_name", "section", "batch_year", "current_semester"],
+      order: [["batch_year", "DESC"], ["current_semester", "ASC"], ["section", "ASC"], ["student_id", "ASC"]],
+    });
+
+    if (students.length === 0) {
+      return res.status(404).json({ error: "No students found matching criteria" });
+    }
+
+    const studentIds = students.map((s) => s.id);
+
+    // Fetch all exam schedules for this cycle
+    const schedules = await ExamSchedule.findAll({
+      where: { exam_cycle_id },
+      include: [
+        {
+          model: Course,
+          as: "course",
+          attributes: ["code", "name", "semester"],
+        },
+      ],
+    });
+
+    // Fetch all marks for these students
+    const marks = await ExamMark.findAll({
+      where: {
+        student_id: studentIds,
+        exam_schedule_id: schedules.map((s) => s.id),
+      },
+      include: [
+        {
+          model: User,
+          as: "student",
+          attributes: ["id", "student_id", "first_name", "last_name", "section", "batch_year", "current_semester"],
+        },
+        {
+          model: ExamSchedule,
+          as: "schedule",
+          attributes: ["id", "exam_type", "max_marks"],
+          include: [
+            {
+              model: Course,
+              as: "course",
+              attributes: ["code", "name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    // Get regulation for grade calculation
+    const regulation = await Regulation.findByPk(cycle.regulation_id);
+    const gradeScale = regulation?.grade_scale || [];
+
+    // Group by student and course
+    const studentData = {};
+    marks.forEach((mark) => {
+      const studentId = mark.student.student_id;
+      const courseCode = mark.schedule.course.code;
+
+      if (!studentData[studentId]) {
+        studentData[studentId] = {
+          student_id: studentId,
+          name: `${mark.student.first_name} ${mark.student.last_name}`,
+          section: mark.student.section,
+          batch: mark.student.batch_year,
+          semester: mark.student.current_semester,
+          courses: {},
+        };
+      }
+
+      if (!studentData[studentId].courses[courseCode]) {
+        studentData[studentId].courses[courseCode] = {
+          course_name: mark.schedule.course.name,
+          marks: {},
+          total: 0,
+        };
+      }
+
+      studentData[studentId].courses[courseCode].marks[mark.schedule.exam_type] = mark.marks_obtained;
+      studentData[studentId].courses[courseCode].total += parseFloat(mark.marks_obtained || 0);
+    });
+
+    // Create Excel workbook
+    const workbook = xlsx.utils.book_new();
+
+    // Summary Sheet
+    const totalStudents = Object.keys(studentData).length;
+    const summaryData = [
+      { Metric: "Department", Value: departmentName },
+      { Metric: "Exam Cycle", Value: cycle.name },
+      { Metric: "Total Students", Value: totalStudents },
+      ...(batch_year ? [{ Metric: "Batch Year", Value: batch_year }] : []),
+      ...(semester ? [{ Metric: "Semester", Value: semester }] : []),
+      ...(section ? [{ Metric: "Section", Value: section }] : []),
+    ];
+
+    const summarySheet = xlsx.utils.json_to_sheet(summaryData);
+    xlsx.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+    // Student-wise Results Sheet
+    const studentResults = [];
+    Object.values(studentData).forEach((student) => {
+      Object.entries(student.courses).forEach(([courseCode, courseData]) => {
+        studentResults.push({
+          "Roll No": student.student_id,
+          "Name": student.name,
+          "Batch": student.batch,
+          "Sem": student.semester,
+          "Section": student.section,
+          "Course": courseCode,
+          "Course Name": courseData.course_name,
+          ...courseData.marks,
+          "Total": courseData.total,
+        });
+      });
+    });
+
+    const resultsSheet = xlsx.utils.json_to_sheet(studentResults);
+    xlsx.utils.book_append_sheet(workbook, resultsSheet, "Student Results");
+
+    // Generate buffer
+    const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    // Set headers and send file
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=Department_Results_${cycle.name.replace(/\s/g, "_")}.xlsx`);
+    res.send(buffer);
+  } catch (error) {
+    logger.error("Error generating HOD results report:", error);
+    res.status(500).json({ error: "Failed to generate department results report" });
   }
 };

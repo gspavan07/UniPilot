@@ -17,6 +17,16 @@ const {
   getMyResults,
   getMyExamSchedules,
   generateHallTickets,
+  getBacklogSubjects,
+  registerForExams,
+  getRegistrationStatus,
+  getRegistrations,
+  updateRegistrationStatus,
+  bulkUpdateRegistrationStatus,
+  getMyRegistrations,
+  downloadReceipt,
+  waiveExamFine,
+  downloadHallTicket,
   bulkImportMarks,
   downloadImportTemplate,
   bulkPublishResults,
@@ -31,13 +41,19 @@ router.use(authenticate);
 
 router.get("/my-results", getMyResults);
 router.get("/my-schedules", getMyExamSchedules);
+router.get("/backlogs", getBacklogSubjects);
+router.post("/register", registerForExams);
+router.get("/registration/status/:cycleId", getRegistrationStatus);
+router.get("/registration/:cycleId/download-hall-ticket", downloadHallTicket);
 
 // Admin/Faculty routes
-router.get("/cycles", checkPermission("exams:view"), getExamCycles);
+// Exam cycles (Students can view filtered cycles, Admins view all)
+router.get("/cycles", getExamCycles);
 router.post("/cycles", checkPermission("exams:manage"), createExamCycle);
 router.put("/cycles/:id", checkPermission("exams:manage"), updateExamCycle);
 router.delete("/cycles/:id", checkPermission("exams:manage"), deleteExamCycle);
-router.get("/schedules", checkPermission("exams:view"), getExamSchedules);
+// Exam schedules (Students can view filtered schedules for their cycle)
+router.get("/schedules", getExamSchedules);
 router.post("/schedules", checkPermission("exams:manage"), addSchedule);
 router.put(
   "/schedules/:id",
@@ -97,6 +113,42 @@ router.post(
   "/hall-ticket/generate",
   checkPermission("exams:manage"),
   generateHallTickets,
+);
+
+router.get(
+  "/registrations/:cycleId",
+  checkPermission("exams:manage"),
+  getRegistrations,
+);
+
+router.get(
+  "/my-registrations",
+  checkPermission("exams:view"),
+  getMyRegistrations,
+);
+
+router.get(
+  "/registration/:id/receipt",
+  checkPermission("exams:view"),
+  downloadReceipt,
+);
+
+router.put(
+  "/registration/:id",
+  checkPermission("exams:manage"),
+  updateRegistrationStatus,
+);
+
+router.put(
+  "/registrations/bulk-override",
+  checkPermission("exams:manage"),
+  bulkUpdateRegistrationStatus,
+);
+
+router.post(
+  "/registration/:id/waive-fine",
+  checkPermission("exams:manage"),
+  waiveExamFine,
 );
 
 module.exports = router;

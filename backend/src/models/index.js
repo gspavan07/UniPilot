@@ -22,6 +22,7 @@ const ExamCycle = require("./ExamCycle");
 const ExamSchedule = require("./ExamSchedule");
 const ExamMark = require("./ExamMark");
 const HallTicket = require("./HallTicket");
+const ExamRegistration = require("./ExamRegistration");
 const FeeCategory = require("./FeeCategory");
 const FeeStructure = require("./FeeStructure");
 const FeePayment = require("./FeePayment");
@@ -65,6 +66,7 @@ const models = {
   ExamSchedule,
   ExamMark,
   HallTicket,
+  ExamRegistration,
   FeeCategory,
   FeeStructure,
   FeePayment,
@@ -339,6 +341,20 @@ User.hasMany(ExamMark, { as: "exam_marks", foreignKey: "student_id" });
 HallTicket.belongsTo(ExamCycle, { as: "cycle", foreignKey: "exam_cycle_id" });
 HallTicket.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(HallTicket, { as: "hall_tickets", foreignKey: "student_id" });
+
+ExamRegistration.belongsTo(ExamCycle, {
+  as: "cycle",
+  foreignKey: "exam_cycle_id",
+});
+ExamCycle.hasMany(ExamRegistration, {
+  as: "registrations",
+  foreignKey: "exam_cycle_id",
+});
+ExamRegistration.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(ExamRegistration, {
+  as: "exam_registrations",
+  foreignKey: "student_id",
+});
 
 // Semester Result Associations
 SemesterResult.belongsTo(User, { as: "student", foreignKey: "student_id" });

@@ -26,6 +26,9 @@ import MarksEntry from "./pages/exam/MarksEntry";
 import PublishMarks from "./pages/exam/PublishMarks";
 import StudentResults from "./pages/exam/StudentResults";
 import MyExams from "./pages/exam/MyExams";
+import ExamPayments from "./pages/exam/ExamPayments";
+import ExamHallTickets from "./pages/exam/ExamHallTickets";
+import MyHallTicket from "./pages/exam/MyHallTicket";
 import MarkEntry from "./pages/exam/MarkEntry";
 import FeeManagement from "./pages/fee/FeeManagement";
 import MyFees from "./pages/fee/MyFees";
@@ -110,7 +113,10 @@ function App() {
           <Route path="/exams/schedules" element={<ExamSchedules />} />
           <Route path="/exams/marks-entry" element={<MarksEntry />} />
           <Route path="/exams/publish" element={<PublishMarks />} />
+          <Route path="/exams/payments" element={<ExamPayments />} />
+          <Route path="/exams/hall-tickets" element={<ExamHallTickets />} />
           <Route path="/my-exams" element={<MyExams />} />
+          <Route path="/my-exams/hall-ticket" element={<MyHallTicket />} />
           <Route path="/marks-entry/:scheduleId" element={<MarkEntry />} />
           <Route path="/results" element={<StudentResults />} />
           <Route path="/fees" element={<FeeManagement />} />
