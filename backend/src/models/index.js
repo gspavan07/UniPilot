@@ -33,6 +33,7 @@ const Timetable = require("./Timetable");
 const TimetableSlot = require("./TimetableSlot");
 const FeeSemesterConfig = require("./FeeSemesterConfig");
 const StudentDocument = require("./StudentDocument");
+const SectionIncharge = require("./SectionIncharge");
 
 const AdmissionConfig = require("./AdmissionConfig");
 const StaffAttendance = require("./StaffAttendance");
@@ -89,6 +90,7 @@ const models = {
   Block,
   Room,
   SemesterResult,
+  SectionIncharge,
 };
 
 // Define associations
@@ -484,6 +486,33 @@ Department.belongsTo(Block, { foreignKey: "block_id", as: "block" });
 Department.belongsTo(Room, { foreignKey: "room_id", as: "room" });
 Block.hasMany(Department, { foreignKey: "block_id", as: "departments" });
 Room.hasOne(Department, { foreignKey: "room_id", as: "department" });
+
+// Section Incharge Associations
+SectionIncharge.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
+User.hasMany(SectionIncharge, {
+  as: "section_assignments",
+  foreignKey: "faculty_id",
+});
+
+SectionIncharge.belongsTo(Department, {
+  as: "department",
+  foreignKey: "department_id",
+});
+Department.hasMany(SectionIncharge, {
+  as: "section_incharges",
+  foreignKey: "department_id",
+});
+
+SectionIncharge.belongsTo(Program, {
+  as: "program",
+  foreignKey: "program_id",
+});
+Program.hasMany(SectionIncharge, {
+  as: "section_incharges",
+  foreignKey: "program_id",
+});
+
+SectionIncharge.belongsTo(User, { as: "assigner", foreignKey: "assigned_by" });
 
 // Export models and sequelize instance
 module.exports = {

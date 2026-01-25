@@ -19,6 +19,7 @@ const holidayRoutes = require("./holidayRoutes");
 const settingRoutes = require("./settingRoutes");
 const infrastructureRoutes = require("./infrastructure"); // Infrastructure Management
 const regulationRoutes = require("./regulations");
+const sectionInchargeRoutes = require("./sectionInchargeRoutes");
 
 const router = express.Router();
 
@@ -54,5 +55,6 @@ router.use("/holidays", holidayRoutes);
 router.use("/settings", settingRoutes);
 router.use("/infrastructure", infrastructureRoutes);
 router.use("/regulations", regulationRoutes);
+router.use("/section-incharges", sectionInchargeRoutes);
 
 module.exports = router;

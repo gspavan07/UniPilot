@@ -4,6 +4,7 @@ import api from "../../utils/api";
 const initialState = {
   users: [],
   sections: [],
+  sectionIncharges: [],
   batchYears: [],
   userStats: null,
   currentUser: null,
@@ -188,6 +189,50 @@ export const bulkUpdateSections = createAsyncThunk(
   },
 );
 
+export const fetchSectionIncharges = createAsyncThunk(
+  "users/fetchSectionIncharges",
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/section-incharges", { params });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch section incharges",
+      );
+    }
+  },
+);
+
+export const assignSectionIncharge = createAsyncThunk(
+  "users/assignSectionIncharge",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await api.post("/section-incharges", data);
+      dispatch(fetchSectionIncharges({ department_id: data.department_id }));
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to assign section incharge",
+      );
+    }
+  },
+);
+
+export const removeSectionIncharge = createAsyncThunk(
+  "users/removeSectionIncharge",
+  async ({ id, department_id }, { rejectWithValue, dispatch }) => {
+    try {
+      await api.delete(`/section-incharges/${id}`);
+      dispatch(fetchSectionIncharges({ department_id }));
+      return id;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to remove section incharge",
+      );
+    }
+  },
+);
+
 export const userSlice = createSlice({
   name: "users",
   initialState,
@@ -243,6 +288,9 @@ export const userSlice = createSlice({
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.users = state.users.filter((u) => u.id !== action.payload);
+      })
+      .addCase(fetchSectionIncharges.fulfilled, (state, action) => {
+        state.sectionIncharges = action.payload;
       });
   },
 });
