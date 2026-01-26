@@ -7,7 +7,7 @@
 
 const PDFDocument = require("pdfkit");
 const config = require("../config/templateConfig");
-const { decrypt } = require("../utils/encryption");
+const { decrypt } = require("../../utils/encryption");
 
 /**
  * Generate Payslip PDF

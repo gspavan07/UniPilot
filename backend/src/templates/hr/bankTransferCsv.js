@@ -6,7 +6,7 @@
  */
 
 const config = require("../config/templateConfig");
-const { decrypt } = require("../utils/encryption");
+const { decrypt } = require("../../utils/encryption");
 
 /**
  * Generate Bank Transfer CSV
