@@ -20,6 +20,7 @@ const settingRoutes = require("./settingRoutes");
 const infrastructureRoutes = require("./infrastructure"); // Infrastructure Management
 const regulationRoutes = require("./regulations");
 const sectionInchargeRoutes = require("./sectionInchargeRoutes");
+const transportRoutes = require("./transport"); // Transport Management
 
 const router = express.Router();
 
@@ -56,5 +57,6 @@ router.use("/settings", settingRoutes);
 router.use("/infrastructure", infrastructureRoutes);
 router.use("/regulations", regulationRoutes);
 router.use("/section-incharges", sectionInchargeRoutes);
+router.use("/transport", transportRoutes);
 
 module.exports = router;

@@ -45,6 +45,13 @@ import LeaveDashboard from "./pages/hr/LeaveDashboard";
 import StaffAttendance from "./pages/hr/StaffAttendance";
 import EmployeeOnboarding from "./pages/hr/EmployeeOnboarding";
 import AcademicCalendar from "./pages/hr/AcademicCalendar";
+import TransportDashboard from "./pages/transport/TransportDashboard";
+import RouteManagement from "./pages/transport/RouteManagement";
+import StopManagement from "./pages/transport/StopManagement";
+import VehicleManagement from "./pages/transport/VehicleManagement";
+import DriverManagement from "./pages/transport/DriverManagement";
+import StudentAllocation from "./pages/transport/StudentAllocation";
+import TripManagement from "./pages/transport/TripManagement";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
@@ -143,6 +150,23 @@ function App() {
           <Route path="/academic/sections" element={<SectionManager />} />
           <Route path="/infrastructure" element={<BlockList />} />
           <Route path="/infrastructure/blocks/:id" element={<BlockDetails />} />
+
+          {/* Transport Management */}
+          <Route path="/transport" element={<TransportDashboard />} />
+          <Route path="/transport/routes" element={<RouteManagement />} />
+          <Route
+            path="/transport/routes/:routeId/stops"
+            element={<StopManagement />}
+          />
+          <Route path="/transport/vehicles" element={<VehicleManagement />} />
+          <Route path="/transport/drivers" element={<DriverManagement />} />
+          <Route
+            path="/transport/allocations"
+            element={<StudentAllocation />}
+          />
+          <Route path="/transport/trips" element={<TripManagement />} />
+          {/* Add more transport sub-routes here */}
+
           <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route

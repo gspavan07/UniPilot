@@ -46,6 +46,16 @@ const Block = require("./Block");
 const Room = require("./Room");
 const SemesterResult = require("./SemesterResult");
 
+// Transport Management Models
+const Route = require("./Route");
+const TransportStop = require("./TransportStop");
+const Vehicle = require("./Vehicle");
+const TransportDriver = require("./TransportDriver");
+const VehicleRouteAssignment = require("./VehicleRouteAssignment");
+const StudentRouteAllocation = require("./StudentRouteAllocation");
+const SpecialTrip = require("./SpecialTrip");
+const TripLog = require("./TripLog");
+
 const models = {
   User,
   Department,
@@ -91,6 +101,16 @@ const models = {
   Room,
   SemesterResult,
   SectionIncharge,
+
+  // Transport Management Models
+  Route,
+  TransportStop,
+  Vehicle,
+  TransportDriver,
+  VehicleRouteAssignment,
+  StudentRouteAllocation,
+  SpecialTrip,
+  TripLog,
 };
 
 // Define associations
@@ -513,6 +533,125 @@ Program.hasMany(SectionIncharge, {
 });
 
 SectionIncharge.belongsTo(User, { as: "assigner", foreignKey: "assigned_by" });
+
+// Transport Management Associations
+if (models.Route && models.TransportStop) {
+  Route.hasMany(TransportStop, { foreignKey: "route_id", as: "stops" });
+  TransportStop.belongsTo(Route, { foreignKey: "route_id", as: "route" });
+}
+
+if (models.Route && models.VehicleRouteAssignment) {
+  Route.hasMany(VehicleRouteAssignment, {
+    foreignKey: "route_id",
+    as: "assignments",
+  });
+}
+
+if (models.Vehicle && models.VehicleRouteAssignment) {
+  Vehicle.hasMany(VehicleRouteAssignment, {
+    foreignKey: "vehicle_id",
+    as: "assignments",
+  });
+  VehicleRouteAssignment.belongsTo(Vehicle, {
+    foreignKey: "vehicle_id",
+    as: "vehicle",
+  });
+}
+
+if (models.TransportDriver && models.VehicleRouteAssignment) {
+  VehicleRouteAssignment.belongsTo(TransportDriver, {
+    foreignKey: "driver_id",
+    as: "driver",
+  });
+  VehicleRouteAssignment.belongsTo(TransportDriver, {
+    foreignKey: "conductor_id",
+    as: "conductor",
+  });
+}
+
+if (models.Route && models.VehicleRouteAssignment) {
+  VehicleRouteAssignment.belongsTo(Route, {
+    foreignKey: "route_id",
+    as: "route",
+  });
+}
+
+if (models.User && models.StudentRouteAllocation) {
+  User.hasMany(StudentRouteAllocation, {
+    foreignKey: "student_id",
+    as: "route_allocations",
+  });
+  StudentRouteAllocation.belongsTo(User, {
+    foreignKey: "student_id",
+    as: "student",
+  });
+}
+
+if (models.Route && models.StudentRouteAllocation) {
+  Route.hasMany(StudentRouteAllocation, {
+    foreignKey: "route_id",
+    as: "student_allocations",
+  });
+  StudentRouteAllocation.belongsTo(Route, {
+    foreignKey: "route_id",
+    as: "route",
+  });
+}
+
+if (models.TransportStop && models.StudentRouteAllocation) {
+  TransportStop.hasMany(StudentRouteAllocation, {
+    foreignKey: "stop_id",
+    as: "allocations",
+  });
+  StudentRouteAllocation.belongsTo(TransportStop, {
+    foreignKey: "stop_id",
+    as: "stop",
+  });
+}
+
+if (models.FeeStructure && models.StudentRouteAllocation) {
+  StudentRouteAllocation.belongsTo(FeeStructure, {
+    foreignKey: "fee_structure_id",
+    as: "fee_structure",
+  });
+}
+
+if (models.Vehicle && models.SpecialTrip) {
+  Vehicle.hasMany(SpecialTrip, {
+    foreignKey: "vehicle_id",
+    as: "special_trips",
+  });
+  SpecialTrip.belongsTo(Vehicle, { foreignKey: "vehicle_id", as: "vehicle" });
+}
+
+if (models.TransportDriver && models.SpecialTrip) {
+  SpecialTrip.belongsTo(TransportDriver, {
+    foreignKey: "driver_id",
+    as: "driver",
+  });
+}
+
+if (models.User && models.SpecialTrip) {
+  SpecialTrip.belongsTo(User, { foreignKey: "requested_by", as: "requester" });
+  SpecialTrip.belongsTo(User, { foreignKey: "approved_by", as: "approver" });
+}
+
+if (models.Vehicle && models.TripLog) {
+  Vehicle.hasMany(TripLog, { foreignKey: "vehicle_id", as: "trip_logs" });
+  TripLog.belongsTo(Vehicle, { foreignKey: "vehicle_id", as: "vehicle" });
+}
+
+if (models.Route && models.TripLog) {
+  TripLog.belongsTo(Route, { foreignKey: "route_id", as: "route" });
+}
+
+if (models.TransportDriver && models.TripLog) {
+  TripLog.belongsTo(TransportDriver, { foreignKey: "driver_id", as: "driver" });
+}
+
+if (models.User && models.TripLog) {
+  TripLog.belongsTo(User, { foreignKey: "logged_by", as: "logger" });
+}
 
 // Export models and sequelize instance
 module.exports = {

@@ -36,6 +36,7 @@ import {
   Sliders,
   Briefcase,
   Building,
+  Bus,
 } from "lucide-react";
 
 const MainLayout = () => {
@@ -251,6 +252,13 @@ const MainLayout = () => {
       roles: ["student"],
     },
     {
+      name: "Transport",
+      href: "/transport",
+      icon: Bus,
+      roles: ["super_admin", "admin"],
+      permission: ["transport:read", "transport:write", "transport:admin"],
+    },
+    {
       name: "Library",
       href: "/library",
       icon: Library,
@@ -286,7 +294,7 @@ const MainLayout = () => {
   // Logic to filter navigation based STRICTLY on user permissions
   const filteredNavigation = navigation.filter((item) => {
     // 1. Super Admin Bypass
-    // if (user?.role === "super_admin") return true;
+    if (user?.role === "super_admin") return true;
 
     // 2. Role Check (Optional)
     if (item.roles && Array.isArray(item.roles)) {

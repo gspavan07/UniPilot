@@ -33,6 +33,11 @@ const FeeStructure = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    academic_year: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Academic year (e.g., 2024-2025)",
+    },
     amount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
