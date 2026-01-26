@@ -7,6 +7,8 @@ import * as yup from "yup";
 import { login, clearError } from "../../store/slices/authSlice";
 import { LogIn, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
 
+import { getLandingPage } from "../../utils/routeUtils";
+
 const schema = yup.object().shape({
   email: yup
     .string()
@@ -39,7 +41,7 @@ const Login = () => {
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
     if (user) {
-      navigate("/dashboard");
+      navigate(getLandingPage(user));
     }
 
     // Clear any previous errors on mount
@@ -52,7 +54,7 @@ const Login = () => {
         email: data.email,
         password: data.password,
         rememberMe: data.rememberMe,
-      })
+      }),
     );
   };
 

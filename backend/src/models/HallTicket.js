@@ -38,7 +38,7 @@ const HallTicket = sequelize.define(
     tableName: "hall_tickets",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = HallTicket;

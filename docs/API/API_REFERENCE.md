@@ -104,7 +104,7 @@ curl -X GET http://localhost:3000/api/users \
 | Exams          | `exams:view`                | `exams:manage`                | -                    | -                       |
 | Results        | `exams:results:view`        | `exams:results:entry`         | -                    | `exams:results:publish` |
 | **Finance**    |
-| Fees           | `finance:fees:view`         | `finance:fees:manage`         | `finance:fees:admin` | -                       |
+| Fees           | `finance:fees:manage`         | `finance:fees:manage`         | `finance:fees:admin` | -                       |
 | Oversight      | `finance:fees:oversight`    | -                             | -                    | -                       |
 | **Library**    |
 | Books          | `library:books:view`        | `library:books:manage`        | -                    | -                       |
@@ -152,7 +152,7 @@ curl -X GET http://localhost:3000/api/users \
   - `academics:timetable:view`
   - `academics:attendance:view`
   - `exams:results:view`
-  - `finance:fees:view`
+  - `finance:fees:manage`
   - `library:books:view`
 - **Access:** View-only access to personal data
 

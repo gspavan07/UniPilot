@@ -394,7 +394,7 @@ FeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(FeePayment, { as: "payments", foreignKey: "student_id" });
 
 FeePayment.belongsTo(FeeStructure, {
-  as: "structure",
+  as: "fee_structure",
   foreignKey: "fee_structure_id",
 });
 FeeStructure.hasMany(FeePayment, {

@@ -241,7 +241,7 @@ All available permissions in the system:
 | Results          | `exams:results:entry`         | Enter and moderate marks            |
 | Results          | `exams:results:publish`       | Publish results                     |
 | **Finance**      |
-| Fees             | `finance:fees:view`           | View fee structures                 |
+| Fees             | `finance:fees:manage`           | View fee structures                 |
 | Fees             | `finance:fees:manage`         | Collect payments                    |
 | Fees             | `finance:fees:admin`          | Configure fee structures            |
 | Fees             | `finance:fees:oversight`      | View all fee data                   |
@@ -276,7 +276,7 @@ All available permissions in the system:
 | **hr**          | All HR permissions + dashboard + users:view                                                                                                            |
 | **faculty**     | dashboard:view, academics (view/manage attendance), exams:results:entry, library:books:view                                                            |
 | **hod**         | Same as faculty + department-specific management                                                                                                       |
-| **student**     | dashboard:view, academics:courses:view, academics:timetable:view, academics:attendance:view, exams:results:view, finance:fees:view, library:books:view |
+| **student**     | dashboard:view, academics:courses:view, academics:timetable:view, academics:attendance:view, exams:results:view, finance:fees:manage, library:books:view |
 
 ---
 

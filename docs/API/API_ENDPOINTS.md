@@ -2056,7 +2056,7 @@ file: marks.xlsx
 
 **Endpoint:** `GET /api/fees/summary/:studentId`  
 **Authentication:** Required (`authenticate`)  
-**Permission:** `finance:fees:view`
+**Permission:** `finance:fees:manage`
 
 **Description:** Get fee status for a specific student (admin/accounts).
 

@@ -19,6 +19,14 @@ module.exports = {
         created_at: new Date(),
         updated_at: new Date(),
       },
+      {
+        id: Sequelize.literal("gen_random_uuid()"),
+        name: "Manage Fees",
+        slug: "finance:fees:manage",
+        module: "Finance",
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
     ];
 
     return queryInterface.bulkInsert("permissions", permissions);
@@ -28,7 +36,11 @@ module.exports = {
     const { Op } = Sequelize;
     return queryInterface.bulkDelete("permissions", {
       slug: {
-        [Op.in]: ["finance:fees:admin", "finance:fees:oversight"],
+        [Op.in]: [
+          "finance:fees:admin",
+          "finance:fees:oversight",
+          "finance:fees:manage",
+        ],
       },
     });
   },

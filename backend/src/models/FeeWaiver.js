@@ -29,12 +29,32 @@ const FeeWaiver = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    applies_to: {
+      type: DataTypes.ENUM("all_semesters", "specific_semester", "one_time"),
+      defaultValue: "one_time",
+    },
+    semester: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    value_type: {
+      type: DataTypes.ENUM("fixed", "percentage"),
+      defaultValue: "fixed",
+    },
+    percentage: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+    },
     approved_at: {
       type: DataTypes.DATE,
     },
     approved_by: {
       type: DataTypes.UUID,
       references: { model: "users", key: "id" },
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
   },
   {

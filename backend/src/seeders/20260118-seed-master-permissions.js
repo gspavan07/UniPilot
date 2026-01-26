@@ -111,9 +111,13 @@ module.exports = {
       { name: "Enter Results", slug: "exams:results:entry", module: "exams" },
 
       // --- Finance ---
-      { name: "View Fees", slug: "finance:fees:view", module: "finance" },
       { name: "Manage Fees", slug: "finance:fees:manage", module: "finance" },
       { name: "Admin Fees", slug: "finance:fees:admin", module: "finance" },
+      {
+        name: "Finance Oversight",
+        slug: "finance:fees:oversight",
+        module: "finance",
+      },
 
       // --- Library ---
       { name: "View Books", slug: "library:books:view", module: "library" },
@@ -159,7 +163,7 @@ module.exports = {
             [Sequelize.Op.or]: [{ slug: perm.slug }, { name: perm.name }],
           },
         },
-        ["id"]
+        ["id"],
       );
 
       if (!exists) {
@@ -178,7 +182,7 @@ module.exports = {
 
     // 3. Fetch Role IDs
     const [roles] = await queryInterface.sequelize.query(
-      `SELECT id, slug FROM roles;`
+      `SELECT id, slug FROM roles;`,
     );
 
     const roleMap = {};
@@ -188,7 +192,7 @@ module.exports = {
 
     // 4. Assign Permissions Logic
     const [allPerms] = await queryInterface.sequelize.query(
-      `SELECT id, slug FROM permissions;`
+      `SELECT id, slug FROM permissions;`,
     );
 
     const rolePermissions = [];
@@ -256,14 +260,13 @@ module.exports = {
       addRelation("student", "academics:timetable:view");
       addRelation("student", "academics:attendance:view"); // Own attendance usually
       addRelation("student", "exams:results:view");
-      addRelation("student", "finance:fees:view");
       addRelation("student", "library:books:view");
     }
 
     // 5. Bulk Insert Relations (Idempotent)
     for (const rp of rolePermissions) {
       const [existing] = await queryInterface.sequelize.query(
-        `SELECT 1 FROM role_permissions WHERE role_id = '${rp.role_id}' AND permission_id = '${rp.permission_id}' LIMIT 1;`
+        `SELECT 1 FROM role_permissions WHERE role_id = '${rp.role_id}' AND permission_id = '${rp.permission_id}' LIMIT 1;`,
       );
 
       if (existing.length === 0) {

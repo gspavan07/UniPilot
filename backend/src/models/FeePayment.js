@@ -32,7 +32,13 @@ const FeePayment = sequelize.define(
       defaultValue: DataTypes.NOW,
     },
     payment_method: {
-      type: DataTypes.ENUM("cash", "online", "bank_transfer", "cheque"),
+      type: DataTypes.ENUM(
+        "cash",
+        "online",
+        "bank_transfer",
+        "cheque",
+        "WALLET",
+      ),
       defaultValue: "online",
     },
     transaction_id: {
@@ -53,7 +59,7 @@ const FeePayment = sequelize.define(
     tableName: "fee_payments",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 module.exports = FeePayment;

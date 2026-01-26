@@ -19,6 +19,11 @@ const FeeStructure = sequelize.define(
       allowNull: false,
       references: { model: "programs", key: "id" },
     },
+    student_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "users", key: "id" },
+    },
     batch_year: {
       type: DataTypes.INTEGER,
       allowNull: false,

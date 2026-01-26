@@ -14,16 +14,16 @@ module.exports = {
     // Order matters due to foreign keys if we hard truncate
     await queryInterface.sequelize.query('TRUNCATE TABLE "users" CASCADE;');
     await queryInterface.sequelize.query(
-      'TRUNCATE TABLE "role_permissions" CASCADE;'
+      'TRUNCATE TABLE "role_permissions" CASCADE;',
     );
     await queryInterface.sequelize.query('TRUNCATE TABLE "roles" CASCADE;');
     await queryInterface.sequelize.query(
-      'TRUNCATE TABLE "permissions" CASCADE;'
+      'TRUNCATE TABLE "permissions" CASCADE;',
     );
     await queryInterface.sequelize.query('TRUNCATE TABLE "courses" CASCADE;');
     await queryInterface.sequelize.query('TRUNCATE TABLE "programs" CASCADE;');
     await queryInterface.sequelize.query(
-      'TRUNCATE TABLE "departments" CASCADE;'
+      'TRUNCATE TABLE "departments" CASCADE;',
     );
 
     // ==========================================
@@ -113,18 +113,6 @@ module.exports = {
       },
 
       // Finance
-      { name: "View Fees", slug: "finance:fees:view", module: "Finance" },
-      { name: "Collect Fees", slug: "finance:fees:collect", module: "Finance" },
-      {
-        name: "Process Payroll",
-        slug: "finance:payroll:process",
-        module: "Finance",
-      },
-      {
-        name: "View Financial Reports",
-        slug: "finance:reports:view",
-        module: "Finance",
-      },
       {
         name: "Administer Fee Structures",
         slug: "finance:fees:admin",
@@ -133,6 +121,11 @@ module.exports = {
       {
         name: "Finance Oversight",
         slug: "finance:fees:oversight",
+        module: "Finance",
+      },
+      {
+        name: "Manage Fees",
+        slug: "finance:fees:manage",
         module: "Finance",
       },
 
@@ -317,17 +310,12 @@ module.exports = {
       ],
       admission_staff: ["admissions:view", "users:view", "users:create"],
       finance_admin: [
-        "finance:fees:view",
         "finance:fees:admin",
-        "finance:fees:collect",
-        "finance:reports:view",
+        "finance:fees:oversight",
+        "finance:fees:manage",
         "users:view",
       ],
-      finance_staff: [
-        "finance:fees:view",
-        "finance:fees:collect",
-        "users:view",
-      ],
+      finance_staff: ["finance:fees:manage", "users:view"],
       exam_admin: [
         "academics:exams:manage",
         "academics:exams:results:view",
@@ -371,7 +359,6 @@ module.exports = {
         "academics:courses:view",
         "academics:timetable:view",
         "academics:attendance:view",
-        "finance:fees:view",
         "library:books:view",
       ],
     };
@@ -731,7 +718,7 @@ module.exports = {
     console.log("Finalizing HOD assignments...");
     for (const update of hodUpdates) {
       await queryInterface.sequelize.query(
-        `UPDATE departments SET hod_id = '${update.hodId}' WHERE id = '${update.deptId}';`
+        `UPDATE departments SET hod_id = '${update.hodId}' WHERE id = '${update.deptId}';`,
       );
     }
 

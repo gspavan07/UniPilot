@@ -54,6 +54,7 @@ import RegulationList from "./pages/academics/RegulationList";
 import RegulationViewer from "./pages/academics/RegulationViewer";
 import RegulationManager from "./pages/admin/RegulationManager";
 import SectionManager from "./pages/academics/SectionManager";
+import { getLandingPage } from "./utils/routeUtils";
 
 function App() {
   const dispatch = useDispatch();
@@ -155,7 +156,7 @@ function App() {
           path="/"
           element={
             user ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to={getLandingPage(user)} replace />
             ) : (
               <Navigate to="/auth/login" replace />
             )
