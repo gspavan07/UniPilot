@@ -21,6 +21,13 @@ const xlsx = require("xlsx");
 const path = require("path");
 const PDFDocument = require("pdfkit");
 
+// Template imports
+const generateHallTicketPdf = require("../templates/exam/hallTicketPdf");
+const generateExamReceiptPdf = require("../templates/exam/examReceiptPdf");
+const generateMarksImportTemplate = require("../templates/exam/marksImportTemplate");
+const generateCourseResultsExcel = require("../templates/exam/courseResultsExcel");
+const generateDepartmentResultsExcel = require("../templates/exam/departmentResultsExcel");
+
 // @desc    Get all exam cycles
 // @route   GET /api/exam/cycles
 // @access  Private/Faculty/Admin
@@ -1454,27 +1461,8 @@ exports.downloadImportTemplate = async (req, res) => {
         .json({ error: "No schedules found for this cycle" });
     }
 
-    // Create a worksheet with instructions and sample data
-    const templateData = [
-      ["Student ID", "Course Code", "Marks", "Attendance", "Remarks"],
-      ["STU001", schedules[0].course.code, "75", "present", "Good"],
-      ["STU002", schedules[0].course.code, "0", "absent", "Medical leave"],
-    ];
-
-    // Optionally add all students for this cycle/semester to make it easier
-    // But for a template, headers + sample is often enough.
-
-    const wb = xlsx.utils.book_new();
-    const ws = xlsx.utils.aoa_to_sheet(templateData);
-    xlsx.utils.book_append_sheet(wb, ws, "Marks Import Template");
-
-    // Add a second sheet with reference data (courses)
-    const refData = [["Course Code", "Course Name"]];
-    schedules.forEach((s) => refData.push([s.course.code, s.course.name]));
-    const wsRef = xlsx.utils.aoa_to_sheet(refData);
-    xlsx.utils.book_append_sheet(wb, wsRef, "Course Reference");
-
-    const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+    // Use template module to generate Excel
+    const buffer = generateMarksImportTemplate(schedules);
 
     res.setHeader(
       "Content-Type",
@@ -2776,158 +2764,24 @@ exports.downloadHallTicket = async (req, res) => {
       order: [["exam_date", "ASC"]],
     });
 
-    // 3. Generate PDF
-    const doc = new PDFDocument({ margin: 50, size: "A4" });
-
-    // Set response headers
+    // 3. Set response headers
     const filename = `HallTicket_${registration.student.student_id || student_id.substring(0, 8)}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
 
-    doc.pipe(res);
+    // 4. Use template module to generate PDF
+    await generateHallTicketPdf(registration, schedules, res);
 
-    // -- Header Design --
-    doc
-      .fillColor("#1e1b4b")
-      .fontSize(22)
-      .font("Helvetica-Bold")
-      .text("UNIPILOT TECHNICAL UNIVERSITY", { align: "center" });
-
-    doc.fontSize(10).fillColor("#4f46e5").text("EXAMINATION HALL TICKET", {
-      align: "center",
-      characterSpacing: 2,
-    });
-
-    doc.moveDown(1);
-    doc
-      .strokeColor("#e2e8f0")
-      .lineWidth(1)
-      .moveTo(50, doc.y)
-      .lineTo(545, doc.y)
-      .stroke();
-    doc.moveDown(1.5);
-
-    // -- Student Info --
-    const startY = doc.y;
-    doc
-      .fillColor("#64748b")
-      .fontSize(9)
-      .font("Helvetica-Bold")
-      .text("STUDENT NAME", 50, startY);
-    doc
-      .fillColor("#111827")
-      .fontSize(11)
-      .text(
-        `${registration.student.first_name} ${registration.student.last_name}`.toUpperCase(),
-        50,
-        startY + 14,
-      );
-
-    doc.fillColor("#64748b").fontSize(9).text("ROLL NUMBER", 350, startY);
-    doc
-      .fillColor("#111827")
-      .fontSize(11)
-      .text(
-        (registration.student.student_id || student_id).toUpperCase(),
-        350,
-        startY + 14,
-      );
-
-    doc.moveDown(2.5);
-
-    const nextY = doc.y;
-    doc.fillColor("#64748b").fontSize(9).text("PROGRAM & SECTION", 50, nextY);
-    doc
-      .fillColor("#111827")
-      .fontSize(11)
-      .text(`B.TECH - ${registration.student.section}`, 50, nextY + 14);
-
-    doc.fillColor("#64748b").fontSize(9).text("EXAM CYCLE", 350, nextY);
-    doc
-      .fillColor("#111827")
-      .fontSize(11)
-      .text(registration.cycle.name, 350, nextY + 14);
-
-    doc.moveDown(3);
-
-    // -- Schedule Table --
-    doc
-      .fillColor("#1e1b4b")
-      .fontSize(14)
-      .font("Helvetica-Bold")
-      .text("EXAMINATION SCHEDULE", 50, doc.y);
-    doc.moveDown(1);
-
-    const tableTop = doc.y;
-    const col1 = 50,
-      col2 = 120,
-      col3 = 300,
-      col4 = 400,
-      col5 = 480;
-
-    // Table Header
-    doc.fillColor("#f8fafc").rect(50, tableTop, 495, 25).fill();
-    doc.fillColor("#1e1b4b").fontSize(9).font("Helvetica-Bold");
-    doc.text("CODE", col1 + 5, tableTop + 8);
-    doc.text("SUBJECT NAME", col2 + 5, tableTop + 8);
-    doc.text("DATE", col3 + 5, tableTop + 8);
-    doc.text("TIME", col4 + 5, tableTop + 8);
-    doc.text("VENUE", col5 + 5, tableTop + 8);
-
-    let rowY = tableTop + 25;
-    doc.font("Helvetica");
-
-    schedules.forEach((s, idx) => {
-      // Background for alternating rows
-      if (idx % 2 === 1) {
-        doc.fillColor("#f1f5f9").rect(50, rowY, 495, 35).fill();
-      }
-
-      doc.fillColor("#111827").fontSize(8);
-      doc.text(s.course.code, col1 + 5, rowY + 10);
-      doc.text(s.course.name, col2 + 5, rowY + 10, { width: 170 });
-      doc.text(new Date(s.exam_date).toLocaleDateString(), col3 + 5, rowY + 10);
-      doc.text(
-        `${s.start_time.substring(0, 5)} - ${s.end_time.substring(0, 5)}`,
-        col4 + 5,
-        rowY + 10,
-      );
-      doc.text(s.venue || "Ex Hall", col5 + 5, rowY + 10);
-
-      rowY += 35;
-    });
-
-    // -- Footer --
-    doc.moveDown(4);
-    const footerY = doc.page.height - 100;
-    doc
-      .strokeColor("#e2e8f0")
-      .lineWidth(1)
-      .moveTo(50, footerY)
-      .lineTo(545, footerY)
-      .stroke();
-
-    doc
-      .fontSize(8)
-      .fillColor("#94a3b8")
-      .text(`Generated on: ${new Date().toLocaleString()}`, 50, footerY + 10);
-
-    doc
-      .fontSize(9)
-      .fillColor("#059669")
-      .font("Helvetica-Bold")
-      .text("DIGITALLY VERIFIED BY EXAMINATION CELL", 350, footerY + 10);
-
-    doc.end();
-
-    // 4. Update download status
+    // 5. Update download status
     await HallTicket.update(
       { download_status: true },
       { where: { exam_cycle_id: cycleId, student_id } },
     );
   } catch (error) {
     logger.error("Error generating hall ticket PDF:", error);
-    res.status(500).json({ error: "Failed to generate Hall Ticket PDF." });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to generate Hall Ticket PDF." });
+    }
   }
 };
 
@@ -2940,7 +2794,9 @@ exports.getFacultyResultsReport = async (req, res) => {
     const faculty_id = req.user.userId;
 
     if (!exam_cycle_id || !course_id) {
-      return res.status(400).json({ error: "Exam cycle and course are required" });
+      return res
+        .status(400)
+        .json({ error: "Exam cycle and course are required" });
     }
 
     // Verify faculty teaches this course
@@ -2953,7 +2809,9 @@ exports.getFacultyResultsReport = async (req, res) => {
     });
 
     if (!teachingAssignment) {
-      return res.status(403).json({ error: "You are not assigned to teach this course/section" });
+      return res
+        .status(403)
+        .json({ error: "You are not assigned to teach this course/section" });
     }
 
     // Fetch exam cycle and course details
@@ -2983,7 +2841,14 @@ exports.getFacultyResultsReport = async (req, res) => {
         {
           model: User,
           as: "student",
-          attributes: ["id", "student_id", "first_name", "last_name", "section", "batch_year"],
+          attributes: [
+            "id",
+            "student_id",
+            "first_name",
+            "last_name",
+            "section",
+            "batch_year",
+          ],
         },
         {
           model: ExamSchedule,
@@ -3012,14 +2877,17 @@ exports.getFacultyResultsReport = async (req, res) => {
           total: 0,
         };
       }
-      studentMarks[studentId].marks[mark.schedule.exam_type] = mark.marks_obtained;
+      studentMarks[studentId].marks[mark.schedule.exam_type] =
+        mark.marks_obtained;
       studentMarks[studentId].total += parseFloat(mark.marks_obtained || 0);
     });
 
     // Calculate grades
     Object.values(studentMarks).forEach((student) => {
-      const percentage = (student.total / (schedules.reduce((sum, s) => sum + s.max_marks, 0))) * 100;
-      
+      const percentage =
+        (student.total / schedules.reduce((sum, s) => sum + s.max_marks, 0)) *
+        100;
+
       // Find grade from scale
       let grade = "F";
       for (const gradeEntry of gradeScale) {
@@ -3028,7 +2896,7 @@ exports.getFacultyResultsReport = async (req, res) => {
           break;
         }
       }
-      
+
       student.percentage = percentage.toFixed(2);
       student.grade = grade;
       student.result = grade !== "F" ? "PASS" : "FAIL";
@@ -3040,17 +2908,17 @@ exports.getFacultyResultsReport = async (req, res) => {
     // Prepare data for Excel
     const excelData = Object.values(studentMarks).map((student) => ({
       "Roll No": student.student_id,
-      "Name": student.name,
-      "Section": student.section,
-      "Batch": student.batch_year,
+      Name: student.name,
+      Section: student.section,
+      Batch: student.batch_year,
       ...Object.keys(student.marks).reduce((acc, examType) => {
         acc[examType] = student.marks[examType];
         return acc;
       }, {}),
-      "Total": student.total,
-      "Percentage": student.percentage,
-      "Grade": student.grade,
-      "Result": student.result,
+      Total: student.total,
+      Percentage: student.percentage,
+      Grade: student.grade,
+      Result: student.result,
     }));
 
     // Add summary statistics
@@ -3077,8 +2945,14 @@ exports.getFacultyResultsReport = async (req, res) => {
     const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
 
     // Set headers and send file
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=Results_${course.code}_${cycle.name.replace(/\s/g, "_")}.xlsx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Results_${course.code}_${cycle.name.replace(/\s/g, "_")}.xlsx`,
+    );
     res.send(buffer);
   } catch (error) {
     logger.error("Error generating faculty results report:", error);
@@ -3130,12 +3004,27 @@ exports.getHODResultsReport = async (req, res) => {
     // Fetch all students in department
     const students = await User.findAll({
       where: studentWhere,
-      attributes: ["id", "student_id", "first_name", "last_name", "section", "batch_year", "current_semester"],
-      order: [["batch_year", "DESC"], ["current_semester", "ASC"], ["section", "ASC"], ["student_id", "ASC"]],
+      attributes: [
+        "id",
+        "student_id",
+        "first_name",
+        "last_name",
+        "section",
+        "batch_year",
+        "current_semester",
+      ],
+      order: [
+        ["batch_year", "DESC"],
+        ["current_semester", "ASC"],
+        ["section", "ASC"],
+        ["student_id", "ASC"],
+      ],
     });
 
     if (students.length === 0) {
-      return res.status(404).json({ error: "No students found matching criteria" });
+      return res
+        .status(404)
+        .json({ error: "No students found matching criteria" });
     }
 
     const studentIds = students.map((s) => s.id);
@@ -3162,7 +3051,15 @@ exports.getHODResultsReport = async (req, res) => {
         {
           model: User,
           as: "student",
-          attributes: ["id", "student_id", "first_name", "last_name", "section", "batch_year", "current_semester"],
+          attributes: [
+            "id",
+            "student_id",
+            "first_name",
+            "last_name",
+            "section",
+            "batch_year",
+            "current_semester",
+          ],
         },
         {
           model: ExamSchedule,
@@ -3208,8 +3105,12 @@ exports.getHODResultsReport = async (req, res) => {
         };
       }
 
-      studentData[studentId].courses[courseCode].marks[mark.schedule.exam_type] = mark.marks_obtained;
-      studentData[studentId].courses[courseCode].total += parseFloat(mark.marks_obtained || 0);
+      studentData[studentId].courses[courseCode].marks[
+        mark.schedule.exam_type
+      ] = mark.marks_obtained;
+      studentData[studentId].courses[courseCode].total += parseFloat(
+        mark.marks_obtained || 0,
+      );
     });
 
     // Create Excel workbook
@@ -3235,14 +3136,14 @@ exports.getHODResultsReport = async (req, res) => {
       Object.entries(student.courses).forEach(([courseCode, courseData]) => {
         studentResults.push({
           "Roll No": student.student_id,
-          "Name": student.name,
-          "Batch": student.batch,
-          "Sem": student.semester,
-          "Section": student.section,
-          "Course": courseCode,
+          Name: student.name,
+          Batch: student.batch,
+          Sem: student.semester,
+          Section: student.section,
+          Course: courseCode,
           "Course Name": courseData.course_name,
           ...courseData.marks,
-          "Total": courseData.total,
+          Total: courseData.total,
         });
       });
     });
@@ -3254,11 +3155,19 @@ exports.getHODResultsReport = async (req, res) => {
     const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
 
     // Set headers and send file
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=Department_Results_${cycle.name.replace(/\s/g, "_")}.xlsx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Department_Results_${cycle.name.replace(/\s/g, "_")}.xlsx`,
+    );
     res.send(buffer);
   } catch (error) {
     logger.error("Error generating HOD results report:", error);
-    res.status(500).json({ error: "Failed to generate department results report" });
+    res
+      .status(500)
+      .json({ error: "Failed to generate department results report" });
   }
 };

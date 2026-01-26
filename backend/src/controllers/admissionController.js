@@ -11,6 +11,9 @@ const { Op } = require("sequelize");
 const PDFDocument = require("pdfkit");
 const logger = require("../utils/logger");
 
+// Template import
+const generateAdmissionLetterPdf = require("../templates/admission/admissionLetterPdf");
+
 /**
  * Admission Controller
  * Handles admission-specific analytics and reporting
@@ -163,7 +166,7 @@ exports.getSeatMatrix = async (req, res) => {
           filled_seats: filled,
           available_seats: Math.max(0, maxIntake - filled),
         };
-      })
+      }),
     );
 
     res.status(200).json({
@@ -234,7 +237,7 @@ exports.updateDocumentStatus = async (req, res) => {
     // --- Phase 4: Communication Hub - Notification Toggle ---
     // In a real system, this would trigger an email or SMS service
     logger.info(
-      `NOTIF_TRIGGER: Student ${document.user_id} - Document ${document.name} ${status}. Remarks: ${remarks || "None"}`
+      `NOTIF_TRIGGER: Student ${document.user_id} - Document ${document.name} ${status}. Remarks: ${remarks || "None"}`,
     );
 
     res.status(200).json({
@@ -349,120 +352,17 @@ exports.generateAdmissionLetter = async (req, res) => {
       });
     }
 
-    const doc = new PDFDocument({ margin: 50 });
-    let filename = `Admission_Letter_${student.student_id}.pdf`;
+    const filename = `Admission_Letter_${student.student_id}.pdf`;
 
     // Set headers for download
     res.setHeader(
       "Content-disposition",
-      'attachment; filename="' + filename + '"'
+      'attachment; filename="' + filename + '"',
     );
     res.setHeader("Content-type", "application/pdf");
 
-    doc.pipe(res);
-
-    // --- Header ---
-    doc
-      .fillColor("#1a365d")
-      .fontSize(26)
-      .text("UniPilot University", { align: "center" });
-    doc
-      .fillColor("#4a5568")
-      .fontSize(10)
-      .text("Official Admissions Office | campus.unipilot.com", {
-        align: "center",
-      });
-    doc.moveDown(1);
-    doc
-      .strokeColor("#e2e8f0")
-      .lineWidth(1)
-      .moveTo(50, doc.y)
-      .lineTo(550, doc.y)
-      .stroke();
-    doc.moveDown(2);
-
-    // --- Date & Reference ---
-    const today = new Date().toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    doc
-      .fillColor("#000")
-      .fontSize(11)
-      .text(`Date: ${today}`, { align: "right" });
-    doc.text(`Ref No: UPU/ADM/${student.batch_year}/${student.student_id}`, {
-      align: "right",
-    });
-    doc.moveDown(2);
-
-    // --- Addressee ---
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .text("ADMISSION PROVISIONAL OFFER LETTER");
-    doc.moveDown(1);
-    doc.font("Helvetica").text("To,");
-    doc
-      .font("Helvetica-Bold")
-      .text(`${student.first_name} ${student.last_name}`);
-    doc.font("Helvetica").text(`Student ID: ${student.student_id}`);
-    doc.moveDown(1.5);
-
-    // --- Body ---
-    doc.text(`Dear ${student.first_name},`);
-    doc.moveDown(1);
-    doc.text(
-      `Congratulations! We are pleased to inform you that you have been provisionally admitted to the ${student.program?.name} program at UniPilot University for the Batch of ${student.batch_year}.`,
-      { align: "justify" }
-    );
-    doc.moveDown(1);
-    doc.text("Admission Details:", { font: "Helvetica-Bold" });
-    doc.moveDown(0.5);
-
-    const details = [
-      ["Program:", student.program?.name || "N/A"],
-      ["Department:", student.department?.name || "N/A"],
-      ["Duration:", `${student.program?.duration_years} Years`],
-      ["Batch Year:", student.batch_year],
-      ["Admission Date:", new Date(student.admission_date).toDateString()],
-    ];
-
-    details.forEach(([label, value]) => {
-      doc.font("Helvetica-Bold").text(label, { continued: true });
-      doc.font("Helvetica").text(` ${value}`);
-    });
-
-    doc.moveDown(2);
-    doc.text(
-      "Please note that this offer is provisional and subject to the fulfillment of eligibility criteria and verification of documents. You are required to complete the remaining registration formalities and fee payment as per the university's academic calendar.",
-      { align: "justify" }
-    );
-
-    doc.moveDown(3);
-
-    // --- Signature ---
-    doc.text("Sincerely,", { align: "left" });
-    doc.moveDown(1);
-    doc
-      .font("Helvetica-Bold")
-      .text("Registrar (Admissions)", { align: "left" });
-    doc
-      .font("Helvetica")
-      .text("UniPilot University Admissions Office", { align: "left" });
-
-    // --- Footer ---
-    doc
-      .fontSize(8)
-      .fillColor("#718096")
-      .text(
-        "This is a computer-generated document and does not require a physical signature.",
-        50,
-        750,
-        { align: "center" }
-      );
-
-    doc.end();
+    // Use template module to generate PDF
+    await generateAdmissionLetterPdf(student, res);
   } catch (error) {
     logger.error("Error in generateAdmissionLetter:", error);
     if (!res.headersSent) {

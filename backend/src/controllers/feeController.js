@@ -12,6 +12,9 @@ const {
 const logger = require("../utils/logger");
 const { Op } = require("sequelize");
 
+// Template import
+const generateDefaultersCsv = require("../templates/fee/defaultersCsv");
+
 // @desc    Create a fee category
 exports.createCategory = async (req, res) => {
   try {

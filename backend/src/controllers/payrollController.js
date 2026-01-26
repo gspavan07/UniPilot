@@ -13,6 +13,10 @@ const auditService = require("../services/auditService");
 const leaveService = require("../services/leaveService");
 const { decrypt } = require("../utils/encryption");
 
+// Template imports
+const generatePayslipPdf = require("../templates/hr/payslipPdf");
+const generateBankTransferCsv = require("../templates/hr/bankTransferCsv");
+
 // @desc    Get Salary Structure for a Staff
 // @route   GET /api/hr/payroll/structure/:user_id
 // @access  Private/Admin
@@ -81,7 +85,7 @@ exports.upsertSalaryStructure = async (req, res) => {
         allowances: allowances || {},
         deductions: deductions || {},
       },
-      { returning: true }
+      { returning: true },
     );
 
     logger.info(`Upsert successful. Created: ${created}`);
@@ -133,12 +137,12 @@ exports.generatePayslip = async (req, res) => {
       parseFloat(structure.basic_salary) +
       Object.values(structure.allowances || {}).reduce(
         (a, b) => a + getVal(b, structure.basic_salary),
-        0
+        0,
       );
 
     let totalDeductions = Object.values(structure.deductions || {}).reduce(
       (a, b) => a + getVal(b, structure.basic_salary),
-      0
+      0,
     );
 
     // TODO: Calc LOP (Loss of Pay) from Attendance if needed
@@ -173,7 +177,7 @@ exports.generatePayslip = async (req, res) => {
           breakdown,
           generated_date: new Date(),
         },
-        { transaction: t }
+        { transaction: t },
       );
     }
 
@@ -327,7 +331,7 @@ exports.bulkGeneratePayslips = async (req, res) => {
           },
         ],
       },
-      { transaction: t }
+      { transaction: t },
     );
 
     if (!structures.length) {
@@ -352,12 +356,12 @@ exports.bulkGeneratePayslips = async (req, res) => {
         parseFloat(structure.basic_salary) +
         Object.values(structure.allowances || {}).reduce(
           (a, b) => a + getVal(b, structure.basic_salary),
-          0
+          0,
         );
 
       let totalDeductions = Object.values(structure.deductions || {}).reduce(
         (a, b) => a + getVal(b, structure.basic_salary),
-        0
+        0,
       );
 
       // --- Pro-rata Calculation (For New Joinees) ---
@@ -480,7 +484,7 @@ exports.bulkGeneratePayslips = async (req, res) => {
             breakdown,
             generated_date: new Date(),
           },
-          { transaction: t }
+          { transaction: t },
         );
       }
       results.push(payslip.id);
@@ -619,7 +623,7 @@ exports.upsertSalaryGrade = async (req, res) => {
         leave_policy: leave_policy || [],
         lop_config: lop_config || { basis: "basic", deduction_factor: 1.0 },
       },
-      { returning: true }
+      { returning: true },
     );
 
     // Propagate leave policy changes to all assigned users
@@ -716,22 +720,13 @@ exports.exportBankTransferFile = async (req, res) => {
       });
     }
 
-    // Generate CSV Content
-    let csv = "Employee Name,Account Number,IFSC Code,Amount,Employee ID\n";
-    payslips.forEach((p) => {
-      const bank = p.staff.bank_details || {};
-      const accNum = decrypt(bank.account_number) || "";
-      csv += `"${p.staff.first_name} ${p.staff.last_name}",`;
-      csv += `"${accNum}",`;
-      csv += `"${bank.ifsc_code || ""}",`;
-      csv += `${p.net_salary},`;
-      csv += `"${p.staff.employee_id || ""}"\n`;
-    });
+    // Use template module to generate CSV
+    const csv = generateBankTransferCsv(payslips);
 
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=Salary_Bank_Transfer_${month}_${year}.csv`
+      `attachment; filename=Salary_Bank_Transfer_${month}_${year}.csv`,
     );
     res.status(200).send(csv);
   } catch (error) {
@@ -801,7 +796,7 @@ exports.confirmPayment = async (req, res) => {
       {
         where: { id: targetIds },
         transaction: t,
-      }
+      },
     );
 
     // Trigger Email Notifications
@@ -1014,7 +1009,7 @@ exports.publishPayslips = async (req, res) => {
       {
         where: { id: validIds },
         transaction: t,
-      }
+      },
     );
 
     await t.commit();
@@ -1074,7 +1069,7 @@ exports.downloadPayslipPdf = async (req, res) => {
     // Authorization: Own payslip or HR/Admin
     const isSelf = req.user.userId === payslip.user_id;
     const isPrivileged = ["admin", "super_admin", "hr", "hr_admin"].includes(
-      req.user.role
+      req.user.role,
     );
 
     if (!isSelf && !isPrivileged) {
@@ -1090,315 +1085,8 @@ exports.downloadPayslipPdf = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
-    doc.pipe(res);
-
-    // --- PDF Design ---
-
-    // Metrics for layout
-    const width = 595.28; // A4 Width
-    const margin = 50;
-    const contentWidth = width - margin * 2;
-
-    // 1. Header
-    doc
-      .fontSize(24)
-      .fillColor("#1a365d")
-      .font("Helvetica-Bold")
-      .text("UniPilot University", { align: "center" });
-
-    doc.moveDown(0.2);
-
-    doc
-      .fontSize(10)
-      .fillColor("#718096")
-      .font("Helvetica")
-      .text("Excellence in Education", { align: "center" });
-
-    doc.moveDown(1.5);
-
-    // Separator
-    doc
-      .moveTo(margin, doc.y)
-      .lineTo(width - margin, doc.y)
-      .strokeColor("#e2e8f0")
-      .stroke();
-
-    doc.moveDown(1.5);
-
-    // 2. Title Section
-    doc
-      .fontSize(16)
-      .fillColor("#2d3748")
-      .font("Helvetica-Bold")
-      .text(`Payslip for ${monthName}, ${payslip.year}`, {
-        align: "center",
-      });
-
-    doc.moveDown(1.5);
-
-    // 3. Employee Details Box
-    const startY = doc.y;
-    // Background for details
-    doc.rect(margin, startY, contentWidth, 85).fillColor("#f7fafc").fill();
-
-    doc.fillColor("#2d3748").font("Helvetica-Bold").fontSize(10);
-
-    // Left Column
-    const leftX = margin + 20;
-    const rightX = margin + contentWidth / 2 + 20;
-    const rowHeight = 20;
-    let currentY = startY + 15;
-
-    doc.text("Employee Name:", leftX, currentY);
-    doc
-      .font("Helvetica")
-      .text(
-        `${payslip.staff.first_name} ${payslip.staff.last_name}`,
-        leftX + 100,
-        currentY
-      );
-
-    doc.font("Helvetica-Bold").text("Employee ID:", rightX, currentY);
-    doc
-      .font("Helvetica")
-      .text(payslip.staff.employee_id || "N/A", rightX + 80, currentY);
-
-    currentY += rowHeight;
-
-    doc.font("Helvetica-Bold").text("Department:", leftX, currentY);
-    doc
-      .font("Helvetica")
-      .text(payslip.staff.department?.name || "N/A", leftX + 100, currentY);
-
-    doc.font("Helvetica-Bold").text("Designation:", rightX, currentY);
-    doc
-      .font("Helvetica")
-      .text(
-        payslip.staff.role
-          ? payslip.staff.role.charAt(0).toUpperCase() +
-              payslip.staff.role.slice(1)
-          : "Staff",
-        rightX + 80,
-        currentY
-      );
-
-    currentY += rowHeight;
-
-    doc.font("Helvetica-Bold").text("Bank:", leftX, currentY);
-    doc
-      .font("Helvetica")
-      .text(
-        payslip.staff.bank_details?.bank_name || "-",
-        leftX + 100,
-        currentY
-      );
-
-    doc.font("Helvetica-Bold").text("Account No:", rightX, currentY);
-    doc
-      .font("Helvetica")
-      .text(
-        payslip.staff.bank_details?.account_number
-          ? `****${String(decrypt(payslip.staff.bank_details.account_number)).slice(-4)}`
-          : "-",
-        rightX + 80,
-        currentY
-      );
-
-    doc.moveDown(4);
-
-    // 4. Tables (Earnings & Deductions)
-
-    // Y position for tables
-    const tableTop = doc.y;
-    const colWidth = contentWidth / 2 - 10;
-
-    // -- Earnings Table --
-    doc
-      .fillColor("#1a365d")
-      .font("Helvetica-Bold")
-      .fontSize(12)
-      .text("Earnings", margin, tableTop);
-
-    // Header Line
-    doc
-      .moveTo(margin, tableTop + 20)
-      .lineTo(margin + colWidth, tableTop + 20)
-      .strokeColor("#4299e1")
-      .lineWidth(2)
-      .stroke();
-
-    let earnY = tableTop + 30;
-
-    // Basic
-    doc
-      .fillColor("#4a5568")
-      .font("Helvetica")
-      .fontSize(10)
-      .text("Basic Salary", margin, earnY);
-    doc
-      .font("Helvetica-Bold")
-      .text(
-        `Rs. ${Number(payslip.breakdown?.basic || 0).toLocaleString()}`,
-        margin + colWidth - 80,
-        earnY,
-        { align: "right", width: 80 }
-      );
-    earnY += 20;
-
-    // Allowances
-    if (payslip.breakdown?.allowances) {
-      Object.entries(payslip.breakdown.allowances).forEach(([key, val]) => {
-        const valObj = typeof val === "object" ? val : { value: val };
-        const displayVal = valObj.value; // For now assuming pre-calculated or raw
-        // Wait, breakdown stores config. We need calculated values ideally.
-        // For simpler MVP, we rely on totalEarnings if breakdown isn't granular with values.
-        // Actually, let's assume specific allowances are stored or we just show "Allowances Total" for MVP simplicity
-        // OR better: iterate keys.
-        doc.font("Helvetica").text(key, margin, earnY);
-        // Calculating value roughly if percentage (complex).
-        // Strategy: Since valid breakdown with calculated amounts isn't always stored, we list names.
-        // BUT wait, a professional payslip needs values.
-        // Let's use a workaround: If total earnings > basic, show "Other Allowances" line
-      });
-      // Correct approach for this MVP data model:
-      // Show "Allowances" as a single aggregate or parsed if possible.
-      // Let's simplified itemized:
-      doc.font("Helvetica").text("Total Allowances", margin, earnY);
-      doc
-        .font("Helvetica-Bold")
-        .text(
-          `Rs. ${(Number(payslip.total_earnings) - Number(payslip.breakdown?.basic || 0)).toLocaleString()}`,
-          margin + colWidth - 80,
-          earnY,
-          { align: "right", width: 80 }
-        );
-      earnY += 20;
-    }
-
-    doc
-      .moveTo(margin, earnY + 5)
-      .lineTo(margin + colWidth, earnY + 5)
-      .lineWidth(1)
-      .strokeColor("#e2e8f0")
-      .stroke();
-    earnY += 15;
-
-    doc
-      .fillColor("#2d3748")
-      .font("Helvetica-Bold")
-      .text("Total Earnings", margin, earnY);
-    doc.text(
-      `Rs. ${Number(payslip.total_earnings).toLocaleString()}`,
-      margin + colWidth - 80,
-      earnY,
-      { align: "right", width: 80 }
-    );
-
-    // -- Deductions Table --
-    doc
-      .fillColor("#1a365d")
-      .font("Helvetica-Bold")
-      .fontSize(12)
-      .text("Deductions", margin + colWidth + 20, tableTop);
-    doc
-      .moveTo(margin + colWidth + 20, tableTop + 20)
-      .lineTo(margin + colWidth + 20 + colWidth, tableTop + 20)
-      .strokeColor("#4299e1")
-      .lineWidth(2)
-      .stroke();
-
-    let dedY = tableTop + 30;
-
-    // Deductions items
-    doc
-      .fillColor("#4a5568")
-      .font("Helvetica")
-      .fontSize(10)
-      .text("Total Deductions", margin + colWidth + 20, dedY);
-    doc
-      .font("Helvetica-Bold")
-      .text(
-        `Rs. ${Number(payslip.total_deductions).toLocaleString()}`,
-        margin + colWidth + 20 + colWidth - 80,
-        dedY,
-        { align: "right", width: 80 }
-      );
-    dedY += 20;
-
-    // ... Deductions Itemized logic (similar simplified approach for MVP) ...
-
-    doc
-      .moveTo(margin + colWidth + 20, dedY + 25)
-      .lineTo(margin + colWidth + 20 + colWidth, dedY + 25)
-      .lineWidth(1)
-      .strokeColor("#e2e8f0")
-      .stroke();
-    dedY += 35;
-
-    doc
-      .fillColor("#2d3748")
-      .font("Helvetica-Bold")
-      .text("Total Deductions", margin + colWidth + 20, dedY);
-    doc.text(
-      `Rs. ${Number(payslip.total_deductions).toLocaleString()}`,
-      margin + colWidth + 20 + colWidth - 80,
-      dedY,
-      { align: "right", width: 80 }
-    );
-
-    // 5. Net Pay (Highlighted)
-    const maxY = Math.max(earnY, dedY) + 50;
-
-    doc.rect(margin, maxY, contentWidth, 40).fillColor("#edf2f7").fill();
-    doc
-      .moveTo(margin, maxY)
-      .lineTo(margin + contentWidth, maxY)
-      .strokeColor("#4299e1")
-      .lineWidth(2)
-      .stroke();
-
-    doc
-      .fillColor("#1a365d")
-      .fontSize(14)
-      .font("Helvetica-Bold")
-      .text("NET SALARY PAYABLE", margin + 20, maxY + 13);
-
-    doc
-      .fillColor("#2d3748")
-      .fontSize(16)
-      .font("Helvetica-Bold")
-      .text(
-        `Rs. ${Number(payslip.net_salary).toLocaleString()}`,
-        width - margin - 150,
-        maxY + 12,
-        { align: "right", width: 130 }
-      );
-
-    // 6. Footer
-    const footerY = maxY + 100;
-
-    doc
-      .fontSize(10)
-      .fillColor("#718096")
-      .font("Helvetica-Oblique")
-      .text(
-        "This is a system generated payslip and does not require a signature.",
-        margin,
-        footerY,
-        { align: "center" }
-      );
-
-    doc
-      .fontSize(8)
-      .text(
-        `Generated on: ${new Date().toLocaleDateString()}`,
-        margin,
-        footerY + 15,
-        { align: "center" }
-      );
-
-    doc.end();
+    // Use template module to generate PDF
+    await generatePayslipPdf(payslip, payslip.staff, res);
   } catch (error) {
     console.error("Error generating PDF:", error);
     if (!res.headersSent) {
