@@ -52,6 +52,19 @@ import VehicleManagement from "./pages/transport/VehicleManagement";
 import DriverManagement from "./pages/transport/DriverManagement";
 import StudentAllocation from "./pages/transport/StudentAllocation";
 import TripManagement from "./pages/transport/TripManagement";
+// Hostel Management
+import HostelDashboard from "./pages/hostel/HostelDashboard";
+import BuildingManagement from "./pages/hostel/BuildingManagement";
+import RoomManagement from "./pages/hostel/RoomManagement";
+import StudentHostelDashboard from "./pages/hostel/StudentHostelDashboard";
+import HostelStudentAllocation from "./pages/hostel/StudentAllocation";
+import HostelFeeManagement from "./pages/hostel/HostelFeeManagement";
+import HostelComplaints from "./pages/hostel/HostelComplaints";
+import HostelAttendance from "./pages/hostel/HostelAttendance";
+import HostelReports from "./pages/hostel/HostelReports";
+import GatePassManagement from "./pages/hostel/GatePassManagement";
+import HostelFines from "./pages/hostel/HostelFines";
+import HostelRoomBills from "./pages/hostel/HostelRoomBills";
 import MainLayout from "./components/layout/MainLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
@@ -165,6 +178,24 @@ function App() {
             element={<StudentAllocation />}
           />
           <Route path="/transport/trips" element={<TripManagement />} />
+
+          {/* Hostel Management */}
+          <Route path="/hostel" element={<HostelDashboard />} />
+          <Route path="/hostel/student" element={<StudentHostelDashboard />} />
+          <Route path="/hostel/buildings" element={<BuildingManagement />} />
+          <Route path="/hostel/rooms" element={<RoomManagement />} />
+          <Route
+            path="/hostel/allocations"
+            element={<HostelStudentAllocation />}
+          />
+          <Route path="/hostel/fees" element={<HostelFeeManagement />} />
+          <Route path="/hostel/complaints" element={<HostelComplaints />} />
+          <Route path="/hostel/attendance" element={<HostelAttendance />} />
+          <Route path="/hostel/gate-pass" element={<GatePassManagement />} />
+          <Route path="/hostel/fines" element={<HostelFines />} />
+          <Route path="/hostel/room-bills" element={<HostelRoomBills />} />
+          <Route path="/hostel/reports" element={<HostelReports />} />
+
           {/* Add more transport sub-routes here */}
 
           <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />

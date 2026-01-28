@@ -24,7 +24,7 @@ const Attendance = sequelize.define(
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM("present", "absent", "late", "excused"),
+      type: DataTypes.ENUM("present", "absent", "late", "excused", "on_leave"),
       defaultValue: "present",
       allowNull: false,
     },

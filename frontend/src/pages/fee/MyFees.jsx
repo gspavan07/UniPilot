@@ -108,8 +108,25 @@ const MyFees = () => {
               amount: amount,
             });
           } else {
-            // Regular fee
-            paymentBatch.push({ structure_id: feeId, amount: amount });
+            // Find the fee object to determine if it's a charge or structure
+            let feeType = "structure";
+            let found = false;
+
+            // Search in all semesters
+            Object.entries(semesterWise).forEach(([sem, semData]) => {
+              if (found) return;
+              const feeObj = semData.fees.find((f) => f.id === feeId);
+              if (feeObj) {
+                if (feeObj.is_charge) feeType = "charge";
+                found = true;
+                paymentBatch.push({
+                  type: feeType,
+                  structure_id: feeId,
+                  semester: parseInt(sem),
+                  amount: amount,
+                });
+              }
+            });
           }
         }
       });

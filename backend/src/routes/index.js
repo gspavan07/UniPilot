@@ -21,6 +21,7 @@ const infrastructureRoutes = require("./infrastructure"); // Infrastructure Mana
 const regulationRoutes = require("./regulations");
 const sectionInchargeRoutes = require("./sectionInchargeRoutes");
 const transportRoutes = require("./transport"); // Transport Management
+const hostelRoutes = require("./hostel"); // Hostel Management
 
 const router = express.Router();
 
@@ -58,5 +59,6 @@ router.use("/infrastructure", infrastructureRoutes);
 router.use("/regulations", regulationRoutes);
 router.use("/section-incharges", sectionInchargeRoutes);
 router.use("/transport", transportRoutes);
+router.use("/hostel", hostelRoutes);
 
 module.exports = router;

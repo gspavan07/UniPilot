@@ -4,6 +4,7 @@ const {
   FeePayment,
   FeeWaiver,
   FeeSemesterConfig,
+  StudentFeeCharge,
   User,
   Program,
   Department,
@@ -222,6 +223,33 @@ exports.collectPayment = async (req, res) => {
       const p = payments[i];
       let amountRemaining = p.amount;
 
+      // Robust Type Detection: Check if ID exists in FeeStructure if type is ambiguous
+      let resolvedType = p.type;
+      let targetStructureId = p.structure_id;
+
+      // If assumed structure but ID might be charge
+      if (
+        (!resolvedType || resolvedType === "structure") &&
+        targetStructureId &&
+        !targetStructureId.toString().startsWith("fine")
+      ) {
+        // Optimization: If calculateFeeStatus ran, we might check there, but a DB check is safer against stale data
+        const structExists = await FeeStructure.count({
+          where: { id: targetStructureId },
+        });
+        if (!structExists) {
+          resolvedType = "charge";
+        } else {
+          resolvedType = "structure";
+        }
+      } else if (
+        p.type === "fine" ||
+        (p.structure_id && p.structure_id.toString().startsWith("fine"))
+      ) {
+        resolvedType = "fine";
+        targetStructureId = null; // Fines (ad-hoc) don't link to structure table usually, or use semester
+      }
+
       // 1. Consume Wallet Credit first
       if (walletCredit > 0) {
         const canDeduct = Math.min(walletCredit, amountRemaining);
@@ -229,14 +257,18 @@ exports.collectPayment = async (req, res) => {
           const wPayment = await FeePayment.create(
             {
               student_id,
-              fee_structure_id: p.type === "fine" ? null : p.structure_id,
-              semester: p.semester || (p.type === "fine" ? p.semester : null),
+              fee_structure_id:
+                resolvedType === "structure" ? targetStructureId : null,
+              fee_charge_id:
+                resolvedType === "charge" ? targetStructureId : null,
+              semester:
+                p.semester || (resolvedType === "fine" ? p.semester : null),
               amount_paid: canDeduct,
               payment_method: "WALLET",
-              transaction_id: `WAL-${Date.now()}-${i}`, // Simple wallet ID
+              transaction_id: `WAL-${Date.now()}-${i}`,
               receipt_url,
               payment_date: payment_date || new Date(),
-              remarks: `Paid from Wallet: ${p.type === "fine" ? "Fine" : "Fee"}`,
+              remarks: `Paid from Wallet: ${resolvedType === "fine" ? "Fine" : "Fee"}`,
               status: "completed",
             },
             { transaction },
@@ -252,15 +284,18 @@ exports.collectPayment = async (req, res) => {
         const payment = await FeePayment.create(
           {
             student_id,
-            fee_structure_id: p.type === "fine" ? null : p.structure_id,
-            semester: p.semester || (p.type === "fine" ? p.semester : null),
+            fee_structure_id:
+              resolvedType === "structure" ? targetStructureId : null,
+            fee_charge_id: resolvedType === "charge" ? targetStructureId : null,
+            semester:
+              p.semester || (resolvedType === "fine" ? p.semester : null),
             amount_paid: amountRemaining,
             payment_method: payment_method || "cash",
             transaction_id,
             receipt_url,
             payment_date: payment_date || new Date(),
             remarks:
-              p.type === "fine"
+              resolvedType === "fine"
                 ? `Late Fine for Semester ${p.semester}`
                 : remarks,
             status: "completed",
@@ -305,6 +340,11 @@ exports.collectPayment = async (req, res) => {
           as: "fee_structure",
           include: [{ model: FeeCategory, as: "category" }],
         },
+        {
+          model: StudentFeeCharge,
+          as: "student_fee_charge",
+          include: [{ model: FeeCategory, as: "category" }],
+        },
       ],
     });
     return res.status(201).json({ success: true, data: hydratedPayments });
@@ -344,7 +384,12 @@ exports.payMyFees = async (req, res) => {
           const wPayment = await FeePayment.create(
             {
               student_id,
-              fee_structure_id: p.type === "fine" ? null : p.structure_id,
+              fee_structure_id:
+                p.type === "structure" || !p.type ? p.structure_id : null,
+              fee_charge_id:
+                p.type === "charge" || p.type === "fine"
+                  ? p.structure_id
+                  : null,
               semester: p.semester || (p.type === "fine" ? p.semester : null),
               amount_paid: canDeduct,
               payment_method: "WALLET",
@@ -367,7 +412,10 @@ exports.payMyFees = async (req, res) => {
         const payment = await FeePayment.create(
           {
             student_id,
-            fee_structure_id: p.type === "fine" ? null : p.structure_id,
+            fee_structure_id:
+              p.type === "structure" || !p.type ? p.structure_id : null,
+            fee_charge_id:
+              p.type === "charge" || p.type === "fine" ? p.structure_id : null,
             semester: p.semester || (p.type === "fine" ? p.semester : null),
             amount_paid: amountRemaining,
             payment_method: payment_method || "online", // Default to online for students
@@ -444,30 +492,32 @@ const calculateFeeStatus = async (studentId) => {
   const { program_id, batch_year, is_hosteller, requires_transport } = student;
   const effectiveBatchYear = batch_year || new Date().getFullYear();
 
-  const [structures, payments, semesterConfigs, waivers] = await Promise.all([
-    FeeStructure.findAll({
-      where: {
-        program_id,
-        batch_year: effectiveBatchYear,
-        is_active: true,
-        [Op.or]: [
-          { student_id: null }, // General batch fees
-          { student_id: studentId }, // Specific student fines/fees
-        ],
-      },
-      include: [{ model: FeeCategory, as: "category" }],
-      order: [["semester", "ASC"]],
-    }),
-    FeePayment.findAll({
-      where: { student_id: studentId, status: "completed" },
-    }),
-    FeeSemesterConfig.findAll({
-      where: { program_id, batch_year: effectiveBatchYear },
-    }),
-    FeeWaiver.findAll({
-      where: { student_id: studentId, is_approved: true, is_active: true },
-    }),
-  ]);
+  const [structures, payments, semesterConfigs, waivers, individualCharges] =
+    await Promise.all([
+      FeeStructure.findAll({
+        where: {
+          program_id,
+          batch_year: effectiveBatchYear,
+          is_active: true,
+          student_id: null, // Only return templates here
+        },
+        include: [{ model: FeeCategory, as: "category" }],
+        order: [["semester", "ASC"]],
+      }),
+      FeePayment.findAll({
+        where: { student_id: studentId, status: "completed" },
+      }),
+      FeeSemesterConfig.findAll({
+        where: { program_id, batch_year: effectiveBatchYear },
+      }),
+      FeeWaiver.findAll({
+        where: { student_id: studentId, is_approved: true, is_active: true },
+      }),
+      StudentFeeCharge.findAll({
+        where: { student_id: studentId },
+        include: [{ model: FeeCategory, as: "category" }],
+      }),
+    ]);
 
   const configMap = {};
   semesterConfigs.forEach((c) => (configMap[c.semester] = c));
@@ -601,6 +651,59 @@ const calculateFeeStatus = async (studentId) => {
     grandTotals.excessBalance += excess; // Cumulative Credit Balance
   });
 
+  // Process Individual Charges
+  individualCharges.forEach((c) => {
+    const chargePayments = payments.filter((p) => p.fee_charge_id === c.id);
+    const paid = chargePayments.reduce(
+      (sum, p) => sum + parseFloat(p.amount_paid),
+      0,
+    );
+    const payable = parseFloat(c.amount);
+    const due = Math.max(0, payable - paid);
+    const excess = Math.max(0, paid - payable);
+
+    const sem = c.semester || 1;
+    if (!semesterWise[sem]) {
+      // Ensure semester exists if it's outside 1-8
+      semesterWise[sem] = {
+        fees: [],
+        totals: { payable: 0, paid: 0, due: 0, waiver: 0, excess: 0 },
+        fine: {
+          amount: 0,
+          paid: 0,
+          due: 0,
+          isOverdue: false,
+          deadline: null,
+        },
+      };
+    }
+
+    semesterWise[sem].fees.push({
+      id: c.id,
+      is_charge: true,
+      charge_type: c.charge_type,
+      category: c.category?.name || "Individual Charge",
+      category_id: c.category_id,
+      payable,
+      paid,
+      waiver: 0, // Individual charges don't usually have waivers in this flow
+      due,
+      excess,
+      description: c.description,
+      receipts: chargePayments.map((p) => ({
+        number: p.transaction_id,
+        date: p.payment_date,
+        amount: p.amount_paid,
+        method: p.payment_method,
+      })),
+    });
+
+    semesterWise[sem].totals.payable += payable;
+    semesterWise[sem].totals.paid += paid;
+    semesterWise[sem].totals.due += due;
+    semesterWise[sem].totals.excess += excess;
+  });
+
   Object.keys(semesterWise).forEach((sem) => {
     const data = semesterWise[sem];
     const config = configMap[sem];
@@ -629,6 +732,17 @@ const calculateFeeStatus = async (studentId) => {
     grandTotals.paid += data.totals.paid;
     grandTotals.due += data.totals.due;
   });
+
+  // Fix: Deduct amount used from Wallet (internal payments) from the calculated Excess Balance
+  // Otherwise, the original excess remains "available" even after being used.
+  const totalWalletUsage = payments
+    .filter((p) => p.payment_method === "WALLET")
+    .reduce((sum, p) => sum + parseFloat(p.amount_paid), 0);
+
+  grandTotals.excessBalance = Math.max(
+    0,
+    grandTotals.excessBalance - totalWalletUsage,
+  );
 
   return {
     semesterWise,
@@ -824,6 +938,11 @@ exports.getTransactions = async (req, res) => {
           as: "fee_structure",
           include: [{ model: FeeCategory, as: "category" }],
         },
+        {
+          model: StudentFeeCharge,
+          as: "student_fee_charge",
+          include: [{ model: FeeCategory, as: "category" }],
+        },
       ],
       order: [["payment_date", "DESC"]],
       limit: parseInt(limit),
@@ -907,7 +1026,7 @@ exports.applyWaiver = async (req, res) => {
       waiver_type,
       amount: amount || 0,
       is_approved: is_approved || false,
-      approved_by: is_approved ? req.user.id : null,
+      approved_by: is_approved ? req.user.userId || req.user.id : null,
       approved_at: is_approved ? new Date() : null,
       applies_to: applies_to || "one_time",
       semester: semester || null,
@@ -962,7 +1081,7 @@ exports.approveWaiver = async (req, res) => {
 
     await waiver.update({
       is_approved: true,
-      approved_by: req.user.id,
+      approved_by: req.user.userId || req.user.id,
       approved_at: new Date(),
     });
 
@@ -1166,7 +1285,7 @@ exports.finalizeScholarshipImport = async (req, res) => {
         waiver_type: r.waiver_type,
         amount: r.amount,
         is_approved: true,
-        approved_by: req.user.id,
+        approved_by: req.user.userId || req.user.id,
         approved_at: new Date(),
         // New advanced fields
         applies_to: r.applies_to || "one_time",
@@ -1640,19 +1759,18 @@ exports.addStudentFine = async (req, res) => {
     const student = await User.findByPk(student_id);
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    const structure = await FeeStructure.create({
+    const charge = await StudentFeeCharge.create({
       student_id,
-      program_id: student.program_id,
-      batch_year: student.batch_year, // Tie to their batch
-      semester: semester || student.current_semester || 1,
       category_id,
+      charge_type: "fine", // or other if needed
       amount,
-      is_optional: false,
-      applies_to: "all",
-      is_active: true,
+      description: remarks || "Individual Fine Imposed",
+      semester: semester || student.current_semester || 1,
+      is_paid: false,
+      created_by: req.user.userId || req.user.id,
     });
 
-    res.status(201).json({ success: true, data: structure });
+    res.status(201).json({ success: true, data: charge });
   } catch (error) {
     logger.error("Error imposing fine:", error);
     res.status(500).json({ error: "Failed to impose fine" });
@@ -1731,6 +1849,11 @@ exports.getDailyCollection = async (req, res) => {
         {
           model: FeeStructure,
           as: "fee_structure",
+          include: [{ model: FeeCategory, as: "category" }],
+        },
+        {
+          model: StudentFeeCharge,
+          as: "student_fee_charge",
           include: [{ model: FeeCategory, as: "category" }],
         },
       ],

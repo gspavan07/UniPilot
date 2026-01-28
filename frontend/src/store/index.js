@@ -16,6 +16,7 @@ import hrReducer from "./slices/hrSlice";
 import infrastructureReducer from "./slices/infrastructureSlice";
 import regulationReducer from "./slices/regulationSlice";
 import transportReducer from "./slices/transportSlice";
+import hostelReducer from "./slices/hostelSlice";
 
 export const store = configureStore({
   reducer: {
@@ -36,6 +37,7 @@ export const store = configureStore({
     infrastructure: infrastructureReducer,
     regulations: regulationReducer,
     transport: transportReducer,
+    hostel: hostelReducer,
   },
 });
 

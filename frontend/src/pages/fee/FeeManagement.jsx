@@ -614,6 +614,7 @@ const FeeManagement = () => {
         data.fees.forEach((f) => {
           if (selectedCounterFees.has(f.id)) {
             paymentBatch.push({
+              type: f.is_charge ? "charge" : "structure",
               structure_id: f.id,
               amount: counterCustomAmounts[f.id] || f.due,
               semester: parseInt(sem),
@@ -2272,6 +2273,7 @@ const FeeManagement = () => {
                     `${t.student?.first_name} ${t.student?.last_name}`,
                     t.payment_method,
                     t.fee_structure?.category?.name ||
+                      t.student_fee_charge?.category?.name ||
                       (t.semester ? "LATE PAYMENT FINE" : "AD-HOC PENALTY"),
                     t.semester || t.fee_structure?.semester || "N/A",
                     t.amount_paid,
@@ -2334,6 +2336,7 @@ const FeeManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-xs font-bold text-gray-600 dark:text-gray-300">
                       {t.fee_structure?.category?.name ||
+                        t.student_fee_charge?.category?.name ||
                         (t.semester && !t.fee_structure_id
                           ? "LATE PAYMENT FINE"
                           : "AD-HOC PAYMENT")}

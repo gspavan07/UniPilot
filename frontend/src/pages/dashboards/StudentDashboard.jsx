@@ -8,6 +8,8 @@ import {
   AlertCircle,
   TrendingUp,
   Award,
+  Shield,
+  Ticket,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { fetchMyFeeStatus } from "../../store/slices/feeSlice";
@@ -262,6 +264,32 @@ const StudentDashboard = () => {
             >
               View All Results
             </Link>
+          </div>
+
+          {/* Hostel Quick Action */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-cyan-500" /> Hostel
+                Services
+              </h3>
+            </div>
+            <div className="space-y-3">
+              <Link
+                to="/hostel/gate-pass"
+                className="flex items-center p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 hover:bg-cyan-100 transition-colors"
+              >
+                <Ticket className="w-5 h-5 mr-3" />
+                <span className="text-sm font-bold">Request Gate Pass</span>
+              </Link>
+              <Link
+                to="/hostel/complaints"
+                className="flex items-center p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 hover:bg-orange-100 transition-colors"
+              >
+                <AlertCircle className="w-5 h-5 mr-3" />
+                <span className="text-sm font-bold">Hostel Complaint</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

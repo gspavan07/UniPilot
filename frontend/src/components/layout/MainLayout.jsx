@@ -37,6 +37,7 @@ import {
   Briefcase,
   Building,
   Bus,
+  Home,
 } from "lucide-react";
 
 const MainLayout = () => {
@@ -180,6 +181,12 @@ const MainLayout = () => {
       permission: "academics:sections:manage",
     },
     {
+      name: "Reports",
+      href: "/hostel/reports",
+      icon: FileText,
+      permission: "hostel:read",
+    },
+    {
       name: "Attendance",
       href: "/attendance",
       icon: ClipboardCheck,
@@ -255,8 +262,15 @@ const MainLayout = () => {
       name: "Transport",
       href: "/transport",
       icon: Bus,
-      roles: ["super_admin", "admin"],
+
       permission: ["transport:read", "transport:write", "transport:admin"],
+      roles: ["super_admin"],
+    },
+    {
+      name: "Hostel",
+      href: "/hostel",
+      icon: Building,
+      permission: "hostel:read",
     },
     {
       name: "Library",
@@ -268,6 +282,12 @@ const MainLayout = () => {
       name: "My Library",
       href: "/my-library",
       icon: BookOpen,
+      roles: ["student"],
+    },
+    {
+      name: "My Hostel",
+      href: "/hostel/student",
+      icon: Home,
       roles: ["student"],
     },
     {
@@ -294,7 +314,7 @@ const MainLayout = () => {
   // Logic to filter navigation based STRICTLY on user permissions
   const filteredNavigation = navigation.filter((item) => {
     // 1. Super Admin Bypass
-    if (user?.role === "super_admin") return true;
+    // if (user?.role === "super_admin") return true;
 
     // 2. Role Check (Optional)
     if (item.roles && Array.isArray(item.roles)) {

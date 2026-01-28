@@ -63,7 +63,16 @@ const StudentRouteAllocation = sequelize.define(
         model: "fee_structures",
         key: "id",
       },
-      comment: "Linked fee structure entry for transport fee",
+      comment: "Legacy: Linked fee structure entry",
+    },
+    fee_charge_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "student_fee_charges",
+        key: "id",
+      },
+      comment: "Linked student fee charge entry",
     },
     remarks: {
       type: DataTypes.TEXT,

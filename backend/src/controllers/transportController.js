@@ -13,6 +13,7 @@ const {
   User,
   FeeStructure,
   FeeCategory,
+  StudentFeeCharge,
   Department,
   Program,
 } = require("../models");
@@ -520,18 +521,19 @@ exports.createAllocation = async (req, res) => {
       transaction,
     });
 
-    // Create fee structure entry for transport
-    const feeStructure = await FeeStructure.create(
+    // Create individual fee charge for transport
+    const feeCharge = await StudentFeeCharge.create(
       {
-        category_id: transportCategory.id,
-        program_id: student.program_id,
-        batch_year: student.batch_year,
-        semester: semester,
-        amount: stop.zone_fee,
-        is_optional: true,
-        applies_to: "day_scholars",
         student_id: student_id,
-        is_active: true,
+        category_id: transportCategory.id,
+        charge_type: "transport_fee",
+        amount: stop.zone_fee,
+        description: `Transport Fee: ${stop.name} (${stop.pickup_time})`,
+        reference_id: null, // Will update after allocation
+        reference_type: "transport_allocation",
+        semester: semester,
+        is_paid: false,
+        created_by: req.user.userId || req.user.id,
       },
       { transaction },
     );
@@ -543,11 +545,14 @@ exports.createAllocation = async (req, res) => {
         route_id,
         stop_id,
         semester,
-        fee_structure_id: feeStructure.id,
+        fee_charge_id: feeCharge.id,
         status: "active",
       },
       { transaction },
     );
+
+    // Update fee charge with reference_id
+    await feeCharge.update({ reference_id: allocation.id }, { transaction });
 
     // Update student's requires_transport flag
     await student.update({ requires_transport: true }, { transaction });
@@ -727,50 +732,49 @@ exports.syncSemesterFees = async (req, res) => {
 
     for (const alloc of activeAllocations) {
       // Check if fee structure already exists for this student, category, year, and semester
-      const existingFee = await FeeStructure.findOne({
+      const existingCharge = await StudentFeeCharge.findOne({
         where: {
           category_id: transportCategory.id,
           student_id: alloc.student_id,
-          batch_year: batch_year,
           semester: semester,
         },
         transaction,
       });
 
-      if (existingFee) {
+      if (existingCharge) {
         // Update price to current stop price
         if (
-          parseFloat(existingFee.amount) !== parseFloat(alloc.stop.zone_fee)
+          parseFloat(existingCharge.amount) !== parseFloat(alloc.stop.zone_fee)
         ) {
-          await existingFee.update(
+          await existingCharge.update(
             {
               amount: alloc.stop.zone_fee,
-              is_active: true,
             },
             { transaction },
           );
           updatedCount++;
         }
       } else {
-        // Create new fee entry
-        const newFee = await FeeStructure.create(
+        // Create new fee charge entry
+        const newCharge = await StudentFeeCharge.create(
           {
-            category_id: transportCategory.id,
-            program_id: alloc.student.program_id,
-            batch_year: batch_year,
-            semester: semester,
-            amount: alloc.stop.zone_fee,
-            is_optional: true,
-            applies_to: "day_scholars",
             student_id: alloc.student_id,
-            is_active: true,
+            category_id: transportCategory.id,
+            charge_type: "transport_fee",
+            amount: alloc.stop.zone_fee,
+            description: `Transport Fee Sync: ${alloc.stop.name}`,
+            reference_id: alloc.id,
+            reference_type: "transport_allocation",
+            semester: semester,
+            is_paid: false,
+            created_by: req.user.userId || req.user.id,
           },
           { transaction },
         );
 
-        // Update allocation with the latest fee structure if it matches the target semester
+        // Update allocation with the latest fee charge if it matches the target semester
         if (parseInt(alloc.semester) === parseInt(semester)) {
-          await alloc.update({ fee_structure_id: newFee.id }, { transaction });
+          await alloc.update({ fee_charge_id: newCharge.id }, { transaction });
         }
         createdCount++;
       }

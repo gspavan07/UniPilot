@@ -157,7 +157,7 @@ export const printReceipt = (transaction, items = []) => {
                 (item) => `
               <tr>
                 <td>
-                  <div style="font-weight: bold">${item.fee_structure?.category?.name || (item.semester && !item.fee_structure_id ? "Late Payment Fine" : "Ad-hoc Payment")}</div>
+                  <div style="font-weight: bold">${item.fee_structure?.category?.name || item.student_fee_charge?.category?.name || (item.semester && !item.fee_structure_id ? "Late Payment Fine" : "Ad-hoc Payment")}</div>
                   <div style="font-size: 10px; color: #666; margin-top: 2px;">${item.remarks || "Regular collection"}</div>
                 </td>
                 <td style="text-align: center; color: #666;">

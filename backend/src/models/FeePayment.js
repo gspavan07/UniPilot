@@ -19,6 +19,11 @@ const FeePayment = sequelize.define(
       allowNull: true,
       references: { model: "fee_structures", key: "id" },
     },
+    fee_charge_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "student_fee_charges", key: "id" },
+    },
     semester: {
       type: DataTypes.INTEGER,
       allowNull: true,

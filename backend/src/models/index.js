@@ -27,6 +27,7 @@ const FeeCategory = require("./FeeCategory");
 const FeeStructure = require("./FeeStructure");
 const FeePayment = require("./FeePayment");
 const FeeWaiver = require("./FeeWaiver");
+const StudentFeeCharge = require("./StudentFeeCharge");
 const Book = require("./Book");
 const BookIssue = require("./BookIssue");
 const Timetable = require("./Timetable");
@@ -56,6 +57,23 @@ const StudentRouteAllocation = require("./StudentRouteAllocation");
 const SpecialTrip = require("./SpecialTrip");
 const TripLog = require("./TripLog");
 
+// Hostel Management Models
+const HostelBuilding = require("./HostelBuilding");
+const HostelFloor = require("./HostelFloor");
+const HostelRoom = require("./HostelRoom");
+const HostelBed = require("./HostelBed");
+const HostelAllocation = require("./HostelAllocation");
+const HostelFeeStructure = require("./HostelFeeStructure");
+const HostelMessFeeStructure = require("./HostelMessFeeStructure");
+const HostelComplaint = require("./HostelComplaint");
+const HostelAttendance = require("./HostelAttendance");
+const HostelGatePass = require("./HostelGatePass");
+const HostelVisitor = require("./HostelVisitor");
+const HostelStayLog = require("./HostelStayLog");
+const HostelFine = require("./HostelFine");
+const HostelRoomBill = require("./HostelRoomBill");
+const HostelRoomBillDistribution = require("./HostelRoomBillDistribution");
+
 const models = {
   User,
   Department,
@@ -82,6 +100,7 @@ const models = {
   FeeStructure,
   FeePayment,
   FeeWaiver,
+  StudentFeeCharge,
   Book,
   BookIssue,
   Timetable,
@@ -111,6 +130,23 @@ const models = {
   StudentRouteAllocation,
   SpecialTrip,
   TripLog,
+
+  // Hostel Management Models
+  HostelBuilding,
+  HostelFloor,
+  HostelRoom,
+  HostelBed,
+  HostelAllocation,
+  HostelFeeStructure,
+  HostelMessFeeStructure,
+  HostelComplaint,
+  HostelAttendance,
+  HostelGatePass,
+  HostelVisitor,
+  HostelStayLog,
+  HostelFine,
+  HostelRoomBill,
+  HostelRoomBillDistribution,
 };
 
 // Define associations
@@ -422,6 +458,26 @@ FeeStructure.hasMany(FeePayment, {
   foreignKey: "fee_structure_id",
 });
 
+FeePayment.belongsTo(StudentFeeCharge, {
+  as: "student_fee_charge",
+  foreignKey: "fee_charge_id",
+});
+StudentFeeCharge.hasMany(FeePayment, {
+  as: "payments",
+  foreignKey: "fee_charge_id",
+});
+
+StudentFeeCharge.belongsTo(User, { as: "student", foreignKey: "student_id" });
+StudentFeeCharge.belongsTo(FeeCategory, {
+  as: "category",
+  foreignKey: "category_id",
+});
+User.hasMany(StudentFeeCharge, { as: "fee_charges", foreignKey: "student_id" });
+FeeCategory.hasMany(StudentFeeCharge, {
+  as: "fee_charges",
+  foreignKey: "category_id",
+});
+
 FeeWaiver.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(FeeWaiver, { as: "waivers", foreignKey: "student_id" });
 
@@ -616,6 +672,13 @@ if (models.FeeStructure && models.StudentRouteAllocation) {
   });
 }
 
+if (models.StudentFeeCharge && models.StudentRouteAllocation) {
+  StudentRouteAllocation.belongsTo(StudentFeeCharge, {
+    foreignKey: "fee_charge_id",
+    as: "fee_charge",
+  });
+}
+
 if (models.Vehicle && models.SpecialTrip) {
   Vehicle.hasMany(SpecialTrip, {
     foreignKey: "vehicle_id",
@@ -651,6 +714,220 @@ if (models.TransportDriver && models.TripLog) {
 
 if (models.User && models.TripLog) {
   TripLog.belongsTo(User, { foreignKey: "logged_by", as: "logger" });
+}
+
+// ============================================
+// HOSTEL MANAGEMENT ASSOCIATIONS
+// ============================================
+
+// HostelBuilding -> HostelFloor
+if (models.HostelBuilding && models.HostelFloor) {
+  HostelBuilding.hasMany(HostelFloor, {
+    foreignKey: "building_id",
+    as: "floors",
+  });
+  HostelFloor.belongsTo(HostelBuilding, {
+    foreignKey: "building_id",
+    as: "building",
+  });
+}
+
+// HostelBuilding -> HostelRoom
+if (models.HostelBuilding && models.HostelRoom) {
+  HostelBuilding.hasMany(HostelRoom, {
+    foreignKey: "building_id",
+    as: "rooms",
+  });
+  HostelRoom.belongsTo(HostelBuilding, {
+    foreignKey: "building_id",
+    as: "building",
+  });
+}
+
+// HostelFloor -> HostelRoom
+if (models.HostelFloor && models.HostelRoom) {
+  HostelFloor.hasMany(HostelRoom, { foreignKey: "floor_id", as: "rooms" });
+  HostelRoom.belongsTo(HostelFloor, { foreignKey: "floor_id", as: "floor" });
+}
+
+// HostelRoom -> HostelBed
+if (models.HostelRoom && models.HostelBed) {
+  HostelRoom.hasMany(HostelBed, { foreignKey: "room_id", as: "beds" });
+  HostelBed.belongsTo(HostelRoom, { foreignKey: "room_id", as: "room" });
+}
+
+// HostelAllocation associations
+if (models.HostelAllocation && models.User) {
+  HostelAllocation.belongsTo(User, { foreignKey: "student_id", as: "student" });
+  User.hasMany(HostelAllocation, {
+    foreignKey: "student_id",
+    as: "hostelAllocations",
+  });
+}
+
+if (models.HostelAllocation && models.HostelRoom) {
+  HostelAllocation.belongsTo(HostelRoom, { foreignKey: "room_id", as: "room" });
+  HostelRoom.hasMany(HostelAllocation, {
+    foreignKey: "room_id",
+    as: "allocations",
+  });
+}
+
+if (models.HostelAllocation && models.HostelBed) {
+  HostelAllocation.belongsTo(HostelBed, { foreignKey: "bed_id", as: "bed" });
+  HostelBed.hasOne(HostelAllocation, {
+    foreignKey: "bed_id",
+    as: "allocation",
+  });
+}
+
+if (models.HostelAllocation && models.HostelFeeStructure) {
+  HostelAllocation.belongsTo(HostelFeeStructure, {
+    foreignKey: "fee_structure_id",
+    as: "fee_structure",
+  });
+}
+
+if (models.HostelAllocation && models.HostelMessFeeStructure) {
+  HostelAllocation.belongsTo(HostelMessFeeStructure, {
+    as: "mess_fee_structure",
+    foreignKey: "mess_fee_structure_id",
+  });
+}
+
+if (models.HostelAllocation && models.FeeStructure) {
+  HostelAllocation.belongsTo(FeeStructure, {
+    as: "rent_fee",
+    foreignKey: "rent_fee_id",
+  });
+  HostelAllocation.belongsTo(FeeStructure, {
+    as: "mess_fee",
+    foreignKey: "mess_fee_id",
+  });
+  HostelAllocation.belongsTo(StudentFeeCharge, {
+    as: "rent_fee_charge",
+    foreignKey: "rent_fee_charge_id",
+  });
+  HostelAllocation.belongsTo(StudentFeeCharge, {
+    as: "mess_fee_charge",
+    foreignKey: "mess_fee_charge_id",
+  });
+}
+
+// HostelComplaint associations
+if (models.HostelComplaint && models.User) {
+  HostelComplaint.belongsTo(User, { foreignKey: "student_id", as: "student" });
+  HostelComplaint.belongsTo(User, {
+    foreignKey: "assigned_to",
+    as: "assignedTo",
+  });
+}
+
+if (models.HostelComplaint && models.HostelRoom) {
+  HostelComplaint.belongsTo(HostelRoom, { foreignKey: "room_id", as: "room" });
+}
+
+// HostelAttendance associations
+if (models.HostelAttendance && models.User) {
+  HostelAttendance.belongsTo(User, { foreignKey: "student_id", as: "student" });
+}
+
+// HostelGatePass associations
+if (models.HostelGatePass && models.User) {
+  HostelGatePass.belongsTo(User, { foreignKey: "student_id", as: "student" });
+  HostelGatePass.belongsTo(User, { foreignKey: "approved_by", as: "approver" });
+}
+
+// HostelVisitor associations
+if (models.HostelVisitor && models.User) {
+  HostelVisitor.belongsTo(User, { foreignKey: "student_id", as: "student" });
+}
+
+// HostelStayLog associations
+if (models.HostelStayLog) {
+  HostelStayLog.belongsTo(User, { foreignKey: "student_id", as: "student" });
+  HostelStayLog.belongsTo(HostelRoom, { foreignKey: "room_id", as: "room" });
+  HostelStayLog.belongsTo(HostelBed, { foreignKey: "bed_id", as: "bed" });
+  HostelStayLog.belongsTo(HostelAllocation, {
+    foreignKey: "allocation_id",
+    as: "allocation",
+  });
+
+  User.hasMany(HostelStayLog, {
+    foreignKey: "student_id",
+    as: "hostelStayLogs",
+  });
+  HostelAllocation.hasMany(HostelStayLog, {
+    foreignKey: "allocation_id",
+    as: "stayLogs",
+  });
+}
+
+// HostelFine associations
+if (models.HostelFine) {
+  HostelFine.belongsTo(User, { foreignKey: "student_id", as: "student" });
+  HostelFine.belongsTo(User, { foreignKey: "issued_by", as: "issued_by_user" });
+  HostelFine.belongsTo(HostelAllocation, {
+    foreignKey: "allocation_id",
+    as: "allocation",
+  });
+  HostelFine.belongsTo(FeeStructure, {
+    foreignKey: "fee_structure_id",
+    as: "feeStructure",
+  });
+  HostelFine.belongsTo(StudentFeeCharge, {
+    foreignKey: "fee_charge_id",
+    as: "feeCharge",
+  });
+
+  User.hasMany(HostelFine, {
+    foreignKey: "student_id",
+    as: "hostelFines",
+  });
+}
+
+// HostelRoomBill associations
+if (models.HostelRoomBill) {
+  HostelRoomBill.belongsTo(HostelRoom, { foreignKey: "room_id", as: "room" });
+  HostelRoomBill.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+  HostelRoomBill.hasMany(HostelRoomBillDistribution, {
+    foreignKey: "room_bill_id",
+    as: "distributions",
+  });
+
+  HostelRoom.hasMany(HostelRoomBill, {
+    foreignKey: "room_id",
+    as: "roomBills",
+  });
+}
+
+// HostelRoomBillDistribution associations
+if (models.HostelRoomBillDistribution) {
+  HostelRoomBillDistribution.belongsTo(HostelRoomBill, {
+    foreignKey: "room_bill_id",
+    as: "roomBill",
+  });
+  HostelRoomBillDistribution.belongsTo(User, {
+    foreignKey: "student_id",
+    as: "student",
+  });
+  HostelRoomBillDistribution.belongsTo(HostelAllocation, {
+    foreignKey: "allocation_id",
+    as: "allocation",
+  });
+  HostelRoomBillDistribution.belongsTo(FeeStructure, {
+    foreignKey: "fee_structure_id",
+    as: "feeStructure",
+  });
+  HostelRoomBillDistribution.belongsTo(StudentFeeCharge, {
+    foreignKey: "fee_charge_id",
+    as: "feeCharge",
+  });
+
+  User.hasMany(HostelRoomBillDistribution, {
+    foreignKey: "student_id",
+    as: "roomBillDistributions",
+  });
 }
 
 // Export models and sequelize instance
