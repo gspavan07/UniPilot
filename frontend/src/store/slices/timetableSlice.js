@@ -15,10 +15,10 @@ export const fetchTimetable = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch timetable"
+        error.response?.data?.error || "Failed to fetch timetable",
       );
     }
-  }
+  },
 );
 
 export const fetchMyTimetable = createAsyncThunk(
@@ -29,10 +29,10 @@ export const fetchMyTimetable = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch your schedule"
+        error.response?.data?.error || "Failed to fetch your schedule",
       );
     }
-  }
+  },
 );
 
 export const findTimetable = createAsyncThunk(
@@ -46,10 +46,10 @@ export const findTimetable = createAsyncThunk(
       return rejectWithValue(
         error.response?.data?.message ||
           error.response?.data?.error ||
-          "Failed to find timetable"
+          "Failed to find timetable",
       );
     }
-  }
+  },
 );
 
 export const createTimetable = createAsyncThunk(
@@ -60,10 +60,10 @@ export const createTimetable = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to create timetable"
+        error.response?.data?.error || "Failed to create timetable",
       );
     }
-  }
+  },
 );
 
 export const addSlot = createAsyncThunk(
@@ -74,10 +74,24 @@ export const addSlot = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to add slot"
+        error.response?.data?.error || "Failed to add slot",
       );
     }
-  }
+  },
+);
+
+export const deleteSlot = createAsyncThunk(
+  "timetable/deleteSlot",
+  async (id, { rejectWithValue }) => {
+    try {
+      await api.delete(`/timetable/slots/${id}`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to delete slot",
+      );
+    }
+  },
 );
 
 export const timetableSlice = createSlice({
@@ -137,6 +151,13 @@ export const timetableSlice = createSlice({
         if (state.currentTimetable) {
           if (!state.currentTimetable.slots) state.currentTimetable.slots = [];
           state.currentTimetable.slots.push(action.payload);
+        }
+      })
+      .addCase(deleteSlot.fulfilled, (state, action) => {
+        if (state.currentTimetable && state.currentTimetable.slots) {
+          state.currentTimetable.slots = state.currentTimetable.slots.filter(
+            (slot) => slot.id !== action.payload,
+          );
         }
       });
   },

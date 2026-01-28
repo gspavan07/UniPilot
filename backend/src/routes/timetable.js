@@ -16,13 +16,18 @@ router.use(authenticate);
 router.post(
   "/init",
   checkPermission("academics:timetable:manage"),
-  createTimetable
+  createTimetable,
 );
 router.post("/slots", checkPermission("academics:timetable:manage"), addSlot);
+router.delete(
+  "/slots/:id",
+  checkPermission("academics:timetable:manage"),
+  require("../controllers/timetableController").deleteSlot,
+);
 router.get(
   "/find",
   checkPermission("academics:timetable:manage"),
-  getTimetableByCriteria
+  getTimetableByCriteria,
 );
 
 // Public/View Routes

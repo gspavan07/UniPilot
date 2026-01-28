@@ -12,11 +12,13 @@ import {
   Search,
   Filter,
   MousePointer2,
+  Trash2,
 } from "lucide-react";
 import {
   findTimetable,
   createTimetable,
   addSlot,
+  deleteSlot,
   clearCurrentTimetable,
 } from "../../store/slices/timetableSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
@@ -55,6 +57,7 @@ const TimetableManager = () => {
   });
 
   const [courses, setCourses] = useState([]);
+  const [sections, setSections] = useState([]);
   const [faculty, setFaculty] = useState([]);
   const [blocks, setBlocks] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -101,14 +104,35 @@ const TimetableManager = () => {
     (p) => p.department_id === criteria.department_id,
   );
 
-  // Fetch courses when program/semester changes
+  // Fetch courses and sections when program/semester changes
   useEffect(() => {
     if (criteria.program_id) {
+      // Fetch courses
       api
         .get(
           `/courses?program_id=${criteria.program_id}&semester=${criteria.semester}`,
         )
         .then((res) => setCourses(res.data.data));
+
+      // Fetch dynamic sections
+      api
+        .get(
+          `/users/sections?program_id=${criteria.program_id}&semester=${criteria.semester}`,
+        )
+        .then((res) => {
+          setSections(res.data.data || []);
+          // If current section is not in new sections, reset it
+          if (res.data.data && res.data.data.length > 0) {
+            if (!res.data.data.includes(criteria.section)) {
+              setCriteria((prev) => ({ ...prev, section: res.data.data[0] }));
+            }
+          } else {
+            setCriteria((prev) => ({ ...prev, section: "" }));
+          }
+        });
+    } else {
+      setCourses([]);
+      setSections([]);
     }
   }, [criteria.program_id, criteria.semester]);
 
@@ -159,6 +183,18 @@ const TimetableManager = () => {
         }
       },
     );
+  };
+
+  const handleDeleteSlot = async (slotId) => {
+    if (!window.confirm("Are you sure you want to delete this class slot?"))
+      return;
+
+    try {
+      await dispatch(deleteSlot(slotId)).unwrap();
+      // No need for explicit refresh as the slice update handles it
+    } catch (err) {
+      alert(err || "Failed to delete slot");
+    }
   };
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -275,10 +311,14 @@ const TimetableManager = () => {
               onChange={(e) =>
                 setCriteria({ ...criteria, section: e.target.value })
               }
+              disabled={!criteria.program_id || sections.length === 0}
             >
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-              <option value="C">Section C</option>
+              <option value="">Section</option>
+              {sections.map((sec) => (
+                <option key={sec} value={sec}>
+                  Section {sec}
+                </option>
+              ))}
             </select>
 
             <button
@@ -615,7 +655,7 @@ const TimetableManager = () => {
                           }`}
                         >
                           {slot ? (
-                            <div className="h-full flex flex-col justify-between">
+                            <div className="h-full flex flex-col justify-between group relative">
                               <div>
                                 <h4 className="font-bold text-xs text-indigo-700 dark:text-indigo-400 leading-tight mb-1">
                                   {slot.activity_name || slot.course?.name}
@@ -646,6 +686,15 @@ const TimetableManager = () => {
                                     "TBD"}
                                 </div>
                               </div>
+
+                              {/* Delete button (conditionally visible on hover) */}
+                              <button
+                                onClick={() => handleDeleteSlot(slot.id)}
+                                className="absolute top-0 -right-1 p-1 opacity-0 group-hover:opacity-100 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                                title="Delete Slot"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
                             </div>
                           ) : (
                             <div className="h-full flex items-center justify-center">

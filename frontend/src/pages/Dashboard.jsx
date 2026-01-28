@@ -5,6 +5,7 @@ import StudentDashboard from "./dashboards/StudentDashboard";
 import FacultyDashboard from "./dashboards/FacultyDashboard";
 import HodDashboard from "./dashboards/HodDashboard";
 import AdmissionAnalytics from "./dashboards/AdmissionAnalytics";
+import SuperAdminDashboard from "./dashboards/SuperAdminDashboard";
 import HRDashboard from "./hr/HRDashboard";
 
 const Dashboard = () => {
@@ -26,8 +27,9 @@ const Dashboard = () => {
     case "hr":
     case "hr_admin":
       return <HRDashboard />;
-    case "admin":
     case "super_admin":
+      return <SuperAdminDashboard />;
+    case "admin":
     default:
       return <AdminDashboard />;
   }

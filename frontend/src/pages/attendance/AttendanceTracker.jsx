@@ -103,12 +103,18 @@ const AttendanceTracker = () => {
     setActiveSession(session);
     setLoadingStudents(true);
     try {
-      let url = `/users?role=student&department_id=${user.department_id}`;
-      if (session?.program_id) url += `&program_id=${session.program_id}`;
-      if (session?.section) url += `&section=${session.section}`;
-      if (session?.semester) url += `&semester=${session.semester}`;
+      // Build fetch URL based on session criteria
+      const params = new URLSearchParams({ role: "student" });
+      if (session?.program_id) params.append("program_id", session.program_id);
+      if (session?.section) params.append("section", session.section);
+      if (session?.semester) params.append("semester", session.semester);
 
-      const response = await api.get(url);
+      // Only add department if no specific program is selected (fallback)
+      if (!session?.program_id && user.department_id) {
+        params.append("department_id", user.department_id);
+      }
+
+      const response = await api.get(`/users?${params.toString()}`);
       setStudentList(response.data.data);
 
       setStudentList(response.data.data);

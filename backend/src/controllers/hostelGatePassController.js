@@ -1,9 +1,8 @@
 const logger = require("../utils/logger");
 const {
-  HostleGatePass,
   HostelGatePass,
   User,
-  Attendance,
+  HostelAttendance,
   sequelize,
 } = require("../models");
 const { Op } = require("sequelize");
@@ -106,58 +105,55 @@ exports.verifyOtpAndApprove = async (req, res) => {
       { transaction },
     );
 
-    // SYNC TO ATTENDANCE
-    // Only mark as 'on_leave' for 'long' passes that span at least one day
-    if (gatePass.pass_type === "long") {
-      const startDate = new Date(gatePass.going_date);
-      const endDate = new Date(gatePass.coming_date);
+    // SYNC TO HOSTEL ATTENDANCE
+    // Mark as 'on_leave' in hostel_attendance table only
+    const startDate = new Date(gatePass.going_date);
+    const endDate = new Date(gatePass.coming_date);
 
-      const attendanceRecords = [];
-      for (
-        let d = new Date(startDate);
-        d <= endDate;
-        d.setDate(d.getDate() + 1)
-      ) {
-        const dateStr = d.toISOString().split("T")[0];
+    const hostelAttendanceRecords = [];
+    for (
+      let d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const dateStr = d.toISOString().split("T")[0];
 
-        attendanceRecords.push({
+      // Mark for both shifts (Day and Night Roll Call)
+      [false, true].forEach((isNight) => {
+        hostelAttendanceRecords.push({
           student_id: gatePass.student_id,
           date: dateStr,
-          status: "on_leave",
-          remarks: `Hostel Gate Pass Approved: ${gatePass.purpose || "No reason specified"}`,
-          marked_by: req.user.userId,
-          batch_year: gatePass.student?.batch_year,
-          section: gatePass.student?.section,
+          is_present: false,
+          night_roll_call: isNight,
+          remarks: `On Leave: ${gatePass.pass_type === "day" ? "Day Outing" : "Long Leave"} (${gatePass.purpose || "Gate Pass"})`,
         });
-      }
-
-      // We use findOrCreate for each date to avoid duplicates if attendance was already marked
-      for (const record of attendanceRecords) {
-        const [attRecord, created] = await Attendance.findOrCreate({
-          where: {
-            student_id: record.student_id,
-            date: record.date,
-            course_id: null,
-            timetable_slot_id: null,
-          },
-          defaults: record,
-          transaction,
-        });
-
-        if (!created) {
-          await attRecord.update(
-            {
-              status: "on_leave",
-              remarks: record.remarks,
-              marked_by: record.marked_by,
-            },
-            { transaction },
-          );
-        }
-      }
-
-      await gatePass.update({ attendance_synced: true }, { transaction });
+      });
     }
+
+    // Upsert hostel attendance records
+    for (const record of hostelAttendanceRecords) {
+      const [attRecord, created] = await HostelAttendance.findOrCreate({
+        where: {
+          student_id: record.student_id,
+          date: record.date,
+          night_roll_call: record.night_roll_call,
+        },
+        defaults: record,
+        transaction,
+      });
+
+      if (!created) {
+        await attRecord.update(
+          {
+            is_present: false,
+            remarks: record.remarks,
+          },
+          { transaction },
+        );
+      }
+    }
+
+    await gatePass.update({ attendance_synced: true }, { transaction });
 
     await transaction.commit();
 

@@ -2,6 +2,7 @@ const { sequelize } = require("../config/database");
 
 // Import models
 const User = require("./User");
+const AuditLog = require("./AuditLog");
 const Department = require("./Department");
 const Program = require("./Program");
 const Course = require("./Course");
@@ -76,6 +77,7 @@ const HostelRoomBillDistribution = require("./HostelRoomBillDistribution");
 
 const models = {
   User,
+  AuditLog,
   Department,
   Program,
   Course,
@@ -315,6 +317,10 @@ ProctorAlert.belongsTo(User, { as: "proctor", foreignKey: "proctor_id" });
 ProctorAlert.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(ProctorAlert, { as: "proctor_alerts", foreignKey: "proctor_id" });
 User.hasMany(ProctorAlert, { as: "student_alerts", foreignKey: "student_id" });
+
+// Audit Log Associations
+AuditLog.belongsTo(User, { as: "actor", foreignKey: "user_id" });
+User.hasMany(AuditLog, { as: "audit_logs", foreignKey: "user_id" });
 
 // Promotion & Lifecycle Associations
 PromotionCriteria.belongsTo(Program, {

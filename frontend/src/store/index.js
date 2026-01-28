@@ -17,6 +17,7 @@ import infrastructureReducer from "./slices/infrastructureSlice";
 import regulationReducer from "./slices/regulationSlice";
 import transportReducer from "./slices/transportSlice";
 import hostelReducer from "./slices/hostelSlice";
+import dashboardReducer from "./slices/dashboardSlice";
 
 export const store = configureStore({
   reducer: {
@@ -38,6 +39,7 @@ export const store = configureStore({
     regulations: regulationReducer,
     transport: transportReducer,
     hostel: hostelReducer,
+    dashboard: dashboardReducer,
   },
 });
 

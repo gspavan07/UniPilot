@@ -357,3 +357,25 @@ exports.getTimetableByCriteria = async (req, res) => {
     res.status(500).json({ error: "Failed to search for timetable" });
   }
 };
+// @desc    Delete a timetable slot
+// @route   DELETE /api/timetable/slots/:id
+// @access  Private/Admin
+exports.deleteSlot = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const slot = await TimetableSlot.findByPk(id);
+
+    if (!slot) {
+      return res.status(404).json({ error: "Timetable slot not found" });
+    }
+
+    await slot.destroy();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Slot deleted successfully" });
+  } catch (error) {
+    logger.error("Error deleting slot:", error);
+    res.status(500).json({ error: "Failed to delete slot" });
+  }
+};

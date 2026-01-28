@@ -78,10 +78,16 @@ exports.getAllUsers = async (req, res) => {
         }
 
         // HOD & Faculty Logic: Restrict to OWN Department
+        // REFINED: Allow bypass if searching for specific Program/Semester/Section (for attendance)
         if (requesterSlug === "faculty" || requesterSlug === "hod") {
-          if (requester.department_id) {
+          const hasAcademicCriteria =
+            (req.query.program_id && req.query.program_id !== "undefined") ||
+            (req.query.semester && req.query.semester !== "undefined") ||
+            (req.query.section && req.query.section !== "undefined");
+
+          if (requester.department_id && !hasAcademicCriteria) {
             req.forcedDepartmentId = requester.department_id;
-          } else {
+          } else if (!requester.department_id && !hasAcademicCriteria) {
             roleScopeFilter = { id: null }; // block access if no department assigned
           }
         }
@@ -259,13 +265,14 @@ exports.getUserStats = async (req, res) => {
 // @access  Private
 exports.getStudentSections = async (req, res) => {
   try {
-    const { department_id, batch_year, semester } = req.query;
+    const { department_id, program_id, batch_year, semester } = req.query;
     const where = {
       role: "student",
       section: { [Op.ne]: null }, // Only sections that are not null
     };
 
     if (department_id) where.department_id = department_id;
+    if (program_id) where.program_id = program_id;
     if (batch_year) where.batch_year = batch_year;
     if (semester) where.current_semester = semester;
 
