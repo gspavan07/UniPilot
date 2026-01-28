@@ -84,11 +84,7 @@ router.post(
   checkPermission("finance:fees:manage"),
   collectPayment,
 );
-router.get(
-  "/summary/:studentId",
-  checkPermission("finance:fees:manage"),
-  getStudentFeeStatus,
-);
+router.get("/summary/:studentId", getStudentFeeStatus);
 
 // Semester Configs
 router.get(

@@ -14,6 +14,7 @@ const {
   getMarkEntryData,
   updateModerationStatus,
   getConsolidatedResults,
+  getStudentAcademicDetails,
   getMyResults,
   getMyExamSchedules,
   generateHallTickets,
@@ -108,6 +109,11 @@ router.get(
   "/consolidated-results",
   checkPermission("exams:results:publish"),
   getConsolidatedResults,
+);
+router.get(
+  "/results/:studentId",
+  checkPermission("exams:view"),
+  getStudentAcademicDetails,
 );
 router.post(
   "/hall-ticket/generate",

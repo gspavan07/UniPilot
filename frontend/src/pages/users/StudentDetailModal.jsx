@@ -13,6 +13,9 @@ import {
   Phone,
   Briefcase,
   IndianRupee,
+  TrendingUp,
+  Award,
+  Layers,
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -22,6 +25,8 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [feeDetails, setFeeDetails] = useState(null);
   const [loadingFees, setLoadingFees] = useState(false);
+  const [performance, setPerformance] = useState(null);
+  const [loadingPerformance, setLoadingPerformance] = useState(false);
 
   useEffect(() => {
     if (isOpen && student?.id) {
@@ -29,6 +34,8 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
         fetchDocuments();
       } else if (activeTab === "fees") {
         fetchFees();
+      } else if (activeTab === "performance") {
+        fetchPerformance();
       }
     }
   }, [isOpen, activeTab, student]);
@@ -48,12 +55,24 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
   const fetchFees = async () => {
     try {
       setLoadingFees(true);
-      const res = await api.get(`/finance/fees/summary/${student.id}`);
+      const res = await api.get(`/fees/summary/${student.id}`);
       setFeeDetails(res.data.data);
     } catch (err) {
       console.error("Failed to fetch fees", err);
     } finally {
       setLoadingFees(false);
+    }
+  };
+
+  const fetchPerformance = async () => {
+    try {
+      setLoadingPerformance(true);
+      const res = await api.get(`/exam/results/${student.id}`);
+      setPerformance(res.data.data);
+    } catch (err) {
+      console.error("Failed to fetch performance", err);
+    } finally {
+      setLoadingPerformance(false);
     }
   };
 
@@ -63,6 +82,7 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
     { id: "overview", label: "Overview", icon: Grid },
     { id: "personal", label: "Personal & Family", icon: Users },
     { id: "academic", label: "Academic", icon: Book },
+    { id: "performance", label: "Performance", icon: TrendingUp },
     { id: "fees", label: "Fee Details", icon: IndianRupee },
     { id: "documents", label: "Documents", icon: FileText },
   ];
@@ -212,7 +232,7 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                 </div>
                 <div>
                   <SectionTitle title="Identity Documents" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-rows-3 gap-4">
                     <InfoRow
                       icon={CreditCard}
                       label="Aadhaar Number"
@@ -513,6 +533,227 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
               </div>
             )}
 
+            {activeTab === "performance" && (
+              <div className="space-y-8 animate-fade-in">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800">
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest mb-1">
+                      CGPA
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">
+                        {performance?.summary?.cgpa || "0.00"}
+                      </p>
+                      <span className="text-xs text-indigo-400">/ 10.0</span>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800">
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest mb-1">
+                      Credits Earned
+                    </p>
+                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                      {performance?.summary?.earnedCredits || 0}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800">
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest mb-1">
+                      Total Semesters
+                    </p>
+                    <p className="text-2xl font-black text-amber-700 dark:text-amber-300">
+                      {performance?.summary?.totalSemesters || 0}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800">
+                    <p className="text-[10px] text-rose-600 dark:text-rose-400 font-black uppercase tracking-widest mb-1">
+                      Backlogs
+                    </p>
+                    <p className="text-2xl font-black text-rose-700 dark:text-rose-300">
+                      {performance?.performance?.reduce(
+                        (acc, sem) =>
+                          acc +
+                          sem.courses.filter((c) =>
+                            Object.values(c.marks).some((m) => m.grade === "F"),
+                          ).length,
+                        0,
+                      ) || 0}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Semester Wise Performance */}
+                <div className="space-y-6">
+                  {loadingPerformance ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                      <div className="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin" />
+                      <p className="text-sm font-bold text-gray-500">
+                        Compiling Academic History...
+                      </p>
+                    </div>
+                  ) : !performance?.performance?.length ? (
+                    <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+                      <Award className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 font-bold">
+                        No academic performance records found.
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Locked results will appear here once published.
+                      </p>
+                    </div>
+                  ) : (
+                    performance.performance.map((sem, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white dark:bg-gray-800/40 rounded-3xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm"
+                      >
+                        <div className="px-6 py-4 bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary-500 text-white rounded-lg">
+                              <Layers className="w-4 h-4" />
+                            </div>
+                            <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-wider text-sm">
+                              Semester {sem.semester}
+                            </h4>
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="text-right">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase">
+                                SGPA
+                              </p>
+                              <p className="text-sm font-black text-primary-600">
+                                {sem.sgpa || "N/A"}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase">
+                                Credits
+                              </p>
+                              <p className="text-sm font-black text-gray-700 dark:text-gray-300">
+                                {sem.earned} / {sem.credits}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {sem.courses.map((course, cIdx) => {
+                            const mids = Object.entries(course.marks).filter(
+                              ([k]) => k.includes("mid"),
+                            );
+                            const internals = Object.entries(
+                              course.marks,
+                            ).filter(([k]) => k.includes("internal"));
+                            const labs = Object.entries(course.marks).filter(
+                              ([k]) =>
+                                k.includes("external") || k.includes("project"),
+                            );
+                            const endSem = course.marks["end_semester"];
+
+                            return (
+                              <div
+                                key={cIdx}
+                                className="p-5 rounded-3xl bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+                              >
+                                <div className="flex justify-between items-start mb-4">
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="text-sm font-black text-gray-900 dark:text-white truncate uppercase tracking-tight">
+                                      {course.name}
+                                    </h5>
+                                    <p className="text-[10px] font-mono text-gray-400 mt-0.5">
+                                      {course.code} • {course.type}
+                                    </p>
+                                  </div>
+                                  <div
+                                    className={`px-3 py-1 rounded-xl text-xs font-black shadow-sm ${
+                                      endSem?.grade === "F"
+                                        ? "bg-rose-100 text-rose-600"
+                                        : ["O", "A+", "A"].includes(
+                                              endSem?.grade,
+                                            )
+                                          ? "bg-emerald-100 text-emerald-600"
+                                          : "bg-gray-100 text-gray-700"
+                                    }`}
+                                  >
+                                    {endSem?.grade || "PND"}
+                                  </div>
+                                </div>
+
+                                {/* Component Figures */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  {/* Mid Terms / Internals */}
+                                  <div className="p-2 rounded-2xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100/30 dark:border-indigo-800/30 text-center">
+                                    <p className="text-[8px] font-black text-indigo-400 uppercase leading-none mb-1.5">
+                                      Mids
+                                    </p>
+                                    <div className="flex flex-col gap-1">
+                                      {mids.length > 0 ? (
+                                        mids.map(([k, m], i) => (
+                                          <p
+                                            key={i}
+                                            className="text-xs font-black text-indigo-700 dark:text-indigo-300 leading-none"
+                                          >
+                                            {m.obtained}
+                                          </p>
+                                        ))
+                                      ) : internals.length > 0 ? (
+                                        internals.map(([k, m], i) => (
+                                          <p
+                                            key={i}
+                                            className="text-xs font-black text-emerald-700 dark:text-emerald-300 leading-none"
+                                          >
+                                            {m.obtained}
+                                          </p>
+                                        ))
+                                      ) : (
+                                        <p className="text-xs font-black text-gray-300 leading-none">
+                                          -
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Lab / Project */}
+                                  <div className="p-2 rounded-2xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100/30 dark:border-amber-800/30 text-center">
+                                    <p className="text-[8px] font-black text-amber-400 uppercase leading-none mb-1.5">
+                                      Labs
+                                    </p>
+                                    <div className="flex flex-col gap-1">
+                                      {labs.length > 0 ? (
+                                        labs.map(([k, m], i) => (
+                                          <p
+                                            key={i}
+                                            className="text-xs font-black text-amber-700 dark:text-amber-300 leading-none"
+                                          >
+                                            {m.obtained}
+                                          </p>
+                                        ))
+                                      ) : (
+                                        <p className="text-xs font-black text-gray-300 leading-none">
+                                          -
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* End Semester */}
+                                  <div className="p-2 rounded-2xl bg-primary-50/50 dark:bg-primary-900/10 border border-primary-100/30 dark:border-primary-800/30 text-center">
+                                    <p className="text-[8px] font-black text-primary-400 uppercase leading-none mb-1.5">
+                                      Final
+                                    </p>
+                                    <p className="text-xs font-black text-primary-700 dark:text-primary-300 leading-none">
+                                      {endSem?.obtained || "-"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
             {activeTab === "documents" && (
               <div>
                 <SectionTitle title="Uploaded Documents" />

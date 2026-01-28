@@ -19,13 +19,13 @@ router.get("/my-courses", getMyCourses);
 
 router
   .route("/")
-  .get(checkPermission("academics:courses:view"), getAllCourses)
-  .post(checkPermission("academics:courses:manage"), createCourse);
+  .get(getAllCourses)
+  .post(checkPermission("academics:manage"), createCourse);
 
 router
   .route("/:id")
-  .get(checkPermission("academics:courses:view"), getCourse)
-  .put(checkPermission("academics:courses:manage"), updateCourse)
-  .delete(checkPermission("academics:courses:manage"), deleteCourse);
+  .get(getCourse)
+  .put(checkPermission("academics:manage"), updateCourse)
+  .delete(checkPermission("academics:manage"), deleteCourse);
 
 module.exports = router;

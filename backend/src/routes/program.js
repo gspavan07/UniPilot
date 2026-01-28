@@ -16,12 +16,12 @@ router.use(authenticate);
 router
   .route("/")
   .get(getAllPrograms)
-  .post(checkPermission("academics:courses:manage"), createProgram);
+  .post(checkPermission("academics:manage"), createProgram);
 
 router
   .route("/:id")
   .get(getProgram)
-  .put(checkPermission("academics:courses:manage"), updateProgram)
-  .delete(checkPermission("academics:courses:manage"), deleteProgram);
+  .put(checkPermission("academics:manage"), updateProgram)
+  .delete(checkPermission("academics:manage"), deleteProgram);
 
 module.exports = router;

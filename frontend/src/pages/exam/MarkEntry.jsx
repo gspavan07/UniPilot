@@ -126,10 +126,21 @@ const MarkEntry = () => {
 
     const marksToSave = students
       .filter((s) => marks[s.id].moderation_status !== "locked")
-      .map((s) => ({
-        student_id: s.id,
-        ...marks[s.id],
-      }));
+      .map((s) => {
+        const studentMark = { ...marks[s.id] };
+        // If there are no components defined for this cycle, ensure component_scores is null
+        // rather than an empty object, to prevent backend from incorrectly recalculating total as 0
+        if (
+          !schedule?.cycle?.component_breakdown ||
+          schedule.cycle.component_breakdown.length === 0
+        ) {
+          studentMark.component_scores = null;
+        }
+        return {
+          student_id: s.id,
+          ...studentMark,
+        };
+      });
 
     if (marksToSave.length === 0) return toast.error("No editable marks found");
 
@@ -194,12 +205,12 @@ const MarkEntry = () => {
       {/* Premium Navigation Header */}
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-6">
-          <button
+          {/* <button
             onClick={() => navigate("/exams/marks-entry")}
             className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all group"
           >
             <ArrowLeft className="w-6 h-6 text-gray-400 group-hover:text-indigo-600" />
-          </button>
+          </button> */}
 
           <div className="h-12 w-px bg-gray-100 dark:bg-gray-700 hidden md:block"></div>
 
@@ -263,7 +274,7 @@ const MarkEntry = () => {
                 )}
                 SAVE DRAFT
               </button>
-              <button
+              {/* <button
                 disabled={saving || submitting}
                 onClick={() => saveMarks(true)}
                 className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 transition-all disabled:opacity-50"
@@ -274,7 +285,7 @@ const MarkEntry = () => {
                   <Send className="w-5 h-5 mr-2" />
                 )}
                 FINAL SUBMIT
-              </button>
+              </button> */}
             </div>
           )}
 

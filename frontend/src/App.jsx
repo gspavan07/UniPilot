@@ -12,6 +12,8 @@ import ProgramList from "./pages/programs/ProgramList";
 import UserList from "./pages/users/UserList";
 import StudentList from "./pages/users/StudentList";
 import StudentRegistration from "./pages/users/StudentRegistration";
+import MySections from "./pages/users/MySections";
+import SectionStudentList from "./pages/users/SectionStudentList";
 import CourseList from "./pages/courses/CourseList";
 import MyCourses from "./pages/courses/MyCourses";
 import RoleManagement from "./pages/settings/RoleManagement";
@@ -74,6 +76,10 @@ import RegulationList from "./pages/academics/RegulationList";
 import RegulationViewer from "./pages/academics/RegulationViewer";
 import RegulationManager from "./pages/admin/RegulationManager";
 import SectionManager from "./pages/academics/SectionManager";
+import AcademicsManagement from "./pages/academics/AcademicsManagement";
+import HRManagement from "./pages/hr/HRManagement";
+import ExamManagement from "./pages/exam/ExamManagement";
+import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
 import { getLandingPage } from "./utils/routeUtils";
 
 function App() {
@@ -104,6 +110,7 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/academics" element={<AcademicsManagement />} />
           <Route path="/departments" element={<DepartmentList />} />
           <Route path="/programs" element={<ProgramList />} />
           <Route path="/regulations" element={<RegulationList />} />
@@ -122,6 +129,10 @@ function App() {
           <Route path="/staff" element={<UserList role="staff" />} />
           <Route path="/admins" element={<UserList role="admin" />} />
           <Route path="/admission/dashboard" element={<AdmissionDashboard />} />
+          <Route
+            path="/admission-management"
+            element={<AdmissionManagement />}
+          />
           <Route path="/admission/settings" element={<AdmissionSettings />} />
           <Route path="/users" element={<UserList />} />
           <Route path="/timetable/manage" element={<TimetableManager />} />
@@ -132,6 +143,7 @@ function App() {
           <Route path="/attendance" element={<AttendanceTracker />} />
           <Route path="/leave" element={<LeaveManager />} />
           <Route path="/exams/schedules" element={<ExamSchedules />} />
+          <Route path="/exam-management" element={<ExamManagement />} />
           <Route path="/exams/marks-entry" element={<MarksEntry />} />
           <Route path="/exams/publish" element={<PublishMarks />} />
           <Route path="/exams/payments" element={<ExamPayments />} />
@@ -139,12 +151,18 @@ function App() {
           <Route path="/my-exams" element={<MyExams />} />
           <Route path="/my-exams/hall-ticket" element={<MyHallTicket />} />
           <Route path="/marks-entry/:scheduleId" element={<MarkEntry />} />
+          <Route path="/my-students" element={<MySections />} />
+          <Route
+            path="/my-students/view/:programId/:batchYear/:section"
+            element={<SectionStudentList />}
+          />
           <Route path="/results" element={<StudentResults />} />
           <Route path="/fees" element={<FeeManagement />} />
           <Route path="/my-fees" element={<MyFees />} />
           <Route path="/my-courses" element={<MyCourses />} />
           <Route path="/library" element={<LibraryDashboard />} />
           <Route path="/my-library" element={<MyLibrary />} />
+          <Route path="/hr-management" element={<HRManagement />} />
           <Route path="/hr/onboard" element={<EmployeeOnboarding />} />
           <Route path="/employees" element={<StaffList />} />
           <Route path="/employee/:id" element={<StaffProfile />} />

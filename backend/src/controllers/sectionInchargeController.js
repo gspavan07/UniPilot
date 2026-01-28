@@ -131,13 +131,15 @@ exports.assignSectionIncharge = async (req, res) => {
 // @access  Private
 exports.getSectionIncharges = async (req, res) => {
   try {
-    const { department_id, program_id, batch_year, academic_year } = req.query;
+    const { department_id, program_id, batch_year, academic_year, faculty_id } =
+      req.query;
 
     const where = {};
     if (department_id) where.department_id = department_id;
     if (program_id) where.program_id = program_id;
     if (batch_year) where.batch_year = batch_year;
     if (academic_year) where.academic_year = academic_year;
+    if (faculty_id) where.faculty_id = faculty_id;
 
     const incharges = await SectionIncharge.findAll({
       where,

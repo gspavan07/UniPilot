@@ -707,10 +707,14 @@ exports.enterMarks = async (req, res) => {
         let totalMarks = parseFloat(item.marks_obtained || 0);
         let componentScores = item.component_scores || null;
 
-        // If component scores provided, calculate total correctly
-        if (componentScores && typeof componentScores === "object") {
+        // If component scores provided and not empty, calculate total from them
+        if (
+          componentScores &&
+          typeof componentScores === "object" &&
+          Object.keys(componentScores).length > 0
+        ) {
           totalMarks = Object.values(componentScores).reduce(
-            (sum, val) => sum + parseFloat(val || 0),
+            (sum, val) => sum + (parseFloat(val) || 0),
             0,
           );
         }
@@ -847,6 +851,154 @@ exports.updateModerationStatus = async (req, res) => {
 // @desc    Get student's exam results
 // @route   GET /api/exam/my-results
 // @access  Private/Student
+// @desc    Get detailed results for a specific student (for Faculty/HOD/Admin)
+// @route   GET /api/exam/results/:studentId
+// @access  Private/Faculty/Admin
+exports.getStudentAcademicDetails = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { semester } = req.query;
+
+    // Build include for course filtering
+    const courseInclude = {
+      model: Course,
+      as: "course",
+      attributes: ["name", "code", "semester", "credits", "course_type"],
+      required: false,
+    };
+
+    if (semester) {
+      courseInclude.where = { semester: parseInt(semester) };
+      courseInclude.required = true;
+    }
+
+    const marks = await ExamMark.findAll({
+      where: {
+        student_id: studentId,
+      },
+      include: [
+        {
+          model: ExamSchedule,
+          as: "schedule",
+          required: semester ? true : false,
+          include: [
+            courseInclude,
+            {
+              model: ExamCycle,
+              as: "cycle",
+              attributes: ["name", "cycle_type", "instance_number"],
+            },
+          ],
+        },
+      ],
+      order: [
+        [
+          { model: ExamSchedule, as: "schedule" },
+          { model: Course, as: "course" },
+          "semester",
+          "ASC",
+        ],
+        ["created_at", "DESC"],
+      ],
+    });
+
+    // Fetch Semester Results (SGPA/CGPA)
+    const semesterResults = await SemesterResult.findAll({
+      where: { student_id: studentId },
+      order: [["semester", "ASC"]],
+    });
+
+    // Initialize performance from Semester Results (SGPA/CGPA)
+    const performance = {};
+    semesterResults.forEach((r) => {
+      performance[r.semester] = {
+        semester: r.semester,
+        sgpa: parseFloat(r.sgpa).toFixed(2),
+        credits: r.total_credits,
+        earned: r.earned_credits,
+        courses: {},
+      };
+    });
+
+    // Group marks by Semester, then by Course
+
+    marks.forEach((m) => {
+      const sem = m.schedule?.course?.semester || "Unknown";
+      const courseId = m.schedule?.course?.id;
+
+      if (!performance[sem]) {
+        const semResult = semesterResults.find((r) => r.semester === sem);
+        performance[sem] = {
+          semester: sem,
+          sgpa: semResult ? parseFloat(semResult.sgpa).toFixed(2) : null,
+          credits: semResult ? semResult.total_credits : 0,
+          earned: semResult ? semResult.earned_credits : 0,
+          courses: {},
+        };
+      }
+
+      if (courseId) {
+        if (!performance[sem].courses[courseId]) {
+          performance[sem].courses[courseId] = {
+            id: courseId,
+            name: m.schedule.course.name,
+            code: m.schedule.course.code,
+            type: m.schedule.course.course_type,
+            marks: {},
+          };
+        }
+
+        const cycleType = m.schedule.cycle.cycle_type;
+        const instance = m.schedule.cycle.instance_number;
+        const key = `${cycleType}${instance > 1 ? `_${instance}` : ""}`;
+
+        performance[sem].courses[courseId].marks[key] = {
+          obtained: m.marks_obtained,
+          grade: m.grade,
+          status: m.attendance_status,
+        };
+      }
+    });
+
+    // Convert courses object to array for easier frontend mapping
+    const formattedPerformance = Object.values(performance).map((semData) => ({
+      ...semData,
+      courses: Object.values(semData.courses),
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        performance: formattedPerformance,
+        summary: {
+          totalSemesters: semesterResults.length,
+          cgpa:
+            semesterResults.length > 0
+              ? (
+                  semesterResults.reduce(
+                    (acc, r) => acc + parseFloat(r.sgpa) * r.total_credits,
+                    0,
+                  ) /
+                  semesterResults.reduce((acc, r) => acc + r.total_credits, 0)
+                ).toFixed(2)
+              : "0.00",
+          totalCredits: semesterResults.reduce(
+            (acc, r) => acc + r.total_credits,
+            0,
+          ),
+          earnedCredits: semesterResults.reduce(
+            (acc, r) => acc + r.earned_credits,
+            0,
+          ),
+        },
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching student academic details:", error);
+    res.status(500).json({ error: "Failed to fetch academic details" });
+  }
+};
+
 exports.getMyResults = async (req, res) => {
   try {
     const { semester } = req.query;
