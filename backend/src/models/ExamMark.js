@@ -51,6 +51,29 @@ const ExamMark = sequelize.define(
       type: DataTypes.UUID,
       references: { model: "users", key: "id" },
     },
+    is_reverified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: "Whether this mark has been reverified",
+    },
+    reverification_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false,
+      comment: "Number of times reverification was done",
+    },
+    original_marks: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      comment:
+        "Original marks when first published (for reverification tracking)",
+    },
+    reverification_history: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+      comment: "History of all reverification changes",
+    },
   },
   {
     tableName: "exam_marks",

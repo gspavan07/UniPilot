@@ -22,6 +22,8 @@ const Holiday = require("./Holiday");
 const ExamCycle = require("./ExamCycle");
 const ExamSchedule = require("./ExamSchedule");
 const ExamMark = require("./ExamMark");
+const ExamReverification = require("./ExamReverification");
+const ExamScript = require("./ExamScript");
 const HallTicket = require("./HallTicket");
 const ExamRegistration = require("./ExamRegistration");
 const FeeCategory = require("./FeeCategory");
@@ -96,6 +98,8 @@ const models = {
   ExamCycle,
   ExamSchedule,
   ExamMark,
+  ExamReverification,
+  ExamScript,
   HallTicket,
   ExamRegistration,
   FeeCategory,
@@ -418,6 +422,66 @@ ExamRegistration.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(ExamRegistration, {
   as: "exam_registrations",
   foreignKey: "student_id",
+});
+
+// Exam Reverification Associations
+ExamReverification.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(ExamReverification, {
+  as: "exam_reverifications",
+  foreignKey: "student_id",
+});
+
+ExamReverification.belongsTo(ExamSchedule, {
+  as: "schedule",
+  foreignKey: "exam_schedule_id",
+});
+ExamSchedule.hasMany(ExamReverification, {
+  as: "reverifications",
+  foreignKey: "exam_schedule_id",
+});
+
+ExamReverification.belongsTo(ExamMark, {
+  as: "exam_mark",
+  foreignKey: "exam_mark_id",
+});
+ExamMark.hasOne(ExamReverification, {
+  as: "reverification",
+  foreignKey: "exam_mark_id",
+});
+
+ExamReverification.belongsTo(StudentFeeCharge, {
+  as: "fee_charge",
+  foreignKey: "fee_charge_id",
+});
+StudentFeeCharge.hasMany(ExamReverification, {
+  as: "reverifications",
+  foreignKey: "fee_charge_id",
+});
+
+ExamReverification.belongsTo(User, {
+  as: "reviewer",
+  foreignKey: "reviewed_by",
+});
+
+// Exam Script Associations
+ExamScript.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(ExamScript, {
+  as: "exam_scripts",
+  foreignKey: "student_id",
+});
+
+ExamScript.belongsTo(ExamSchedule, {
+  as: "schedule",
+  foreignKey: "exam_schedule_id",
+});
+ExamSchedule.hasMany(ExamScript, {
+  as: "scripts",
+  foreignKey: "exam_schedule_id",
+});
+
+ExamScript.belongsTo(User, {
+  as: "uploader",
+  foreignKey: "uploaded_by",
 });
 
 // Semester Result Associations

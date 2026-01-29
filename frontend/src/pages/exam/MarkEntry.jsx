@@ -37,11 +37,17 @@ const MarkEntry = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [reverificationOnly, setReverificationOnly] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await dispatch(fetchMarkEntryData(scheduleId)).unwrap();
+      const res = await dispatch(
+        fetchMarkEntryData({
+          scheduleId,
+          reverification_only: reverificationOnly,
+        }),
+      ).unwrap();
       setSchedule(res.schedule);
       setStudents(res.students);
 
@@ -62,7 +68,7 @@ const MarkEntry = () => {
     } finally {
       setLoading(false);
     }
-  }, [scheduleId, dispatch, navigate]);
+  }, [scheduleId, reverificationOnly, dispatch, navigate]);
 
   useEffect(() => {
     fetchData();
@@ -124,8 +130,12 @@ const MarkEntry = () => {
       return;
     }
 
+    // In reverification mode, allow editing locked marks
+    // In normal mode, skip locked marks
     const marksToSave = students
-      .filter((s) => marks[s.id].moderation_status !== "locked")
+      .filter(
+        (s) => reverificationOnly || marks[s.id].moderation_status !== "locked",
+      )
       .map((s) => {
         const studentMark = { ...marks[s.id] };
         // If there are no components defined for this cycle, ensure component_scores is null
@@ -182,12 +192,15 @@ const MarkEntry = () => {
       s.student_id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const isLocked = students.some(
-    (s) =>
-      marks[s.id]?.moderation_status === "locked" ||
-      marks[s.id]?.moderation_status === "verified" ||
-      marks[s.id]?.moderation_status === "approved",
-  );
+  // When in reverification mode, allow editing even if marks are locked
+  const isLocked =
+    !reverificationOnly &&
+    students.some(
+      (s) =>
+        marks[s.id]?.moderation_status === "locked" ||
+        marks[s.id]?.moderation_status === "verified" ||
+        marks[s.id]?.moderation_status === "approved",
+    );
 
   if (loading) {
     return (
@@ -311,25 +324,42 @@ const MarkEntry = () => {
           />
         </div>
 
-        {!isLocked && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-400 uppercase mr-2">
-              Bulk Attendance:
-            </span>
-            <button
-              onClick={() => handleBulkAttendance("present")}
-              className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30"
-            >
-              All Present
-            </button>
-            <button
-              onClick={() => handleBulkAttendance("absent")}
-              className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30"
-            >
-              All Absent
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Reverification Filter Toggle */}
+          <button
+            onClick={() => setReverificationOnly(!reverificationOnly)}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+              reverificationOnly
+                ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/30"
+                : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30 hover:bg-purple-100"
+            }`}
+          >
+            🔄{" "}
+            {reverificationOnly
+              ? "Showing Reverifications"
+              : "Show Reverification Only"}
+          </button>
+
+          {!isLocked && (
+            <>
+              <span className="text-xs font-bold text-gray-400 uppercase mr-2">
+                Bulk Attendance:
+              </span>
+              <button
+                onClick={() => handleBulkAttendance("present")}
+                className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30"
+              >
+                All Present
+              </button>
+              <button
+                onClick={() => handleBulkAttendance("absent")}
+                className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30"
+              >
+                All Absent
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Main Entry Table */}

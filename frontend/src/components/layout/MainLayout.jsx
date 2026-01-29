@@ -28,6 +28,7 @@ import {
   Building,
   Bus,
   Home,
+  RefreshCw,
 } from "lucide-react";
 
 const MainLayout = () => {
@@ -49,12 +50,14 @@ const MainLayout = () => {
       href: "/admission-management",
       icon: ClipboardCheck,
       permission: ["admissions:view", "admissions:manage"],
+      roles: ["super_admin", "principal", "admission_admin", "admission_staff"],
     },
     {
       name: "Academics",
       href: "/academics",
       icon: BookOpen,
       permission: ["academics:manage"],
+      roles: ["super_admin", "principal", "hod", "staff"],
     },
     {
       name: "HR Management",
@@ -68,6 +71,7 @@ const MainLayout = () => {
         "hr:leaves:manage",
         "hr:attendance:view",
       ],
+      roles: ["super_admin", "principal", "hr_admin", "hr_staff"],
     },
     {
       name: "Exams Management",
@@ -78,18 +82,26 @@ const MainLayout = () => {
         "exams:results:entry",
         "exams:results:publish",
       ],
+      roles: [
+        "super_admin",
+        "principal",
+        "exam_admin",
+        "exam_staff",
+        "faculty",
+      ],
     },
     {
       name: "Students",
       href: "/students",
       icon: GraduationCap,
       permission: "students:view",
+      roles: ["super_admin", "principal", "hod", "staff", "faculty"],
     },
     {
       name: "Infrastructure",
       href: "/infrastructure",
       icon: Building,
-      roles: ["admin", "super_admin"], // Visible to Admins
+      roles: ["principal", "super_admin"], // Visible to Admins
     },
     {
       name: "My Courses",
@@ -101,55 +113,68 @@ const MainLayout = () => {
       name: "My Students",
       href: "/my-students",
       icon: Users,
-      roles: ["faculty", "hod", "admin", "super_admin"],
+      roles: ["faculty", "hod", "principal", "super_admin"],
     },
     {
       name: "My Timetable",
       href: "/timetable/my",
       icon: Clock,
       permission: "academics:timetable:view",
+      roles: ["student", "faculty", "hod"],
     },
     {
       name: "My HR",
       href: "/hr/my-profile",
       icon: UserIcon,
       permission: "hr:leaves:view", // Staff/Faculty have this, Students don't
+      roles: [
+        "faculty",
+        "hod",
+        "staff",
+        "principal",
+        "super_admin",
+        "hr_admin",
+        "hr_staff",
+        "exam_admin",
+        "exam_staff",
+        "admission_admin",
+        "admission_staff",
+        "hostel_admin",
+        "transport_admin",
+      ],
     },
     {
       name: "Proctoring",
       href: "/proctoring",
       icon: LifeBuoy,
       permission: "proctoring:view",
+      roles: ["faculty", "hod", "principal", "super_admin"],
     },
     {
       name: "Reports",
       href: "/hostel/reports",
       icon: FileText,
       permission: "hostel:read",
+      roles: ["super_admin", "principal", "hostel_admin"],
     },
     {
       name: "Attendance",
       href: "/attendance",
       icon: ClipboardCheck,
       permission: ["academics:attendance:view", "academics:attendance:manage"], // Students view, Faculty manage
+      roles: ["student", "faculty", "hod", "principal", "super_admin"],
     },
 
     {
-      name: "Exams",
+      name: "Examination Hub",
       href: "/my-exams",
-      icon: Calendar,
-      roles: ["student"],
-    },
-    {
-      name: "Exam Payments",
-      href: "/exams/payments",
-      icon: Wallet,
+      icon: Award,
       roles: ["student"],
     },
     {
       name: "My Results",
       href: "/results",
-      icon: Award,
+      icon: FileText,
       roles: ["student"],
     },
     {
@@ -157,6 +182,7 @@ const MainLayout = () => {
       href: "/fees",
       icon: Wallet,
       permission: "finance:fees:manage",
+      roles: ["super_admin", "principal", "finance_admin", "finance_staff"],
     },
     {
       name: "My Fees",
@@ -168,14 +194,15 @@ const MainLayout = () => {
       name: "Transport",
       href: "/transport",
       icon: Bus,
-
       permission: ["transport:manage"],
+      roles: ["super_admin", "principal", "transport_admin"],
     },
     {
       name: "Hostel",
       href: "/hostel",
       icon: Building,
       permission: "hostel:read",
+      roles: ["super_admin", "principal", "hostel_admin"],
     },
     // {
     //   name: "Library",
@@ -194,30 +221,38 @@ const MainLayout = () => {
       href: "/hostel/student",
       icon: Home,
       roles: ["student"],
+      isHostellerOnly: true, // Custom flag for student-level restriction
     },
     {
       name: "Settings",
       href: "/settings/roles",
       icon: Settings,
       permission: "settings:roles:manage",
+      roles: ["super_admin", "principal"],
     },
     // Example of role-based restricted item:
     // {
     //   name: "Role Restricted",
     //   href: "/restricted",
     //   icon: Shield,
-    //   roles: ["admin", "super_admin"], // Only these roles can see this
+    //   roles: ["principal", "super_admin"], // Only these roles can see this
     // },
   ];
 
   // Logic to filter navigation based STRICTLY on user permissions
   const filteredNavigation = navigation.filter((item) => {
-    // 1. Super Admin Bypass
-    // if (user?.role === "super_admin") return true;
-
-    // 2. Role Check (Optional)
+    // 1. Role Check (Priority)
     if (item.roles && Array.isArray(item.roles)) {
       if (!item.roles.includes(user?.role)) return false;
+    }
+
+    // 2. Specific Student-Level Restrictions (e.g., Hostel)
+    if (
+      item.isHostellerOnly &&
+      user?.role === "student" &&
+      !user?.is_hosteller
+    ) {
+      return false;
     }
 
     // 3. Strict Permission Check
@@ -228,7 +263,7 @@ const MainLayout = () => {
       return user?.permissions?.includes(item.permission);
     }
 
-    // 3. Fallback: If no permission specified, it's public (but better to specify 'dashboard:view')
+    // 4. Fallback: If no permission specified, it's public (but better to specify 'dashboard:view')
     return true;
   });
 

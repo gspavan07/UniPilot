@@ -202,9 +202,15 @@ export const fetchScheduleMarks = createAsyncThunk(
 
 export const fetchMarkEntryData = createAsyncThunk(
   "exam/fetchMarkEntryData",
-  async (scheduleId, { rejectWithValue }) => {
+  async ({ scheduleId, reverification_only = false }, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/exam/marks/entry-data/${scheduleId}`);
+      const params = {};
+      if (reverification_only) {
+        params.reverification_only = "true";
+      }
+      const response = await api.get(`/exam/marks/entry-data/${scheduleId}`, {
+        params,
+      });
       return response.data.data;
     } catch (error) {
       return rejectWithValue(

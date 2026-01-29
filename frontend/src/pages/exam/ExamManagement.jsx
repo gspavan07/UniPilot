@@ -9,6 +9,8 @@ import {
   ChevronRight,
   ShieldAlert,
   GraduationCap,
+  RefreshCw,
+  Upload,
 } from "lucide-react";
 
 const ExamManagement = () => {
@@ -46,6 +48,26 @@ const ExamManagement = () => {
       permission: "exams:results:publish",
       color: "purple",
     },
+    {
+      id: "reverification",
+      name: "Reverification Management",
+      description:
+        "Manage student reverification requests and update marks after review.",
+      icon: RefreshCw,
+      href: "/exams/reverification",
+      permission: "exams:reverification:manage",
+      color: "orange",
+    },
+    {
+      id: "scripts",
+      name: "Script Management",
+      description:
+        "Upload, manage, and control visibility of exam answer scripts.",
+      icon: Upload,
+      href: "/exams/scripts",
+      permission: "exams:scripts:manage",
+      color: "indigo",
+    },
     // {
     //   id: "hall-tickets",
     //   name: "Hall Tickets",
@@ -75,6 +97,10 @@ const ExamManagement = () => {
         "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 border-purple-100 dark:border-purple-800",
       amber:
         "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-amber-100 dark:border-amber-800",
+      orange:
+        "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400 border-orange-100 dark:border-orange-800",
+      indigo:
+        "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800",
     };
     return classes[color] || classes.blue;
   };

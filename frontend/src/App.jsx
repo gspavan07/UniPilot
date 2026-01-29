@@ -27,8 +27,7 @@ import ExamSchedules from "./pages/exam/ExamSchedules";
 import MarksEntry from "./pages/exam/MarksEntry";
 import PublishMarks from "./pages/exam/PublishMarks";
 import StudentResults from "./pages/exam/StudentResults";
-import MyExams from "./pages/exam/MyExams";
-import ExamPayments from "./pages/exam/ExamPayments";
+import MyExams from "./pages/student/Exams";
 import ExamHallTickets from "./pages/exam/ExamHallTickets";
 import MyHallTicket from "./pages/exam/MyHallTicket";
 import MarkEntry from "./pages/exam/MarkEntry";
@@ -79,6 +78,8 @@ import SectionManager from "./pages/academics/SectionManager";
 import AcademicsManagement from "./pages/academics/AcademicsManagement";
 import HRManagement from "./pages/hr/HRManagement";
 import ExamManagement from "./pages/exam/ExamManagement";
+import ReverificationManagement from "./pages/exam/ReverificationManagement";
+import ScriptManagement from "./pages/exam/ScriptManagement";
 import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
 import { getLandingPage } from "./utils/routeUtils";
 
@@ -146,8 +147,6 @@ function App() {
           <Route path="/exam-management" element={<ExamManagement />} />
           <Route path="/exams/marks-entry" element={<MarksEntry />} />
           <Route path="/exams/publish" element={<PublishMarks />} />
-          <Route path="/exams/payments" element={<ExamPayments />} />
-          <Route path="/exams/hall-tickets" element={<ExamHallTickets />} />
           <Route path="/my-exams" element={<MyExams />} />
           <Route path="/my-exams/hall-ticket" element={<MyHallTicket />} />
           <Route path="/marks-entry/:scheduleId" element={<MarkEntry />} />
@@ -157,6 +156,14 @@ function App() {
             element={<SectionStudentList />}
           />
           <Route path="/results" element={<StudentResults />} />
+
+          {/* Reverification and Script Management */}
+          <Route
+            path="/exams/reverification"
+            element={<ReverificationManagement />}
+          />
+          <Route path="/exams/scripts" element={<ScriptManagement />} />
+
           <Route path="/fees" element={<FeeManagement />} />
           <Route path="/my-fees" element={<MyFees />} />
           <Route path="/my-courses" element={<MyCourses />} />

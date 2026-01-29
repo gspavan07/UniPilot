@@ -12,6 +12,7 @@ const {
   TimetableSlot,
   SemesterResult,
   Program,
+  ExamReverification,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
@@ -623,17 +624,35 @@ exports.getMarkEntryData = async (req, res) => {
     }
 
     // 4. Fetch students with their marks for this schedule
+    const { reverification_only } = req.query;
+
+    const studentInclude = [
+      {
+        model: ExamMark,
+        as: "exam_marks",
+        where: { exam_schedule_id: scheduleId },
+        required: false,
+      },
+    ];
+
+    // If filtering for reverification only, add reverification join
+    if (reverification_only === "true") {
+      const { ExamReverification } = require("../models");
+      studentInclude.push({
+        model: ExamReverification,
+        as: "exam_reverifications",
+        where: {
+          exam_schedule_id: scheduleId,
+          status: "under_review",
+        },
+        required: true, // INNER JOIN - only students with reverification
+      });
+    }
+
     const students = await User.findAll({
       where: studentWhere,
       attributes: ["id", "first_name", "last_name", "student_id", "program_id"],
-      include: [
-        {
-          model: ExamMark,
-          as: "exam_marks",
-          where: { exam_schedule_id: scheduleId },
-          required: false,
-        },
-      ],
+      include: studentInclude,
       order: [["student_id", "ASC"]],
     });
 
@@ -641,10 +660,17 @@ exports.getMarkEntryData = async (req, res) => {
       success: true,
       data: {
         schedule,
-        students: students.map((s) => ({
-          ...s.toJSON(),
-          mark: s.exam_marks && s.exam_marks[0] ? s.exam_marks[0] : null,
-        })),
+        students: students.map((s) => {
+          const studentData = s.toJSON();
+          return {
+            ...studentData,
+            mark: s.exam_marks && s.exam_marks[0] ? s.exam_marks[0] : null,
+            has_reverification:
+              reverification_only === "true" ||
+              (studentData.exam_reverifications &&
+                studentData.exam_reverifications.length > 0),
+          };
+        }),
       },
     });
   } catch (error) {
@@ -767,7 +793,19 @@ exports.enterMarks = async (req, res) => {
         if (!created) {
           // Check if locked
           if (mark.moderation_status === "locked") {
-            continue; // Skip locked records
+            // Bypass lock if there is an active under_review reverification for this student/schedule
+            const hasReverification = await ExamReverification.findOne({
+              where: {
+                student_id: item.student_id,
+                exam_schedule_id,
+                status: "under_review",
+              },
+              transaction: t,
+            });
+
+            if (!hasReverification) {
+              continue; // Still skip if no active reverification
+            }
           }
 
           const oldMarks = mark.marks_obtained;
@@ -2290,10 +2328,47 @@ exports.bulkPublishResults = async (req, res) => {
       }
     }
 
+    // 5. Update reverification requests to completed
+    // Find all under_review reverifications for these schedules and update them
+    const { ExamReverification } = require("../models");
+
+    const reverifications = await ExamReverification.findAll({
+      where: {
+        exam_schedule_id: { [Op.in]: scheduleIds },
+        status: "under_review",
+      },
+      include: [
+        {
+          model: ExamMark,
+          as: "exam_mark",
+          attributes: ["marks_obtained", "grade"],
+        },
+      ],
+    });
+
+    if (reverifications.length > 0) {
+      for (const reverification of reverifications) {
+        await reverification.update({
+          status: "completed",
+          revised_marks: reverification.exam_mark.marks_obtained,
+          revised_grade: reverification.exam_mark.grade,
+          reviewed_at: new Date(),
+          reviewed_by: req.user.userId,
+          remarks:
+            reverification.remarks ||
+            "Reverification completed - marks published",
+        });
+      }
+      logger.info(
+        `Completed ${reverifications.length} reverification requests`,
+      );
+    }
+
     res.status(200).json({
       success: true,
-      message: `Successfully published ${updatedCount} results and updated SGPAs.`,
+      message: `Successfully published ${updatedCount} results${reverifications.length > 0 ? ` and completed ${reverifications.length} reverification(s)` : ""}.`,
       updatedCount,
+      reverificationsCompleted: reverifications.length,
     });
   } catch (error) {
     logger.error("Error bulk publishing results:", error);

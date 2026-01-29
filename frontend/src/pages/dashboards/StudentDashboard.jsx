@@ -54,10 +54,14 @@ const StudentDashboard = () => {
       ?.filter((s) => s.day_of_week === today)
       .sort((a, b) => a.start_time.localeCompare(b.start_time)) || [];
 
-  // Upcoming Active Exam Cycle
-  const upcomingExam = cycles?.find(
-    (c) => c.status === "published" || c.status === "ongoing",
-  );
+  // Filter Upcoming Exams (Today or Future) and Sort by Proximity
+  const todayDate = new Date().toISOString().split("T")[0];
+  const upcomingSchedules = schedules
+    ? [...schedules]
+        .filter((s) => s.exam_date >= todayDate)
+        .sort((a, b) => a.exam_date.localeCompare(b.exam_date))
+        .slice(0, 3)
+    : [];
 
   const stats = [
     {
@@ -198,8 +202,8 @@ const StudentDashboard = () => {
             </div>
 
             <div className="space-y-3">
-              {schedules && schedules.length > 0 ? (
-                schedules.slice(0, 3).map((s, idx) => (
+              {upcomingSchedules.length > 0 ? (
+                upcomingSchedules.map((s, idx) => (
                   <div
                     key={idx}
                     className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/5"
@@ -237,60 +241,33 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 className="font-bold mb-4">Recent Results</h3>
-            <div className="space-y-3">
-              {myResults.length > 0 ? (
-                myResults.slice(0, 3).map((res, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between text-sm py-2 border-b border-gray-100 dark:border-gray-700"
-                  >
-                    <span>{res.course_name}</span>
-                    <span className="font-bold text-green-600">
-                      {res.grade}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-gray-400 text-center py-4">
-                  No results published yet.
-                </p>
-              )}
+          {/* Hostel Quick Action - Only for Hostellers */}
+          {user?.is_hosteller && (
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold flex items-center">
+                  <Shield className="w-5 h-5 mr-2 text-cyan-500" /> Hostel
+                  Services
+                </h3>
+              </div>
+              <div className="space-y-3">
+                <Link
+                  to="/hostel/gate-pass"
+                  className="flex items-center p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 hover:bg-cyan-100 transition-colors"
+                >
+                  <Ticket className="w-5 h-5 mr-3" />
+                  <span className="text-sm font-bold">Request Gate Pass</span>
+                </Link>
+                <Link
+                  to="/hostel/complaints"
+                  className="flex items-center p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 hover:bg-orange-100 transition-colors"
+                >
+                  <AlertCircle className="w-5 h-5 mr-3" />
+                  <span className="text-sm font-bold">Hostel Complaint</span>
+                </Link>
+              </div>
             </div>
-            <Link
-              to="/results"
-              className="block text-center text-xs font-bold text-gray-400 mt-4 hover:text-indigo-500"
-            >
-              View All Results
-            </Link>
-          </div>
-
-          {/* Hostel Quick Action */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold flex items-center">
-                <Shield className="w-5 h-5 mr-2 text-cyan-500" /> Hostel
-                Services
-              </h3>
-            </div>
-            <div className="space-y-3">
-              <Link
-                to="/hostel/gate-pass"
-                className="flex items-center p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 hover:bg-cyan-100 transition-colors"
-              >
-                <Ticket className="w-5 h-5 mr-3" />
-                <span className="text-sm font-bold">Request Gate Pass</span>
-              </Link>
-              <Link
-                to="/hostel/complaints"
-                className="flex items-center p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 hover:bg-orange-100 transition-colors"
-              >
-                <AlertCircle className="w-5 h-5 mr-3" />
-                <span className="text-sm font-bold">Hostel Complaint</span>
-              </Link>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

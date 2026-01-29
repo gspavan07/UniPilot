@@ -138,6 +138,40 @@ const ExamCycle = sequelize.define(
       comment:
         "Attendance % below which HOD permission is required with condonation",
     },
+    is_reverification_open: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: "Whether reverification window is open for this exam cycle",
+    },
+    reverification_start_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      comment: "Start date for reverification applications",
+    },
+    reverification_end_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      comment: "End date for reverification applications",
+    },
+    reverification_fee_per_paper: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0,
+      allowNull: false,
+      comment: "Fee charged per subject for reverification",
+    },
+    is_script_view_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: "Whether answer script viewing is enabled",
+    },
+    script_view_fee: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0,
+      allowNull: false,
+      comment: "One-time fee for accessing answer scripts (0 if free)",
+    },
   },
   {
     tableName: "exam_cycles",

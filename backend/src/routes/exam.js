@@ -32,7 +32,45 @@ const {
   downloadImportTemplate,
   bulkPublishResults,
 } = require("../controllers/examController");
+
+// Reverification controllers
+const {
+  configureReverification,
+  getReverificationRequests,
+  closeReverificationWindow,
+  reviewReverification,
+  waiveReverificationFee,
+} = require("../controllers/reverificationController");
+
+const {
+  getMyReverificationEligibility,
+  applyForReverification,
+  getMyReverificationRequests,
+} = require("../controllers/studentReverificationController");
+
+const {
+  payReverificationFee,
+} = require("../controllers/reverificationPaymentController");
+
+const {
+  applyWithPayment,
+} = require("../controllers/applyWithPaymentController");
+
+// Script management controllers
+const {
+  uploadScripts,
+  updateScriptVisibility,
+  getUploadedScripts,
+} = require("../controllers/scriptController");
+
+const {
+  getMyScripts,
+  viewScript,
+  payScriptViewAccess,
+} = require("../controllers/studentScriptController");
+
 const { authenticate, checkPermission } = require("../middleware/auth");
+const { scriptUpload } = require("../middleware/scriptUpload");
 
 const router = express.Router();
 
@@ -156,5 +194,76 @@ router.post(
   checkPermission("exams:manage"),
   waiveExamFine,
 );
+
+// ============================================
+// REVERIFICATION ROUTES
+// ============================================
+
+// Exam Cell - Reverification Management
+router.post(
+  "/reverification/configure",
+  checkPermission("exams:reverification:manage"),
+  configureReverification,
+);
+
+router.get(
+  "/reverification/requests",
+  checkPermission("exams:reverification:view"),
+  getReverificationRequests,
+);
+
+router.put(
+  "/reverification/:id/review",
+  checkPermission("exams:reverification:manage"),
+  reviewReverification,
+);
+
+router.post(
+  "/reverification/:id/waive-fee",
+  checkPermission("exams:reverification:manage"),
+  waiveReverificationFee,
+);
+
+router.post(
+  "/reverification/:cycleId/close-window",
+  checkPermission("exams:reverification:manage"),
+  closeReverificationWindow,
+);
+
+// Student - Reverification
+router.get("/my-reverification-eligibility", getMyReverificationEligibility);
+router.post("/reverification/apply", applyForReverification);
+router.post("/reverification/apply-with-payment", applyWithPayment);
+router.get("/my-reverification-requests", getMyReverificationRequests);
+router.post("/reverification/pay", payReverificationFee);
+
+// ============================================
+// SCRIPT MANAGEMENT ROUTES
+// ============================================
+
+// Exam Cell - Script Management
+router.post(
+  "/scripts/upload",
+  checkPermission("exams:scripts:manage"),
+  scriptUpload.array("scripts", 100),
+  uploadScripts,
+);
+
+router.put(
+  "/scripts/visibility",
+  checkPermission("exams:scripts:manage"),
+  updateScriptVisibility,
+);
+
+router.get(
+  "/scripts/uploaded",
+  checkPermission("exams:scripts:view"),
+  getUploadedScripts,
+);
+
+// Student - Script Viewing
+router.get("/my-scripts", getMyScripts);
+router.get("/scripts/:id/view", viewScript);
+router.post("/scripts/pay-access", payScriptViewAccess);
 
 module.exports = router;

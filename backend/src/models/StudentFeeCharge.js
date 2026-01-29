@@ -22,7 +22,14 @@ const StudentFeeCharge = sequelize.define(
       comment: "Fee category (e.g., Hostel Electricity, Transport)",
     },
     charge_type: {
-      type: DataTypes.ENUM("hostel_bill", "transport_fee", "fine", "other"),
+      type: DataTypes.ENUM(
+        "hostel_bill",
+        "transport_fee",
+        "fine",
+        "exam_reverification",
+        "exam_script_view",
+        "other",
+      ),
       allowNull: false,
       comment: "Type of individual charge",
     },

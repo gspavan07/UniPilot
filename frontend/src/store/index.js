@@ -18,6 +18,8 @@ import regulationReducer from "./slices/regulationSlice";
 import transportReducer from "./slices/transportSlice";
 import hostelReducer from "./slices/hostelSlice";
 import dashboardReducer from "./slices/dashboardSlice";
+import reverificationReducer from "../redux/slices/reverificationSlice";
+import studentReverificationReducer from "../redux/slices/studentReverificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -40,6 +42,8 @@ export const store = configureStore({
     transport: transportReducer,
     hostel: hostelReducer,
     dashboard: dashboardReducer,
+    reverification: reverificationReducer,
+    studentReverification: studentReverificationReducer,
   },
 });
 

@@ -2248,10 +2248,17 @@ const FeeManagement = () => {
             </h4>
             <button
               onClick={() => {
-                const csvData =
-                  insightFilters.startDate || insightFilters.department_id
-                    ? dailyReport?.transactions
-                    : transactions;
+                // Check if ANY filter is active (except the default 'all' payment type)
+                const isFiltered = Object.entries(insightFilters).some(
+                  ([key, value]) => {
+                    if (key === "payment_type") return value !== "all";
+                    return value !== "";
+                  },
+                );
+
+                const csvData = isFiltered
+                  ? dailyReport?.transactions
+                  : transactions;
                 if (!csvData) return;
                 const csv = [
                   [
@@ -2285,7 +2292,9 @@ const FeeManagement = () => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = "financial_insights_export.csv";
+                a.download = isFiltered
+                  ? "filtered_financial_ledger.csv"
+                  : "global_financial_ledger.csv";
                 a.click();
               }}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-100 transition-all"
