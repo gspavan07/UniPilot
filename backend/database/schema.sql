@@ -75,8 +75,8 @@ ALTER TYPE public.enum_books_status OWNER TO postgres;
 
 CREATE TYPE public.enum_courses_course_type AS ENUM (
     'theory',
-    'practical',
-    'theory_practical'
+    'lab',
+    'project'
 );
 
 

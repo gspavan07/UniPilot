@@ -41,13 +41,21 @@ const CourseList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    department_id: "",
+    program_id: "",
+    regulation_id: "",
+    semester: "",
+    course_type: "",
+  });
 
   useEffect(() => {
-    dispatch(fetchCourses());
+    dispatch(fetchCourses(filters));
     dispatch(fetchDepartments());
     dispatch(fetchPrograms());
     dispatch(fetchRegulations());
-  }, [dispatch]);
+  }, [dispatch, filters]);
 
   const handleDelete = async (id) => {
     if (
@@ -77,6 +85,25 @@ const CourseList = () => {
   const openEditForm = (course) => {
     setSelectedCourse(course);
     setIsFormOpen(true);
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      department_id: "",
+      program_id: "",
+      regulation_id: "",
+      semester: "",
+      course_type: "",
+    });
+    setSearchTerm("");
   };
 
   const filteredCourses = courses.filter(
@@ -120,11 +147,127 @@ const CourseList = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button className="btn btn-secondary flex items-center">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`btn ${showFilters ? "btn-primary" : "btn-secondary"} flex items-center`}
+        >
           <Filter className="w-5 h-5 mr-2" />
-          Filters
+          {showFilters ? "Hide Filters" : "Filters"}
         </button>
+        {(filters.department_id ||
+          filters.program_id ||
+          filters.regulation_id ||
+          filters.semester ||
+          filters.course_type ||
+          searchTerm) && (
+          <button
+            onClick={resetFilters}
+            className="btn btn-ghost text-gray-500 hover:text-error-500 flex items-center"
+          >
+            Reset
+          </button>
+        )}
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="card p-4 bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                Department
+              </label>
+              <select
+                name="department_id"
+                value={filters.department_id}
+                onChange={handleFilterChange}
+                className="form-select w-full text-xs rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                Program
+              </label>
+              <select
+                name="program_id"
+                value={filters.program_id}
+                onChange={handleFilterChange}
+                className="form-select w-full text-xs rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
+              >
+                <option value="">All Programs</option>
+                {programs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                Regulation
+              </label>
+              <select
+                name="regulation_id"
+                value={filters.regulation_id}
+                onChange={handleFilterChange}
+                className="form-select w-full text-xs rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
+              >
+                <option value="">All Regulations</option>
+                {regulations.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                Semester
+              </label>
+              <select
+                name="semester"
+                value={filters.semester}
+                onChange={handleFilterChange}
+                className="form-select w-full text-xs rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
+              >
+                <option value="">All Semesters</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                  <option key={s} value={s}>
+                    Semester {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                Course Type
+              </label>
+              <select
+                name="course_type"
+                value={filters.course_type}
+                onChange={handleFilterChange}
+                className="form-select w-full text-xs rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
+              >
+                <option value="">All Types</option>
+                <option value="theory">Theory</option>
+                <option value="lab">Lab</option>
+                <option value="project">Project</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {courseStatus === "loading" && courses.length === 0 ? (
         <div className="py-24 flex flex-col items-center justify-center">

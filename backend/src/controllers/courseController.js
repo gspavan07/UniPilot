@@ -11,11 +11,28 @@ const logger = require("../utils/logger");
 // @access  Private
 exports.getAllCourses = async (req, res) => {
   try {
-    const { regulation_id } = req.query;
+    const { regulation_id, department_id, program_id, semester, course_type } =
+      req.query;
     const whereClause = {};
 
     if (regulation_id) {
       whereClause.regulation_id = regulation_id;
+    }
+
+    if (department_id) {
+      whereClause.department_id = department_id;
+    }
+
+    if (program_id) {
+      whereClause.program_id = program_id;
+    }
+
+    if (semester) {
+      whereClause.semester = semester;
+    }
+
+    if (course_type) {
+      whereClause.course_type = course_type;
     }
 
     const courses = await Course.findAll({

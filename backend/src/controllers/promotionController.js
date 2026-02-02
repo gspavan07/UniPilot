@@ -60,7 +60,7 @@ exports.evaluatePromotion = async (req, res) => {
   try {
     const { program_id, current_semester } = req.body;
 
-    // 1. Get Criteria
+    // 1. Get Criteria (Optional)
     const criteria = await PromotionCriteria.findOne({
       where: {
         program_id,
@@ -69,12 +69,7 @@ exports.evaluatePromotion = async (req, res) => {
       },
     });
 
-    if (!criteria) {
-      return res.status(404).json({
-        success: false,
-        error: "No active promotion criteria found for this semester",
-      });
-    }
+    const to_semester = criteria ? criteria.to_semester : current_semester + 1;
 
     // 2. Get Students
     const students = await User.findAll({
@@ -88,20 +83,25 @@ exports.evaluatePromotion = async (req, res) => {
 
     const results = [];
 
-    // 3. Evaluate each student (Simulated logic for now)
+    // 3. Evaluate each student
     for (const student of students) {
       // In a full implementation, we would query attendance and marks tables here
-      // For now, we simulate with some random logic or assume metadata
+      const attendance = 100; // Default when no criteria
+      const cgpa = 7.0; // Default
+      const backlogs = 0; // Default
+      const fee_cleared = true; // Default
 
-      const attendance = 80; // Placeholder
-      const cgpa = 7.5; // Placeholder
-      const backlogs = 0; // Placeholder
-      const fee_cleared = true; // Placeholder
+      let attendance_met = true;
+      let cgpa_met = true;
+      let backlogs_met = true;
+      let fee_met = true;
 
-      const attendance_met = attendance >= criteria.min_attendance_percentage;
-      const cgpa_met = criteria.min_cgpa ? cgpa >= criteria.min_cgpa : true;
-      const backlogs_met = backlogs <= criteria.max_backlogs_allowed;
-      const fee_met = criteria.fee_clearance_required ? fee_cleared : true;
+      if (criteria) {
+        attendance_met = attendance >= criteria.min_attendance_percentage;
+        cgpa_met = criteria.min_cgpa ? cgpa >= criteria.min_cgpa : true;
+        backlogs_met = backlogs <= criteria.max_backlogs_allowed;
+        fee_met = criteria.fee_clearance_required ? fee_cleared : true;
+      }
 
       const overall_eligible =
         attendance_met && cgpa_met && backlogs_met && fee_met;
@@ -119,7 +119,8 @@ exports.evaluatePromotion = async (req, res) => {
         fee_cleared,
         overall_eligible,
         from_semester: current_semester,
-        to_semester: criteria.to_semester,
+        to_semester: to_semester,
+        using_criteria: !!criteria,
       });
     }
 
@@ -156,7 +157,7 @@ exports.processBulkPromotion = async (req, res) => {
               current_semester: to_semester,
               academic_status: "promoted",
             },
-            { transaction: t }
+            { transaction: t },
           );
 
           // Record evaluation/history
@@ -169,7 +170,7 @@ exports.processBulkPromotion = async (req, res) => {
               overall_eligible: true,
               processed_by: req.user.userId,
             },
-            { transaction: t }
+            { transaction: t },
           );
         }
       }
