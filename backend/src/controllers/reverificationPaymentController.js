@@ -5,6 +5,7 @@ const {
   User,
   ExamSchedule,
   Course,
+  ExamFeePayment,
   sequelize,
 } = require("../models");
 
@@ -16,12 +17,15 @@ const payReverificationFee = async (req, res) => {
 
   try {
     const student_id = req.user.userId;
+    const student = await User.findByPk(student_id, { transaction });
     const { reverification_id, payment_method } = req.body;
 
     if (!reverification_id) {
       await transaction.rollback();
       return res.status(400).json({ message: "Reverification ID is required" });
     }
+
+    const { ExamFeePayment } = require("../models");
 
     // Get the reverification request
     const reverification = await ExamReverification.findOne({
@@ -31,8 +35,8 @@ const payReverificationFee = async (req, res) => {
       },
       include: [
         {
-          model: StudentFeeCharge,
-          as: "fee_charge",
+          model: ExamFeePayment,
+          as: "exam_fee_payment",
         },
         {
           model: ExamSchedule,
@@ -62,45 +66,46 @@ const payReverificationFee = async (req, res) => {
       });
     }
 
-    if (!reverification.fee_charge) {
+    const feePayment = reverification.exam_fee_payment;
+    if (!feePayment) {
       await transaction.rollback();
       return res.status(404).json({
-        message: "Fee charge not found for this request",
+        message: "Exam fee payment record not found for this request",
       });
     }
 
-    // Update fee charge as paid
-    await reverification.fee_charge.update(
+    // Update centralized ExamFeePayment as completed
+    await feePayment.update(
       {
-        is_paid: true,
-        paid_at: new Date(),
-        payment_method: payment_method || "cash",
+        status: "completed",
+        payment_date: new Date(),
+        payment_method: payment_method || "online",
+        transaction_id: `REV-TXN-${Date.now()}`,
       },
       { transaction },
     );
 
-    // Create fee payment record
+    // Create main FeePayment record for Insights (Financial Audit Only)
     await FeePayment.create(
       {
         student_id,
-        charge_id: reverification.fee_charge.id,
-        amount: reverification.fee_charge.amount,
-        payment_method: payment_method || "cash",
+        fee_charge_id: null,
+        amount_paid: feePayment.amount,
+        payment_method: payment_method || "online",
         payment_date: new Date(),
-        transaction_id: `REV-${Date.now()}`,
-        description: `Reverification fee for ${reverification.schedule.course.name}`,
-        semester: reverification.semester || reverification.fee_charge.semester,
-        fee_structure_id: null, // Charges don't have fee_structure_id
-        student_fee_charge_id: reverification.fee_charge.id, // Explicitly link to charge
-        created_by: student_id,
+        transaction_id: feePayment.transaction_id,
+        remarks: `Reverification fee for ${reverification.schedule.course.name}`,
+        semester: reverification.semester || student.current_semester || 0,
+        status: "completed",
       },
       { transaction },
     );
 
-    // Update reverification payment status
+    // Update reverification status
     await reverification.update(
       {
         payment_status: "paid",
+        status: "under_review", // Move to under_review automatically after payment
       },
       { transaction },
     );
@@ -112,7 +117,8 @@ const payReverificationFee = async (req, res) => {
       reverification: {
         id: reverification.id,
         payment_status: "paid",
-        fee_amount: reverification.fee_charge.amount,
+        status: "under_review",
+        fee_amount: feePayment.amount,
       },
     });
   } catch (error) {

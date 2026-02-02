@@ -172,6 +172,22 @@ const ExamCycle = sequelize.define(
       allowNull: false,
       comment: "One-time fee for accessing answer scripts (0 if free)",
     },
+    condonation_fee: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0.0,
+      allowNull: false,
+      comment: "Fee charged for attendance condonation",
+    },
+    exam_month: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Month of the examination (e.g., Jan, Feb)",
+    },
+    exam_year: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "Year of the examination (e.g., 2024)",
+    },
   },
   {
     tableName: "exam_cycles",

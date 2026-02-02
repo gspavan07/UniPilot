@@ -38,6 +38,7 @@ const TimetableSlot = require("./TimetableSlot");
 const FeeSemesterConfig = require("./FeeSemesterConfig");
 const StudentDocument = require("./StudentDocument");
 const SectionIncharge = require("./SectionIncharge");
+const ExamFeePayment = require("./ExamFeePayment");
 
 const AdmissionConfig = require("./AdmissionConfig");
 const StaffAttendance = require("./StaffAttendance");
@@ -126,7 +127,7 @@ const models = {
   Room,
   SemesterResult,
   SectionIncharge,
-
+  ExamFeePayment,
   // Transport Management Models
   Route,
   TransportStop,
@@ -461,6 +462,27 @@ StudentFeeCharge.hasMany(ExamReverification, {
 ExamReverification.belongsTo(User, {
   as: "reviewer",
   foreignKey: "reviewed_by",
+});
+
+ExamReverification.belongsTo(ExamFeePayment, {
+  as: "exam_fee_payment",
+  foreignKey: "exam_fee_payment_id",
+});
+ExamFeePayment.hasMany(ExamReverification, {
+  as: "reverifications",
+  foreignKey: "exam_fee_payment_id",
+});
+
+// Exam Fee Payment Associations
+ExamFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(ExamFeePayment, { as: "exam_payments", foreignKey: "student_id" });
+ExamFeePayment.belongsTo(ExamCycle, {
+  as: "cycle",
+  foreignKey: "exam_cycle_id",
+});
+ExamCycle.hasMany(ExamFeePayment, {
+  as: "exam_payments",
+  foreignKey: "exam_cycle_id",
 });
 
 // Exam Script Associations

@@ -359,9 +359,13 @@ export const fetchRegistrationStatus = createAsyncThunk(
 
 export const fetchRegistrations = createAsyncThunk(
   "exam/fetchRegistrations",
-  async (cycleId, { rejectWithValue }) => {
+  async ({ cycleId, courseId }, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/exam/registrations/${cycleId}`);
+      const params = {};
+      if (courseId) params.course_id = courseId;
+      const response = await api.get(`/exam/registrations/${cycleId}`, {
+        params,
+      });
       return response.data; // Return full object: { data: registrations, cycle_config: config }
     } catch (error) {
       return rejectWithValue(

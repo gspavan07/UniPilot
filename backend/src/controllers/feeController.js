@@ -478,7 +478,7 @@ exports.payMyFees = async (req, res) => {
   }
 };
 
-const calculateFeeStatus = async (studentId) => {
+exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
   const student = await User.findByPk(studentId, {
     include: [
       { model: Program, as: "program" },
@@ -852,22 +852,28 @@ exports.getCollectionStats = async (req, res) => {
       },
     });
 
-    // Program-wise collection
+    // Program-wise collection (Joined via student to include all payment types)
     const programWise = await FeePayment.findAll({
       attributes: [
-        [sequelize.col("fee_structure->program.name"), "program_name"],
+        [sequelize.col("student->program.name"), "program_name"],
         [sequelize.fn("SUM", sequelize.col("amount_paid")), "total"],
       ],
       include: [
         {
-          model: FeeStructure,
-          as: "fee_structure",
+          model: User,
+          as: "student",
           attributes: [],
-          include: [{ model: Program, as: "program", attributes: [] }],
+          include: [
+            {
+              model: Program,
+              as: "program",
+              attributes: [],
+            },
+          ],
         },
       ],
       where: { status: "completed" },
-      group: [sequelize.col("fee_structure->program.name")],
+      group: [sequelize.col("student->program.name")],
     });
 
     // Payment method distribution

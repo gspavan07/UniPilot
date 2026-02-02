@@ -6,7 +6,7 @@ const {
   ExamScript,
   User,
   Course,
-  StudentFeeCharge,
+  ExamFeePayment,
   FeeCategory,
   Program,
   Regulation,
@@ -246,33 +246,26 @@ const applyForReverification = async (req, res) => {
       });
     }
 
-    // Create fee charge
-    const student = await User.findByPk(student_id, {
-      attributes: ["current_semester"],
-      transaction,
-    });
-
-    const feeCharge = await StudentFeeCharge.create(
+    // Create centralized ExamFeePayment record (Pending)
+    const examFeePayment = await ExamFeePayment.create(
       {
         student_id,
-        category_id: feeCategory.id,
-        charge_type: "exam_reverification",
+        exam_cycle_id: cycle.id,
+        category: "reverification",
         amount: totalFee,
-        description: `Reverification fee for ${exam_schedule_ids.length} subject(s)`,
-        semester: student.current_semester || 1,
-        is_paid: false,
-        created_by: student_id,
+        status: "pending",
+        remarks: `Reverification fee for ${exam_schedule_ids.length} subject(s)`,
       },
       { transaction },
     );
 
-    // Link fee charge to reverification requests
+    // Link exam fee payment to reverification requests
     const createdRequests = await Promise.all(
       reverificationRequests.map((req) =>
         ExamReverification.create(
           {
             ...req,
-            fee_charge_id: feeCharge.id,
+            exam_fee_payment_id: examFeePayment.id,
           },
           { transaction },
         ),
@@ -296,8 +289,8 @@ const applyForReverification = async (req, res) => {
           ],
         },
         {
-          model: StudentFeeCharge,
-          as: "fee_charge",
+          model: ExamFeePayment,
+          as: "exam_fee_payment",
         },
       ],
     });
@@ -305,10 +298,10 @@ const applyForReverification = async (req, res) => {
     res.status(201).json({
       message: "Reverification applications submitted successfully",
       reverificationRequests: finalRequests,
-      feeCharge: {
-        id: feeCharge.id,
-        amount: feeCharge.amount,
-        is_paid: feeCharge.is_paid,
+      payment_details: {
+        id: examFeePayment.id,
+        amount: examFeePayment.amount,
+        status: examFeePayment.status,
       },
       payment_required: true,
     });

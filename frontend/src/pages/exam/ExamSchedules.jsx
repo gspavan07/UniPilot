@@ -97,6 +97,9 @@ const ExamSchedules = () => {
     override_remarks: "",
   });
 
+  // View State for Cycle Tabs
+  const [activeCycleTab, setActiveCycleTab] = useState("upcoming");
+
   // Derive unique batch years and semesters from cycles
   const uniqueBatches = [
     ...new Set(cycles.map((c) => c.batch_year).filter(Boolean)),
@@ -105,13 +108,18 @@ const ExamSchedules = () => {
     ...new Set(cycles.map((c) => c.semester).filter(Boolean)),
   ].sort((a, b) => a - b);
 
-  // Filter cycles based on selected batch and semester
+  // Filter cycles based on selected batch, semester and active tab
   const filteredCycles = cycles.filter((c) => {
     const matchesBatch =
       !selectedBatch || c.batch_year === parseInt(selectedBatch, 10);
     const matchesSemester =
       !selectedSemester || c.semester === parseInt(selectedSemester, 10);
-    return matchesBatch && matchesSemester;
+
+    const isCompleted = c.status === "results_published";
+    const matchesTab =
+      activeCycleTab === "upcoming" ? !isCompleted : isCompleted;
+
+    return matchesBatch && matchesSemester && matchesTab;
   });
 
   // Create Cycle Modal State
@@ -131,15 +139,21 @@ const ExamSchedules = () => {
     regular_fee: 0,
     supply_fee_per_paper: 0,
     late_fee_amount: 0,
+    condonation_fee: 0,
     is_attendance_checked: true,
     is_fee_checked: true,
     attendance_condonation_threshold: 75.0,
     attendance_permission_threshold: 65.0,
     exam_mode: "regular",
+    exam_month: "",
+    exam_year: new Date().getFullYear(),
+    status: "scheduled",
   });
   const [editingCycle, setEditingCycle] = useState(null);
 
-  const [viewingCycle, setViewingCycle] = useState(null);
+  const [viewingCycleRaw, setViewingCycleRaw] = useState(null);
+  const viewingCycle =
+    cycles.find((c) => c.id === selectedCycle) || viewingCycleRaw;
 
   // Timetable/Schedule State
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -219,6 +233,7 @@ const ExamSchedules = () => {
           semester: viewingCycle.semester,
           batch_year: viewingCycle.batch_year,
           section: examSection,
+          exam_cycle_id: selectedCycle, // CRITICAL: Pass cycle ID for filtering
         }),
       ).unwrap();
       setTabulationData(res.data);
@@ -262,15 +277,24 @@ const ExamSchedules = () => {
         late_fee_amount: viewingCycle.late_fee_amount || 0,
         is_attendance_checked: viewingCycle.is_attendance_checked ?? true,
         is_fee_checked: viewingCycle.is_fee_checked ?? true,
+        exam_month: viewingCycle.exam_month || "",
+        exam_year: viewingCycle.exam_year || new Date().getFullYear(),
       });
     }
   }, [viewMode, viewingCycle]);
 
+  const [regSubjectFilter, setRegSubjectFilter] = useState("");
+
   useEffect(() => {
     if (activeTab === "registrations" && selectedCycle) {
-      dispatch(fetchRegistrations(selectedCycle));
+      dispatch(
+        fetchRegistrations({
+          cycleId: selectedCycle,
+          courseId: regSubjectFilter,
+        }),
+      );
     }
-  }, [activeTab, selectedCycle, dispatch]);
+  }, [activeTab, selectedCycle, regSubjectFilter, dispatch]);
 
   const handleOverride = async () => {
     if (!overrideData.override_remarks) {
@@ -281,7 +305,10 @@ const ExamSchedules = () => {
       await dispatch(
         updateRegistrationStatus({
           id: activeReg.id,
-          data: overrideData,
+          data: {
+            ...overrideData,
+            exam_cycle_id: selectedCycle,
+          },
         }),
       ).unwrap();
       alert("Registration status updated successfully");
@@ -328,7 +355,9 @@ const ExamSchedules = () => {
       } else if (regStatusFilter === "blocked") {
         matchesStatus = student.eligibility?.is_eligible === false;
       } else if (regStatusFilter === "needs_condonation") {
-        matchesStatus = student.attendance?.tier === "needs_condonation";
+        matchesStatus =
+          student.attendance?.tier === "needs_condonation" ||
+          student.attendance?.tier === "needs_permission";
       } else if (regStatusFilter === "needs_permission") {
         matchesStatus = student.attendance?.tier === "needs_permission";
       }
@@ -359,34 +388,22 @@ const ExamSchedules = () => {
     }
 
     try {
-      // 2. Fetch Students
-      const course = courses.find((c) => c.id === courseId);
-      let url = `/users?role=student&department_id=${user.department_id}`;
+      // 2. Fetch Marks Entry Data (which includes registered students and existing marks)
+      const res = await api.get(`/exam/marks/entry-data/${schedule.id}`);
+      const { students: registeredStudents } = res.data.data;
 
-      if (course?.program_id) url += `&program_id=${course.program_id}`;
-      if (course?.semester) url += `&semester=${course.semester}`;
-      if (section) url += `&section=${section}`;
+      setStudentList(registeredStudents);
 
-      const response = await api.get(url);
-      const students = response.data.data;
-      setStudentList(students);
-
-      // 3. Fetch Existing Marks
-      const existingMarks = await dispatch(
-        fetchScheduleMarks(schedule.id),
-      ).unwrap();
-
-      // 4. Merge Data & Status
+      // 3. Prepare initial marks state
       const initial = {};
-      if (existingMarks.length > 0) {
-        setSheetStatus(existingMarks[0].moderation_status || "draft");
+      if (registeredStudents.length > 0 && registeredStudents[0].mark) {
+        setSheetStatus(registeredStudents[0].mark.moderation_status || "draft");
       }
 
-      students.forEach((s) => {
-        const record = existingMarks.find((r) => r.student_id === s.id);
+      registeredStudents.forEach((s) => {
         initial[s.id] = {
-          marks_obtained: record ? record.marks_obtained : "",
-          component_scores: record?.component_scores || {},
+          marks_obtained: s.mark ? s.mark.marks_obtained : "",
+          component_scores: s.mark?.component_scores || {},
         };
       });
       setMarksData(initial);
@@ -406,7 +423,7 @@ const ExamSchedules = () => {
         if (!res.error) {
           setShowCreateModal(false);
           setEditingCycle(null);
-          setViewingCycle(res.payload); // Update active view if needed
+          setViewingCycleRaw(res.payload); // Update active view if needed
           alert("Exam cycle updated successfully!");
         }
       });
@@ -424,6 +441,8 @@ const ExamSchedules = () => {
             cycle_type: "",
             instance_number: 1,
             exam_mode: "regular",
+            exam_month: "",
+            exam_year: new Date().getFullYear(),
           });
           alert("Exam cycle created successfully!");
         }
@@ -595,9 +614,14 @@ const ExamSchedules = () => {
                     supply_fee_per_paper:
                       viewingCycle.supply_fee_per_paper || 0,
                     late_fee_amount: viewingCycle.late_fee_amount || 0,
+                    condonation_fee: viewingCycle.condonation_fee || 0,
                     is_attendance_checked:
                       viewingCycle.is_attendance_checked ?? true,
                     is_fee_checked: viewingCycle.is_fee_checked ?? true,
+                    exam_month: viewingCycle.exam_month || "",
+                    exam_year:
+                      viewingCycle.exam_year || new Date().getFullYear(),
+                    status: viewingCycle.status || "scheduled",
                   });
                   setShowCreateModal(true);
                 }}
@@ -655,37 +679,64 @@ const ExamSchedules = () => {
       {/* View Mode Switching */}
       {viewMode === "list" ? (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-wrap gap-4">
-            <div className="flex items-center gap-2 text-gray-400 mr-2">
-              <Filter className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase">
-                Quick Filters:
-              </span>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 w-fit">
+              <button
+                onClick={() => setActiveCycleTab("upcoming")}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                  activeCycleTab === "upcoming"
+                    ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Upcoming
+              </button>
+              <button
+                onClick={() => setActiveCycleTab("completed")}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                  activeCycleTab === "completed"
+                    ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Completed
+              </button>
             </div>
-            <select
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg py-2 px-4 text-xs font-bold focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All Batches</option>
-              {uniqueBatches.map((year) => (
-                <option key={year} value={year}>
-                  {year} Batch
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedSemester}
-              onChange={(e) => setSelectedSemester(e.target.value)}
-              className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg py-2 px-4 text-xs font-bold focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All Semesters</option>
-              {uniqueSemesters.map((sem) => (
-                <option key={sem} value={sem}>
-                  Semester {sem}
-                </option>
-              ))}
-            </select>
+
+            <div className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Filter className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase">
+                  Quick Filters:
+                </span>
+              </div>
+              <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+                className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg py-2 px-4 text-xs font-bold focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">All Batches</option>
+                {uniqueBatches.map((year) => (
+                  <option key={year} value={year}>
+                    {year} Batch
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedSemester}
+                onChange={(e) => setSelectedSemester(e.target.value)}
+                className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg py-2 px-4 text-xs font-bold focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">All Semesters</option>
+                {uniqueSemesters.map((sem) => (
+                  <option key={sem} value={sem}>
+                    Semester {sem}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -715,6 +766,10 @@ const ExamSchedules = () => {
                               cycle_type: cycle.cycle_type || "",
                               instance_number: cycle.instance_number || 1,
                               exam_mode: cycle.exam_mode || "regular",
+                              exam_month: cycle.exam_month || "",
+                              exam_year:
+                                cycle.exam_year || new Date().getFullYear(),
+                              status: cycle.status || "scheduled",
                             });
                             setShowCreateModal(true);
                           }}
@@ -725,15 +780,17 @@ const ExamSchedules = () => {
                       </>
                     )}
                     <span
-                      className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
-                        cycle.status === "scheduled"
-                          ? "bg-blue-100 text-blue-600"
+                      className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border ${
+                        cycle.status === "results_published"
+                          ? "bg-green-50 text-green-600 border-green-100"
                           : cycle.status === "ongoing"
-                            ? "bg-green-100 text-green-600"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-amber-50 text-amber-600 border-amber-100"
+                            : "bg-blue-50 text-blue-600 border-blue-100"
                       }`}
                     >
-                      {cycle.status}
+                      {cycle.status === "results_published"
+                        ? "Results Published"
+                        : "Result Pending"}
                     </span>
                     {(user?.role === "super_admin" ||
                       user?.permissions?.includes("exams:manage")) && (
@@ -770,7 +827,7 @@ const ExamSchedules = () => {
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
                   <button
                     onClick={() => {
-                      setViewingCycle(cycle);
+                      setViewingCycleRaw(cycle);
                       setSelectedCycle(cycle.id);
                       setViewMode("details");
                     }}
@@ -817,6 +874,17 @@ const ExamSchedules = () => {
                     </span>
                     <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 rounded text-indigo-600">
                       {viewingCycle?.cycle_type?.replace("_", " ")}
+                    </span>
+                    <span
+                      className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border ${
+                        viewingCycle?.status === "results_published"
+                          ? "bg-green-50 text-green-600 border-green-100"
+                          : "bg-blue-50 text-blue-600 border-blue-100"
+                      }`}
+                    >
+                      {viewingCycle?.status === "results_published"
+                        ? "Results Published"
+                        : "Result Pending"}
                     </span>
                   </div>
                 </div>
@@ -1492,15 +1560,35 @@ const ExamSchedules = () => {
             {activeTab === "registrations" && (
               <div className="space-y-6 animate-fade-in">
                 <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row gap-4 justify-between items-center">
-                  <div className="relative w-full md:w-96">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search student name or email..."
-                      value={regSearchTerm}
-                      onChange={(e) => setRegSearchTerm(e.target.value)}
-                      className="w-full bg-white dark:bg-gray-700 border-none rounded-xl pl-12 pr-6 py-2.5 text-sm focus:ring-2 focus:ring-indigo-600 shadow-sm"
-                    />
+                  <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    <div className="relative w-full md:w-80">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search student..."
+                        value={regSearchTerm}
+                        onChange={(e) => setRegSearchTerm(e.target.value)}
+                        className="w-full bg-white dark:bg-gray-700 border-none rounded-xl pl-12 pr-6 py-2.5 text-sm focus:ring-2 focus:ring-indigo-600 shadow-sm"
+                      />
+                    </div>
+                    <select
+                      value={regSubjectFilter}
+                      onChange={(e) => setRegSubjectFilter(e.target.value)}
+                      className="bg-white dark:bg-gray-700 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-600 shadow-sm min-w-[200px]"
+                    >
+                      <option value="">All Subjects</option>
+                      {schedules
+                        .filter(
+                          (s) =>
+                            s.exam_cycle_id === selectedCycle ||
+                            s.cycle?.id === selectedCycle,
+                        )
+                        .map((s) => (
+                          <option key={s.id} value={s.course_id}>
+                            {s.course?.code} - {s.course?.name}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1693,28 +1781,31 @@ const ExamSchedules = () => {
                                   </span>
                                   {/* Tier Badge */}
                                   {student.attendance?.tier !== "clear" && (
-                                    <span
-                                      className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                                    <div className="flex gap-1">
+                                      {(student.attendance?.tier ===
+                                        "needs_condonation" ||
                                         student.attendance?.tier ===
-                                        "needs_condonation"
-                                          ? "bg-yellow-50 text-yellow-700"
-                                          : "bg-orange-50 text-orange-700"
-                                      }`}
-                                    >
+                                          "needs_permission") && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-yellow-50 text-yellow-700">
+                                          Cond.
+                                        </span>
+                                      )}
                                       {student.attendance?.tier ===
-                                      "needs_condonation"
-                                        ? "Cond."
-                                        : "HOD"}
-                                    </span>
+                                        "needs_permission" && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-orange-50 text-orange-700">
+                                          HOD
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                                 {/* Override badges */}
-                                {student.overrides?.is_condoned && (
+                                {student.registration?.is_condoned && (
                                   <span className="text-[8px] text-green-600 font-black uppercase tracking-tighter">
                                     ✓ Condoned
                                   </span>
                                 )}
-                                {student.overrides?.has_permission && (
+                                {student.registration?.has_permission && (
                                   <span className="text-[8px] text-green-600 font-black uppercase tracking-tighter">
                                     ✓ HOD Approved
                                   </span>
@@ -1787,7 +1878,7 @@ const ExamSchedules = () => {
 
                             {/* Exam Fee Status */}
                             <td className="px-8 py-6">
-                              {student.exam_fee_status?.paid ? (
+                              {student.registration?.fee_status == "paid" ? (
                                 <div className="flex flex-col">
                                   <span className="text-[9px] px-2 py-0.5 font-black rounded uppercase tracking-widest bg-green-50 text-green-600 inline-block text-center mb-1">
                                     Paid
@@ -1809,17 +1900,23 @@ const ExamSchedules = () => {
                                 onClick={() => {
                                   setActiveReg(student);
                                   setOverrideData({
-                                    status: student.registration_status,
+                                    status:
+                                      student.registration_status ===
+                                      "not_registered"
+                                        ? "approved"
+                                        : student.registration_status,
                                     is_condoned:
-                                      student.overrides?.is_condoned || false,
+                                      student.registration?.is_condoned ||
+                                      false,
                                     has_permission:
-                                      student.overrides?.has_permission ||
+                                      student.registration?.has_permission ||
                                       false,
                                     override_status:
-                                      student.overrides?.override_status ||
+                                      student.registration?.override_status ||
                                       false,
                                     override_remarks:
-                                      student.overrides?.override_remarks || "",
+                                      student.registration?.override_remarks ||
+                                      "",
                                   });
                                   setShowOverrideModal(true);
                                 }}
@@ -2052,6 +2149,27 @@ const ExamSchedules = () => {
                                 setCycleForm({
                                   ...cycleForm,
                                   late_fee_amount: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
+                            <div className="flex flex-col text-left">
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                                Condonation Fee
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                (For Low Attendance)
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              value={cycleForm.condonation_fee || 0}
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  condonation_fee: parseFloat(e.target.value),
                                 })
                               }
                               className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
@@ -2295,6 +2413,63 @@ const ExamSchedules = () => {
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none mb-4"
                 />
 
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Exam Month
+                    </label>
+                    <select
+                      required
+                      value={cycleForm.exam_month}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          exam_month: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Select Month</option>
+                      {[
+                        "January",
+                        "February",
+                        "March",
+                        "April",
+                        "May",
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December",
+                      ].map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Exam Year
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="YYYY"
+                      value={cycleForm.exam_year}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          exam_year: parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
@@ -2341,6 +2516,24 @@ const ExamSchedules = () => {
                       <option value="project_review">Project Review</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                    Cycle Status
+                  </label>
+                  <select
+                    value={cycleForm.status}
+                    onChange={(e) =>
+                      setCycleForm({ ...cycleForm, status: e.target.value })
+                    }
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="completed">Completed (Exams Over)</option>
+                    <option value="results_published">Results Published</option>
+                  </select>
                 </div>
 
                 {cycleForm.cycle_type === "mid_term" && (

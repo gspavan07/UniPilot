@@ -13,9 +13,12 @@ const {
   SemesterResult,
   Program,
   ExamReverification,
+  ExamFeePayment,
+  FeePayment,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
+const { calculateFeeStatus } = require("./feeController");
 const { Op } = require("sequelize");
 const fs = require("fs");
 const xlsx = require("xlsx");
@@ -28,6 +31,37 @@ const generateExamReceiptPdf = require("../templates/exam/examReceiptPdf");
 const generateMarksImportTemplate = require("../templates/exam/marksImportTemplate");
 const generateCourseResultsExcel = require("../templates/exam/courseResultsExcel");
 const generateDepartmentResultsExcel = require("../templates/exam/departmentResultsExcel");
+
+const calculateLiveAttendance = async (
+  student_id,
+  cycle,
+  transaction = null,
+) => {
+  const attendanceRecords = await Attendance.findAll({
+    where: { student_id },
+    attributes: ["status"],
+    transaction,
+  });
+  const totalClasses = attendanceRecords.length;
+  const presentClasses = attendanceRecords.filter(
+    (r) => r.status === "present",
+  ).length;
+  const attendance_percentage =
+    totalClasses > 0
+      ? parseFloat(((presentClasses / totalClasses) * 100).toFixed(2))
+      : 0;
+
+  let attendance_status = "clear";
+  let condonation_fee = 0;
+  if (cycle.is_attendance_checked) {
+    if (attendance_percentage < cycle.attendance_condonation_threshold) {
+      attendance_status = "low";
+      condonation_fee = parseFloat(cycle.condonation_fee || 0);
+    }
+  }
+
+  return { attendance_percentage, attendance_status, condonation_fee };
+};
 
 // @desc    Get all exam cycles
 // @route   GET /api/exam/cycles
@@ -42,17 +76,74 @@ exports.getExamCycles = async (req, res) => {
       const student = await User.findByPk(req.user.userId);
       if (student) {
         const today = new Date().toISOString().split("T")[0];
+
+        // 1. Check if student has any unresolved backlogs (failures in locked end-sem cycles)
+        const { ExamMark, ExamSchedule, ExamCycle } = require("../models");
+        const allMarks = await ExamMark.findAll({
+          where: { student_id: student.id, moderation_status: "locked" },
+          include: [
+            {
+              model: ExamSchedule,
+              as: "schedule",
+              include: [
+                {
+                  model: ExamCycle,
+                  as: "cycle",
+                  where: { cycle_type: "end_semester" },
+                },
+              ],
+            },
+          ],
+        });
+
+        // Find latest attempt for each course code
+        const latestAttempts = new Map();
+        allMarks.forEach((m) => {
+          const courseCode = m.schedule?.course?.code || m.schedule?.course_id;
+          if (!courseCode) return;
+          const prev = latestAttempts.get(courseCode);
+          if (
+            !prev ||
+            new Date(m.schedule.exam_date) > new Date(prev.schedule.exam_date)
+          ) {
+            latestAttempts.set(courseCode, m);
+          }
+        });
+
+        const backlogItems = Array.from(latestAttempts.values()).filter(
+          (m) => m.grade === "F",
+        );
+        const backlogSemesters = [
+          ...new Set(
+            backlogItems
+              .map((m) => m.schedule?.cycle?.semester)
+              .filter(Boolean),
+          ),
+        ];
+
+        // 2. Build filtered where clause
         where = {
-          batch_year: student.batch_year,
-          semester: student.current_semester,
           // Only show cycles where registration window has at least started
           reg_start_date: {
             [Op.and]: [{ [Op.ne]: null }, { [Op.lte]: today }],
           },
-          // And where it hasn't completely closed (end date or late fee date)
+          // And where it hasn't completely closed
           [Op.or]: [
             { reg_end_date: { [Op.gte]: today } },
             { reg_late_fee_date: { [Op.gte]: today } },
+          ],
+          // Logic:
+          // 1. It's my current semester exam (Regular/Combined)
+          // 2. OR it's a semester where I have backlogs (Supplementary/Combined)
+          [Op.or]: [
+            {
+              batch_year: student.batch_year,
+              semester: student.current_semester,
+            },
+            {
+              semester: { [Op.in]: backlogSemesters },
+              exam_mode: { [Op.in]: ["supplementary", "combined"] },
+            },
           ],
         };
       }
@@ -100,6 +191,12 @@ exports.createExamCycle = async (req, res) => {
       is_attendance_checked,
       is_fee_checked,
       exam_mode,
+      exam_month,
+      exam_year,
+      condonation_fee,
+      attendance_condonation_threshold,
+      attendance_permission_threshold,
+      status,
     } = req.body;
 
     let component_breakdown = [];
@@ -159,6 +256,12 @@ exports.createExamCycle = async (req, res) => {
         is_attendance_checked !== undefined ? is_attendance_checked : true,
       is_fee_checked: is_fee_checked !== undefined ? is_fee_checked : true,
       exam_mode: exam_mode || "regular",
+      exam_month,
+      exam_year,
+      condonation_fee,
+      attendance_condonation_threshold,
+      attendance_permission_threshold,
+      status: status || "scheduled",
     });
 
     res.status(201).json({ success: true, data: cycle });
@@ -195,6 +298,12 @@ exports.updateExamCycle = async (req, res) => {
       is_attendance_checked,
       is_fee_checked,
       exam_mode,
+      exam_month,
+      exam_year,
+      condonation_fee,
+      attendance_condonation_threshold,
+      attendance_permission_threshold,
+      status,
     } = req.body;
 
     await cycle.update({
@@ -230,6 +339,19 @@ exports.updateExamCycle = async (req, res) => {
       is_fee_checked:
         is_fee_checked !== undefined ? is_fee_checked : cycle.is_fee_checked,
       exam_mode: exam_mode !== undefined ? exam_mode : cycle.exam_mode,
+      exam_month: exam_month !== undefined ? exam_month : cycle.exam_month,
+      exam_year: exam_year !== undefined ? exam_year : cycle.exam_year,
+      condonation_fee:
+        condonation_fee !== undefined ? condonation_fee : cycle.condonation_fee,
+      attendance_condonation_threshold:
+        attendance_condonation_threshold !== undefined
+          ? attendance_condonation_threshold
+          : cycle.attendance_condonation_threshold,
+      attendance_permission_threshold:
+        attendance_permission_threshold !== undefined
+          ? attendance_permission_threshold
+          : cycle.attendance_permission_threshold,
+      status: status !== undefined ? status : cycle.status,
     });
 
     res.status(200).json({ success: true, data: cycle });
@@ -340,6 +462,7 @@ exports.getExamSchedules = async (req, res) => {
           model: ExamCycle,
           as: "cycle",
           attributes: [
+            "id",
             "name",
             "cycle_type",
             "component_breakdown",
@@ -353,6 +476,28 @@ exports.getExamSchedules = async (req, res) => {
         ["start_time", "ASC"],
       ],
     });
+
+    // Filter by student program if applicable
+    let filteredSchedules = schedules;
+    if (req.user.role === "student" || req.user.role === "Student") {
+      const student = await User.findByPk(req.user.userId);
+      if (student && student.program_id) {
+        // First filter by branch/program
+        const branchFiltered = schedules.filter((s) => {
+          if (!s.branches || s.branches.length === 0) return true;
+          return s.branches.includes(student.program_id);
+        });
+
+        // Then ensure uniqueness by Course ID (in case of multiple sections/slots)
+        const uniqueMap = new Map();
+        branchFiltered.forEach((s) => {
+          if (!uniqueMap.has(s.course_id)) {
+            uniqueMap.set(s.course_id, s);
+          }
+        });
+        filteredSchedules = Array.from(uniqueMap.values());
+      }
+    }
 
     // For faculty, identify which courses they teach
     const isSuperUser = [
@@ -371,7 +516,7 @@ exports.getExamSchedules = async (req, res) => {
       taughtCourseIds = new Set(slots.map((s) => s.course_id));
     }
 
-    const enhancedSchedules = schedules.map((s) => ({
+    const enhancedSchedules = filteredSchedules.map((s) => ({
       ...s.toJSON(),
       is_teaching: isSuperUser || taughtCourseIds.has(s.course_id),
     }));
@@ -561,6 +706,7 @@ exports.getMarkEntryData = async (req, res) => {
             "component_breakdown",
             "max_marks",
             "passing_marks",
+            "exam_mode",
           ],
           include: [{ model: Regulation, as: "regulation" }],
         },
@@ -604,23 +750,77 @@ exports.getMarkEntryData = async (req, res) => {
     }
 
     // 3. Determine target students
-    // Filter by role 'student', current_semester (from cycle), and program (from branches)
     const semester = schedule.course.semester || 1;
+    const cycleMode = (schedule.cycle?.exam_mode || "").toLowerCase();
+    const cycleType = (schedule.cycle?.cycle_type || "").toLowerCase();
+
+    // Detect if this is a supplementary/backlog-oriented cycle
+    const isSupplyOrCombined =
+      ["supplementary", "combined", "supply"].includes(cycleMode) ||
+      cycleType.includes("supply") ||
+      cycleType.includes("supplementary");
+
+    logger.info(
+      `Mark Entry Data: ScheduleID=${scheduleId}, Mode=${cycleMode}, Type=${cycleType}, DetectSupply=${isSupplyOrCombined}`,
+    );
 
     let studentWhere = {
       role: "student",
       is_active: true,
-      current_semester: semester,
     };
+
+    // For regular exams, filter by current_semester
+    if (!isSupplyOrCombined) {
+      studentWhere.current_semester = semester;
+    }
 
     if (!isSuperUser && assignedSections.length > 0) {
       studentWhere.section = { [Op.in]: assignedSections };
     }
 
+    // Branch/Program filtering
     if (schedule.branches && schedule.branches.length > 0) {
       studentWhere.program_id = { [Op.in]: schedule.branches };
     } else if (schedule.course.program_id) {
       studentWhere.program_id = schedule.course.program_id;
+    }
+
+    // For Supply/Combined, we MUST filter by registered students for this SPECIFIC course
+    if (isSupplyOrCombined) {
+      const { ExamRegistration } = require("../models");
+      const registrations = await ExamRegistration.findAll({
+        where: {
+          exam_cycle_id: schedule.exam_cycle_id,
+          // Only students who are actually registered and cleared (paid, waived, or approved)
+          status: { [Op.in]: ["approved", "submitted"] },
+          fee_status: { [Op.in]: ["paid", "waived", "pending"] },
+        },
+        attributes: ["student_id", "registered_subjects"],
+      });
+
+      const registeredStudentIds = registrations
+        .filter((r) => {
+          if (!r.registered_subjects) return false;
+          // Support both UUID objects and strings in JSONB comparison
+          return r.registered_subjects.some(
+            (s) => String(s.course_id) === String(schedule.course_id),
+          );
+        })
+        .map((r) => r.student_id);
+
+      // CRITICAL: If this is a supply/combined cycle, we MUST restrict to these IDs.
+      studentWhere.id = { [Op.in]: registeredStudentIds };
+
+      // If no registrations, return empty to avoid showing all students
+      if (registeredStudentIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            schedule,
+            students: [],
+          },
+        });
+      }
     }
 
     // 4. Fetch students with their marks for this schedule
@@ -1237,8 +1437,19 @@ exports.getConsolidatedResults = async (req, res) => {
     // Fetch target cycle if provided
     let targetCycle = null;
     if (exam_cycle_id) {
-      targetCycle = await ExamCycle.findByPk(exam_cycle_id);
-      logger.info(`PublishMarks: Cycle Type: ${targetCycle?.cycle_type}`);
+      targetCycle = await ExamCycle.findByPk(exam_cycle_id, {
+        attributes: [
+          "id",
+          "name",
+          "cycle_type",
+          "exam_mode",
+          "batch_year",
+          "semester",
+        ],
+      });
+      logger.info(
+        `ConsolidatedResults: CycleID=${exam_cycle_id}, Mode=${targetCycle?.exam_mode}`,
+      );
     }
 
     // STRICT: Only 'end_semester' cycle results show SGPA/Grades.
@@ -1249,6 +1460,29 @@ exports.getConsolidatedResults = async (req, res) => {
     if (program_id) studentWhere.program_id = program_id;
     if (batch_year) studentWhere.batch_year = batchInt;
     if (section) studentWhere.section = section;
+
+    // Filter by registration if it's a supply or combined cycle
+    const cycleMode = (targetCycle?.exam_mode || "").toLowerCase();
+    const isSupplyOrCombined = ["supplementary", "combined", "supply"].includes(
+      cycleMode,
+    );
+
+    if (isSupplyOrCombined && exam_cycle_id) {
+      const registrations = await ExamRegistration.findAll({
+        where: {
+          exam_cycle_id,
+          status: { [Op.in]: ["approved", "submitted"] },
+        },
+        attributes: ["student_id"],
+      });
+      const registeredStudentIds = registrations.map((r) => r.student_id);
+      studentWhere.id = { [Op.in]: registeredStudentIds };
+
+      // If no registrations found, we should still use an empty IN clause to return 0 students
+      if (registeredStudentIds.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+    }
 
     const students = await User.findAll({
       where: studentWhere,
@@ -1681,12 +1915,22 @@ exports.generateHallTickets = async (req, res) => {
         // Check registration status
         const registration = await ExamRegistration.findOne({
           where: { exam_cycle_id, student_id: sid },
+          include: [{ model: User, as: "student" }],
           transaction: t,
         });
 
         // Eligibility check
         let is_blocked = false;
         let block_reason = "";
+
+        // Check for current semester dues specifically
+        const student =
+          registration?.student ||
+          (await User.findByPk(sid, { transaction: t }));
+        const feeStatus = await calculateFeeStatus(sid);
+        const currentSem = student?.current_semester || 1;
+        const currentSemData = feeStatus.semesterWise[currentSem];
+        const hasDues = currentSemData?.totals.due > 0;
 
         if (!registration) {
           is_blocked = true;
@@ -1701,6 +1945,9 @@ exports.generateHallTickets = async (req, res) => {
         ) {
           is_blocked = true;
           block_reason = "Exam fee payment pending.";
+        } else if (hasDues && !registration.override_status) {
+          is_blocked = true;
+          block_reason = `Outstanding dues for Semester ${currentSem} (₹${currentSemData.totals.due}).`;
         } else if (
           registration.attendance_status === "low" &&
           !registration.is_condoned &&
@@ -1753,12 +2000,10 @@ exports.getBacklogSubjects = async (req, res) => {
   try {
     const student_id = req.user.userId;
 
-    // A backlog is a subject where the student appeared (or was absent) and got 'F'
-    // in a locked final result (end_semester).
-    const backlogs = await ExamMark.findAll({
+    // 1. Get ALL locked marks for this student to determine latest status
+    const allMarks = await ExamMark.findAll({
       where: {
         student_id,
-        grade: "F",
         moderation_status: "locked",
       },
       include: [
@@ -1766,6 +2011,11 @@ exports.getBacklogSubjects = async (req, res) => {
           model: ExamSchedule,
           as: "schedule",
           include: [
+            {
+              model: ExamCycle,
+              as: "cycle",
+              // Include all cycle types to get full history
+            },
             {
               model: Course,
               as: "course",
@@ -1776,13 +2026,27 @@ exports.getBacklogSubjects = async (req, res) => {
       ],
     });
 
-    // Simplify response to unique courses
-    const uniqueBacklogs = [];
-    const seenCourses = new Set();
+    // 2. Group by course code and find the latest attempt
+    const latestAttempts = new Map(); // Using Course Code for logical uniqueness
+    allMarks.forEach((m) => {
+      const courseCode = m.schedule?.course?.code;
+      if (!courseCode) return;
 
-    backlogs.forEach((mark) => {
-      const course = mark.schedule?.course;
-      if (course && !seenCourses.has(course.id)) {
+      const currentLatest = latestAttempts.get(courseCode);
+      if (
+        !currentLatest ||
+        new Date(m.schedule.exam_date) >
+          new Date(currentLatest.schedule.exam_date)
+      ) {
+        latestAttempts.set(courseCode, m);
+      }
+    });
+
+    // 3. Filter for those where the LATEST attempt is a failure
+    const uniqueBacklogs = [];
+    latestAttempts.forEach((mark, courseCode) => {
+      if (mark.grade === "F") {
+        const course = mark.schedule.course;
         uniqueBacklogs.push({
           id: course.id,
           name: course.name,
@@ -1790,8 +2054,11 @@ exports.getBacklogSubjects = async (req, res) => {
           credits: course.credits,
           last_grade: mark.grade,
           last_attempt_date: mark.schedule.exam_date,
+          last_attempt_cycle: mark.schedule.cycle?.name,
+          last_attempt_period:
+            `${mark.schedule.cycle?.exam_month || ""} ${mark.schedule.cycle?.exam_year || ""}`.trim() ||
+            null,
         });
-        seenCourses.add(course.id);
       }
     });
 
@@ -1809,6 +2076,9 @@ exports.registerForExams = async (req, res) => {
   try {
     const { exam_cycle_id, subjects } = req.body; // subjects: [{course_id, type: 'regular'|'supply'}]
     const student_id = req.user.userId;
+
+    const student = await User.findByPk(student_id);
+    if (!student) return res.status(404).json({ error: "Student not found" });
 
     const cycle = await ExamCycle.findByPk(exam_cycle_id);
     if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
@@ -1828,30 +2098,29 @@ exports.registerForExams = async (req, res) => {
       return res.status(400).json({ error: "Registration is closed." });
     }
 
-    // Calculate Fees
-    let total_fee = 0;
-    let late_fee = 0;
-    let reg_type = "regular";
+    // Check for current semester dues before proceeding
+    const feeStatus = await calculateFeeStatus(student_id);
+    const currentSem = student.current_semester || 1;
+    const currentSemData = feeStatus.semesterWise[currentSem];
+    const hasCurrentSemDues = currentSemData?.totals.due > 0;
 
-    const regularCount = subjects.filter((s) => s.type === "regular").length;
-    const supplyCount = subjects.filter((s) => s.type === "supply").length;
-
-    if (regularCount > 0 && supplyCount > 0) reg_type = "combined";
-    else if (supplyCount > 0) reg_type = "supply";
-
-    if (
-      regularCount > 0 ||
-      (subjects.length === 0 && cycle.exam_mode !== "supplementary")
-    )
-      total_fee += parseFloat(cycle.regular_fee || 0);
-    total_fee += supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
-
-    // Apply late fee if applicable
-    if (cycle.reg_end_date && today > cycle.reg_end_date) {
-      late_fee = parseFloat(cycle.late_fee_amount || 0);
+    if (cycle.is_fee_checked && hasCurrentSemDues) {
+      return res.status(400).json({
+        error: `Registration blocked. Please clear outstanding dues for Semester ${currentSem} (₹${currentSemData.totals.due}).`,
+      });
     }
 
-    // Check attendance (Simple auto-check)
+    // Check if student already has a registration with overrides
+    const existingRegistration = await ExamRegistration.findOne({
+      where: { exam_cycle_id, student_id },
+    });
+
+    // Detect Attempt Type
+    const isRegularAttempt =
+      cycle.batch_year === student.batch_year &&
+      cycle.semester === student.current_semester;
+
+    // Check attendance and apply condonation fee (Only for Regular attempts)
     const attendanceRecords = await Attendance.findAll({
       where: { student_id },
       attributes: ["status"],
@@ -1863,41 +2132,151 @@ exports.registerForExams = async (req, res) => {
     const attendance_percentage =
       totalClasses > 0 ? (presentClasses / totalClasses) * 100 : 100;
 
-    // Generate mock transaction ID for testing
-    const mockTransactionId = `TXN-${Date.now()}-${student_id.substring(0, 8).toUpperCase()}`;
+    let attendance_status = "clear";
+    let condonation_fee = 0;
 
-    const [registration, created] = await ExamRegistration.findOrCreate({
-      where: { exam_cycle_id, student_id },
-      defaults: {
-        registered_subjects: subjects,
-        registration_type: reg_type,
-        total_fee: total_fee + late_fee,
-        paid_amount: total_fee + late_fee, // Mock payment - set paid amount equal to total
-        late_fee,
-        attendance_percentage,
-        attendance_status: attendance_percentage < 75 ? "low" : "clear",
-        status: "approved", // Auto-approve for mock payment
-        fee_status: "paid", // Mock payment - mark as paid immediately
-        transaction_id: mockTransactionId, // Mock transaction ID
-      },
-    });
-
-    if (!created) {
-      await registration.update({
-        registered_subjects: subjects,
-        registration_type: reg_type,
-        total_fee: total_fee + late_fee,
-        paid_amount: total_fee + late_fee, // Mock payment - set paid amount equal to total
-        late_fee,
-        attendance_percentage,
-        attendance_status: attendance_percentage < 75 ? "low" : "clear",
-        status: "approved", // Auto-approve for mock payment
-        fee_status: "paid", // Mock payment - mark as paid immediately
-        transaction_id: mockTransactionId, // Mock transaction ID
-      });
+    if (cycle.is_attendance_checked && isRegularAttempt) {
+      if (attendance_percentage < cycle.attendance_permission_threshold) {
+        if (!existingRegistration?.has_permission) {
+          return res.status(400).json({
+            error:
+              "Attendance too low (below 65%). HOD permission and condonation fee required to register.",
+          });
+        }
+        attendance_status = "low";
+        condonation_fee = parseFloat(cycle.condonation_fee || 0);
+      } else if (
+        attendance_percentage < cycle.attendance_condonation_threshold
+      ) {
+        attendance_status = "low";
+        condonation_fee = parseFloat(cycle.condonation_fee || 0);
+      }
     }
 
-    res.status(200).json({ success: true, data: registration });
+    // Calculate Fees
+    let total_fee = 0;
+    let late_fee = 0;
+    let reg_type = isRegularAttempt ? "regular" : "supply";
+
+    const supplyCount = subjects.length;
+
+    if (isRegularAttempt) {
+      // Regular Path: Flat fee + optional supply backlogs if cycle is combined
+      total_fee = parseFloat(cycle.regular_fee || 0);
+
+      // If it's a combined cycle, we might have additional backlogs selected
+      // (though usually backlogs are for previous semesters, here we assume any
+      // subjects specifically marked 'supply' in a regular attempt incur extra cost)
+      const extraSupplyCount = subjects.filter(
+        (s) => s.type === "supply",
+      ).length;
+      total_fee +=
+        extraSupplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
+
+      if (extraSupplyCount > 0) reg_type = "combined";
+    } else {
+      // Senior Path: Per paper fee only
+      total_fee = supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
+    }
+
+    // Apply late fee if applicable
+    if (cycle.reg_end_date && today > cycle.reg_end_date) {
+      late_fee = parseFloat(cycle.late_fee_amount || 0);
+    }
+
+    const finalTotal = total_fee + late_fee + condonation_fee;
+    const mockTransactionId = `TXN-EXAM-${Date.now()}-${student_id.substring(0, 8).toUpperCase()}`;
+
+    // Perform database operations in a transaction
+    const t = await sequelize.transaction();
+
+    try {
+      // 3. Create or update ExamRegistration
+      const [registration, created] = await ExamRegistration.findOrCreate({
+        where: { exam_cycle_id, student_id },
+        defaults: {
+          registered_subjects: subjects,
+          registration_type: reg_type,
+          total_fee: finalTotal,
+          paid_amount: finalTotal,
+          late_fee,
+          attendance_percentage,
+          attendance_status,
+          status: "approved",
+          fee_status: "paid",
+          transaction_id: mockTransactionId,
+        },
+        transaction: t,
+      });
+
+      if (!created) {
+        await registration.update(
+          {
+            registered_subjects: subjects,
+            registration_type: reg_type,
+            total_fee: finalTotal,
+            paid_amount: finalTotal,
+            late_fee,
+            attendance_percentage,
+            attendance_status,
+            status: "approved",
+            fee_status: "paid",
+            transaction_id: mockTransactionId,
+          },
+          { transaction: t },
+        );
+      }
+
+      // 4. Record Centralized Exam Fee Payment
+      await ExamFeePayment.create(
+        {
+          student_id,
+          exam_cycle_id,
+          category: reg_type === "supply" ? "supply" : "registration",
+          amount: total_fee,
+          transaction_id: mockTransactionId,
+          payment_method: "online",
+          remarks: `Exam Fee Registration: ${cycle.name}`,
+        },
+        { transaction: t },
+      );
+
+      if (late_fee > 0) {
+        await ExamFeePayment.create(
+          {
+            student_id,
+            exam_cycle_id,
+            category: "registration",
+            amount: late_fee,
+            transaction_id: mockTransactionId,
+            payment_method: "online",
+            remarks: `Late Fee for ${cycle.name}`,
+          },
+          { transaction: t },
+        );
+      }
+
+      if (condonation_fee > 0) {
+        await ExamFeePayment.create(
+          {
+            student_id,
+            exam_cycle_id,
+            category: "condonation",
+            amount: condonation_fee,
+            transaction_id: mockTransactionId,
+            payment_method: "online",
+            remarks: `Attendance Condonation Fee for ${cycle.name} (${attendance_percentage.toFixed(2)}%)`,
+          },
+          { transaction: t },
+        );
+      }
+
+      await t.commit();
+      res.status(200).json({ success: true, data: registration });
+    } catch (innerError) {
+      await t.rollback();
+      throw innerError;
+    }
   } catch (error) {
     logger.error("Error registering for exams:", error);
     res.status(500).json({ error: "Registration failed." });
@@ -1910,16 +2289,99 @@ exports.registerForExams = async (req, res) => {
 exports.updateRegistrationStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, is_condoned, override_status, override_remarks } = req.body;
+    const {
+      status,
+      is_condoned,
+      has_permission,
+      override_status,
+      override_remarks,
+      exam_cycle_id,
+    } = req.body;
 
-    const registration = await ExamRegistration.findByPk(id);
+    let registration;
+    const finalStatus =
+      status === "not_registered" ? "approved" : status || "approved";
+
+    // Fetch cycle to get fees and thresholds
+    const cycle = await ExamCycle.findByPk(
+      exam_cycle_id || req.body.exam_cycle_id,
+    );
+    if (!cycle && id.startsWith("temp-")) {
+      return res.status(400).json({ error: "Exam cycle not found" });
+    }
+
+    if (id.startsWith("temp-")) {
+      const student_id = id.replace("temp-", "");
+
+      // Calculate LIVE attendance for initial status
+      const { attendance_percentage, attendance_status, condonation_fee } =
+        await calculateLiveAttendance(student_id, cycle);
+
+      // Calculate initial fee
+      let initial_fee = parseFloat(cycle.regular_fee || 0) + condonation_fee;
+      const today = new Date().toISOString().split("T")[0];
+      if (cycle.reg_end_date && today > cycle.reg_end_date) {
+        initial_fee += parseFloat(cycle.late_fee_amount || 0);
+      }
+
+      // Find or create registration for this student and cycle
+      const [record, created] = await ExamRegistration.findOrCreate({
+        where: { student_id, exam_cycle_id },
+        defaults: {
+          status: finalStatus,
+          is_condoned: is_condoned || false,
+          has_permission: has_permission || false,
+          override_status: override_status || false,
+          override_remarks,
+          registration_type: "regular",
+          fee_status: "pending",
+          total_fee: initial_fee,
+          attendance_status,
+          attendance_percentage,
+          registered_subjects: [],
+        },
+      });
+      registration = record;
+    } else {
+      registration = await ExamRegistration.findByPk(id);
+    }
+
     if (!registration)
       return res.status(404).json({ error: "Registration not found" });
 
+    // For existing registrations, if they are undergoing override or permission,
+    // ensure attendance/fees are corrected if they were previously zero or clear.
+    const { attendance_percentage, attendance_status, condonation_fee } =
+      await calculateLiveAttendance(registration.student_id, cycle);
+
+    // Recalculate fee if it's currently 0 or if we're adding condonation/permission
+    let updated_fee = parseFloat(registration.total_fee);
+    if (updated_fee === 0) {
+      updated_fee = parseFloat(cycle.regular_fee || 0) + condonation_fee;
+      const today = new Date().toISOString().split("T")[0];
+      if (cycle.reg_end_date && today > cycle.reg_end_date) {
+        updated_fee += parseFloat(cycle.late_fee_amount || 0);
+      }
+    }
+
     await registration.update({
-      status,
-      is_condoned,
-      override_status,
+      status: status ? finalStatus : registration.status,
+      total_fee: updated_fee,
+      attendance_status: attendance_status || registration.attendance_status,
+      attendance_percentage:
+        attendance_percentage !== undefined
+          ? attendance_percentage
+          : registration.attendance_percentage,
+      is_condoned:
+        is_condoned !== undefined ? is_condoned : registration.is_condoned,
+      has_permission:
+        has_permission !== undefined
+          ? has_permission
+          : registration.has_permission,
+      override_status:
+        override_status !== undefined
+          ? override_status
+          : registration.override_status,
       override_remarks: override_remarks || registration.override_remarks,
     });
 
@@ -1966,6 +2428,12 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
         .json({ error: "exam_cycle_id is required for bulk override" });
     }
 
+    // Fetch cycle to get fees and thresholds
+    const cycle = await ExamCycle.findByPk(exam_cycle_id);
+    if (!cycle) {
+      return res.status(400).json({ error: "Exam cycle not found" });
+    }
+
     // Process bulk update in transaction
     const result = await sequelize.transaction(async (t) => {
       const updated = [];
@@ -1991,6 +2459,21 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
 
             // If no registration exists, create one with override data
             if (!registration) {
+              // Calculate LIVE attendance for initial status
+              const {
+                attendance_percentage,
+                attendance_status,
+                condonation_fee,
+              } = await calculateLiveAttendance(actualUserId, cycle, t);
+
+              // Calculate initial fee (regular + condonation + late)
+              let initial_fee =
+                parseFloat(cycle.regular_fee || 0) + condonation_fee;
+              const today = new Date().toISOString().split("T")[0];
+              if (cycle.reg_end_date && today > cycle.reg_end_date) {
+                initial_fee += parseFloat(cycle.late_fee_amount || 0);
+              }
+
               registration = await ExamRegistration.create(
                 {
                   student_id: actualUserId,
@@ -1998,7 +2481,9 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
                   status: "approved", // Set to approved since admin is granting override
                   registration_type: "regular",
                   fee_status: "pending",
-                  total_fee: 0,
+                  total_fee: initial_fee,
+                  attendance_status,
+                  attendance_percentage,
                   is_condoned: is_condoned || false,
                   has_permission: has_permission || false,
                   override_status: override_status || false,
@@ -2010,9 +2495,36 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
 
               created.push(studentId);
             } else {
-              // Update existing registration
+              // Update existing registration - but recalculate fees if 0
+              const {
+                attendance_percentage,
+                attendance_status,
+                condonation_fee,
+              } = await calculateLiveAttendance(
+                registration.student_id,
+                cycle,
+                t,
+              );
+
+              let updated_fee = parseFloat(registration.total_fee);
+              if (updated_fee === 0) {
+                updated_fee =
+                  parseFloat(cycle.regular_fee || 0) + condonation_fee;
+                const today = new Date().toISOString().split("T")[0];
+                if (cycle.reg_end_date && today > cycle.reg_end_date) {
+                  updated_fee += parseFloat(cycle.late_fee_amount || 0);
+                }
+              }
+
               await registration.update(
                 {
+                  total_fee: updated_fee,
+                  attendance_status:
+                    attendance_status || registration.attendance_status,
+                  attendance_percentage:
+                    attendance_percentage !== undefined
+                      ? attendance_percentage
+                      : registration.attendance_percentage,
                   is_condoned:
                     is_condoned !== undefined
                       ? is_condoned
@@ -2364,6 +2876,11 @@ exports.bulkPublishResults = async (req, res) => {
       );
     }
 
+    // 6. Update the Cycle Status to results_published
+    if (cycle && cycle.status !== "results_published") {
+      await cycle.update({ status: "results_published" });
+    }
+
     res.status(200).json({
       success: true,
       message: `Successfully published ${updatedCount} results${reverifications.length > 0 ? ` and completed ${reverifications.length} reverification(s)` : ""}.`,
@@ -2395,6 +2912,8 @@ exports.getRegistrationStatus = async (req, res) => {
       attributes: [
         "id",
         "name",
+        "batch_year",
+        "semester",
         "is_attendance_checked",
         "is_fee_checked",
         "reg_start_date",
@@ -2403,6 +2922,7 @@ exports.getRegistrationStatus = async (req, res) => {
         "regular_fee",
         "supply_fee_per_paper",
         "late_fee_amount",
+        "condonation_fee",
         "attendance_condonation_threshold",
         "attendance_permission_threshold",
       ],
@@ -2411,6 +2931,16 @@ exports.getRegistrationStatus = async (req, res) => {
     if (!cycle) {
       return res.status(404).json({ error: "Exam cycle not found" });
     }
+
+    const student = await User.findByPk(student_id, {
+      attributes: ["id", "batch_year", "current_semester"],
+    });
+
+    // Detect Attempt Type
+    const isRegularAttempt =
+      cycle.batch_year === student.batch_year &&
+      cycle.semester === student.current_semester;
+    const attempt_type = isRegularAttempt ? "regular" : "supply";
 
     // 1. Calculate Attendance (Live calculation for accurate status)
     const attendanceRecords = await Attendance.findAll({
@@ -2428,7 +2958,7 @@ exports.getRegistrationStatus = async (req, res) => {
 
     // 2. Determine Attendance Tier
     let attendance_tier = "clear";
-    if (cycle.is_attendance_checked) {
+    if (cycle.is_attendance_checked && isRegularAttempt) {
       if (attendance_percentage < cycle.attendance_permission_threshold) {
         attendance_tier = "needs_permission";
       } else if (
@@ -2444,48 +2974,20 @@ exports.getRegistrationStatus = async (req, res) => {
     const has_permission = registration?.has_permission || false;
     const override_status = registration?.override_status || false;
 
-    // Fee status check
-    // If registered, use stored fee_status. If not, default to "pending"
-    // IMPORTANT: 'fee_status' here refers to the EXAM FEE for THIS registration.
-    const exam_fee_status = registration?.fee_status || "pending";
-
-    // For blocking, we usually check TUITION fees. Since we don't have a Tuition module linked yet,
-    // we assume Tuition is clear. If we check 'exam_fee_status' here, it creates a deadlock
-    // (can't register because haven't paid exam fee, can't pay exam fee because not registered).
-    const tuition_fee_status = "paid"; // Assume clear for now to allow testing
-
-    if (cycle.is_attendance_checked) {
-      if (
-        attendance_tier === "needs_permission" &&
-        !has_permission &&
-        !override_status
-      ) {
-        blockers.push("needs_hod_permission");
-      } else if (
-        attendance_tier === "needs_condonation" &&
-        !is_condoned &&
-        !override_status
-      ) {
-        blockers.push("needs_condonation");
+    // Attendance block (Only for Regular attempts)
+    if (cycle.is_attendance_checked && isRegularAttempt) {
+      if (attendance_tier === "needs_permission" && !override_status) {
+        if (!has_permission) blockers.push("needs_hod_permission");
       }
     }
 
-    // Here "fee_checked" usually refers to TUITION fee.
-    // If we don't have a Tuition Fee table, we might assume it's clear for now
-    // OR if the user wants us to simulating "fee due", we can use a flag on User model.
-    // For this specific 'exam' fee, it's always pending until they pay.
-    // The user requisition said "if ... fee is pending we will lock".
-    // Let's assume this refers to 'Tuition Fee'.
-    // We will assume tuition is clear for now unless we add a column to User.
-    // But for EXAM fee, it's obviously pending.
-    // FIX: Do NOT block on 'fee_status' (exam fee) being pending.
-    // Only block if we had a separate tuition check.
-    // blockers.push("fee_pending");
-    if (
-      cycle.is_fee_checked &&
-      tuition_fee_status === "pending" &&
-      !override_status
-    ) {
+    // Fee block (Current Semester)
+    const feeStatus = await calculateFeeStatus(student_id);
+    const currentSem = student?.current_semester || 1;
+    const currentSemData = feeStatus.semesterWise[currentSem];
+    const hasCurrentSemDues = currentSemData?.totals.due > 0;
+
+    if (cycle.is_fee_checked && hasCurrentSemDues && !override_status) {
       blockers.push("fee_pending");
     }
 
@@ -2494,6 +2996,19 @@ exports.getRegistrationStatus = async (req, res) => {
     }
 
     const is_eligible = blockers.length === 0;
+
+    // Calculate condonation fee if applicable (Only for Regular attempts)
+    let condonation_fee = 0;
+    if (cycle.is_attendance_checked && isRegularAttempt) {
+      // Below permission threshold (< 65%) - requires HOD permission + condonation
+      if (attendance_percentage < cycle.attendance_permission_threshold) {
+        condonation_fee = parseFloat(cycle.condonation_fee || 0);
+      }
+      // Between permission and condonation threshold (65-75%) - auto condonation
+      else if (attendance_percentage < cycle.attendance_condonation_threshold) {
+        condonation_fee = parseFloat(cycle.condonation_fee || 0);
+      }
+    }
 
     // 4. Construct Response
     let responseData;
@@ -2505,9 +3020,11 @@ exports.getRegistrationStatus = async (req, res) => {
         exam_cycle_id: cycleId,
         status: "not_registered",
         fee_status: "pending",
-        total_fee: cycle.regular_fee, // Simplified
+        total_fee: isRegularAttempt ? cycle.regular_fee : 0, // Supply fee calculated per paper on front
+        condonation_fee,
         is_eligible,
         blockers,
+        attempt_type,
         attendance: {
           percentage: attendance_percentage,
           tier: attendance_tier,
@@ -2521,6 +3038,8 @@ exports.getRegistrationStatus = async (req, res) => {
     } else {
       // Existing Registration enriched with live data
       responseData = registration.toJSON();
+      responseData.condonation_fee = condonation_fee;
+      responseData.attempt_type = attempt_type;
       responseData.attendance = {
         percentage: attendance_percentage,
         tier: attendance_tier,
@@ -2719,18 +3238,38 @@ exports.downloadReceipt = async (req, res) => {
 exports.getRegistrations = async (req, res) => {
   try {
     const { cycleId } = req.params;
-    const { program_id, status: filterStatus } = req.query;
+    const { program_id, status: filterStatus, course_id } = req.query;
+
+    const { Op } = require("sequelize");
 
     const cycle = await ExamCycle.findByPk(cycleId);
     if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
 
+    // Detect if this is a supplementary/backlog-oriented cycle
+    const cycleMode = (cycle.exam_mode || "").toLowerCase();
+    const cycleType = (cycle.cycle_type || "").toLowerCase();
+    const isSupply =
+      ["supplementary", "supply"].includes(cycleMode) ||
+      cycleType.includes("supply") ||
+      cycleType.includes("supplementary");
+
     // 1. Get all students who SHOULD be in this cycle
     const studentWhere = { role: "student", is_active: true };
-    if (cycle.batch_year) studentWhere.batch_year = cycle.batch_year;
-    if (cycle.semester && cycle.exam_type !== "re_exam") {
-      studentWhere.current_semester = cycle.semester;
+    // For regular exams, filter by current_semester
+    if (!isSupply) {
+      if (cycle.batch_year) studentWhere.batch_year = cycle.batch_year;
+      if (cycle.semester && cycle.exam_type !== "re_exam") {
+        studentWhere.current_semester = cycle.semester;
+      }
     }
     if (program_id) studentWhere.program_id = program_id;
+
+    const registrationWhere = { exam_cycle_id: cycleId };
+    if (course_id) {
+      registrationWhere.registered_subjects = {
+        [Op.contains]: [{ course_id }],
+      };
+    }
 
     const students = await User.findAll({
       where: studentWhere,
@@ -2752,8 +3291,8 @@ exports.getRegistrations = async (req, res) => {
         {
           model: ExamRegistration,
           as: "exam_registrations",
-          where: { exam_cycle_id: cycleId },
-          required: false, // LEFT JOIN to get all students
+          where: registrationWhere,
+          required: isSupply || filterStatus || course_id ? true : false,
         },
       ],
       order: [["student_id", "ASC"]],
@@ -2785,7 +3324,7 @@ exports.getRegistrations = async (req, res) => {
         if (cycle.is_attendance_checked) {
           if (attendance_percentage < cycle.attendance_permission_threshold) {
             attendance_tier = "needs_permission";
-            requires_action = "hod_permission";
+            requires_action = "hod_and_condonation";
           } else if (
             attendance_percentage < cycle.attendance_condonation_threshold
           ) {
@@ -2794,11 +3333,14 @@ exports.getRegistrations = async (req, res) => {
           }
         }
 
-        // TODO: Calculate fee dues from actual fee system
-        // For now, mock as 0 (implement when fee module exists)
+        // Calculate live fee dues for current semester ONLY
+        const feeStatus = await calculateFeeStatus(student.id);
+        const currentSem = student.current_semester || 1;
+        const currentSemData = feeStatus.semesterWise[currentSem];
+
         const fee_due = {
-          amount: 0,
-          status: "clear", // "clear" or "pending"
+          amount: currentSemData?.totals.due || 0,
+          status: currentSemData?.totals.due > 0 ? "pending" : "clear",
         };
 
         // Determine exam registration type
@@ -2822,47 +3364,15 @@ exports.getRegistrations = async (req, res) => {
         // Determine final eligibility
         const blockers = [];
 
-        // Attendance check
         if (cycle.is_attendance_checked) {
-          if (
-            attendance_tier === "needs_permission" &&
-            !has_permission &&
-            !override_status
-          ) {
-            blockers.push("needs_hod_permission");
-          } else if (
-            attendance_tier === "needs_condonation" &&
-            !is_condoned &&
-            !override_status
-          ) {
-            blockers.push("needs_condonation");
+          if (attendance_tier === "needs_permission") {
+            if (!has_permission) blockers.push("needs_hod_permission");
           }
         }
 
-        // Fee dues check
-        if (
-          cycle.is_fee_checked &&
-          fee_due.status === "pending" &&
-          !override_status
-        ) {
+        if (fee_due.status === "pending" && !override_status) {
           blockers.push("fee_pending");
         }
-
-        // Admin manual block
-        if (registration?.status === "blocked") {
-          blockers.push("admin_blocked");
-        }
-
-        const is_eligible = blockers.length === 0;
-
-        // Exam fee status
-        const exam_fee_status = {
-          paid: registration?.fee_status === "paid",
-          transaction_id: registration?.transaction_id || null,
-          amount: registration?.total_fee || 0,
-          late_fee: registration?.late_fee || 0,
-          is_fine_waived: registration?.is_fine_waived || false,
-        };
 
         return {
           id: registration?.id || `temp-${student.id}`,
@@ -2881,7 +3391,7 @@ exports.getRegistrations = async (req, res) => {
             percentage: attendance_percentage,
             total_classes: totalClasses,
             present: presentClasses,
-            tier: attendance_tier, // "clear", "needs_condonation", "needs_permission"
+            tier: attendance_tier,
             status:
               attendance_percentage >= cycle.attendance_condonation_threshold
                 ? "clear"
@@ -2889,17 +3399,22 @@ exports.getRegistrations = async (req, res) => {
           },
           fee_due,
           eligibility: {
-            is_eligible,
+            is_eligible: blockers.length === 0,
             blockers,
-            requires_action, // "none", "condonation", "hod_permission"
+            requires_action,
           },
-          exam_fee_status,
-          overrides: {
-            is_condoned,
-            has_permission,
-            override_status,
-            override_remarks: registration?.override_remarks || "",
-          },
+          registration: registration
+            ? {
+                id: registration.id,
+                status: registration.status,
+                fee_status: registration.fee_status,
+                is_condoned,
+                has_permission,
+                override_status,
+                override_remarks: registration.override_remarks || "",
+                subjects: registration.registered_subjects,
+              }
+            : null,
           registration_status: registration?.status || "not_registered",
           registered_at: registration?.created_at || null,
         };

@@ -28,6 +28,7 @@ const StudentFeeCharge = sequelize.define(
         "fine",
         "exam_reverification",
         "exam_script_view",
+        "exam_registration",
         "other",
       ),
       allowNull: false,

@@ -289,7 +289,7 @@ const Exams = () => {
                           handleDownloadHallTicket(cycleInfo.id, cycleInfo.name)
                         }
                         disabled={downloading === `hall-${cycleInfo.id}`}
-                        className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-500/20 active:scale-95 transition-all flex items-center gap-3 flex-1 md:flex-none font-bold"
+                        className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-500/20 active:scale-95 transition-all flex items-center gap-3 flex-1 md:flex-none"
                       >
                         {downloading === `hall-${cycleInfo.id}` ? (
                           <RefreshCw size={14} className="animate-spin" />
@@ -419,9 +419,9 @@ const Exams = () => {
       setSelectedCycle(cycle);
       dispatch(fetchRegistrationStatus(cycle.id));
       dispatch(fetchExamSchedules({ exam_cycle_id: cycle.id }));
-      setRegSubTab(
-        cycle.exam_mode === "supplementary" ? "backlogs" : "regular",
-      );
+      // Always start with the main cycle subjects
+      setRegSubTab("regular");
+      setSelectedSubjects([]);
     };
 
     const toggleSubject = (course, type) => {
@@ -433,45 +433,98 @@ const Exams = () => {
       }
     };
 
+    const cycleSchedules = schedules.filter(
+      (s) => (s.cycle?.id || s.exam_cycle_id) === selectedCycle?.id,
+    );
+
     const calculateFees = () => {
       if (!selectedCycle) return 0;
-      let base =
-        selectedCycle.exam_mode === "regular" ||
-        selectedCycle.exam_mode === "combined"
-          ? parseFloat(selectedCycle.regular_fee || 0)
-          : 0;
-      let supply =
-        selectedCycle.exam_mode === "supplementary" ||
-        selectedCycle.exam_mode === "combined"
-          ? selectedSubjects.filter((s) => s.type === "supply").length *
-            parseFloat(selectedCycle.supply_fee_per_paper || 0)
-          : 0;
+
+      const attemptType =
+        currentRegistration?.attempt_type ||
+        (selectedCycle.exam_mode === "supplementary" ? "supply" : "regular");
+
+      let base = 0;
+      let supply = 0;
+
+      if (attemptType === "regular") {
+        // Flat fee for current semester (Regular/Combined)
+        base = parseFloat(selectedCycle.regular_fee || 0);
+        // Add additional supply fees if any backlogs are selected in a combined cycle
+        supply =
+          selectedSubjects.filter((s) => s.type === "supply").length *
+          parseFloat(selectedCycle.supply_fee_per_paper || 0);
+      } else {
+        // Per-paper fee for Senior/Backlog attempts
+        supply =
+          selectedSubjects.length *
+          parseFloat(selectedCycle.supply_fee_per_paper || 0);
+      }
+
       let total = base + supply;
+
       const today = new Date().toISOString().split("T")[0];
       if (selectedCycle.reg_end_date && today > selectedCycle.reg_end_date) {
         total += parseFloat(selectedCycle.late_fee_amount || 0);
       }
+
+      // Add condonation fee ONLY for regular attempts with low attendance
+      if (attemptType === "regular") {
+        if (
+          currentRegistration?.attendance_status === "low" ||
+          currentRegistration?.attendance_status === "condoned" ||
+          currentRegistration?.blockers?.includes("needs_condonation")
+        ) {
+          total += parseFloat(selectedCycle.condonation_fee || 0);
+        }
+      }
+
       return total;
     };
 
     const handleRegistrationSubmit = async () => {
-      if (selectedSubjects.length === 0 && !selectedCycle.regular_fee) {
+      const attemptType =
+        currentRegistration?.attempt_type ||
+        (selectedCycle.exam_mode === "supplementary" ? "supply" : "regular");
+
+      let regularSubjects = [];
+      let selectionSubjects = [];
+
+      if (attemptType === "regular") {
+        // 1. Identify Regular subjects (auto-included for juniors)
+        regularSubjects = cycleSchedules.map((s) => ({
+          course_id: s.course?.id,
+          type: "regular",
+        }));
+
+        // 2. Identify Selection subjects (manually selected backlogs if combined)
+        selectionSubjects = selectedSubjects.map((s) => ({
+          course_id: s.id,
+          type: s.type, // usually 'supply'
+        }));
+      } else {
+        // 1. Senior/Supply Path: only manually selected subjects from the cycle list
+        selectionSubjects = selectedSubjects.map((s) => ({
+          course_id: s.id,
+          type: "supply",
+        }));
+      }
+
+      const subjects = [...regularSubjects, ...selectionSubjects];
+
+      if (subjects.length === 0) {
         toast.error("Please select at least one subject");
         return;
       }
-      const subjects = selectedSubjects.map((s) => ({
-        course_id: s.id,
-        type: s.type,
-      }));
       try {
         await dispatch(
           registerForExams({ exam_cycle_id: selectedCycle.id, subjects }),
         ).unwrap();
-        toast.success("Payment Successful!");
+        toast.success("Registration Successful!");
         dispatch(fetchMyRegistrations());
         dispatch(fetchRegistrationStatus(selectedCycle.id));
       } catch (err) {
-        toast.error(err || "Payment failed");
+        toast.error(err || "Registration failed");
       }
     };
 
@@ -489,38 +542,42 @@ const Exams = () => {
 
             <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 shadow-sm border border-gray-100 dark:border-gray-700">
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                  {selectedCycle.name}
-                </h3>
+                <div className="flex flex-col">
+                  <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                    {selectedCycle.name}
+                  </h3>
+                  {selectedCycle.exam_month && selectedCycle.exam_year && (
+                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+                      Session: {selectedCycle.exam_month}{" "}
+                      {selectedCycle.exam_year}
+                    </p>
+                  )}
+                </div>
                 <span className="text-xs px-4 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-xl uppercase tracking-widest border border-indigo-100 dark:border-indigo-800">
                   {selectedCycle.exam_mode} Mode
                 </span>
               </div>
 
-              <div className="flex p-1.5 bg-gray-50 dark:bg-gray-900/50 rounded-2xl mb-8">
-                {(selectedCycle.exam_mode === "regular" ||
-                  selectedCycle.exam_mode === "combined") && (
+              {selectedCycle.exam_mode === "combined" && (
+                <div className="flex p-1.5 bg-gray-50 dark:bg-gray-900/50 rounded-2xl mb-8">
                   <button
                     onClick={() => setRegSubTab("regular")}
                     className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${regSubTab === "regular" ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
                   >
                     Regular Subjects
                   </button>
-                )}
-                {(selectedCycle.exam_mode === "supplementary" ||
-                  selectedCycle.exam_mode === "combined") && (
                   <button
                     onClick={() => setRegSubTab("backlogs")}
                     className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${regSubTab === "backlogs" ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
                   >
                     Backlogs ({backlogs.length})
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {regSubTab === "regular" ? (
-                  schedules.map((schedule) => (
+                  cycleSchedules.map((schedule) => (
                     <div
                       key={schedule.id}
                       className="flex items-center justify-between p-5 bg-gray-50/50 dark:bg-gray-700/30 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-indigo-500/20 transition-all"
@@ -537,6 +594,28 @@ const Exams = () => {
                             {schedule.course?.code}
                           </p>
                         </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        {currentRegistration?.attempt_type === "supply" ||
+                        selectedCycle.exam_mode === "supplementary" ? (
+                          <button
+                            onClick={() =>
+                              toggleSubject(schedule.course, "supply")
+                            }
+                            className={`px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${selectedSubjects.some((s) => s.id === schedule.course?.id) ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-white border border-gray-200 text-gray-400 hover:text-indigo-600 dark:bg-gray-800 dark:border-gray-700"}`}
+                          >
+                            {selectedSubjects.some(
+                              (s) => s.id === schedule.course?.id,
+                            )
+                              ? "Selected"
+                              : "Select"}
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[9px] font-black uppercase tracking-widest rounded-lg border border-green-100 dark:border-green-800">
+                            <CheckCircle size={10} />
+                            Included
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))
@@ -556,9 +635,15 @@ const Exams = () => {
                           <h4 className="font-bold text-gray-900 dark:text-white">
                             {course.name}
                           </h4>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                            {course.code} • ₹
-                            {selectedCycle.supply_fee_per_paper}/paper
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
+                            {course.code} • Fee: ₹
+                            {selectedCycle.supply_fee_per_paper}
+                            {course.last_attempt_period && (
+                              <span className="block text-rose-500 mt-0.5">
+                                Last Attempt: {course.last_attempt_period} (
+                                {course.last_grade})
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -587,8 +672,61 @@ const Exams = () => {
                 Fee Summary
               </h4>
               <div className="space-y-4 mb-8">
-                <div className="flex justify-between text-sm font-bold text-gray-500 uppercase tracking-tighter">
-                  <span>Total Payable</span>
+                {/* Regular Fee */}
+                {(selectedCycle.exam_mode === "regular" ||
+                  selectedCycle.exam_mode === "combined") && (
+                  <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    <span>Regular Exam Fee</span>
+                    <span>₹{selectedCycle.regular_fee}</span>
+                  </div>
+                )}
+
+                {/* Supply Fee Breakdown if applicable */}
+                {selectedSubjects.filter((s) => s.type === "supply").length >
+                  0 && (
+                  <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    <span>
+                      Supply Fee (
+                      {
+                        selectedSubjects.filter((s) => s.type === "supply")
+                          .length
+                      }{" "}
+                      Subjects)
+                    </span>
+                    <span>
+                      ₹
+                      {selectedSubjects.filter((s) => s.type === "supply")
+                        .length *
+                        parseFloat(selectedCycle.supply_fee_per_paper || 0)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Condonation Fee */}
+                {(currentRegistration?.attendance_status === "low" ||
+                  currentRegistration?.attendance_status === "condoned" ||
+                  currentRegistration?.blockers?.includes(
+                    "needs_condonation",
+                  )) && (
+                  <div className="flex justify-between text-xs font-bold text-rose-500 uppercase tracking-widest">
+                    <span>Condonation Fee</span>
+                    <span>₹{selectedCycle.condonation_fee}</span>
+                  </div>
+                )}
+
+                {/* Late Fee */}
+                {new Date().toISOString().split("T")[0] >
+                  selectedCycle.reg_end_date && (
+                  <div className="flex justify-between text-xs font-bold text-amber-500 uppercase tracking-widest">
+                    <span>Late Fee</span>
+                    <span>₹{selectedCycle.late_fee_amount}</span>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                  <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                    Total Payable
+                  </span>
                   <span className="text-2xl font-black text-indigo-600">
                     ₹{calculateFees()}
                   </span>
@@ -634,10 +772,47 @@ const Exams = () => {
                     </button>
                   </div>
                 </div>
+              ) : currentRegistration?.is_eligible === false ? (
+                <div className="space-y-4">
+                  <div className="p-6 bg-rose-50 dark:bg-rose-900/20 rounded-3xl border border-rose-100 dark:border-rose-800">
+                    <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 mb-3">
+                      <Lock className="w-5 h-5" />
+                      <span className="font-black text-xs uppercase tracking-widest">
+                        Registration Blocked
+                      </span>
+                    </div>
+                    <ul className="space-y-2">
+                      {currentRegistration.blockers?.map((blocker, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2 text-[10px] font-bold text-rose-500/80 leading-relaxed uppercase"
+                        >
+                          <span className="mt-1 w-1 h-1 bg-rose-400 rounded-full flex-shrink-0" />
+                          {blocker === "fee_pending" &&
+                            "Outstanding Semester Fees - Please clear your dues at the Finance Office."}
+                          {blocker === "needs_hod_permission" &&
+                            "Attendance Below 65% - Requires HOD permission and condonation fee to register."}
+                          {blocker === "admin_blocked" &&
+                            "Registration explicitly blocked by Exam Cell Administrator."}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    disabled
+                    className="w-full py-5 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-[1.5rem] font-black uppercase tracking-widest cursor-not-allowed border border-gray-200 dark:border-gray-700"
+                  >
+                    Action Required
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={handleRegistrationSubmit}
-                  disabled={calculateFees() === 0}
+                  disabled={
+                    calculateFees() === 0 &&
+                    selectedCycle.exam_mode !== "regular" &&
+                    selectedCycle.exam_mode !== "combined"
+                  }
                   className="w-full py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/30 hover:bg-indigo-700 hover:-translate-y-1 transition-all disabled:opacity-50 disabled:translate-y-0"
                 >
                   Pay Fees Now
@@ -692,9 +867,14 @@ const Exams = () => {
                         : "PENDING"}
                     </span>
                   </div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2 leading-tight uppercase tracking-wide group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-xl font-black text-gray-900 dark:text-white mb-1 leading-tight uppercase tracking-wide group-hover:text-indigo-600 transition-colors">
                     {cycle.name}
                   </h3>
+                  {cycle.exam_month && cycle.exam_year && (
+                    <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-widest mb-3">
+                      {cycle.exam_month} {cycle.exam_year}
+                    </p>
+                  )}
                   <div className="space-y-2 mb-8">
                     <div className="flex items-center text-[10px] font-black text-gray-400 uppercase tracking-widest gap-2">
                       <Clock className="w-3.5 h-3.5" />

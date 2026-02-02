@@ -61,7 +61,13 @@ const ExamReverification = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
       references: { model: "student_fee_charges", key: "id" },
-      comment: "Associated fee charge for reverification",
+      comment: "Associated fee charge for reverification (Legacy)",
+    },
+    exam_fee_payment_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: "exam_fee_payments", key: "id" },
+      comment: "Associated centralized exam fee payment",
     },
     semester: {
       type: DataTypes.INTEGER,

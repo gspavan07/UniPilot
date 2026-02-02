@@ -105,6 +105,7 @@ const PublishMarks = () => {
         }),
       ).unwrap();
       alert(res.message || "Results published successfully!");
+      dispatch(fetchExamCycles()); // Refresh cycle status in global state
       handleFetchResults(); // Refresh table
     } catch (err) {
       alert(err || "Failed to publish results");

@@ -4,8 +4,7 @@ const {
   ExamScript,
   User,
   Course,
-  StudentFeeCharge,
-  FeeCategory,
+  ExamFeePayment,
   sequelize,
 } = require("../models");
 const { Op } = require("sequelize");
@@ -180,12 +179,13 @@ const payScriptViewAccess = async (req, res) => {
       return res.json({ message: "No fee required for this exam cycle" });
     }
 
-    // Check if already paid
-    const existing = await StudentFeeCharge.findOne({
+    // Check for already paid/initiated in centralized system
+    const { ExamFeePayment } = require("../models");
+    const existing = await ExamFeePayment.findOne({
       where: {
         student_id,
-        charge_type: "exam_script_view",
-        reference_id: exam_cycle_id,
+        exam_cycle_id,
+        category: "script_view",
       },
       transaction,
     });
@@ -193,48 +193,23 @@ const payScriptViewAccess = async (req, res) => {
     if (existing) {
       await transaction.rollback();
       return res.status(400).json({
-        message: existing.is_paid
-          ? "Script view access already purchased"
-          : "Payment already initiated",
+        message:
+          existing.status === "completed"
+            ? "Script view access already purchased"
+            : "Payment already initiated",
         charge: existing,
       });
     }
 
-    // Get or create fee category
-    let feeCategory = await FeeCategory.findOne({
-      where: { name: "Exam Script View" },
-      transaction,
-    });
-
-    if (!feeCategory) {
-      feeCategory = await FeeCategory.create(
-        {
-          name: "Exam Script View",
-          description: "Fee for viewing exam answer scripts",
-          type: "academic",
-        },
-        { transaction },
-      );
-    }
-
-    const student = await User.findByPk(student_id, {
-      attributes: ["current_semester"],
-      transaction,
-    });
-
-    // Create fee charge
-    const feeCharge = await StudentFeeCharge.create(
+    // Create centralized ExamFeePayment record (Pending)
+    const examFeePayment = await ExamFeePayment.create(
       {
         student_id,
-        category_id: feeCategory.id,
-        charge_type: "exam_script_view",
+        exam_cycle_id,
+        category: "script_view",
         amount: cycle.script_view_fee,
-        description: `Script view access for ${cycle.name}`,
-        reference_id: exam_cycle_id,
-        reference_type: "exam_cycle",
-        semester: student.current_semester || 1,
-        is_paid: false,
-        created_by: student_id,
+        status: "pending",
+        remarks: `Script view access for ${cycle.name}`,
       },
       { transaction },
     );
@@ -243,11 +218,10 @@ const payScriptViewAccess = async (req, res) => {
 
     res.status(201).json({
       message: "Script view payment initiated",
-      feeCharge: {
-        id: feeCharge.id,
-        amount: feeCharge.amount,
-        description: feeCharge.description,
-        is_paid: feeCharge.is_paid,
+      payment_details: {
+        id: examFeePayment.id,
+        amount: examFeePayment.amount,
+        status: examFeePayment.status,
       },
     });
   } catch (error) {
