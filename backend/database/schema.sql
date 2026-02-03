@@ -7621,3 +7621,97 @@ ALTER TABLE ONLY public.vehicle_route_assignments
 --
 -- PostgreSQL database dump complete
 --
+--
+-- Placement Module Tables
+--
+
+CREATE TABLE public.placement_companies (
+    id uuid NOT NULL PRIMARY KEY,
+    name character varying(200) NOT NULL,
+    industry character varying(100),
+    website character varying(255),
+    logo_url character varying(500),
+    address text,
+    about text,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE public.job_postings (
+    id uuid NOT NULL PRIMARY KEY,
+    company_id uuid REFERENCES public.placement_companies(id),
+    role_title character varying(200) NOT NULL,
+    job_description text,
+    required_skills text[],
+    ctc_lpa numeric(10,2),
+    work_location character varying(200),
+    number_of_positions integer,
+    application_deadline timestamp with time zone,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE public.placement_drives (
+    id uuid NOT NULL PRIMARY KEY,
+    job_posting_id uuid REFERENCES public.job_postings(id),
+    drive_name character varying(200) NOT NULL,
+    drive_type character varying(50) DEFAULT 'on_campus',
+    drive_date date,
+    venue character varying(255),
+    mode character varying(50) DEFAULT 'offline',
+    registration_start timestamp with time zone,
+    registration_end timestamp with time zone,
+    registration_form_fields jsonb DEFAULT '[]'::jsonb,
+    external_registration_url character varying(500),
+    status character varying(50) DEFAULT 'upcoming',
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE public.drive_eligibility (
+    id uuid NOT NULL PRIMARY KEY,
+    drive_id uuid REFERENCES public.placement_drives(id),
+    min_cgpa numeric(4,2),
+    max_backlogs integer,
+    eligible_departments uuid[],
+    eligible_regulations uuid[],
+    gender_preference character varying(20),
+    other_criteria text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE public.drive_rounds (
+    id uuid NOT NULL PRIMARY KEY,
+    drive_id uuid REFERENCES public.placement_drives(id),
+    round_number integer,
+    round_name character varying(100),
+    round_type character varying(50),
+    round_date date,
+    round_time time without time zone,
+    venue character varying(255),
+    venue_type character varying(50) DEFAULT 'online',
+    mode character varying(50) DEFAULT 'offline',
+    test_link character varying(500),
+    duration_minutes integer,
+    is_eliminatory boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE public.student_placement_profiles (
+    id uuid NOT NULL PRIMARY KEY,
+    user_id uuid REFERENCES public.users(id),
+    resume_url character varying(500),
+    skills text[],
+    interests text[],
+    preferred_locations text[],
+    is_placed boolean DEFAULT false,
+    placed_at_company_id uuid REFERENCES public.placement_companies(id),
+    placed_ctc numeric(10,2),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+

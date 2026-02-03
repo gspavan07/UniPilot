@@ -81,6 +81,23 @@ import ExamManagement from "./pages/exam/ExamManagement";
 import ReverificationManagement from "./pages/exam/ReverificationManagement";
 import ScriptManagement from "./pages/exam/ScriptManagement";
 import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
+import PlacementDashboard from "./pages/placement/PlacementDashboard";
+import StudentPlacementDashboard from "./pages/placement/StudentPlacementDashboard";
+import MyPlacementProfile from "./pages/placement/MyPlacementProfile";
+import BrowseDrives from "./pages/placement/BrowseDrives";
+import SelectionPipeline from "./pages/placement/SelectionPipeline";
+import DepartmentPlacementDashboard from "./pages/placement/DepartmentPlacementDashboard";
+import ApplyDrive from "./pages/placement/ApplyDrive";
+import MyApplications from "./pages/placement/MyApplications";
+import CompanyManagement from "./pages/placement/CompanyManagement";
+import CompanyForm from "./pages/placement/CompanyForm";
+import JobPostings from "./pages/placement/JobPostings";
+import JobPostingForm from "./pages/placement/JobPostingForm";
+import DriveManagement from "./pages/placement/DriveManagement";
+import DriveForm from "./pages/placement/DriveForm";
+import DriveDetail from "./pages/placement/DriveDetail";
+import CompanyProfile from "./pages/placement/CompanyProfile";
+import JobPostingDetail from "./pages/placement/JobPostingDetail";
 import { getLandingPage } from "./utils/routeUtils";
 
 function App() {
@@ -220,6 +237,52 @@ function App() {
           <Route path="/hostel/fines" element={<HostelFines />} />
           <Route path="/hostel/room-bills" element={<HostelRoomBills />} />
           <Route path="/hostel/reports" element={<HostelReports />} />
+
+          {/* Placement Module */}
+          <Route path="/placement/dashboard" element={<PlacementDashboard />} />
+          <Route
+            path="/placement/department"
+            element={<DepartmentPlacementDashboard />}
+          />
+          <Route
+            path="/placement/student/dashboard"
+            element={<StudentPlacementDashboard />}
+          />
+          <Route path="/placement/profile" element={<MyPlacementProfile />} />
+          <Route path="/placement/eligible" element={<BrowseDrives />} />
+          <Route
+            path="/placement/drive/:id/pipeline"
+            element={<SelectionPipeline />}
+          />
+          <Route path="/placement/drive/:id/apply" element={<ApplyDrive />} />
+          <Route
+            path="/placement/my-applications"
+            element={<MyApplications />}
+          />
+          <Route path="/placement/companies" element={<CompanyManagement />} />
+          <Route path="/placement/companies/new" element={<CompanyForm />} />
+          <Route
+            path="/placement/companies/:id/edit"
+            element={<CompanyForm />}
+          />
+          <Route path="/placement/companies/:id" element={<CompanyProfile />} />
+          <Route path="/placement/job-postings" element={<JobPostings />} />
+          <Route
+            path="/placement/job-postings/new"
+            element={<JobPostingForm />}
+          />
+          <Route
+            path="/placement/job-postings/:id/edit"
+            element={<JobPostingForm />}
+          />
+          <Route
+            path="/placement/job-postings/:id"
+            element={<JobPostingDetail />}
+          />
+          <Route path="/placement/drives" element={<DriveManagement />} />
+          <Route path="/placement/drives/new" element={<DriveForm />} />
+          <Route path="/placement/drives/:id/edit" element={<DriveForm />} />
+          <Route path="/placement/drives/:id" element={<DriveDetail />} />
 
           {/* Add more transport sub-routes here */}
 

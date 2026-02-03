@@ -24,6 +24,10 @@ export const getLandingPage = (user) => {
     case "transport_admin":
     case "transport_staff":
       return "/transport";
+    case "tpo":
+      return "/placement/dashboard";
+    case "placement_coordinator":
+      return "/placement/department";
     case "student":
       return "/dashboard"; // StudentDashboard is well defined
     case "faculty":

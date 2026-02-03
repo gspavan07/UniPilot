@@ -23,6 +23,7 @@ const sectionInchargeRoutes = require("./sectionInchargeRoutes");
 const transportRoutes = require("./transport"); // Transport Management
 const hostelRoutes = require("./hostel"); // Hostel Management
 const dashboardRoutes = require("./dashboard");
+const placementRoutes = require("./placement"); // Placement Module
 
 const router = express.Router();
 
@@ -62,5 +63,6 @@ router.use("/section-incharges", sectionInchargeRoutes);
 router.use("/transport", transportRoutes);
 router.use("/hostel", hostelRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/placement", placementRoutes);
 
 module.exports = router;

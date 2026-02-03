@@ -20,6 +20,7 @@ import hostelReducer from "./slices/hostelSlice";
 import dashboardReducer from "./slices/dashboardSlice";
 import reverificationReducer from "../redux/slices/reverificationSlice";
 import studentReverificationReducer from "../redux/slices/studentReverificationSlice";
+import placementReducer from "./slices/placementSlice";
 
 export const store = configureStore({
   reducer: {
@@ -44,6 +45,7 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     reverification: reverificationReducer,
     studentReverification: studentReverificationReducer,
+    placement: placementReducer,
   },
 });
 

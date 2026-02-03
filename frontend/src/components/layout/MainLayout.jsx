@@ -113,7 +113,7 @@ const MainLayout = () => {
       name: "My Students",
       href: "/my-students",
       icon: Users,
-      roles: ["faculty", "hod", "principal", "super_admin"],
+      roles: ["faculty", "hod"],
     },
     {
       name: "My Timetable",
@@ -143,13 +143,13 @@ const MainLayout = () => {
         "transport_admin",
       ],
     },
-    {
-      name: "Proctoring",
-      href: "/proctoring",
-      icon: LifeBuoy,
-      permission: "proctoring:view",
-      roles: ["faculty", "hod", "principal", "super_admin"],
-    },
+    // {
+    //   name: "Proctoring",
+    //   href: "/proctoring",
+    //   icon: LifeBuoy,
+    //   permission: "proctoring:view",
+    //   roles: ["faculty", "hod", "principal", "super_admin"],
+    // },
     {
       name: "Reports",
       href: "/hostel/reports",
@@ -204,6 +204,25 @@ const MainLayout = () => {
       permission: "hostel:read",
       roles: ["super_admin", "principal", "hostel_admin"],
     },
+    {
+      name: "Placements",
+      href: "/placement/dashboard",
+      icon: Briefcase,
+      // permission: ["placement.company.manage", "placement.drive.manage"],
+      roles: ["super_admin", "principal", "tpo", "placement_coordinator"],
+    },
+    {
+      name: "Dept. Placements",
+      href: "/placement/department",
+      icon: Briefcase,
+      roles: ["hod"],
+    },
+    {
+      name: "My Placements",
+      href: "/placement/student/dashboard",
+      icon: Briefcase,
+      roles: ["student"],
+    },
     // {
     //   name: "Library",
     //   href: "/library",
@@ -241,12 +260,16 @@ const MainLayout = () => {
 
   // Logic to filter navigation based STRICTLY on user permissions
   const filteredNavigation = navigation.filter((item) => {
-    // 1. Role Check (Priority)
+    // 1. Admin/Super Admin bypass (Priority) - Consistent with backend logic
+    // const adminRoles = ["super_admin", "admin", "administrator"];
+    // if (adminRoles.includes(user?.role)) return true;
+
+    // 2. Role Check
     if (item.roles && Array.isArray(item.roles)) {
       if (!item.roles.includes(user?.role)) return false;
     }
 
-    // 2. Specific Student-Level Restrictions (e.g., Hostel)
+    // 3. Specific Student-Level Restrictions (e.g., Hostel)
     if (
       item.isHostellerOnly &&
       user?.role === "student" &&
@@ -255,7 +278,7 @@ const MainLayout = () => {
       return false;
     }
 
-    // 3. Strict Permission Check
+    // 4. Strict Permission Check (if item has permission but user is not admin)
     if (item.permission) {
       if (Array.isArray(item.permission)) {
         return item.permission.some((p) => user?.permissions?.includes(p));
@@ -263,7 +286,7 @@ const MainLayout = () => {
       return user?.permissions?.includes(item.permission);
     }
 
-    // 4. Fallback: If no permission specified, it's public (but better to specify 'dashboard:view')
+    // 5. Fallback: If no permission specified and role matched, allow
     return true;
   });
 

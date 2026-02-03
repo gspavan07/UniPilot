@@ -39,7 +39,6 @@ const FeeSemesterConfig = require("./FeeSemesterConfig");
 const StudentDocument = require("./StudentDocument");
 const SectionIncharge = require("./SectionIncharge");
 const ExamFeePayment = require("./ExamFeePayment");
-
 const AdmissionConfig = require("./AdmissionConfig");
 const StaffAttendance = require("./StaffAttendance");
 const LeaveBalance = require("./LeaveBalance");
@@ -50,6 +49,21 @@ const InstitutionSetting = require("./InstitutionSetting");
 const Block = require("./Block");
 const Room = require("./Room");
 const SemesterResult = require("./SemesterResult");
+
+// Placement Module Models
+const Company = require("./Company");
+const CompanyContact = require("./CompanyContact");
+const JobPosting = require("./JobPosting");
+const PlacementDrive = require("./PlacementDrive");
+const DriveEligibility = require("./DriveEligibility");
+const DriveRound = require("./DriveRound");
+const StudentPlacementProfile = require("./StudentPlacementProfile");
+const StudentApplication = require("./StudentApplication");
+const RoundResult = require("./RoundResult");
+const Placement = require("./Placement");
+const PlacementPolicy = require("./PlacementPolicy");
+const PlacementNotification = require("./PlacementNotification");
+const PlacementDocument = require("./PlacementDocument");
 
 // Transport Management Models
 const Route = require("./Route");
@@ -154,6 +168,21 @@ const models = {
   HostelFine,
   HostelRoomBill,
   HostelRoomBillDistribution,
+
+  // Placement Module Models
+  Company,
+  CompanyContact,
+  JobPosting,
+  PlacementDrive,
+  DriveEligibility,
+  DriveRound,
+  StudentPlacementProfile,
+  StudentApplication,
+  RoundResult,
+  Placement,
+  PlacementPolicy,
+  PlacementNotification,
+  PlacementDocument,
 };
 
 // Define associations
@@ -1021,6 +1050,117 @@ if (models.HostelRoomBillDistribution) {
     as: "roomBillDistributions",
   });
 }
+
+// ============================================
+// PLACEMENT MODULE ASSOCIATIONS
+// ============================================
+
+// Company <-> CompanyContact
+Company.hasMany(CompanyContact, { foreignKey: "company_id", as: "contacts" });
+CompanyContact.belongsTo(Company, { foreignKey: "company_id", as: "company" });
+
+// Company <-> JobPosting
+Company.hasMany(JobPosting, { foreignKey: "company_id", as: "job_postings" });
+JobPosting.belongsTo(Company, { foreignKey: "company_id", as: "company" });
+
+// JobPosting <-> PlacementDrive
+JobPosting.hasMany(PlacementDrive, {
+  foreignKey: "job_posting_id",
+  as: "drives",
+});
+PlacementDrive.belongsTo(JobPosting, {
+  foreignKey: "job_posting_id",
+  as: "job_posting",
+});
+
+// PlacementDrive <-> DriveEligibility
+PlacementDrive.hasOne(DriveEligibility, {
+  foreignKey: "drive_id",
+  as: "eligibility",
+});
+DriveEligibility.belongsTo(PlacementDrive, {
+  foreignKey: "drive_id",
+  as: "drive",
+});
+
+// PlacementDrive <-> DriveRound
+PlacementDrive.hasMany(DriveRound, { foreignKey: "drive_id", as: "rounds" });
+DriveRound.belongsTo(PlacementDrive, { foreignKey: "drive_id", as: "drive" });
+
+// User (Coordinator) <-> PlacementDrive
+PlacementDrive.belongsTo(User, {
+  as: "coordinator",
+  foreignKey: "coordinator_id",
+});
+User.hasMany(PlacementDrive, {
+  as: "coordinated_drives",
+  foreignKey: "coordinator_id",
+});
+
+// User (Student) <-> StudentPlacementProfile
+User.hasOne(StudentPlacementProfile, {
+  as: "placement_profile",
+  foreignKey: "student_id",
+});
+StudentPlacementProfile.belongsTo(User, {
+  as: "student",
+  foreignKey: "student_id",
+});
+
+// StudentApplication Associations
+StudentApplication.belongsTo(PlacementDrive, {
+  as: "drive",
+  foreignKey: "drive_id",
+});
+PlacementDrive.hasMany(StudentApplication, {
+  as: "applications",
+  foreignKey: "drive_id",
+});
+StudentApplication.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(StudentApplication, {
+  as: "placement_applications",
+  foreignKey: "student_id",
+});
+StudentApplication.belongsTo(DriveRound, {
+  as: "current_round",
+  foreignKey: "current_round_id",
+});
+
+// RoundResult Associations
+RoundResult.belongsTo(DriveRound, { as: "round", foreignKey: "round_id" });
+DriveRound.hasMany(RoundResult, { as: "results", foreignKey: "round_id" });
+RoundResult.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(RoundResult, { as: "round_results", foreignKey: "student_id" });
+
+// Placement Associations
+Placement.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(Placement, { as: "placements", foreignKey: "student_id" });
+Placement.belongsTo(PlacementDrive, { as: "drive", foreignKey: "drive_id" });
+Placement.belongsTo(JobPosting, {
+  as: "job_posting",
+  foreignKey: "job_posting_id",
+});
+Placement.belongsTo(StudentApplication, {
+  as: "application",
+  foreignKey: "application_id",
+});
+
+// PlacementNotification Associations
+PlacementNotification.belongsTo(User, { as: "user", foreignKey: "user_id" });
+User.hasMany(PlacementNotification, {
+  as: "placement_notifications",
+  foreignKey: "user_id",
+});
+PlacementNotification.belongsTo(PlacementDrive, {
+  as: "drive",
+  foreignKey: "related_drive_id",
+});
+
+// PlacementDocument Associations
+PlacementDocument.belongsTo(User, {
+  as: "uploader",
+  foreignKey: "uploaded_by",
+});
 
 // Export models and sequelize instance
 module.exports = {
