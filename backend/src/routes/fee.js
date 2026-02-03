@@ -29,6 +29,7 @@ const {
   payMyFees,
   addStudentFine,
   getDailyCollection,
+  createPaymentOrder,
 } = require("../controllers/feeController");
 const { authenticate, checkPermission } = require("../middleware/auth");
 
@@ -40,7 +41,10 @@ router.use(authenticate);
 
 // Student routes
 router.get("/my-status", getMyFeeStatus);
+router.get("/my-status", getMyFeeStatus);
 router.post("/my-payment", payMyFees);
+router.post("/payment/order", createPaymentOrder);
+
 
 // @Users/pavang/UniPilot/backend/src/routes/fee.js
 // Admin/Accounts routes

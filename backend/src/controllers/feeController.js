@@ -15,6 +15,22 @@ const { Op } = require("sequelize");
 
 // Template import
 const generateDefaultersCsv = require("../templates/fee/defaultersCsv");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+
+// Initialize Razorpay
+// Prioritize RAZORPAY_MODE env var, otherwise fallback to NODE_ENV
+const isLive =
+  process.env.RAZORPAY_MODE === "live" || process.env.NODE_ENV === "production";
+
+const razorpay = new Razorpay({
+  key_id: isLive
+    ? process.env.RAZORPAY_KEY_ID_LIVE
+    : process.env.RAZORPAY_KEY_ID,
+  key_secret: isLive
+    ? process.env.RAZORPAY_KEY_SECRET_LIVE
+    : process.env.RAZORPAY_KEY_SECRET,
+});
 
 // @desc    Create a fee category
 exports.createCategory = async (req, res) => {
@@ -372,6 +388,40 @@ exports.payMyFees = async (req, res) => {
     const status = await calculateFeeStatus(student_id);
     let walletCredit = status.grandTotals.excessBalance || 0;
 
+    // Razorpay Verification Logic
+    if (payment_method === "razorpay") {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+        req.body;
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res
+          .status(400)
+          .json({ error: "Missing Razorpay payment details" });
+      }
+
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const isLive =
+        process.env.RAZORPAY_MODE === "live" ||
+        process.env.NODE_ENV === "production";
+
+      const expectedSignature = crypto
+        .createHmac(
+          "sha256",
+          isLive
+            ? process.env.RAZORPAY_KEY_SECRET_LIVE
+            : process.env.RAZORPAY_KEY_SECRET,
+        )
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ error: "Invalid Razorpay signature" });
+      }
+
+      // If verified, proceed to record payment
+      // Use razorpay_payment_id as transaction_id
+    }
+
     createdPayments = [];
     for (let i = 0; i < payments.length; i++) {
       const p = payments[i];
@@ -419,7 +469,10 @@ exports.payMyFees = async (req, res) => {
             semester: p.semester || (p.type === "fine" ? p.semester : null),
             amount_paid: amountRemaining,
             payment_method: payment_method || "online", // Default to online for students
-            transaction_id: transaction_id || `TXN-${Date.now()}`,
+            transaction_id:
+              payment_method === "razorpay"
+                ? req.body.razorpay_payment_id
+                : transaction_id || `TXN-${Date.now()}`,
             receipt_url,
             payment_date: new Date(),
             remarks:
@@ -800,15 +853,46 @@ exports.getStudentFeeStatus = async (req, res) => {
 exports.getSemesterConfigs = async (req, res) => {
   try {
     const { program_id, batch_year } = req.query;
-    const configs = await FeeSemesterConfig.findAll({
-      where: { program_id, batch_year },
-    });
-    res.json({ success: true, data: configs });
-  } catch (err) {
-    logger.error("Error fetching semester configs", err);
-    res.status(500).json({ success: false, message: "Error fetching configs" });
+    const where = {};
+    if (program_id) where.program_id = program_id;
+    if (batch_year) where.batch_year = batch_year;
+
+    const configs = await FeeSemesterConfig.findAll({ where });
+    res.status(200).json({ success: true, data: configs });
+  } catch (error) {
+    logger.error("Error fetching semester configs:", error);
+    res.status(500).json({ error: "Failed to fetch configs" });
   }
 };
+
+// @desc    Create Razorpay Order
+exports.createPaymentOrder = async (req, res) => {
+  try {
+    const { amount, currency = "INR" } = req.body;
+
+    if (!amount) {
+      return res.status(400).json({ error: "Amount is required" });
+    }
+
+    const options = {
+      amount: Math.round(amount * 100), // amount in the smallest currency unit
+      currency,
+      receipt: `REC-${Date.now()}`,
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.status(200).json({
+      success: true,
+      data: order,
+      key_id: razorpay.key_id, // Send key_id to frontend
+    });
+  } catch (error) {
+    logger.error("Error creating Razorpay order:", error);
+    res.status(500).json({ error: "Failed to create payment order" });
+  }
+};
+
 
 // @desc    Update or create semester config
 exports.updateSemesterConfig = async (req, res) => {
@@ -1738,8 +1822,8 @@ exports.exportDefaulters = async (req, res) => {
           maxOverdueDays,
           student.phone || "",
           student.parent_details?.father_mobile ||
-            student.parent_details?.mother_mobile ||
-            "",
+          student.parent_details?.mother_mobile ||
+          "",
         ].join(",");
         csvContent += row + "\n";
       }

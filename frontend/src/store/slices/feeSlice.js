@@ -99,6 +99,20 @@ export const cloneFeeStructure = createAsyncThunk(
   },
 );
 
+export const createPaymentOrder = createAsyncThunk(
+  "fee/createPaymentOrder",
+  async (orderData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/fees/payment/order", orderData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to create payment order",
+      );
+    }
+  },
+);
+
 export const createFeePayment = createAsyncThunk(
   "fee/createPayment",
   async (paymentData, { rejectWithValue }) => {
