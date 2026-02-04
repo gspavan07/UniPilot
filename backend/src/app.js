@@ -21,7 +21,7 @@ app.get("/uploads/profiles/:filename", fileController.serveProfileImage);
 // Ideally these should also be protected, but keeping open to prevent breaking existing features for now
 app.use(
   "/uploads/student_docs",
-  express.static(path.join(__dirname, "../uploads/student_docs"))
+  express.static(path.join(__dirname, "../uploads/student_docs")),
 );
 // Make sure other subfolders in uploads are not accidentally exposed unless explicitly added
 
@@ -33,7 +33,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3001",
     credentials: true,
-  })
+  }),
 );
 
 // Request logging
@@ -45,7 +45,7 @@ if (process.env.NODE_ENV === "development") {
       stream: {
         write: (message) => logger.info(message.trim()),
       },
-    })
+    }),
   );
 }
 
@@ -67,7 +67,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use("/api", limiter);
+// app.use("/api", limiter);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

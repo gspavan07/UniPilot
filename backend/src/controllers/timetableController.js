@@ -182,8 +182,8 @@ exports.getMyTimetable = async (req, res) => {
       const student = await User.findByPk(userId);
       if (!student || !student.program_id) {
         return res
-          .status(404)
-          .json({ error: "Student program details not found" });
+          .status(200)
+          .json({ message: "Student program details not found" });
       }
 
       // Find timetable for this program/semester
@@ -191,6 +191,7 @@ exports.getMyTimetable = async (req, res) => {
         where: {
           program_id: student.program_id,
           semester: student.current_semester || 1,
+          section: student.section,
           is_active: true,
         },
         include: [
@@ -226,8 +227,8 @@ exports.getMyTimetable = async (req, res) => {
 
       if (!timetable) {
         return res
-          .status(404)
-          .json({ error: "No timetable found for your program/semester" });
+          .status(200)
+          .json({ message: "No timetable found for your program/semester" });
       }
 
       // Mapping faculty name for frontend consistency
