@@ -44,13 +44,32 @@ const getMyScripts = async (req, res) => {
       order: [["schedule", "exam_date", "DESC"]],
     });
 
-    // Add access status to each script (Simplified: no payment wall)
-    const scriptsWithAccess = scripts.map((script) => ({
-      ...script.toJSON(),
-      can_access: true,
-      requires_payment: false,
-      fee_amount: 0,
-    }));
+    // Get script_view payments for this student
+    const payments = await ExamFeePayment.findAll({
+      where: {
+        student_id,
+        category: "script_view",
+        status: "completed",
+      },
+      attributes: ["exam_cycle_id"],
+    });
+
+    const paidCycleIds = new Set(payments.map((p) => p.exam_cycle_id));
+
+    // Add access status to each script
+    const scriptsWithAccess = scripts.map((script) => {
+      const cycle = script.schedule.cycle;
+      const feeAmount = parseFloat(cycle.script_view_fee || 0);
+      const isPaid = paidCycleIds.has(cycle.id);
+      const requiresPayment = feeAmount > 0 && !isPaid;
+
+      return {
+        ...script.toJSON(),
+        can_access: !requiresPayment,
+        requires_payment: requiresPayment,
+        fee_amount: feeAmount,
+      };
+    });
 
     res.json({
       scripts: scriptsWithAccess,
@@ -100,15 +119,14 @@ const viewScript = async (req, res) => {
       });
     }
 
-    // Check payment if fee is required (REMOVED: Access is now free if visible)
-    /*
+    // Check payment if fee is required
     if (script.schedule.cycle.script_view_fee > 0) {
-      const payment = await StudentFeeCharge.findOne({
+      const payment = await ExamFeePayment.findOne({
         where: {
           student_id,
-          charge_type: "exam_script_view",
-          reference_id: script.schedule.cycle.id,
-          is_paid: true,
+          category: "script_view",
+          exam_cycle_id: script.schedule.cycle.id,
+          status: "completed",
         },
       });
 
@@ -120,7 +138,6 @@ const viewScript = async (req, res) => {
         });
       }
     }
-    */
 
     // Get file path
     const filePath = path.join(__dirname, "../../uploads", script.file_path);

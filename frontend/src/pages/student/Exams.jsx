@@ -30,6 +30,9 @@ import {
   registerForExams,
   fetchRegistrationStatus,
   fetchMyRegistrations,
+  createRegistrationOrder,
+  createReverificationOrder,
+  applyReverificationWithPayment,
 } from "../../store/slices/examSlice";
 import {
   getMyReverificationEligibility,
@@ -218,21 +221,19 @@ const Exams = () => {
           <div className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner">
             <button
               onClick={() => setSubTab("upcoming")}
-              className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                subTab === "upcoming"
-                  ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
-              }`}
+              className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${subTab === "upcoming"
+                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
+                }`}
             >
               Upcoming ({upcomingCycles.length})
             </button>
             <button
               onClick={() => setSubTab("completed")}
-              className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                subTab === "completed"
-                  ? "bg-white dark:bg-gray-800 text-slate-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
-              }`}
+              className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${subTab === "completed"
+                ? "bg-white dark:bg-gray-800 text-slate-600 shadow-sm border border-gray-100 dark:border-gray-700"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
+                }`}
             >
               Completed ({completedCycles.length})
             </button>
@@ -468,12 +469,13 @@ const Exams = () => {
         total += parseFloat(selectedCycle.late_fee_amount || 0);
       }
 
-      // Add condonation fee ONLY for regular attempts with low attendance
+      // Add condonation fee ONLY for regular attempts with low attendance AND NOT condoned
       if (attemptType === "regular") {
         if (
-          currentRegistration?.attendance_status === "low" ||
-          currentRegistration?.attendance_status === "condoned" ||
-          currentRegistration?.blockers?.includes("needs_condonation")
+          !currentRegistration?.is_condoned &&
+          (currentRegistration?.attendance_status === "low" ||
+            currentRegistration?.attendance_status === "condoned" ||
+            currentRegistration?.blockers?.includes("needs_condonation"))
         ) {
           total += parseFloat(selectedCycle.condonation_fee || 0);
         }
@@ -516,15 +518,103 @@ const Exams = () => {
         toast.error("Please select at least one subject");
         return;
       }
-      try {
-        await dispatch(
-          registerForExams({ exam_cycle_id: selectedCycle.id, subjects }),
-        ).unwrap();
-        toast.success("Registration Successful!");
-        dispatch(fetchMyRegistrations());
-        dispatch(fetchRegistrationStatus(selectedCycle.id));
-      } catch (err) {
-        toast.error(err || "Registration failed");
+
+      const currentTotalFee = calculateFees();
+
+      // --- Payment Flow ---
+      if (currentTotalFee > 0) {
+        try {
+          // 1. Load Razorpay SDK
+          const res = await new Promise((resolve) => {
+            if (window.Razorpay) {
+              resolve(true); // Already loaded
+              return;
+            }
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+          });
+
+          if (!res) {
+            toast.error("Razorpay SDK failed to load. Check internet connection.");
+            return;
+          }
+
+          // 2. Create Order
+          // We must pass the is_condoned flag if we are overriding
+          // But strict backend logic should ideally re-evaluate
+          // For now, let's pass explicit fields
+          const orderRes = await dispatch(
+            createRegistrationOrder({
+              cycleId: selectedCycle.id,
+              subjects,
+              is_condoned: currentRegistration?.is_condoned // pass logic if needed
+            })
+          ).unwrap();
+
+          // 3. Open Razorpay
+          const options = {
+            key: orderRes.key_id,
+            amount: orderRes.data.amount,
+            currency: orderRes.data.currency,
+            name: "UniPilot Exams",
+            description: `Registration for ${selectedCycle.name}`,
+            order_id: orderRes.data.id,
+            handler: async function (response) {
+              try {
+                // 4. Verify & Register
+                await dispatch(
+                  registerForExams({
+                    exam_cycle_id: selectedCycle.id,
+                    subjects,
+                    payment: {
+                      razorpay_order_id: response.razorpay_order_id,
+                      razorpay_payment_id: response.razorpay_payment_id,
+                      razorpay_signature: response.razorpay_signature
+                    }
+                  }),
+                ).unwrap();
+
+                toast.success("Registration & Payment Successful!");
+                dispatch(fetchMyRegistrations());
+                dispatch(fetchRegistrationStatus(selectedCycle.id));
+              } catch (err) {
+                toast.error("Payment verification failed: " + err);
+              }
+            },
+            prefill: {
+              name: user.name,
+              email: user.email,
+              contact: user.phone || ""
+            },
+            theme: {
+              color: "#4f46e5" // Indigo 600
+            }
+          };
+
+          const rzp1 = new window.Razorpay(options);
+          rzp1.on("payment.failed", function (response) {
+            toast.error(response.error.description || "Payment Failed");
+          });
+          rzp1.open();
+
+        } catch (err) {
+          toast.error(err || "Failed to initiate payment");
+        }
+      } else {
+        // Zero Fee Flow (No Payment)
+        try {
+          await dispatch(
+            registerForExams({ exam_cycle_id: selectedCycle.id, subjects }),
+          ).unwrap();
+          toast.success("Registration Successful!");
+          dispatch(fetchMyRegistrations());
+          dispatch(fetchRegistrationStatus(selectedCycle.id));
+        } catch (err) {
+          toast.error(err || "Registration failed");
+        }
       }
     };
 
@@ -597,7 +687,7 @@ const Exams = () => {
                       </div>
                       <div className="flex flex-col items-end">
                         {currentRegistration?.attempt_type === "supply" ||
-                        selectedCycle.exam_mode === "supplementary" ? (
+                          selectedCycle.exam_mode === "supplementary" ? (
                           <button
                             onClick={() =>
                               toggleSubject(schedule.course, "supply")
@@ -675,53 +765,54 @@ const Exams = () => {
                 {/* Regular Fee */}
                 {(selectedCycle.exam_mode === "regular" ||
                   selectedCycle.exam_mode === "combined") && (
-                  <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    <span>Regular Exam Fee</span>
-                    <span>₹{selectedCycle.regular_fee}</span>
-                  </div>
-                )}
+                    <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      <span>Regular Exam Fee</span>
+                      <span>₹{selectedCycle.regular_fee}</span>
+                    </div>
+                  )}
 
                 {/* Supply Fee Breakdown if applicable */}
                 {selectedSubjects.filter((s) => s.type === "supply").length >
                   0 && (
-                  <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    <span>
-                      Supply Fee (
-                      {
-                        selectedSubjects.filter((s) => s.type === "supply")
-                          .length
-                      }{" "}
-                      Subjects)
-                    </span>
-                    <span>
-                      ₹
-                      {selectedSubjects.filter((s) => s.type === "supply")
-                        .length *
-                        parseFloat(selectedCycle.supply_fee_per_paper || 0)}
-                    </span>
-                  </div>
-                )}
+                    <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      <span>
+                        Supply Fee (
+                        {
+                          selectedSubjects.filter((s) => s.type === "supply")
+                            .length
+                        }{" "}
+                        Subjects)
+                      </span>
+                      <span>
+                        ₹
+                        {selectedSubjects.filter((s) => s.type === "supply")
+                          .length *
+                          parseFloat(selectedCycle.supply_fee_per_paper || 0)}
+                      </span>
+                    </div>
+                  )}
 
                 {/* Condonation Fee */}
-                {(currentRegistration?.attendance_status === "low" ||
-                  currentRegistration?.attendance_status === "condoned" ||
-                  currentRegistration?.blockers?.includes(
-                    "needs_condonation",
-                  )) && (
-                  <div className="flex justify-between text-xs font-bold text-rose-500 uppercase tracking-widest">
-                    <span>Condonation Fee</span>
-                    <span>₹{selectedCycle.condonation_fee}</span>
-                  </div>
-                )}
+                {!currentRegistration?.is_condoned &&
+                  (currentRegistration?.attendance_status === "low" ||
+                    currentRegistration?.attendance_status === "condoned" ||
+                    currentRegistration?.blockers?.includes(
+                      "needs_condonation",
+                    )) && (
+                    <div className="flex justify-between text-xs font-bold text-rose-500 uppercase tracking-widest">
+                      <span>Condonation Fee</span>
+                      <span>₹{selectedCycle.condonation_fee}</span>
+                    </div>
+                  )}
 
                 {/* Late Fee */}
                 {new Date().toISOString().split("T")[0] >
                   selectedCycle.reg_end_date && (
-                  <div className="flex justify-between text-xs font-bold text-amber-500 uppercase tracking-widest">
-                    <span>Late Fee</span>
-                    <span>₹{selectedCycle.late_fee_amount}</span>
-                  </div>
-                )}
+                    <div className="flex justify-between text-xs font-bold text-amber-500 uppercase tracking-widest">
+                      <span>Late Fee</span>
+                      <span>₹{selectedCycle.late_fee_amount}</span>
+                    </div>
+                  )}
 
                 <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
                   <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
@@ -974,24 +1065,92 @@ const Exams = () => {
       setShowRevPaymentModal(true);
     };
 
-    const handleRevPayment = async (paymentMethod) => {
-      try {
-        const response = await api.post(
-          "/exam/reverification/apply-with-payment",
-          {
-            exam_schedule_ids: revSelectedSubjects.map((s) => s.schedule_id),
-            reason: revReason,
-            payment_method: paymentMethod,
-          },
-        );
-        toast.success("Application Submitted!");
-        dispatch(getMyReverificationEligibility());
-        dispatch(getMyReverificationRequests());
-        setShowRevPaymentModal(false);
-        setRevSelectedSubjects([]);
-        setRevReason("");
-      } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to apply");
+    const handleRevPayment = async (method) => {
+      if (revSelectedSubjects.length === 0) return;
+
+      if (method === "online") {
+        try {
+          // 1. Load Razorpay SDK
+          const res = await new Promise((resolve) => {
+            if (window.Razorpay) {
+              resolve(true); // Already loaded
+              return;
+            }
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+          });
+
+          if (!res) {
+            toast.error("Razorpay SDK failed to load. Check internet connection.");
+            return;
+          }
+
+          // 2. Create Order
+          // Use s.schedule_id || s.id based on what was there before
+          const orderRes = await dispatch(
+            createReverificationOrder({
+              exam_schedule_ids: revSelectedSubjects.map((s) => s.schedule_id || s.id),
+            })
+          ).unwrap();
+
+          // 3. Open Razorpay
+          const options = {
+            key: orderRes.key_id,
+            amount: orderRes.order.amount,
+            currency: orderRes.order.currency,
+            name: "UniPilot Reverification",
+            description: `Reverification for ${revSelectedSubjects.length} subjects`,
+            order_id: orderRes.order.id,
+            handler: async function (response) {
+              try {
+                // 4. Submit Application with Payment
+                await dispatch(
+                  applyReverificationWithPayment({
+                    exam_schedule_ids: revSelectedSubjects.map((s) => s.schedule_id || s.id),
+                    reason: revReason,
+                    payment_method: "razorpay",
+                    payment: {
+                      razorpay_order_id: response.razorpay_order_id,
+                      razorpay_payment_id: response.razorpay_payment_id,
+                      razorpay_signature: response.razorpay_signature,
+                    },
+                  })
+                ).unwrap();
+
+                toast.success("Application Submitted!");
+                dispatch(getMyReverificationEligibility());
+                dispatch(getMyReverificationRequests());
+                setShowRevPaymentModal(false);
+                setRevSelectedSubjects([]);
+                setRevReason("");
+              } catch (err) {
+                toast.error(err.message || "Payment verification failed");
+              }
+            },
+            prefill: {
+              name: user.name,
+              email: user.email,
+              contact: user.phone || "",
+            },
+            theme: {
+              color: "#4f46e5",
+            },
+          };
+
+          const rzp1 = new window.Razorpay(options);
+          rzp1.on("payment.failed", function (response) {
+            toast.error(response.error.description || "Payment Failed");
+          });
+          rzp1.open();
+
+        } catch (err) {
+          toast.error(err.message || "Failed to initiate payment");
+        }
+      } else {
+        toast.error("Only online payment is supported");
       }
     };
 
@@ -1161,13 +1320,12 @@ const Exams = () => {
                       </div>
                     )}
                     <div
-                      className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                        req.status === "completed"
-                          ? "bg-green-100 text-green-700"
-                          : req.status === "pending"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-indigo-100 text-indigo-700"
-                      }`}
+                      className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${req.status === "completed"
+                        ? "bg-green-100 text-green-700"
+                        : req.status === "pending"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-indigo-100 text-indigo-700"
+                        }`}
                     >
                       {req.status}
                     </div>
@@ -1214,7 +1372,7 @@ const Exams = () => {
                   onClick={() => handleRevPayment("online")}
                   className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all"
                 >
-                  Pay with UPI / Card
+                  Pay Online
                 </button>
                 <button
                   onClick={() => setShowRevPaymentModal(false)}
@@ -1325,48 +1483,43 @@ const Exams = () => {
                   <button
                     key={script.id}
                     onClick={() => handleViewScript(script)}
-                    className={`w-full text-left p-6 rounded-[2rem] transition-all duration-300 group border ${
-                      activePreviewScript?.id === script.id
-                        ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-500/20"
-                        : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-indigo-500/30 hover:bg-indigo-50/30"
-                    }`}
+                    className={`w-full text-left p-6 rounded-[2rem] transition-all duration-300 group border ${activePreviewScript?.id === script.id
+                      ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-500/20"
+                      : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-indigo-500/30 hover:bg-indigo-50/30"
+                      }`}
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className={`p-3 rounded-xl transition-colors ${
-                          activePreviewScript?.id === script.id
-                            ? "bg-white/20 text-white"
-                            : "bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
-                        }`}
+                        className={`p-3 rounded-xl transition-colors ${activePreviewScript?.id === script.id
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
+                          }`}
                       >
                         <FileText size={20} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div
-                          className={`text-sm font-black uppercase tracking-tight truncate ${
-                            activePreviewScript?.id === script.id
-                              ? "text-white"
-                              : "text-gray-900 dark:text-white"
-                          }`}
+                          className={`text-sm font-black uppercase tracking-tight truncate ${activePreviewScript?.id === script.id
+                            ? "text-white"
+                            : "text-gray-900 dark:text-white"
+                            }`}
                         >
                           {script.schedule?.course?.name}
                         </div>
                         <div
-                          className={`text-[9px] font-black uppercase tracking-widest mt-1 ${
-                            activePreviewScript?.id === script.id
-                              ? "text-indigo-100"
-                              : "text-indigo-500"
-                          }`}
+                          className={`text-[9px] font-black uppercase tracking-widest mt-1 ${activePreviewScript?.id === script.id
+                            ? "text-indigo-100"
+                            : "text-indigo-500"
+                            }`}
                         >
                           {script.schedule?.course?.code}
                         </div>
                       </div>
                       <div
-                        className={`transition-transform duration-300 ${
-                          activePreviewScript?.id === script.id
-                            ? "translate-x-1"
-                            : "opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
-                        }`}
+                        className={`transition-transform duration-300 ${activePreviewScript?.id === script.id
+                          ? "translate-x-1"
+                          : "opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
+                          }`}
                       >
                         <ChevronRight size={16} />
                       </div>
@@ -1497,11 +1650,10 @@ const Exams = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${
-                  isActive
-                    ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700 scale-[1.02]"
-                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${isActive
+                  ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700 scale-[1.02]"
+                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  }`}
               >
                 <Icon
                   size={14}

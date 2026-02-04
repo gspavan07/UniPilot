@@ -14,8 +14,10 @@ import {
   fetchMyFeeStatus,
   createFeePayment,
   studentPayFees,
+  createPaymentOrder,
 } from "../../store/slices/feeSlice";
 import { printReceipt } from "../../utils/receiptGenerator";
+import { toast } from "react-hot-toast";
 
 const MyFees = () => {
   const dispatch = useDispatch();
@@ -81,15 +83,86 @@ const MyFees = () => {
     const appliedWallet = Math.min(total, walletCredit);
     const netPayable = total - appliedWallet;
 
-    let confirmMsg = `Total Amount: ₹${total.toLocaleString("en-IN")}\n`;
+    // Build detailed fee breakdown
+    const feeDetails = [];
+    const chargeDetails = [];
+    const fineDetails = [];
+
+    selectedFees.forEach((feeId) => {
+      const amount = customAmounts[feeId] || 0;
+      if (amount <= 0) return;
+
+      // Check if it's a fine
+      if (feeId.toString().startsWith("fine:")) {
+        const sem = feeId.split(":")[1];
+        fineDetails.push({
+          semester: parseInt(sem),
+          amount: amount
+        });
+      } else {
+        // Find the fee object in all semesters
+        Object.entries(semesterWise).forEach(([sem, semData]) => {
+          const feeObj = semData.fees.find((f) => f.id === feeId);
+          if (feeObj) {
+            if (feeObj.is_charge) {
+              chargeDetails.push({
+                category: feeObj.category,
+                semester: parseInt(sem),
+                amount: amount,
+                description: feeObj.description
+              });
+            } else {
+              feeDetails.push({
+                category: feeObj.category,
+                semester: parseInt(sem),
+                amount: amount
+              });
+            }
+          }
+        });
+      }
+    });
+
+    // Build enhanced confirmation message
+    let confirmMsg = `=== PAYMENT SUMMARY ===\n\n`;
+
+    if (feeDetails.length > 0) {
+      confirmMsg += `📚 Academic Fees:\n`;
+      feeDetails.forEach(fee => {
+        confirmMsg += `  • ${fee.category} (Sem ${fee.semester}): ₹${fee.amount.toLocaleString("en-IN")}\n`;
+      });
+      confirmMsg += `\n`;
+    }
+
+    if (chargeDetails.length > 0) {
+      confirmMsg += `💳 Charges:\n`;
+      chargeDetails.forEach(charge => {
+        confirmMsg += `  • ${charge.category} (Sem ${charge.semester}): ₹${charge.amount.toLocaleString("en-IN")}\n`;
+      });
+      confirmMsg += `\n`;
+    }
+
+    if (fineDetails.length > 0) {
+      confirmMsg += `⚠️ Late Payment Fines:\n`;
+      fineDetails.forEach(fine => {
+        confirmMsg += `  • Semester ${fine.semester}: ₹${fine.amount.toLocaleString("en-IN")}\n`;
+      });
+      confirmMsg += `\n`;
+    }
+
+    confirmMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    confirmMsg += `Total Amount: ₹${total.toLocaleString("en-IN")}\n`;
+
     if (appliedWallet > 0) {
       confirmMsg += `Using Wallet Credit: -₹${appliedWallet.toLocaleString("en-IN")}\n`;
       if (netPayable > 0) {
         confirmMsg += `Net Payment Required: ₹${netPayable.toLocaleString("en-IN")}\n`;
       } else {
-        confirmMsg += `Your Wallet covers the entire fee! No external payment needed.`;
+        confirmMsg += `\n✅ Your Wallet covers the entire fee! No external payment needed.`;
       }
     }
+
+    confirmMsg += `\n\nProceed with payment?`;
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -131,20 +204,110 @@ const MyFees = () => {
         }
       });
 
-      await dispatch(
-        studentPayFees({
-          payments: paymentBatch,
-          payment_method: "online",
-          transaction_id: `OTX-${Date.now()}`,
-          remarks: "Online Selective Payment",
-        }),
-      ).unwrap();
+      if (netPayable > 0) {
+        // Load Razorpay Script
+        const res = await new Promise((resolve) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
 
-      setSelectedFees(new Set());
-      dispatch(fetchMyFeeStatus());
-      alert("Payment Successful!");
+        if (!res) {
+          toast.error("Razorpay SDK failed to load. Are you online?");
+          return;
+        }
+
+        // Create Order
+        const orderRes = await dispatch(
+          createPaymentOrder({ amount: netPayable }),
+        ).unwrap();
+
+        // Build description and notes for Razorpay
+        let description = "Student Fee Payment";
+        if (feeDetails.length > 0) {
+          const categories = feeDetails.map(f => f.category).join(', ');
+          description = categories.length > 50
+            ? `Academic Fees - ${categories.substring(0, 47)}...`
+            : `Academic Fees - ${categories}`;
+        }
+
+        const allSemesters = [...new Set([
+          ...feeDetails.map(f => f.semester),
+          ...chargeDetails.map(c => c.semester),
+          ...fineDetails.map(f => f.semester)
+        ])];
+
+        const options = {
+          key: orderRes.key_id,
+          amount: orderRes.data.amount,
+          currency: orderRes.data.currency,
+          name: "UniPilot University",
+          description: description,
+          image: "https://your-logo-url.com/logo.png", // Valid logo url
+          order_id: orderRes.data.id,
+          handler: async function (response) {
+            try {
+              // Verify Payment
+              await dispatch(
+                studentPayFees({
+                  payments: paymentBatch,
+                  payment_method: "razorpay", // Explicit method
+                  transaction_id: response.razorpay_payment_id,
+                  remarks: "Online Razorpay Payment",
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              ).unwrap();
+
+              setSelectedFees(new Set());
+              dispatch(fetchMyFeeStatus());
+              toast.success("Payment Successful!");
+            } catch (err) {
+              toast.error("Payment Verification Failed: " + err);
+            }
+          },
+          prefill: {
+            name: user.first_name + " " + user.last_name,
+            email: user.email,
+            contact: user.phone_number,
+          },
+          notes: {
+            student_id: user.student_id || user.id,
+            admission_number: user.admission_number || "N/A",
+            student_name: `${user.first_name} ${user.last_name}`,
+            payment_type: feeDetails.length > 0 ? "academic_fees" : "fee_payment",
+            fee_categories: feeDetails.map(f => f.category).join(', ') || "N/A",
+            semesters: allSemesters.join(', ') || "N/A",
+            total_items: selectedFees.size,
+            wallet_credit_used: appliedWallet > 0 ? `₹${appliedWallet}` : "None"
+          },
+          theme: {
+            color: "#4f46e5",
+          },
+        };
+
+        const rzp1 = new window.Razorpay(options);
+        rzp1.open();
+      } else {
+        // Full Wallet Payment
+        await dispatch(
+          studentPayFees({
+            payments: paymentBatch,
+            payment_method: "wallet",
+            transaction_id: `WAL-${Date.now()}`,
+            remarks: "Paid via Wallet",
+          }),
+        ).unwrap();
+
+        setSelectedFees(new Set());
+        dispatch(fetchMyFeeStatus());
+        toast.success("Payment Successful!");
+      }
     } catch (err) {
-      alert("Payment failed: " + err);
+      toast.error("Payment initiation failed: " + err);
     }
   };
 
@@ -300,13 +463,12 @@ const MyFees = () => {
                 return (
                   <div
                     key={sem}
-                    className={`min-w-[180px] p-3 rounded-xl border-l-4 transition-all ${
-                      isPaid
-                        ? "bg-emerald-50/30 border-emerald-500"
-                        : d.fine.isOverdue
-                          ? "bg-red-50/30 border-red-500"
-                          : "bg-amber-50/30 border-amber-500"
-                    }`}
+                    className={`min-w-[180px] p-3 rounded-xl border-l-4 transition-all ${isPaid
+                      ? "bg-emerald-50/30 border-emerald-500"
+                      : d.fine.isOverdue
+                        ? "bg-red-50/30 border-red-500"
+                        : "bg-amber-50/30 border-amber-500"
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-black text-gray-500">
@@ -320,13 +482,12 @@ const MyFees = () => {
                       {formatDate(d.fine.deadline)}
                     </div>
                     <div
-                      className={`text-[10px] font-black mt-1 uppercase ${
-                        isPaid
-                          ? "text-emerald-600"
-                          : d.fine.isOverdue
-                            ? "text-red-600"
-                            : "text-amber-600"
-                      }`}
+                      className={`text-[10px] font-black mt-1 uppercase ${isPaid
+                        ? "text-emerald-600"
+                        : d.fine.isOverdue
+                          ? "text-red-600"
+                          : "text-amber-600"
+                        }`}
                     >
                       {isPaid
                         ? "Cleared"
@@ -353,11 +514,10 @@ const MyFees = () => {
             <button
               key={sem}
               onClick={() => setActiveSemester(sem)}
-              className={`px-5 py-3 rounded-t-xl font-bold text-sm whitespace-nowrap transition-all ${
-                isActive
-                  ? "bg-white dark:bg-gray-800 text-indigo-600 border-b-2 border-indigo-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`}
+              className={`px-5 py-3 rounded-t-xl font-bold text-sm whitespace-nowrap transition-all ${isActive
+                ? "bg-white dark:bg-gray-800 text-indigo-600 border-b-2 border-indigo-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
             >
               {getSemesterLabel(sem)}
             </button>
@@ -519,8 +679,8 @@ const MyFees = () => {
                     <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">
                       {semesterWise[activeSemester].fine.paid > 0
                         ? semesterWise[activeSemester].fine.paid.toLocaleString(
-                            "en-IN",
-                          )
+                          "en-IN",
+                        )
                         : "-"}
                     </td>
                     <td className="px-6 py-4 text-right">

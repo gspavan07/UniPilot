@@ -99,6 +99,20 @@ export const cloneFeeStructure = createAsyncThunk(
   },
 );
 
+export const createPaymentOrder = createAsyncThunk(
+  "fee/createPaymentOrder",
+  async (orderData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/fees/payment/order", orderData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to create payment order",
+      );
+    }
+  },
+);
+
 export const createFeePayment = createAsyncThunk(
   "fee/createPayment",
   async (paymentData, { rejectWithValue }) => {
@@ -164,6 +178,20 @@ export const updateSemesterConfig = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error || "Failed to update config",
+      );
+    }
+  },
+);
+
+export const deleteStudentFine = createAsyncThunk(
+  "fees/deleteStudentFine",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await api.delete(`/fees/fines/${id}`);
+      return { id, message: response.data.message };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to delete fine",
       );
     }
   },
@@ -544,6 +572,17 @@ export const feeSlice = createSlice({
       })
       .addCase(fetchSections.fulfilled, (state, action) => {
         state.sections = action.payload.data;
+      })
+      .addCase(deleteStudentFine.fulfilled, (state, action) => {
+        // Optimistically remove the fine if it's in the current student's data
+        // For deep updates, we usually rely on re-fetching student status, 
+        // but we can trigger a refresh flag or toast here.
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase(deleteStudentFine.rejected, (state, action) => {
+        state.error = action.payload;
+        state.loading = false;
       });
   },
 });

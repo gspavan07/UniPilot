@@ -28,9 +28,106 @@ const PDFDocument = require("pdfkit");
 // Template imports
 const generateHallTicketPdf = require("../templates/exam/hallTicketPdf");
 const generateExamReceiptPdf = require("../templates/exam/examReceiptPdf");
+
+// Payment Utilities
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+
+// Initialize Razorpay
+// Prioritize RAZORPAY_MODE env var, otherwise fallback to NODE_ENV
+const isLive =
+  process.env.RAZORPAY_MODE === "live" || process.env.NODE_ENV === "production";
+
+const razorpay = new Razorpay({
+  key_id: isLive
+    ? process.env.RAZORPAY_KEY_ID_LIVE
+    : process.env.RAZORPAY_KEY_ID,
+  key_secret: isLive
+    ? process.env.RAZORPAY_KEY_SECRET_LIVE
+    : process.env.RAZORPAY_KEY_SECRET,
+});
 const generateMarksImportTemplate = require("../templates/exam/marksImportTemplate");
 const generateCourseResultsExcel = require("../templates/exam/courseResultsExcel");
 const generateDepartmentResultsExcel = require("../templates/exam/departmentResultsExcel");
+
+
+
+// Helper: Calculate total fee server-side to prevent tampering
+const calculateTotalExamFee = (
+  student,
+  cycle,
+  subjects = [], // for supply/combined
+  existingRegistration = null,
+  attendance_percentage = 100,
+  nextCondoned = false,
+) => {
+  let total_fee = 0;
+  let condonation_fee = 0;
+
+  // Detect Attempt Type
+  // Logic must match Frontend: Exams.jsx -> calculateFees
+  let isRegularAttempt = false;
+
+  if (cycle.exam_mode === "regular") {
+    isRegularAttempt = true;
+  } else if (cycle.exam_mode === "supplementary") {
+    isRegularAttempt = false;
+  } else if (cycle.exam_mode === "combined") {
+    // If combined, it's regular if batch/sem matches, otherwise it's supply (e.g. backlog attempt)
+    // Use loose equality for safety if types differ
+    isRegularAttempt = (cycle.batch_year == student.batch_year && cycle.semester == student.current_semester);
+  }
+
+  // 1. Base / Supply Fee
+  if (isRegularAttempt) {
+    // Current Semester Student
+    total_fee += parseFloat(cycle.regular_fee || 0);
+
+    // If combined, they might have selected supply subjects too (Backlogs)
+    if (cycle.exam_mode === "combined") {
+      const supplyCount = subjects.filter((s) => s.type === "supply").length;
+      total_fee += supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
+    }
+  } else {
+    // Supplementary / Backlog Student
+    // Charge per paper
+    total_fee += subjects.length * parseFloat(cycle.supply_fee_per_paper || 0);
+  }
+
+  // 2. Late Fee
+  const today = new Date().toISOString().split("T")[0];
+  if (cycle.reg_end_date && today > cycle.reg_end_date) {
+    total_fee += parseFloat(cycle.late_fee_amount || 0);
+  }
+
+  // 3. Condonation Fee
+  // Logic: Respect existing registration status if available, otherwise use live check
+  let needsCondonation = false;
+
+  if (existingRegistration) {
+    // Use stored status
+    needsCondonation =
+      !existingRegistration.is_condoned &&
+      (existingRegistration.attendance_status === 'low' ||
+        existingRegistration.attendance_status === 'condoned');
+  } else {
+    // Use live calculation
+    // Trust nextCondoned from frontend if provided (user intent), OR force if attendance is strictly low
+    needsCondonation =
+      (cycle.is_attendance_checked && isRegularAttempt &&
+        attendance_percentage < cycle.attendance_condonation_threshold &&
+        attendance_percentage >= 0) ||
+      nextCondoned;
+  }
+
+  if (needsCondonation) {
+    condonation_fee = parseFloat(cycle.condonation_fee || 0);
+  }
+
+  total_fee += condonation_fee;
+
+  return { total_fee, condonation_fee };
+};
 
 const calculateLiveAttendance = async (
   student_id,
@@ -451,11 +548,11 @@ exports.getExamSchedules = async (req, res) => {
           ],
           where: studentDeptId
             ? {
-                [Op.or]: [
-                  { department_id: studentDeptId },
-                  { program_id: null }, // Common subjects across programs
-                ],
-              }
+              [Op.or]: [
+                { department_id: studentDeptId },
+                { program_id: null }, // Common subjects across programs
+              ],
+            }
             : {},
         },
         {
@@ -1213,12 +1310,12 @@ exports.getStudentAcademicDetails = async (req, res) => {
           cgpa:
             semesterResults.length > 0
               ? (
-                  semesterResults.reduce(
-                    (acc, r) => acc + parseFloat(r.sgpa) * r.total_credits,
-                    0,
-                  ) /
-                  semesterResults.reduce((acc, r) => acc + r.total_credits, 0)
-                ).toFixed(2)
+                semesterResults.reduce(
+                  (acc, r) => acc + parseFloat(r.sgpa) * r.total_credits,
+                  0,
+                ) /
+                semesterResults.reduce((acc, r) => acc + r.total_credits, 0)
+              ).toFixed(2)
               : "0.00",
           totalCredits: semesterResults.reduce(
             (acc, r) => acc + r.total_credits,
@@ -2036,7 +2133,7 @@ exports.getBacklogSubjects = async (req, res) => {
       if (
         !currentLatest ||
         new Date(m.schedule.exam_date) >
-          new Date(currentLatest.schedule.exam_date)
+        new Date(currentLatest.schedule.exam_date)
       ) {
         latestAttempts.set(courseCode, m);
       }
@@ -2066,6 +2163,86 @@ exports.getBacklogSubjects = async (req, res) => {
   } catch (error) {
     logger.error("Error fetching backlogs:", error);
     res.status(500).json({ error: "Failed to fetch backlog subjects" });
+  }
+};
+
+// @desc    Create Razorpay Order for Exam Registration
+// @route   POST /api/exam/create-order
+// @access  Private/Student
+exports.createRegistrationOrder = async (req, res) => {
+  try {
+    const student_id = req.user.userId;
+    const { cycleId, subjects = [], is_condoned } = req.body;
+
+    logger.info(`Creating Registration Order for Student: ${student_id}, Cycle: ${cycleId}`);
+    logger.info(`Subjects: ${JSON.stringify(subjects)}, Condoned: ${is_condoned}`);
+
+    // 1. Fetch Student & Cycle
+    const student = await User.findByPk(student_id);
+    const cycle = await ExamCycle.findByPk(cycleId);
+
+    if (!student || !cycle) {
+      logger.error("Student or Exam Cycle not found during order creation");
+      return res.status(404).json({ error: "Student or Exam Cycle not found." });
+    }
+
+    // 2. Refresh Attendance for accurate fee calculation
+    // (We could reuse calculateLiveAttendance here to be safe, or assume frontend sent valid intent)
+    // 2. Fetch existing registration if any (to respect its approval/condonation state)
+    const existingRegistration = await ExamRegistration.findOne({
+      where: { student_id, exam_cycle_id: cycleId }
+    });
+
+    // 3. Refresh Attendance for accurate fee calculation (fallback if no registration)
+    // (We could reuse calculateLiveAttendance here to be safe, or assume frontend sent valid intent)
+    const { attendance_percentage } = await calculateLiveAttendance(
+      student_id,
+      cycle
+    );
+    logger.info(`Calculated Attendance: ${attendance_percentage}`);
+
+    // 4. Calculate Fee Server-Side
+    const { total_fee } = calculateTotalExamFee(
+      student,
+      cycle,
+      subjects,
+      existingRegistration, // Pass existing reg to respect its state
+      attendance_percentage,
+      is_condoned
+    );
+    logger.info(`Calculated Total Fee: ${total_fee}`);
+
+    if (total_fee <= 0) {
+      return res.status(400).json({ error: "No fee applicable for this registration." });
+    }
+
+    // 4. Create Razorpay Order
+    const options = {
+      amount: Math.round(total_fee * 100), // paise
+      currency: "INR",
+      receipt: `EXAM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      notes: {
+        student_id: student_id,
+        exam_cycle_id: cycleId,
+        type: "exam_registration",
+      },
+    };
+
+    const order = await razorpay.orders.create(options);
+    logger.info(`Razorpay Order Created: ${order.id}`);
+
+    res.status(200).json({
+      success: true,
+      data: order,
+      key_id: razorpay.key_id,
+      amount_in_rupees: total_fee,
+    });
+
+  } catch (error) {
+    logger.error("Error creating exam registration order:", error);
+    // Print stack trace for debugging
+    console.error(error);
+    res.status(500).json({ error: "Failed to create payment order." });
   }
 };
 
@@ -2104,16 +2281,20 @@ exports.registerForExams = async (req, res) => {
     const currentSemData = feeStatus.semesterWise[currentSem];
     const hasCurrentSemDues = currentSemData?.totals.due > 0;
 
-    if (cycle.is_fee_checked && hasCurrentSemDues) {
-      return res.status(400).json({
-        error: `Registration blocked. Please clear outstanding dues for Semester ${currentSem} (₹${currentSemData.totals.due}).`,
-      });
-    }
-
     // Check if student already has a registration with overrides
     const existingRegistration = await ExamRegistration.findOne({
       where: { exam_cycle_id, student_id },
     });
+
+    if (
+      cycle.is_fee_checked &&
+      hasCurrentSemDues &&
+      !existingRegistration?.override_status
+    ) {
+      return res.status(400).json({
+        error: `Registration blocked. Please clear outstanding dues for Semester ${currentSem} (₹${currentSemData.totals.due}).`,
+      });
+    }
 
     // Detect Attempt Type
     const isRegularAttempt =
@@ -2135,7 +2316,11 @@ exports.registerForExams = async (req, res) => {
     let attendance_status = "clear";
     let condonation_fee = 0;
 
-    if (cycle.is_attendance_checked && isRegularAttempt) {
+    if (
+      cycle.is_attendance_checked &&
+      isRegularAttempt &&
+      !existingRegistration?.is_condoned
+    ) {
       if (attendance_percentage < cycle.attendance_permission_threshold) {
         if (!existingRegistration?.has_permission) {
           return res.status(400).json({
@@ -2185,7 +2370,39 @@ exports.registerForExams = async (req, res) => {
     }
 
     const finalTotal = total_fee + late_fee + condonation_fee;
-    const mockTransactionId = `TXN-EXAM-${Date.now()}-${student_id.substring(0, 8).toUpperCase()}`;
+
+    // Payment Verification Logic
+    const { payment } = req.body;
+    let fee_status = "pending";
+    let transaction_id = `TXN-EXAM-${Date.now()}-${student_id.substring(0, 8).toUpperCase()}`;
+    let payment_method = "offline"; // default
+
+    if (finalTotal > 0 && payment && payment.razorpay_payment_id) {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = payment;
+
+      // Verify Signature
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac(
+          "sha256",
+          isLive
+            ? process.env.RAZORPAY_KEY_SECRET_LIVE
+            : process.env.RAZORPAY_KEY_SECRET
+        )
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature === razorpay_signature) {
+        fee_status = "paid";
+        transaction_id = razorpay_payment_id;
+        payment_method = "razorpay";
+      } else {
+        return res.status(400).json({ error: "Invalid payment signature." });
+      }
+    } else if (finalTotal === 0) {
+      // No fee required
+      fee_status = "paid";
+    }
 
     // Perform database operations in a transaction
     const t = await sequelize.transaction();
@@ -2195,80 +2412,109 @@ exports.registerForExams = async (req, res) => {
       const [registration, created] = await ExamRegistration.findOrCreate({
         where: { exam_cycle_id, student_id },
         defaults: {
-          registered_subjects: subjects,
+          student_id,
+          exam_cycle_id,
+          status: "approved", // auto-approve standard registrations
           registration_type: reg_type,
+          registered_subjects: subjects, // Store JSON
           total_fee: finalTotal,
-          paid_amount: finalTotal,
-          late_fee,
-          attendance_percentage,
-          attendance_status,
-          status: "approved",
-          fee_status: "paid",
-          transaction_id: mockTransactionId,
+          fee_status: fee_status, // Use calculated status
+          attendance_percentage:
+            attendance_percentage >= 0 ? attendance_percentage : 100,
+          attendance_status: attendance_status,
+          is_condoned: false, // Override flag
+          has_permission: false, // Override flag
+          override_status: false,
+          transaction_id: transaction_id, // Store transaction ID
         },
         transaction: t,
       });
 
       if (!created) {
+        // If already exists (maybe updating subjects), just update relevant fields
+        // Be careful about overriding approved status if re-registering
         await registration.update(
           {
             registered_subjects: subjects,
-            registration_type: reg_type,
             total_fee: finalTotal,
-            paid_amount: finalTotal,
-            late_fee,
-            attendance_percentage,
-            attendance_status,
-            status: "approved",
-            fee_status: "paid",
-            transaction_id: mockTransactionId,
+            registration_type: reg_type,
+            // Only auto-update to paid if verified now, otherwise keep existing
+            fee_status: fee_status === "paid" ? "paid" : registration.fee_status,
+            transaction_id: transaction_id, // Update transaction ID
           },
           { transaction: t },
         );
       }
 
-      // 4. Record Centralized Exam Fee Payment
-      await ExamFeePayment.create(
-        {
-          student_id,
-          exam_cycle_id,
-          category: reg_type === "supply" ? "supply" : "registration",
-          amount: total_fee,
-          transaction_id: mockTransactionId,
-          payment_method: "online",
-          remarks: `Exam Fee Registration: ${cycle.name}`,
-        },
-        { transaction: t },
-      );
-
-      if (late_fee > 0) {
-        await ExamFeePayment.create(
+      // 4. Create Fee Payment Records if PAID
+      // 4. Create Fee Payment Records if PAID
+      if (fee_status === "paid" && finalTotal > 0) {
+        // A. Create Global Fee Payment Record
+        const feePayment = await FeePayment.create(
           {
             student_id,
-            exam_cycle_id,
-            category: "registration",
-            amount: late_fee,
-            transaction_id: mockTransactionId,
-            payment_method: "online",
-            remarks: `Late Fee for ${cycle.name}`,
+            amount_paid: finalTotal, // Total amount including late fees and condonation
+            payment_date: new Date(),
+            transaction_id: transaction_id || mockTransactionId,
+            payment_method: payment_method || "online",
+            status: "completed",
+            remarks: `Exam Registration: ${cycle.name} (${reg_type})`,
+            // fees_structure_id is null for exam payments
           },
-          { transaction: t },
+          { transaction: t }
         );
-      }
 
-      if (condonation_fee > 0) {
-        await ExamFeePayment.create(
-          {
-            student_id,
-            exam_cycle_id,
-            category: "condonation",
-            amount: condonation_fee,
-            transaction_id: mockTransactionId,
-            payment_method: "online",
-            remarks: `Attendance Condonation Fee for ${cycle.name} (${attendance_percentage.toFixed(2)}%)`,
-          },
-          { transaction: t },
-        );
+        // B. Create Detailed Exam Fee Payment Records
+        // Main Registration Fee
+        if (total_fee > 0) {
+          await ExamFeePayment.create(
+            {
+              student_id,
+              exam_cycle_id,
+              category: "registration",
+              amount: total_fee,
+              transaction_id: transaction_id || mockTransactionId,
+              payment_method: payment_method || "online",
+              remarks: `Exam Registration Fee (${reg_type}) - ${payment_method === 'razorpay' ? 'Online' : 'Offline'}`,
+              fee_payment_id: feePayment.id,
+            },
+            { transaction: t }
+          );
+        }
+
+        // Late Fee (Separate record if we want granularity, or integrated)
+        if (late_fee > 0) {
+          await ExamFeePayment.create(
+            {
+              student_id,
+              exam_cycle_id,
+              category: "registration", // Or specific category if needed
+              amount: late_fee,
+              transaction_id: transaction_id || mockTransactionId,
+              payment_method: payment_method || "online",
+              remarks: `Late Fee for ${cycle.name}`,
+              fee_payment_id: feePayment.id,
+            },
+            { transaction: t }
+          );
+        }
+
+        // Condonation Fee
+        if (condonation_fee > 0) {
+          await ExamFeePayment.create(
+            {
+              student_id,
+              exam_cycle_id,
+              category: "condonation",
+              amount: condonation_fee,
+              transaction_id: transaction_id || mockTransactionId,
+              payment_method: payment_method || "online",
+              remarks: `Attendance Condonation Fee for ${cycle.name} (${attendance_percentage.toFixed(2)}%)`,
+              fee_payment_id: feePayment.id,
+            },
+            { transaction: t }
+          );
+        }
       }
 
       await t.commit();
@@ -2354,26 +2600,55 @@ exports.updateRegistrationStatus = async (req, res) => {
     const { attendance_percentage, attendance_status, condonation_fee } =
       await calculateLiveAttendance(registration.student_id, cycle);
 
-    // Recalculate fee if it's currently 0 or if we're adding condonation/permission
+    // Recalculate fee if it's currently 0 or if condonation status is being updated
     let updated_fee = parseFloat(registration.total_fee);
-    if (updated_fee === 0) {
-      updated_fee = parseFloat(cycle.regular_fee || 0) + condonation_fee;
+    const nextCondoned =
+      is_condoned !== undefined ? is_condoned : registration.is_condoned;
+
+    if (updated_fee === 0 || is_condoned !== undefined) {
       const today = new Date().toISOString().split("T")[0];
-      if (cycle.reg_end_date && today > cycle.reg_end_date) {
-        updated_fee += parseFloat(cycle.late_fee_amount || 0);
+      let base_fee = 0;
+
+      // Determine base fee from registration type
+      if (
+        registration.registration_type === "regular" ||
+        registration.registration_type === "combined"
+      ) {
+        base_fee = parseFloat(cycle.regular_fee || 0);
+        if (registration.registration_type === "combined") {
+          const supplyCount = (registration.registered_subjects || []).filter(
+            (s) => s.type === "supply",
+          ).length;
+          base_fee += supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
+        }
+      } else {
+        const supplyCount = (registration.registered_subjects || []).length;
+        base_fee = supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
       }
+
+      let late_fee = 0;
+      if (cycle.reg_end_date && today > cycle.reg_end_date) {
+        late_fee = parseFloat(cycle.late_fee_amount || 0);
+      }
+
+      // Apply condonation fee only if NOT condoned
+      const final_condonation_fee = nextCondoned ? 0 : condonation_fee;
+      updated_fee = base_fee + late_fee + final_condonation_fee;
     }
+
+    const final_attendance_status = nextCondoned
+      ? "condoned"
+      : attendance_status || registration.attendance_status;
 
     await registration.update({
       status: status ? finalStatus : registration.status,
       total_fee: updated_fee,
-      attendance_status: attendance_status || registration.attendance_status,
+      attendance_status: final_attendance_status,
       attendance_percentage:
         attendance_percentage !== undefined
           ? attendance_percentage
           : registration.attendance_percentage,
-      is_condoned:
-        is_condoned !== undefined ? is_condoned : registration.is_condoned,
+      is_condoned: nextCondoned,
       has_permission:
         has_permission !== undefined
           ? has_permission
@@ -2467,9 +2742,11 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
               } = await calculateLiveAttendance(actualUserId, cycle, t);
 
               // Calculate initial fee (regular + condonation + late)
-              let initial_fee =
-                parseFloat(cycle.regular_fee || 0) + condonation_fee;
               const today = new Date().toISOString().split("T")[0];
+              const final_condonation_fee = is_condoned ? 0 : condonation_fee;
+              let initial_fee =
+                parseFloat(cycle.regular_fee || 0) + final_condonation_fee;
+
               if (cycle.reg_end_date && today > cycle.reg_end_date) {
                 initial_fee += parseFloat(cycle.late_fee_amount || 0);
               }
@@ -2495,7 +2772,7 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
 
               created.push(studentId);
             } else {
-              // Update existing registration - but recalculate fees if 0
+              // Update existing registration - but recalculate fees if 0 or if condonation is being applied
               const {
                 attendance_percentage,
                 attendance_status,
@@ -2507,13 +2784,41 @@ exports.bulkUpdateRegistrationStatus = async (req, res) => {
               );
 
               let updated_fee = parseFloat(registration.total_fee);
-              if (updated_fee === 0) {
-                updated_fee =
-                  parseFloat(cycle.regular_fee || 0) + condonation_fee;
+              const nextCondoned =
+                is_condoned !== undefined
+                  ? is_condoned
+                  : registration.is_condoned;
+
+              if (updated_fee === 0 || is_condoned !== undefined) {
                 const today = new Date().toISOString().split("T")[0];
-                if (cycle.reg_end_date && today > cycle.reg_end_date) {
-                  updated_fee += parseFloat(cycle.late_fee_amount || 0);
+                let base_fee = 0;
+
+                if (
+                  registration.registration_type === "regular" ||
+                  registration.registration_type === "combined"
+                ) {
+                  base_fee = parseFloat(cycle.regular_fee || 0);
+                  if (registration.registration_type === "combined") {
+                    const supplyCount = (
+                      registration.registered_subjects || []
+                    ).filter((s) => s.type === "supply").length;
+                    base_fee +=
+                      supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
+                  }
+                } else {
+                  const supplyCount = (registration.registered_subjects || [])
+                    .length;
+                  base_fee =
+                    supplyCount * parseFloat(cycle.supply_fee_per_paper || 0);
                 }
+
+                let late_fee = 0;
+                if (cycle.reg_end_date && today > cycle.reg_end_date) {
+                  late_fee = parseFloat(cycle.late_fee_amount || 0);
+                }
+
+                const final_condonation_fee = nextCondoned ? 0 : condonation_fee;
+                updated_fee = base_fee + late_fee + final_condonation_fee;
               }
 
               await registration.update(
@@ -2956,10 +3261,20 @@ exports.getRegistrationStatus = async (req, res) => {
         ? parseFloat(((presentClasses / totalClasses) * 100).toFixed(2))
         : 0;
 
+    // 3. Determine Blockers
+    const blockers = [];
+    const is_condoned = registration?.is_condoned || false;
+    const has_permission = registration?.has_permission || false;
+    const override_status = registration?.override_status || false;
+
     // 2. Determine Attendance Tier
     let attendance_tier = "clear";
     if (cycle.is_attendance_checked && isRegularAttempt) {
-      if (attendance_percentage < cycle.attendance_permission_threshold) {
+      if (is_condoned) {
+        attendance_tier = "clear";
+      } else if (
+        attendance_percentage < cycle.attendance_permission_threshold
+      ) {
         attendance_tier = "needs_permission";
       } else if (
         attendance_percentage < cycle.attendance_condonation_threshold
@@ -2968,15 +3283,12 @@ exports.getRegistrationStatus = async (req, res) => {
       }
     }
 
-    // 3. Determine Blockers
-    const blockers = [];
-    const is_condoned = registration?.is_condoned || false;
-    const has_permission = registration?.has_permission || false;
-    const override_status = registration?.override_status || false;
-
     // Attendance block (Only for Regular attempts)
     if (cycle.is_attendance_checked && isRegularAttempt) {
-      if (attendance_tier === "needs_permission" && !override_status) {
+      // NOTE: 'override_status' is specifically for FEE block override in the UI.
+      // HOD permission is handled by 'has_permission'.
+      // 'is_condoned' is handled by the tier logic above (sets tier to 'clear').
+      if (attendance_tier === "needs_permission") {
         if (!has_permission) blockers.push("needs_hod_permission");
       }
     }
@@ -2987,6 +3299,7 @@ exports.getRegistrationStatus = async (req, res) => {
     const currentSemData = feeStatus.semesterWise[currentSem];
     const hasCurrentSemDues = currentSemData?.totals.due > 0;
 
+    // Fee override is handled by 'override_status'
     if (cycle.is_fee_checked && hasCurrentSemDues && !override_status) {
       blockers.push("fee_pending");
     }
@@ -3025,6 +3338,8 @@ exports.getRegistrationStatus = async (req, res) => {
         is_eligible,
         blockers,
         attempt_type,
+        attendance_status:
+          attendance_tier === "clear" ? "clear" : "low",
         attendance: {
           percentage: attendance_percentage,
           tier: attendance_tier,
@@ -3173,7 +3488,7 @@ exports.downloadReceipt = async (req, res) => {
     drawRow(
       "Receipt Number:",
       registration.transaction_id ||
-        `REC-${registration.id.split("-")[0].toUpperCase()}`,
+      `REC-${registration.id.split("-")[0].toUpperCase()}`,
     );
     drawRow("Date:", new Date(registration.updatedAt).toLocaleDateString());
     drawRow(
@@ -3405,15 +3720,15 @@ exports.getRegistrations = async (req, res) => {
           },
           registration: registration
             ? {
-                id: registration.id,
-                status: registration.status,
-                fee_status: registration.fee_status,
-                is_condoned,
-                has_permission,
-                override_status,
-                override_remarks: registration.override_remarks || "",
-                subjects: registration.registered_subjects,
-              }
+              id: registration.id,
+              status: registration.status,
+              fee_status: registration.fee_status,
+              is_condoned,
+              has_permission,
+              override_status,
+              override_remarks: registration.override_remarks || "",
+              subjects: registration.registered_subjects,
+            }
             : null,
           registration_status: registration?.status || "not_registered",
           registered_at: registration?.created_at || null,
