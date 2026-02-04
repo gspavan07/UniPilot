@@ -1,6 +1,5 @@
 const {
   ExamReverification,
-  StudentFeeCharge,
   FeePayment,
   User,
   ExamSchedule,

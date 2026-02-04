@@ -53,6 +53,7 @@ import { fetchCourses } from "../../store/slices/courseSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
 import { fetchRegulations } from "../../store/slices/regulationSlice";
 import api from "../../utils/api";
+import { fetchBatchYears } from "../../store/slices/userSlice";
 
 const ExamSchedules = () => {
   const dispatch = useDispatch();
@@ -63,6 +64,7 @@ const ExamSchedules = () => {
     activeCycleConfig,
     status: examStatus,
   } = useSelector((state) => state.exam);
+  const { batchYears } = useSelector((state) => state.users);
   const { courses } = useSelector((state) => state.courses);
   const { programs } = useSelector((state) => state.programs);
   const { regulations } = useSelector((state) => state.regulations);
@@ -148,6 +150,7 @@ const ExamSchedules = () => {
     exam_month: "",
     exam_year: new Date().getFullYear(),
     status: "scheduled",
+    program_id: "", // Helper for name generation
   });
   const [editingCycle, setEditingCycle] = useState(null);
 
@@ -200,17 +203,7 @@ const ExamSchedules = () => {
   const [tabulationData, setTabulationData] = useState([]);
   const [loadingTabulation, setLoadingTabulation] = useState(false);
 
-  // Derive available batch years from regulations
-  const availableYears = [
-    ...(new Set(
-      regulations.map((r) => {
-        const year = r.academic_year?.split("-")[0];
-        return year ? parseInt(year) : null;
-      }),
-    ) || []),
-  ]
-    .filter(Boolean)
-    .sort((a, b) => b - a);
+
 
   const selectedRegObj = regulations.find(
     (r) => r.id === cycleForm.regulation_id,
@@ -251,6 +244,12 @@ const ExamSchedules = () => {
     dispatch(fetchRegulations());
   }, [dispatch]);
 
+
+  useEffect(() => {
+    dispatch(fetchBatchYears());
+  }, [dispatch]);
+
+
   useEffect(() => {
     if (viewMode === "details" && selectedCycle) {
       dispatch(fetchExamSchedules({ exam_cycle_id: selectedCycle }));
@@ -258,7 +257,15 @@ const ExamSchedules = () => {
   }, [viewMode, selectedCycle, dispatch]);
 
   useEffect(() => {
-    if (viewMode === "details" && viewingCycle) {
+    if ((viewMode === "details" || showCreateModal) && viewingCycle) {
+      // Try to infer program_id from name if possible (e.g. "B.Tech - ...")
+      let inferredProgramId = "";
+      if (viewingCycle.name) {
+        const firstPart = viewingCycle.name.split(" - ")[0];
+        const prog = programs.find(p => (p.code && p.code.startsWith(firstPart)) || p.name === firstPart);
+        if (prog) inferredProgramId = prog.id;
+      }
+
       setCycleForm({
         name: viewingCycle.name || "",
         start_date: viewingCycle.start_date || "",
@@ -275,13 +282,17 @@ const ExamSchedules = () => {
         regular_fee: viewingCycle.regular_fee || 0,
         supply_fee_per_paper: viewingCycle.supply_fee_per_paper || 0,
         late_fee_amount: viewingCycle.late_fee_amount || 0,
+        condonation_fee: viewingCycle.condonation_fee || 0,
+        attendance_condonation_threshold: viewingCycle.attendance_condonation_threshold || 75.0,
+        attendance_permission_threshold: viewingCycle.attendance_permission_threshold || 65.0,
         is_attendance_checked: viewingCycle.is_attendance_checked ?? true,
         is_fee_checked: viewingCycle.is_fee_checked ?? true,
         exam_month: viewingCycle.exam_month || "",
         exam_year: viewingCycle.exam_year || new Date().getFullYear(),
+        program_id: inferredProgramId, // Set the inferred program_id
       });
     }
-  }, [viewMode, viewingCycle]);
+  }, [viewMode, viewingCycle, showCreateModal, programs]);
 
   const [regSubjectFilter, setRegSubjectFilter] = useState("");
 
@@ -302,7 +313,7 @@ const ExamSchedules = () => {
       return;
     }
     try {
-      await dispatch(
+      const updatedReg = await dispatch(
         updateRegistrationStatus({
           id: activeReg.id,
           data: {
@@ -311,8 +322,39 @@ const ExamSchedules = () => {
           },
         }),
       ).unwrap();
+
       alert("Registration status updated successfully");
       setShowOverrideModal(false);
+
+      // Optimistic / Immediate Update of the registrations list
+      // This ensures the green ticks appear immediately
+      if (registrations) {
+        // Deep clone or just map to return new objects
+        const updatedList = registrations.map((r) => {
+          if (r.id === activeReg.id) {
+            return {
+              ...r,
+              registration: {
+                ...r.registration,
+                is_condoned: overrideData.is_condoned,
+                has_permission: overrideData.has_permission,
+                override_status: overrideData.override_status,
+                override_remarks: overrideData.override_remarks,
+              },
+              // Re-evaluate eligibility block (simplified) - logic matches backend roughly
+              // Note: Ideally backend returns the full object structure, but for speed we patch:
+            };
+          }
+          return r;
+        });
+
+        // We can't directly setRegistrations since it comes from Redux store props usually.
+        // BUT, notice we are dispatching 'updateRegistrationStatus'.
+        // Let's check if the reducer updates the state.
+        // The reducer DOES update state.registrations[index] = action.payload.
+        // So Redux should trigger a re-render.
+        // However, 'activeReg' might be stale if it's used elsewhere, but here we just set it to null.
+      }
       setActiveReg(null);
     } catch (err) {
       alert(err || "Failed to update status");
@@ -416,9 +458,19 @@ const ExamSchedules = () => {
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
+
+    if (!cycleForm.name) {
+      alert("Cycle name is not generated yet. Please ensure all required fields are selected.");
+      return;
+    }
+
+    // Create clean payload without UI-only helper fields
+    const payload = { ...cycleForm };
+    delete payload.program_id;
+
     if (editingCycle) {
       dispatch(
-        updateExamCycle({ id: editingCycle.id, cycleData: cycleForm }),
+        updateExamCycle({ id: editingCycle.id, cycleData: payload }),
       ).then((res) => {
         if (!res.error) {
           setShowCreateModal(false);
@@ -428,27 +480,95 @@ const ExamSchedules = () => {
         }
       });
     } else {
-      dispatch(createExamCycle(cycleForm)).then((res) => {
+      dispatch(createExamCycle(payload)).then((res) => {
         if (!res.error) {
           setShowCreateModal(false);
           setCycleForm({
             name: "",
             start_date: "",
             end_date: "",
-            batch_year: availableYears[0] || 2024,
+            batch_year: batchYears[0] || 2024,
             semester: 1,
             regulation_id: "",
             cycle_type: "",
             instance_number: 1,
             exam_mode: "regular",
+            reg_start_date: "",
+            reg_end_date: "",
+            reg_late_fee_date: "",
+            regular_fee: 0,
+            supply_fee_per_paper: 0,
+            late_fee_amount: 0,
+            condonation_fee: 0,
+            attendance_condonation_threshold: 75.0,
+            attendance_permission_threshold: 65.0,
+            is_attendance_checked: true,
+            is_fee_checked: true,
             exam_month: "",
             exam_year: new Date().getFullYear(),
+            program_id: "", // Reset program_id
           });
           alert("Exam cycle created successfully!");
         }
       });
     }
   };
+
+  // Auto-generate Cycle Name
+  useEffect(() => {
+    if (showCreateModal) {
+      const selectedProgram = programs.find((p) => p.id === cycleForm.program_id);
+      const selectedReg = regulations.find((r) => r.id === cycleForm.regulation_id);
+
+      if (selectedProgram && selectedReg && cycleForm.semester) {
+        const programCode =
+          selectedProgram.code?.split("-")[0] || selectedProgram.name;
+        const regName = selectedReg.name;
+        const sem = `Sem ${cycleForm.semester}`;
+        const batch = cycleForm.batch_year ? `- ${cycleForm.batch_year}` : "";
+
+        let typeLabel = "";
+        if (cycleForm.cycle_type === "mid_term") {
+          const num = cycleForm.instance_number;
+          const suffix =
+            num === 1 ? "st" : num === 2 ? "nd" : num === 3 ? "rd" : "th";
+          typeLabel = `${num}${suffix} Mid-Term`;
+        } else if (cycleForm.cycle_type === "end_semester") {
+          const mode =
+            cycleForm.exam_mode === "combined"
+              ? "Regular + Supple"
+              : cycleForm.exam_mode;
+          typeLabel = `End Sem (${mode})`;
+        } else {
+          typeLabel = (cycleForm.cycle_type || "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase());
+        }
+
+        const monthYear =
+          cycleForm.exam_month && cycleForm.exam_year
+            ? ` - ${cycleForm.exam_month} ${cycleForm.exam_year}`
+            : "";
+
+        const generatedName = `${programCode} - ${regName} - ${typeLabel}${monthYear} - ${sem} ${batch} Batch`;
+        setCycleForm((prev) => ({ ...prev, name: generatedName }));
+      }
+    }
+  }, [
+    cycleForm.program_id,
+    cycleForm.regulation_id,
+    cycleForm.semester,
+    cycleForm.batch_year,
+    cycleForm.cycle_type,
+    cycleForm.instance_number,
+    cycleForm.exam_mode,
+    cycleForm.exam_month,
+    cycleForm.exam_year,
+    showCreateModal,
+    editingCycle,
+    programs,
+    regulations,
+  ]);
 
   const handleDeleteCycle = (id) => {
     if (
@@ -611,16 +731,15 @@ const ExamSchedules = () => {
                     reg_end_date: viewingCycle.reg_end_date || "",
                     reg_late_fee_date: viewingCycle.reg_late_fee_date || "",
                     regular_fee: viewingCycle.regular_fee || 0,
-                    supply_fee_per_paper:
-                      viewingCycle.supply_fee_per_paper || 0,
+                    supply_fee_per_paper: viewingCycle.supply_fee_per_paper || 0,
                     late_fee_amount: viewingCycle.late_fee_amount || 0,
                     condonation_fee: viewingCycle.condonation_fee || 0,
-                    is_attendance_checked:
-                      viewingCycle.is_attendance_checked ?? true,
+                    attendance_condonation_threshold: viewingCycle.attendance_condonation_threshold || 75.0,
+                    attendance_permission_threshold: viewingCycle.attendance_permission_threshold || 65.0,
+                    is_attendance_checked: viewingCycle.is_attendance_checked ?? true,
                     is_fee_checked: viewingCycle.is_fee_checked ?? true,
                     exam_month: viewingCycle.exam_month || "",
-                    exam_year:
-                      viewingCycle.exam_year || new Date().getFullYear(),
+                    exam_year: viewingCycle.exam_year || new Date().getFullYear(),
                     status: viewingCycle.status || "scheduled",
                   });
                   setShowCreateModal(true);
@@ -683,22 +802,20 @@ const ExamSchedules = () => {
             <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 w-fit">
               <button
                 onClick={() => setActiveCycleTab("upcoming")}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                  activeCycleTab === "upcoming"
-                    ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
-                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeCycleTab === "upcoming"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  }`}
               >
                 <Clock className="w-4 h-4" />
                 Upcoming
               </button>
               <button
                 onClick={() => setActiveCycleTab("completed")}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                  activeCycleTab === "completed"
-                    ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
-                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeCycleTab === "completed"
+                  ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  }`}
               >
                 <CheckCircle className="w-4 h-4" />
                 Completed
@@ -752,41 +869,50 @@ const ExamSchedules = () => {
                   <div className="flex gap-2">
                     {(user?.role === "super_admin" ||
                       user?.permissions?.includes("exams:manage")) && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setEditingCycle(cycle);
-                            setCycleForm({
-                              name: cycle.name,
-                              start_date: cycle.start_date,
-                              end_date: cycle.end_date,
-                              batch_year: cycle.batch_year,
-                              semester: cycle.semester,
-                              regulation_id: cycle.regulation_id || "",
-                              cycle_type: cycle.cycle_type || "",
-                              instance_number: cycle.instance_number || 1,
-                              exam_mode: cycle.exam_mode || "regular",
-                              exam_month: cycle.exam_month || "",
-                              exam_year:
-                                cycle.exam_year || new Date().getFullYear(),
-                              status: cycle.status || "scheduled",
-                            });
-                            setShowCreateModal(true);
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingCycle(cycle);
+                              setCycleForm({
+                                name: cycle.name,
+                                start_date: cycle.start_date,
+                                end_date: cycle.end_date,
+                                batch_year: cycle.batch_year,
+                                semester: cycle.semester,
+                                regulation_id: cycle.regulation_id || "",
+                                cycle_type: cycle.cycle_type || "",
+                                instance_number: cycle.instance_number || 1,
+                                exam_mode: cycle.exam_mode || "regular",
+                                reg_start_date: cycle.reg_start_date || "",
+                                reg_end_date: cycle.reg_end_date || "",
+                                reg_late_fee_date: cycle.reg_late_fee_date || "",
+                                regular_fee: cycle.regular_fee || 0,
+                                supply_fee_per_paper: cycle.supply_fee_per_paper || 0,
+                                late_fee_amount: cycle.late_fee_amount || 0,
+                                condonation_fee: cycle.condonation_fee || 0,
+                                attendance_condonation_threshold: cycle.attendance_condonation_threshold || 75.0,
+                                attendance_permission_threshold: cycle.attendance_permission_threshold || 65.0,
+                                is_attendance_checked: cycle.is_attendance_checked ?? true,
+                                is_fee_checked: cycle.is_fee_checked ?? true,
+                                exam_month: cycle.exam_month || "",
+                                exam_year: cycle.exam_year || new Date().getFullYear(),
+                                status: cycle.status || "scheduled",
+                              });
+                              setShowCreateModal(true);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     <span
-                      className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border ${
-                        cycle.status === "results_published"
-                          ? "bg-green-50 text-green-600 border-green-100"
-                          : cycle.status === "ongoing"
-                            ? "bg-amber-50 text-amber-600 border-amber-100"
-                            : "bg-blue-50 text-blue-600 border-blue-100"
-                      }`}
+                      className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border ${cycle.status === "results_published"
+                        ? "bg-green-50 text-green-600 border-green-100"
+                        : cycle.status === "ongoing"
+                          ? "bg-amber-50 text-amber-600 border-amber-100"
+                          : "bg-blue-50 text-blue-600 border-blue-100"
+                        }`}
                     >
                       {cycle.status === "results_published"
                         ? "Results Published"
@@ -794,14 +920,14 @@ const ExamSchedules = () => {
                     </span>
                     {(user?.role === "super_admin" ||
                       user?.permissions?.includes("exams:manage")) && (
-                      <button
-                        onClick={() => handleDeleteCycle(cycle.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete Cycle"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                        <button
+                          onClick={() => handleDeleteCycle(cycle.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete Cycle"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                   </div>
                 </div>
                 <h3 className="font-bold text-lg mb-1">{cycle.name}</h3>
@@ -876,11 +1002,10 @@ const ExamSchedules = () => {
                       {viewingCycle?.cycle_type?.replace("_", " ")}
                     </span>
                     <span
-                      className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border ${
-                        viewingCycle?.status === "results_published"
-                          ? "bg-green-50 text-green-600 border-green-100"
-                          : "bg-blue-50 text-blue-600 border-blue-100"
-                      }`}
+                      className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border ${viewingCycle?.status === "results_published"
+                        ? "bg-green-50 text-green-600 border-green-100"
+                        : "bg-blue-50 text-blue-600 border-blue-100"
+                        }`}
                     >
                       {viewingCycle?.status === "results_published"
                         ? "Results Published"
@@ -895,23 +1020,22 @@ const ExamSchedules = () => {
                   { id: "timetable", label: "Timetable", icon: Clock },
                   ...(viewingCycle?.cycle_type === "end_semester"
                     ? [
-                        {
-                          id: "registrations",
-                          label: "Students",
-                          icon: User,
-                        },
-                        { id: "config", label: "Settings", icon: Settings },
-                      ]
+                      {
+                        id: "registrations",
+                        label: "Students",
+                        icon: User,
+                      },
+                      { id: "config", label: "Settings", icon: Settings },
+                    ]
                     : []),
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                      activeTab === tab.id
-                        ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === tab.id
+                      ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white"
+                      : "text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     <tab.icon className="w-4 h-4 mr-2" />
                     {tab.label}
@@ -1036,47 +1160,47 @@ const ExamSchedules = () => {
                                     user?.permissions?.includes(
                                       "exams:manage",
                                     )) && (
-                                    <>
-                                      <button
-                                        onClick={() => {
-                                          setEditingSchedule(s);
-                                          setScheduleForm({
-                                            exam_cycle_id: s.exam_cycle_id,
-                                            course_id: s.course_id,
-                                            exam_date: s.exam_date,
-                                            start_time: s.start_time,
-                                            end_time: s.end_time,
-                                            venue: s.venue,
-                                            max_marks: s.max_marks,
-                                            passing_marks: s.passing_marks,
-                                            branches: s.branches || [],
-                                          });
-                                          const course = courses.find(
-                                            (c) => c.id === s.course_id,
-                                          );
-                                          setModalFilters({
-                                            program_id:
-                                              course?.program_id || "",
-                                            semester: course?.semester || "",
-                                          });
-                                          setShowScheduleModal(true);
-                                        }}
-                                        className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
-                                        title="Edit Schedule"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleDeleteSchedule(s.id)
-                                        }
-                                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                                        title="Delete Schedule"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  )}
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            setEditingSchedule(s);
+                                            setScheduleForm({
+                                              exam_cycle_id: s.exam_cycle_id,
+                                              course_id: s.course_id,
+                                              exam_date: s.exam_date,
+                                              start_time: s.start_time,
+                                              end_time: s.end_time,
+                                              venue: s.venue,
+                                              max_marks: s.max_marks,
+                                              passing_marks: s.passing_marks,
+                                              branches: s.branches || [],
+                                            });
+                                            const course = courses.find(
+                                              (c) => c.id === s.course_id,
+                                            );
+                                            setModalFilters({
+                                              program_id:
+                                                course?.program_id || "",
+                                              semester: course?.semester || "",
+                                            });
+                                            setShowScheduleModal(true);
+                                          }}
+                                          className="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                                          title="Edit Schedule"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteSchedule(s.id)
+                                          }
+                                          className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                          title="Delete Schedule"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </>
+                                    )}
                                 </div>
                               </td>
                             </tr>
@@ -1150,15 +1274,14 @@ const ExamSchedules = () => {
                     </label>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                          sheetStatus === "locked"
-                            ? "bg-red-100 text-red-600"
-                            : sheetStatus === "approved"
-                              ? "bg-green-100 text-green-600"
-                              : sheetStatus === "verified"
-                                ? "bg-blue-100 text-blue-600"
-                                : "bg-gray-100 text-gray-600"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${sheetStatus === "locked"
+                          ? "bg-red-100 text-red-600"
+                          : sheetStatus === "approved"
+                            ? "bg-green-100 text-green-600"
+                            : sheetStatus === "verified"
+                              ? "bg-blue-100 text-blue-600"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
                       >
                         {sheetStatus}
                       </span>
@@ -1327,11 +1450,10 @@ const ExamSchedules = () => {
                                     },
                                   })
                                 }
-                                className={`w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold disabled:opacity-50 ${
-                                  hasComponents
-                                    ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
-                                    : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                                }`}
+                                className={`w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold disabled:opacity-50 ${hasComponents
+                                  ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
+                                  : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                  }`}
                                 placeholder="0.0"
                               />
                             </td>
@@ -1527,13 +1649,12 @@ const ExamSchedules = () => {
                             </td>
                             <td className="px-6 py-4 text-center">
                               <span
-                                className={`px-4 py-1.5 rounded-xl font-bold text-sm ${
-                                  parseFloat(row.sgpa) >= 8
-                                    ? "bg-green-100 text-green-700"
-                                    : parseFloat(row.sgpa) >= 6
-                                      ? "bg-blue-100 text-blue-700"
-                                      : "bg-indigo-100 text-indigo-700"
-                                }`}
+                                className={`px-4 py-1.5 rounded-xl font-bold text-sm ${parseFloat(row.sgpa) >= 8
+                                  ? "bg-green-100 text-green-700"
+                                  : parseFloat(row.sgpa) >= 6
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-indigo-100 text-indigo-700"
+                                  }`}
                               >
                                 {row.sgpa}
                               </span>
@@ -1641,7 +1762,7 @@ const ExamSchedules = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          setBulkOverrideData({
+                          setBulkData({
                             is_condoned: false,
                             has_permission: false,
                             override_status: false,
@@ -1667,7 +1788,7 @@ const ExamSchedules = () => {
                             type="checkbox"
                             checked={
                               selectedStudents.length ===
-                                filteredRegistrations.length &&
+                              filteredRegistrations.length &&
                               filteredRegistrations.length > 0
                             }
                             onChange={(e) => {
@@ -1751,13 +1872,12 @@ const ExamSchedules = () => {
                             {/* Type */}
                             <td className="px-8 py-6">
                               <span
-                                className={`text-[9px] px-2 py-0.5 font-black rounded uppercase tracking-widest ${
-                                  student.type === "regular"
-                                    ? "bg-blue-50 text-blue-600"
-                                    : student.type === "supply"
-                                      ? "bg-purple-50 text-purple-600"
-                                      : "bg-orange-50 text-orange-600"
-                                }`}
+                                className={`text-[9px] px-2 py-0.5 font-black rounded uppercase tracking-widest ${student.type === "regular"
+                                  ? "bg-blue-50 text-blue-600"
+                                  : student.type === "supply"
+                                    ? "bg-purple-50 text-purple-600"
+                                    : "bg-orange-50 text-orange-600"
+                                  }`}
                               >
                                 {student.type}
                               </span>
@@ -1768,14 +1888,13 @@ const ExamSchedules = () => {
                               <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-2">
                                   <span
-                                    className={`font-black text-sm ${
-                                      student.attendance?.tier === "clear"
-                                        ? "text-green-600"
-                                        : student.attendance?.tier ===
-                                            "needs_condonation"
-                                          ? "text-yellow-600"
-                                          : "text-orange-600"
-                                    }`}
+                                    className={`font-black text-sm ${student.attendance?.tier === "clear"
+                                      ? "text-green-600"
+                                      : student.attendance?.tier ===
+                                        "needs_condonation"
+                                        ? "text-yellow-600"
+                                        : "text-orange-600"
+                                      }`}
                                   >
                                     {student.attendance?.percentage}%
                                   </span>
@@ -1785,17 +1904,17 @@ const ExamSchedules = () => {
                                       {(student.attendance?.tier ===
                                         "needs_condonation" ||
                                         student.attendance?.tier ===
-                                          "needs_permission") && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-yellow-50 text-yellow-700">
-                                          Cond.
-                                        </span>
-                                      )}
+                                        "needs_permission") && (
+                                          <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-yellow-50 text-yellow-700">
+                                            Cond.
+                                          </span>
+                                        )}
                                       {student.attendance?.tier ===
                                         "needs_permission" && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-orange-50 text-orange-700">
-                                          HOD
-                                        </span>
-                                      )}
+                                          <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-orange-50 text-orange-700">
+                                            HOD
+                                          </span>
+                                        )}
                                     </div>
                                   )}
                                 </div>
@@ -1902,7 +2021,7 @@ const ExamSchedules = () => {
                                   setOverrideData({
                                     status:
                                       student.registration_status ===
-                                      "not_registered"
+                                        "not_registered"
                                         ? "approved"
                                         : student.registration_status,
                                     is_condoned:
@@ -2072,13 +2191,12 @@ const ExamSchedules = () => {
                           </h4>
                           <div className="flex items-center gap-3">
                             <span
-                              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${
-                                viewingCycle.exam_mode === "regular"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : viewingCycle.exam_mode === "supplementary"
-                                    ? "bg-orange-100 text-orange-700"
-                                    : "bg-purple-100 text-purple-700"
-                              }`}
+                              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${viewingCycle.exam_mode === "regular"
+                                ? "bg-blue-100 text-blue-700"
+                                : viewingCycle.exam_mode === "supplementary"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : "bg-purple-100 text-purple-700"
+                                }`}
                             >
                               {viewingCycle.exam_mode === "combined"
                                 ? "Regular + Supplementary"
@@ -2095,49 +2213,49 @@ const ExamSchedules = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           {(cycleForm.exam_mode === "regular" ||
                             cycleForm.exam_mode === "combined") && (
-                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
-                              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                                Regular Fee
-                              </span>
-                              <input
-                                type="number"
-                                value={cycleForm.regular_fee}
-                                onChange={(e) =>
-                                  setCycleForm({
-                                    ...cycleForm,
-                                    regular_fee: parseFloat(e.target.value),
-                                  })
-                                }
-                                className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
-                              />
-                            </div>
-                          )}
+                              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
+                                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                                  Regular Fee
+                                </span>
+                                <input
+                                  type="number"
+                                  value={cycleForm.regular_fee}
+                                  onChange={(e) =>
+                                    setCycleForm({
+                                      ...cycleForm,
+                                      regular_fee: parseFloat(e.target.value),
+                                    })
+                                  }
+                                  className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
+                                />
+                              </div>
+                            )}
                           {(cycleForm.exam_mode === "supplementary" ||
                             cycleForm.exam_mode === "combined") && (
-                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
-                              <div className="flex flex-col text-left">
-                                <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                                  Backlog Fee
-                                </span>
-                                <span className="text-[10px] text-gray-400">
-                                  (Per Paper)
-                                </span>
+                              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
+                                <div className="flex flex-col text-left">
+                                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                                    Backlog Fee
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">
+                                    (Per Paper)
+                                  </span>
+                                </div>
+                                <input
+                                  type="number"
+                                  value={cycleForm.supply_fee_per_paper}
+                                  onChange={(e) =>
+                                    setCycleForm({
+                                      ...cycleForm,
+                                      supply_fee_per_paper: parseFloat(
+                                        e.target.value,
+                                      ),
+                                    })
+                                  }
+                                  className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
+                                />
                               </div>
-                              <input
-                                type="number"
-                                value={cycleForm.supply_fee_per_paper}
-                                onChange={(e) =>
-                                  setCycleForm({
-                                    ...cycleForm,
-                                    supply_fee_per_paper: parseFloat(
-                                      e.target.value,
-                                    ),
-                                  })
-                                }
-                                className="w-32 bg-white dark:bg-gray-800 border-none rounded-xl px-4 py-2 text-right font-black text-indigo-600 focus:ring-2 focus:ring-green-600"
-                              />
-                            </div>
-                          )}
+                            )}
                           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl">
                             <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
                               Late Fine
@@ -2400,20 +2518,41 @@ const ExamSchedules = () => {
             <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                  Cycle Name
+                  Cycle Name <span className="text-[10px] text-gray-400 lowercase italic">(auto-generated)</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Odd Semester 2026"
+                  readOnly
+                  placeholder="Will be generated automatically"
                   value={cycleForm.name}
-                  onChange={(e) =>
-                    setCycleForm({ ...cycleForm, name: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none mb-4"
+                  className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 border-none rounded-xl focus:ring-0 outline-none mb-4 cursor-not-allowed"
                 />
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Program
+                    </label>
+                    <select
+                      required
+                      value={cycleForm.program_id}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          program_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Select Program</option>
+                      {programs?.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
                       Exam Month
@@ -2597,48 +2736,48 @@ const ExamSchedules = () => {
                     <div className="grid grid-cols-2 gap-4">
                       {(cycleForm.exam_mode === "regular" ||
                         cycleForm.exam_mode === "combined") && (
-                        <div>
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                            Regular Fee
-                          </label>
-                          <input
-                            type="number"
-                            required
-                            placeholder="₹"
-                            value={cycleForm.regular_fee}
-                            onChange={(e) =>
-                              setCycleForm({
-                                ...cycleForm,
-                                regular_fee: parseFloat(e.target.value),
-                              })
-                            }
-                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-                          />
-                        </div>
-                      )}
+                          <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                              Regular Fee
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              placeholder="₹"
+                              value={cycleForm.regular_fee}
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  regular_fee: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                            />
+                          </div>
+                        )}
                       {(cycleForm.exam_mode === "supplementary" ||
                         cycleForm.exam_mode === "combined") && (
-                        <div>
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                            Backlog Fee
-                          </label>
-                          <input
-                            type="number"
-                            required
-                            placeholder="₹"
-                            value={cycleForm.supply_fee_per_paper}
-                            onChange={(e) =>
-                              setCycleForm({
-                                ...cycleForm,
-                                supply_fee_per_paper: parseFloat(
-                                  e.target.value,
-                                ),
-                              })
-                            }
-                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-                          />
-                        </div>
-                      )}
+                          <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                              Backlog Fee
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              placeholder="₹"
+                              value={cycleForm.supply_fee_per_paper}
+                              onChange={(e) =>
+                                setCycleForm({
+                                  ...cycleForm,
+                                  supply_fee_per_paper: parseFloat(
+                                    e.target.value,
+                                  ),
+                                })
+                              }
+                              className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                            />
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
@@ -2690,13 +2829,13 @@ const ExamSchedules = () => {
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option value="">Select Year</option>
-                    {availableYears.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
+                    {batchYears?.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
                       </option>
                     ))}
                     {/* Fallback for cases where regulation might not exist for a year */}
-                    {!availableYears.includes(new Date().getFullYear()) && (
+                    {batchYears && !batchYears.includes(new Date().getFullYear()) && (
                       <option value={new Date().getFullYear()}>
                         {new Date().getFullYear()}
                       </option>

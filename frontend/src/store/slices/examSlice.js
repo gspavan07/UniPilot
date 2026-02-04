@@ -329,6 +329,37 @@ export const fetchBacklogs = createAsyncThunk(
   },
 );
 
+// Razorpay Order Creation
+export const createRegistrationOrder = createAsyncThunk(
+  "exam/createRegistrationOrder",
+  async (orderData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/exam/create-order", orderData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to create payment order",
+      );
+    }
+  },
+);
+
+export const createReverificationOrder = createAsyncThunk(
+  "exam/createReverificationOrder",
+  async (orderData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/exam/reverification/create-order", orderData);
+      return response.data;
+    } catch (error) {
+      // Log the error for debugging
+      console.error("Failed to create reverification order:", error);
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to create payment order",
+      );
+    }
+  },
+);
+
 export const registerForExams = createAsyncThunk(
   "exam/register",
   async (regData, { rejectWithValue }) => {
@@ -429,6 +460,21 @@ export const fetchMyRegistrations = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error || "Failed to fetch my registrations",
+      );
+    }
+  },
+);
+
+
+export const applyReverificationWithPayment = createAsyncThunk(
+  "exam/applyReverificationWithPayment",
+  async (applicationData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/exam/reverification/apply-with-payment", applicationData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Reverification application failed",
       );
     }
   },

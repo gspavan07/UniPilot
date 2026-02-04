@@ -14,6 +14,13 @@ const ExamFeePayment = sequelize.define(
       allowNull: false,
       references: { model: "users", key: "id" },
     },
+
+    fee_payment_id: {
+      type: DataTypes.UUID,
+      allowNull: true, // Nullable for now during migration
+      references: { model: "fee_payments", key: "id" },
+      comment: "Parent Global Transaction ID",
+    },
     exam_cycle_id: {
       type: DataTypes.UUID,
       allowNull: false,

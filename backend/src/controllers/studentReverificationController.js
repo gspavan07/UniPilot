@@ -139,6 +139,17 @@ const applyForReverification = async (req, res) => {
       });
     }
 
+    // Get student details for semester
+    const student = await User.findByPk(student_id, {
+      attributes: ['id', 'current_semester'],
+      transaction
+    });
+
+    if (!student) {
+      await transaction.rollback();
+      return res.status(404).json({ message: "Student not found" });
+    }
+
     // Verify all schedules belong to the same cycle
     const schedules = await ExamSchedule.findAll({
       where: { id: exam_schedule_ids },
@@ -347,9 +358,9 @@ const getMyReverificationRequests = async (req, res) => {
           attributes: ["id", "marks_obtained", "grade"],
         },
         {
-          model: StudentFeeCharge,
-          as: "fee_charge",
-          attributes: ["id", "amount", "is_paid", "paid_at"],
+          model: ExamFeePayment,
+          as: "exam_fee_payment",
+          attributes: ["id", "amount", "status", "payment_date"],
         },
         {
           model: User,

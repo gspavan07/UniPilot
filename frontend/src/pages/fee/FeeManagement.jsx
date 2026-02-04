@@ -51,6 +51,7 @@ import {
   fetchBatches,
   fetchStudentFeeStatus,
   createFeePayment,
+  deleteStudentFine,
   fetchWaivers,
   applyWaiver,
   approveWaiver,
@@ -604,6 +605,26 @@ const FeeManagement = () => {
     }
   };
 
+  const handleDeleteFine = async (fineId) => {
+    if (window.confirm("Are you sure you want to remove this fine?")) {
+      try {
+        await dispatch(deleteStudentFine(fineId)).unwrap();
+        // Refresh student status to reflect removal
+        if (selectedStudent) {
+          dispatch(fetchStudentFeeStatus(selectedStudent.id));
+        }
+        // Remove from selection if present
+        if (selectedCounterFees.has(fineId)) {
+          const newSet = new Set(selectedCounterFees);
+          newSet.delete(fineId);
+          setSelectedCounterFees(newSet);
+        }
+      } catch (err) {
+        alert("Failed to delete fine: " + err);
+      }
+    }
+  };
+
   const handleRecordCounterPayment = async (e) => {
     e.preventDefault();
     if (!selectedStudent || selectedCounterFees.size === 0) return;
@@ -642,26 +663,76 @@ const FeeManagement = () => {
       ).unwrap();
 
       // Configure success modal data
-      const totalPaid = result.reduce(
-        (sum, p) => sum + parseFloat(p.amount_paid),
-        0,
-      );
+      // Flatten the hierarchical response (Parents -> Children)
+      let allItems = [];
+      let totalPaid = 0;
+
+      result.forEach((parent) => {
+        totalPaid += parseFloat(parent.amount_paid);
+        let parentChildSum = 0;
+
+        // 1. Academic Fee Payments (Fee Structures)
+        if (parent.academic_fee_payments) {
+          parent.academic_fee_payments.forEach((child) => {
+            allItems.push({
+              ...child,
+              amount_paid: child.amount, // Map for receipt compatibility
+              payment_date: parent.payment_date,
+              transaction_id: parent.transaction_id,
+              payment_method: parent.payment_method,
+              fee_structure: child.structure, // Map included structure
+            });
+            parentChildSum += parseFloat(child.amount);
+          });
+        }
+
+        // 2. Student Charge Payments (Fines/Charges)
+        if (parent.student_charge_payments) {
+          parent.student_charge_payments.forEach((child) => {
+            allItems.push({
+              ...child,
+              amount_paid: child.amount,
+              payment_date: parent.payment_date,
+              transaction_id: parent.transaction_id,
+              payment_method: parent.payment_method,
+              fee_structure: {
+                category: child.charge?.category || { name: "Charge/Fine" },
+              }, // Synthetic structure for receipt
+            });
+            parentChildSum += parseFloat(child.amount);
+          });
+        }
+
+        // 3. Handle Unlinked/Ad-hoc amounts (e.g. Fines without IDs)
+        const gap = parseFloat(parent.amount_paid) - parentChildSum;
+        if (gap > 0.01) {
+          allItems.push({
+            id: `adhoc-${parent.id}`,
+            amount_paid: gap,
+            payment_date: parent.payment_date,
+            transaction_id: parent.transaction_id,
+            payment_method: parent.payment_method,
+            fee_structure: {
+              category: {
+                name: parent.remarks.includes("Fine") ? "Late Fine" : "Ad-hoc Payment",
+              },
+            },
+            semester: parent.semester || "N/A",
+          });
+        }
+      });
+
       setPaymentSuccess({
         transaction_id: result[0]?.transaction_id || counterReference,
         student: selectedStudent,
         amount_paid: totalPaid,
         payment_date: counterPaymentDate,
         payment_method: counterPaymentMethod,
-        fee_structure:
-          result.length === 1
-            ? result[0].fee_structure ||
-              (result[0].semester && !result[0].fee_structure_id
-                ? { category: { name: "Late Payment Fine" } }
-                : { category: { name: "Ad-hoc Payment" } })
-            : { category: { name: "Multiple Fee Heads" } },
+        // For simple display, just pick the first category name
+        fee_structure: allItems.length > 0 ? allItems[0].fee_structure : { category: { name: "Fee Payment" } },
         semester: result.length === 1 ? result[0].semester : "Multi",
         remarks: counterRemarks,
-        items: result,
+        items: allItems, // Pass flattened items
       });
 
       dispatch(fetchCollectionStats());
@@ -878,6 +949,47 @@ const FeeManagement = () => {
   const formatDate = (date) => {
     if (!date) return "-";
     return new Date(date).toLocaleDateString("en-GB");
+  };
+
+  const getPaymentDetails = (t) => {
+    let category = "AD-HOC PAYMENT";
+    let semester = "N/A";
+
+    if (t.academic_fee_payments?.length > 0) {
+      const firstItem = t.academic_fee_payments[0];
+      category = firstItem.fee_structure?.category?.name || "Academic Fee";
+      semester = firstItem.semester || firstItem.fee_structure?.semester || "N/A";
+      if (t.academic_fee_payments.length > 1) {
+        category += ` (+${t.academic_fee_payments.length - 1} more)`;
+      }
+    } else if (t.student_charge_payments?.length > 0) {
+      const firstItem = t.student_charge_payments[0];
+      category = firstItem.fee_charge?.category?.name || "Fine/Charge";
+      semester = firstItem.semester || "Charge";
+      if (t.student_charge_payments.length > 1) {
+        category += ` (+${t.student_charge_payments.length - 1} more)`;
+      }
+    } else if (t.fee_structure?.category?.name) {
+      category = t.fee_structure.category.name;
+      semester = t.fee_structure.semester;
+    } else if (t.student_fee_charge?.category?.name) {
+      category = t.student_fee_charge.category.name;
+      semester = "Charge";
+    } else if (t.exam_payment) {
+      if (t.exam_payment.category === "reverification") {
+        category = "Exam Reverification Fee";
+      } else if (t.exam_payment.category === "registration") {
+        category = "Exam Registration Fee";
+      } else {
+        category = "Exam Fee";
+      }
+      semester = t.exam_payment.cycle?.name || "Cycle";
+    } else if (t.semester && !t.fee_structure_id) {
+      category = "LATE PAYMENT FINE";
+      semester = t.semester;
+    }
+
+    return { category, semester };
   };
 
   // ADMIN VIEW HELPER FUNCTIONS
@@ -1153,11 +1265,10 @@ const FeeManagement = () => {
                       <button
                         key={sem}
                         onClick={() => setActiveCounterSemester(sem)}
-                        className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border ${
-                          isActive
-                            ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                            : "bg-white dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700 hover:border-indigo-200"
-                        }`}
+                        className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border ${isActive
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                          : "bg-white dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700 hover:border-indigo-200"
+                          }`}
                       >
                         Semester {sem}
                       </button>
@@ -1167,7 +1278,7 @@ const FeeManagement = () => {
 
               <div className="p-6">
                 {activeCounterSemester &&
-                studentStatus?.semesterWise?.[activeCounterSemester] ? (
+                  studentStatus?.semesterWise?.[activeCounterSemester] ? (
                   <div className="space-y-4">
                     {/* Fees List */}
                     <div className="space-y-3">
@@ -1176,11 +1287,10 @@ const FeeManagement = () => {
                         .map((fee) => (
                           <div
                             key={fee.id}
-                            className={`p-4 rounded-2xl border transition-all ${
-                              selectedCounterFees.has(fee.id)
-                                ? "bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-900/30 shadow-sm"
-                                : "bg-gray-50/50 border-gray-100 dark:bg-gray-900/20 dark:border-gray-700"
-                            }`}
+                            className={`p-4 rounded-2xl border transition-all ${selectedCounterFees.has(fee.id)
+                              ? "bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-900/30 shadow-sm"
+                              : "bg-gray-50/50 border-gray-100 dark:bg-gray-900/20 dark:border-gray-700"
+                              }`}
                           >
                             <div className="flex items-center justify-between gap-4">
                               <div className="flex items-center gap-4 flex-1">
@@ -1223,6 +1333,16 @@ const FeeManagement = () => {
                                   />
                                 </div>
                               )}
+
+                              {fee.is_charge && (
+                                <button
+                                  onClick={() => handleDeleteFine(fee.id)}
+                                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Remove Fine"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1230,75 +1350,74 @@ const FeeManagement = () => {
                       {/* Fines */}
                       {studentStatus.semesterWise[activeCounterSemester].fine
                         .due > 0 && (
-                        <div
-                          className={`p-4 rounded-2xl border transition-all ${
-                            selectedCounterFees.has(
+                          <div
+                            className={`p-4 rounded-2xl border transition-all ${selectedCounterFees.has(
                               `fine:${activeCounterSemester}`,
                             )
                               ? "bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-900/30 shadow-sm"
                               : "bg-red-50/20 border-red-100 dark:bg-red-900/5 dark:border-red-900/20"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={selectedCounterFees.has(
-                                  `fine:${activeCounterSemester}`,
-                                )}
-                                onChange={() =>
-                                  toggleCounterFeeSelection(
-                                    `fine:${activeCounterSemester}`,
-                                    studentStatus.semesterWise[
-                                      activeCounterSemester
-                                    ].fine.due,
-                                  )
-                                }
-                                className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                              />
-                              <div>
-                                <div className="text-sm font-bold text-red-600 dark:text-red-400">
-                                  Late Payment Fine
-                                </div>
-                                <div className="text-[10px] font-black text-red-400/70 uppercase">
-                                  Balance Due: ₹
-                                  {studentStatus.semesterWise[
-                                    activeCounterSemester
-                                  ].fine.due.toLocaleString("en-IN")}
-                                </div>
-                              </div>
-                            </div>
-                            {selectedCounterFees.has(
-                              `fine:${activeCounterSemester}`,
-                            ) && (
-                              <div className="relative animate-in zoom-in-95">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400">
-                                  ₹
-                                </span>
+                              }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4 flex-1">
                                 <input
-                                  type="number"
-                                  value={
-                                    counterCustomAmounts[
-                                      `fine:${activeCounterSemester}`
-                                    ] ?? ""
-                                  }
-                                  onChange={(e) =>
-                                    handleCounterAmountChange(
+                                  type="checkbox"
+                                  checked={selectedCounterFees.has(
+                                    `fine:${activeCounterSemester}`,
+                                  )}
+                                  onChange={() =>
+                                    toggleCounterFeeSelection(
                                       `fine:${activeCounterSemester}`,
-                                      e.target.value,
                                       studentStatus.semesterWise[
                                         activeCounterSemester
                                       ].fine.due,
                                     )
                                   }
-                                  placeholder="0.00"
-                                  className="w-32 pl-7 pr-3 py-2 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 rounded-xl text-sm font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
+                                  className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
                                 />
+                                <div>
+                                  <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                                    Late Payment Fine
+                                  </div>
+                                  <div className="text-[10px] font-black text-red-400/70 uppercase">
+                                    Balance Due: ₹
+                                    {studentStatus.semesterWise[
+                                      activeCounterSemester
+                                    ].fine.due.toLocaleString("en-IN")}
+                                  </div>
+                                </div>
                               </div>
-                            )}
+                              {selectedCounterFees.has(
+                                `fine:${activeCounterSemester}`,
+                              ) && (
+                                  <div className="relative animate-in zoom-in-95">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400">
+                                      ₹
+                                    </span>
+                                    <input
+                                      type="number"
+                                      value={
+                                        counterCustomAmounts[
+                                        `fine:${activeCounterSemester}`
+                                        ] ?? ""
+                                      }
+                                      onChange={(e) =>
+                                        handleCounterAmountChange(
+                                          `fine:${activeCounterSemester}`,
+                                          e.target.value,
+                                          studentStatus.semesterWise[
+                                            activeCounterSemester
+                                          ].fine.due,
+                                        )
+                                      }
+                                      placeholder="0.00"
+                                      className="w-32 pl-7 pr-3 py-2 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 rounded-xl text-sm font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
+                                    />
+                                  </div>
+                                )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
 
                     {!studentStatus.semesterWise[
@@ -1370,7 +1489,7 @@ const FeeManagement = () => {
                           {Math.max(
                             0,
                             calculateCounterSelectedTotal() -
-                              studentStatus.grandTotals.excessBalance,
+                            studentStatus.grandTotals.excessBalance,
                           ).toLocaleString("en-IN")}
                         </div>
                       </div>
@@ -1378,10 +1497,10 @@ const FeeManagement = () => {
 
                     {calculateCounterSelectedTotal() >
                       studentStatus.grandTotals.excessBalance && (
-                      <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/30">
-                        Collect Cash/Transfer for the rest
-                      </div>
-                    )}
+                        <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/30">
+                          Collect Cash/Transfer for the rest
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -1394,17 +1513,16 @@ const FeeManagement = () => {
                       Payment Method
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      {["cash", "bank_transfer", "cheque", "dd"].map(
+                      {["cash"].map(
                         (method) => (
                           <button
                             key={method}
                             type="button"
                             onClick={() => setCounterPaymentMethod(method)}
-                            className={`p-3 rounded-xl border-2 text-xs font-black uppercase transition-all ${
-                              counterPaymentMethod === method
-                                ? "border-indigo-600 bg-indigo-50 text-indigo-600"
-                                : "border-gray-100 text-gray-400 hover:border-indigo-200"
-                            }`}
+                            className={`p-3 rounded-xl border-2 text-xs font-black uppercase transition-all ${counterPaymentMethod === method
+                              ? "border-indigo-600 bg-indigo-50 text-indigo-600"
+                              : "border-gray-100 text-gray-400 hover:border-indigo-200"
+                              }`}
                           >
                             {method.replace("_", " ")}
                           </button>
@@ -1486,7 +1604,7 @@ const FeeManagement = () => {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 
   const renderScholarshipImportPreview = () => (
@@ -1977,22 +2095,20 @@ const FeeManagement = () => {
         <div className="flex bg-gray-100/50 dark:bg-gray-900/50 p-1 rounded-2xl border border-gray-100 dark:border-gray-800 w-fit">
           <button
             onClick={() => setScholarshipView("assigned")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              scholarshipView === "assigned"
-                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                : "text-gray-400 hover:text-indigo-600"
-            }`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scholarshipView === "assigned"
+              ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+              : "text-gray-400 hover:text-indigo-600"
+              }`}
           >
             <History className="w-4 h-4" />
             Assigned Board
           </button>
           <button
             onClick={() => setScholarshipView("new")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              scholarshipView === "new"
-                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                : "text-gray-400 hover:text-indigo-600"
-            }`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scholarshipView === "new"
+              ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+              : "text-gray-400 hover:text-indigo-600"
+              }`}
           >
             <Plus className="w-4 h-4" />
             Grant New
@@ -2181,11 +2297,10 @@ const FeeManagement = () => {
                   onClick={() =>
                     setInsightFilters({ ...insightFilters, payment_type: t.id })
                   }
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                    insightFilters.payment_type === t.id
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
-                      : "text-gray-400 hover:text-indigo-600"
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${insightFilters.payment_type === t.id
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                    : "text-gray-400 hover:text-indigo-600"
+                    }`}
                 >
                   <t.icon className="w-3.5 h-3.5" />
                   {t.label}
@@ -2272,19 +2387,20 @@ const FeeManagement = () => {
                     "Semester",
                     "Amount",
                   ],
-                  ...csvData.map((t) => [
-                    t.payment_date.split("T")[0],
-                    new Date(t.payment_date).toLocaleTimeString(),
-                    t.transaction_id,
-                    t.student?.student_id || t.student?.admission_number,
-                    `${t.student?.first_name} ${t.student?.last_name}`,
-                    t.payment_method,
-                    t.fee_structure?.category?.name ||
-                      t.student_fee_charge?.category?.name ||
-                      (t.semester ? "LATE PAYMENT FINE" : "AD-HOC PENALTY"),
-                    t.semester || t.fee_structure?.semester || "N/A",
-                    t.amount_paid,
-                  ]),
+                  ...csvData.map((t) => {
+                    const { category, semester } = getPaymentDetails(t);
+                    return [
+                      t.payment_date.split("T")[0],
+                      new Date(t.payment_date).toLocaleTimeString(),
+                      t.transaction_id,
+                      t.student?.student_id || t.student?.admission_number,
+                      `${t.student?.first_name} ${t.student?.last_name}`,
+                      t.payment_method,
+                      category,
+                      semester,
+                      t.amount_paid,
+                    ];
+                  }),
                 ]
                   .map((e) => e.join(","))
                   .join("\n");
@@ -2344,24 +2460,29 @@ const FeeManagement = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-xs font-bold text-gray-600 dark:text-gray-300">
-                      {t.fee_structure?.category?.name ||
-                        t.student_fee_charge?.category?.name ||
-                        (t.semester && !t.fee_structure_id
-                          ? "LATE PAYMENT FINE"
-                          : "AD-HOC PAYMENT")}
-                      <div className="text-[10px] opacity-60">
-                        SEM {t.semester || t.fee_structure?.semester || "N/A"}
-                      </div>
+                      {(() => {
+                        const { category, semester } = getPaymentDetails(t);
+                        return (
+                          <>
+                            {category}
+                            <div className="text-[10px] opacity-60">
+                              {String(semester).startsWith("Charge") ||
+                                String(semester).startsWith("Cycle")
+                                ? semester
+                                : `SEM ${semester}`}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                          t.payment_method === "cash"
-                            ? "bg-emerald-50 text-emerald-600"
-                            : t.payment_method === "WALLET"
-                              ? "bg-amber-50 text-amber-600"
-                              : "bg-blue-50 text-blue-600"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.payment_method === "cash"
+                          ? "bg-emerald-50 text-emerald-600"
+                          : t.payment_method === "WALLET"
+                            ? "bg-amber-50 text-amber-600"
+                            : "bg-blue-50 text-blue-600"
+                          }`}
                       >
                         {t.payment_method === "WALLET"
                           ? "Internal Wallet"
@@ -2382,19 +2503,19 @@ const FeeManagement = () => {
                   </tr>
                 ))}
                 {(Object.values(insightFilters).some((v) => v !== "") &&
-                dailyReport
+                  dailyReport
                   ? dailyReport.transactions
                   : transactions
                 ).length === 0 && (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-12 text-center text-gray-400 font-bold"
-                    >
-                      No transactions found.
-                    </td>
-                  </tr>
-                )}
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="px-6 py-12 text-center text-gray-400 font-bold"
+                      >
+                        No transactions found.
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
@@ -2620,16 +2741,16 @@ const FeeManagement = () => {
                       !Object.values(studentStatus.semesterWise).some((d) =>
                         d.fees.some((f) => f.is_personal),
                       )) && (
-                      <tr>
-                        <td
-                          colSpan="3"
-                          className="px-6 py-12 text-center text-gray-400 font-bold"
-                        >
-                          No personal fines or ad-hoc charges recorded for this
-                          student.
-                        </td>
-                      </tr>
-                    )}
+                        <tr>
+                          <td
+                            colSpan="3"
+                            className="px-6 py-12 text-center text-gray-400 font-bold"
+                          >
+                            No personal fines or ad-hoc charges recorded for this
+                            student.
+                          </td>
+                        </tr>
+                      )}
                   </tbody>
                 </table>
               </div>
@@ -3189,11 +3310,10 @@ const FeeManagement = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all rounded-xl whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
+                className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all rounded-xl whitespace-nowrap ${activeTab === tab.id
+                  ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
               >
                 <tab.icon className="w-3.5 h-3.5" />
                 {tab.label}
@@ -3576,6 +3696,45 @@ const FeeManagement = () => {
               </span>
             </p>
 
+
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 mb-6 text-left max-h-60 overflow-y-auto">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                Summary
+              </h3>
+              <div className="space-y-2">
+                {paymentSuccess.items?.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">
+                        {item.fee_structure?.category?.name || "Fee Item"}
+                      </div>
+                      <div className="text-[10px] uppercase font-bold text-gray-400">
+                        {item.remarks && item.remarks.includes("Fine") ? (
+                          <span className="text-red-500">Fine/Charge</span>
+                        ) : (
+                          <span>Sem {item.semester || "N/A"}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs font-black text-gray-700 dark:text-gray-300">
+                      ₹{parseFloat(item.amount_paid).toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center pt-3 mt-2 border-t border-dashed border-gray-200 dark:border-gray-600">
+                <div className="text-xs font-black text-gray-500 uppercase">
+                  Total Paid
+                </div>
+                <div className="text-sm font-black text-emerald-600">
+                  ₹{parseFloat(paymentSuccess.amount_paid).toLocaleString("en-IN")}
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-3">
               <button
                 onClick={() => printReceipt(null, paymentSuccess.items || [])}
@@ -3595,8 +3754,9 @@ const FeeManagement = () => {
             </div>
           </div>
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };
 

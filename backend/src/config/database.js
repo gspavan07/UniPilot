@@ -9,6 +9,7 @@ const config = {
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
   dialect: 'postgres',
+  timezone: '+05:30',
   logging: (msg) => logger.debug(msg),
   pool: {
     min: parseInt(process.env.DB_POOL_MIN) || 2,

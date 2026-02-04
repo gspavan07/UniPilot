@@ -30,7 +30,9 @@ const {
   downloadHallTicket,
   bulkImportMarks,
   downloadImportTemplate,
+
   bulkPublishResults,
+  createRegistrationOrder,
 } = require("../controllers/examController");
 
 // Reverification controllers
@@ -54,6 +56,7 @@ const {
 
 const {
   applyWithPayment,
+  createReverificationOrder,
 } = require("../controllers/applyWithPaymentController");
 
 // Script management controllers
@@ -82,6 +85,7 @@ router.get("/my-results", getMyResults);
 router.get("/my-schedules", getMyExamSchedules);
 router.get("/backlogs", getBacklogSubjects);
 router.post("/register", registerForExams);
+router.post("/create-order", createRegistrationOrder);
 router.get("/registration/status/:cycleId", getRegistrationStatus);
 router.get("/registration/:cycleId/download-hall-ticket", downloadHallTicket);
 
@@ -233,6 +237,7 @@ router.post(
 // Student - Reverification
 router.get("/my-reverification-eligibility", getMyReverificationEligibility);
 router.post("/reverification/apply", applyForReverification);
+router.post("/reverification/create-order", createReverificationOrder);
 router.post("/reverification/apply-with-payment", applyWithPayment);
 router.get("/my-reverification-requests", getMyReverificationRequests);
 router.post("/reverification/pay", payReverificationFee);

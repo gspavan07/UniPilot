@@ -83,15 +83,86 @@ const MyFees = () => {
     const appliedWallet = Math.min(total, walletCredit);
     const netPayable = total - appliedWallet;
 
-    let confirmMsg = `Total Amount: ₹${total.toLocaleString("en-IN")}\n`;
+    // Build detailed fee breakdown
+    const feeDetails = [];
+    const chargeDetails = [];
+    const fineDetails = [];
+
+    selectedFees.forEach((feeId) => {
+      const amount = customAmounts[feeId] || 0;
+      if (amount <= 0) return;
+
+      // Check if it's a fine
+      if (feeId.toString().startsWith("fine:")) {
+        const sem = feeId.split(":")[1];
+        fineDetails.push({
+          semester: parseInt(sem),
+          amount: amount
+        });
+      } else {
+        // Find the fee object in all semesters
+        Object.entries(semesterWise).forEach(([sem, semData]) => {
+          const feeObj = semData.fees.find((f) => f.id === feeId);
+          if (feeObj) {
+            if (feeObj.is_charge) {
+              chargeDetails.push({
+                category: feeObj.category,
+                semester: parseInt(sem),
+                amount: amount,
+                description: feeObj.description
+              });
+            } else {
+              feeDetails.push({
+                category: feeObj.category,
+                semester: parseInt(sem),
+                amount: amount
+              });
+            }
+          }
+        });
+      }
+    });
+
+    // Build enhanced confirmation message
+    let confirmMsg = `=== PAYMENT SUMMARY ===\n\n`;
+
+    if (feeDetails.length > 0) {
+      confirmMsg += `📚 Academic Fees:\n`;
+      feeDetails.forEach(fee => {
+        confirmMsg += `  • ${fee.category} (Sem ${fee.semester}): ₹${fee.amount.toLocaleString("en-IN")}\n`;
+      });
+      confirmMsg += `\n`;
+    }
+
+    if (chargeDetails.length > 0) {
+      confirmMsg += `💳 Charges:\n`;
+      chargeDetails.forEach(charge => {
+        confirmMsg += `  • ${charge.category} (Sem ${charge.semester}): ₹${charge.amount.toLocaleString("en-IN")}\n`;
+      });
+      confirmMsg += `\n`;
+    }
+
+    if (fineDetails.length > 0) {
+      confirmMsg += `⚠️ Late Payment Fines:\n`;
+      fineDetails.forEach(fine => {
+        confirmMsg += `  • Semester ${fine.semester}: ₹${fine.amount.toLocaleString("en-IN")}\n`;
+      });
+      confirmMsg += `\n`;
+    }
+
+    confirmMsg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    confirmMsg += `Total Amount: ₹${total.toLocaleString("en-IN")}\n`;
+
     if (appliedWallet > 0) {
       confirmMsg += `Using Wallet Credit: -₹${appliedWallet.toLocaleString("en-IN")}\n`;
       if (netPayable > 0) {
         confirmMsg += `Net Payment Required: ₹${netPayable.toLocaleString("en-IN")}\n`;
       } else {
-        confirmMsg += `Your Wallet covers the entire fee! No external payment needed.`;
+        confirmMsg += `\n✅ Your Wallet covers the entire fee! No external payment needed.`;
       }
     }
+
+    confirmMsg += `\n\nProceed with payment?`;
 
     if (!window.confirm(confirmMsg)) return;
 
@@ -153,12 +224,27 @@ const MyFees = () => {
           createPaymentOrder({ amount: netPayable }),
         ).unwrap();
 
+        // Build description and notes for Razorpay
+        let description = "Student Fee Payment";
+        if (feeDetails.length > 0) {
+          const categories = feeDetails.map(f => f.category).join(', ');
+          description = categories.length > 50
+            ? `Academic Fees - ${categories.substring(0, 47)}...`
+            : `Academic Fees - ${categories}`;
+        }
+
+        const allSemesters = [...new Set([
+          ...feeDetails.map(f => f.semester),
+          ...chargeDetails.map(c => c.semester),
+          ...fineDetails.map(f => f.semester)
+        ])];
+
         const options = {
           key: orderRes.key_id,
           amount: orderRes.data.amount,
           currency: orderRes.data.currency,
           name: "UniPilot University",
-          description: "Student Fee Payment",
+          description: description,
           image: "https://your-logo-url.com/logo.png", // Valid logo url
           order_id: orderRes.data.id,
           handler: async function (response) {
@@ -189,7 +275,14 @@ const MyFees = () => {
             contact: user.phone_number,
           },
           notes: {
-            address: "University Address",
+            student_id: user.student_id || user.id,
+            admission_number: user.admission_number || "N/A",
+            student_name: `${user.first_name} ${user.last_name}`,
+            payment_type: feeDetails.length > 0 ? "academic_fees" : "fee_payment",
+            fee_categories: feeDetails.map(f => f.category).join(', ') || "N/A",
+            semesters: allSemesters.join(', ') || "N/A",
+            total_items: selectedFees.size,
+            wallet_credit_used: appliedWallet > 0 ? `₹${appliedWallet}` : "None"
           },
           theme: {
             color: "#4f46e5",

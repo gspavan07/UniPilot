@@ -23,13 +23,12 @@ const {
   validateScholarshipImport,
   finalizeScholarshipImport,
   getDefaulters,
-  sendBulkReminders,
-  getSections,
-  exportDefaulters,
-  payMyFees,
+  sendReminders,
   addStudentFine,
+  deleteStudentFine,
   getDailyCollection,
   createPaymentOrder,
+  payMyFees,
 } = require("../controllers/feeController");
 const { authenticate, checkPermission } = require("../middleware/auth");
 
@@ -40,10 +39,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.use(authenticate);
 
 // Student routes
-router.get("/my-status", getMyFeeStatus);
-router.get("/my-status", getMyFeeStatus);
-router.post("/my-payment", payMyFees);
-router.post("/payment/order", createPaymentOrder);
+router.get("/my-status", authenticate, getMyFeeStatus);
+router.post("/payment/order", authenticate, createPaymentOrder);
+router.post("/my-payment", authenticate, payMyFees);
+
 
 
 // @Users/pavang/UniPilot/backend/src/routes/fee.js
@@ -121,7 +120,7 @@ router.get(
 );
 
 router.get("/batches", checkPermission("finance:fees:oversight"), getBatches);
-router.get("/sections", checkPermission("finance:fees:oversight"), getSections);
+
 
 // Waivers & Scholarships
 router.post("/waivers", checkPermission("finance:fees:admin"), applyWaiver);
@@ -157,17 +156,15 @@ router.get(
   checkPermission("finance:fees:oversight"),
   getDefaulters,
 );
-router.get(
-  "/defaulters/export",
-  checkPermission("finance:fees:oversight"),
-  exportDefaulters,
-);
-router.post(
-  "/reminders/send",
-  checkPermission("finance:fees:manage"),
-  sendBulkReminders,
-);
+
 
 router.post("/fines", checkPermission("finance:fees:manage"), addStudentFine);
+
+router.delete(
+  "/fines/:id",
+  authenticate,
+  checkPermission("finance:fees:manage"),
+  deleteStudentFine,
+);
 
 module.exports = router;

@@ -39,6 +39,8 @@ const FeeSemesterConfig = require("./FeeSemesterConfig");
 const StudentDocument = require("./StudentDocument");
 const SectionIncharge = require("./SectionIncharge");
 const ExamFeePayment = require("./ExamFeePayment");
+const AcademicFeePayment = require("./AcademicFeePayment");
+const StudentChargePayment = require("./StudentChargePayment");
 const AdmissionConfig = require("./AdmissionConfig");
 const StaffAttendance = require("./StaffAttendance");
 const LeaveBalance = require("./LeaveBalance");
@@ -142,6 +144,8 @@ const models = {
   SemesterResult,
   SectionIncharge,
   ExamFeePayment,
+  AcademicFeePayment,
+  StudentChargePayment,
   // Transport Management Models
   Route,
   TransportStop,
@@ -571,7 +575,7 @@ FeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(FeePayment, { as: "payments", foreignKey: "student_id" });
 
 FeePayment.belongsTo(FeeStructure, {
-  as: "fee_structure",
+  as: "fee_structure", // Deprecated, use AcademicFeePayment
   foreignKey: "fee_structure_id",
 });
 FeeStructure.hasMany(FeePayment, {
@@ -580,7 +584,7 @@ FeeStructure.hasMany(FeePayment, {
 });
 
 FeePayment.belongsTo(StudentFeeCharge, {
-  as: "student_fee_charge",
+  as: "student_fee_charge", // Deprecated, use StudentChargePayment
   foreignKey: "fee_charge_id",
 });
 StudentFeeCharge.hasMany(FeePayment, {
@@ -597,6 +601,63 @@ User.hasMany(StudentFeeCharge, { as: "fee_charges", foreignKey: "student_id" });
 FeeCategory.hasMany(StudentFeeCharge, {
   as: "fee_charges",
   foreignKey: "category_id",
+});
+
+// New Fee Payment Architecture Associations
+
+// 1. FeePayment (Global) -> Children
+// 1. FeePayment (Global) -> Children
+FeePayment.hasMany(AcademicFeePayment, {
+  as: "academic_fee_payments",
+  foreignKey: "fee_payment_id",
+});
+AcademicFeePayment.belongsTo(FeePayment, {
+  as: "payment",
+  foreignKey: "fee_payment_id",
+});
+
+FeePayment.hasMany(StudentChargePayment, {
+  as: "student_charge_payments",
+  foreignKey: "fee_payment_id",
+});
+StudentChargePayment.belongsTo(FeePayment, {
+  as: "payment",
+  foreignKey: "fee_payment_id",
+});
+
+FeePayment.hasOne(ExamFeePayment, {
+  as: "exam_payment",
+  foreignKey: "fee_payment_id",
+});
+ExamFeePayment.belongsTo(FeePayment, {
+  as: "payment",
+  foreignKey: "fee_payment_id",
+});
+
+// 2. AcademicFeePayment Associations
+AcademicFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(AcademicFeePayment, { as: "academic_payments", foreignKey: "student_id" });
+
+AcademicFeePayment.belongsTo(FeeStructure, {
+  as: "fee_structure",
+  foreignKey: "fee_structure_id",
+});
+FeeStructure.hasMany(AcademicFeePayment, {
+  as: "academic_payments", // Renamed from "payments" to avoid conflict
+  foreignKey: "fee_structure_id",
+});
+
+// 3. StudentChargePayment Associations
+StudentChargePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
+User.hasMany(StudentChargePayment, { as: "charge_payments", foreignKey: "student_id" });
+
+StudentChargePayment.belongsTo(StudentFeeCharge, {
+  as: "fee_charge",
+  foreignKey: "student_fee_charge_id",
+});
+StudentFeeCharge.hasMany(StudentChargePayment, {
+  as: "charge_payments", // Renamed from "payments" to avoid conflict
+  foreignKey: "student_fee_charge_id",
 });
 
 FeeWaiver.belongsTo(User, { as: "student", foreignKey: "student_id" });

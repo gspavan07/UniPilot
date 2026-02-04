@@ -15,6 +15,7 @@ const {
   SemesterResult,
   Program,
   StudentFeeCharge,
+  ExamFeePayment,
   FeeCategory,
   FeePayment,
   sequelize,
@@ -150,9 +151,9 @@ const getReverificationRequests = async (req, res) => {
         attributes: ["id", "marks_obtained", "grade"],
       },
       {
-        model: StudentFeeCharge,
-        as: "fee_charge",
-        attributes: ["id", "amount", "is_paid"],
+        model: ExamFeePayment,
+        as: "exam_fee_payment",
+        attributes: ["id", "amount", "status", "payment_date"],
       },
       {
         model: User,
@@ -458,8 +459,8 @@ const waiveReverificationFee = async (req, res) => {
           as: "student",
         },
         {
-          model: StudentFeeCharge,
-          as: "fee_charge",
+          model: ExamFeePayment,
+          as: "exam_fee_payment",
         },
       ],
     });
@@ -474,12 +475,12 @@ const waiveReverificationFee = async (req, res) => {
     reverification.payment_status = "waived";
     await reverification.save();
 
-    // If there's an associated fee charge, mark it as waived/paid
-    if (reverification.fee_charge) {
-      await reverification.fee_charge.update({
-        is_paid: true,
-        paid_at: new Date(),
-        description: `${reverification.fee_charge.description} (Fee Waived)`,
+    // If there's an associated exam fee payment, mark it as completed/waived
+    if (reverification.exam_fee_payment) {
+      await reverification.exam_fee_payment.update({
+        status: 'completed',
+        payment_date: new Date(),
+        remarks: `${reverification.exam_fee_payment.remarks || ''} (Fee Waived)`,
       });
     }
 
