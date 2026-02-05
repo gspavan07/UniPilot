@@ -93,7 +93,10 @@ const FeeDashboardScreen = ({ navigation }) => {
     );
   }
 
-  const { grandTotals, studentInfo } = data || {};
+  // Backend returns { success: true, data: { grandTotals, studentInfo, ... } }
+  // After axios interceptor (response.data), we get the outer object
+  // So we need to destructure from data?.data
+  const { grandTotals, studentInfo } = data?.data || {};
 
   return (
     <View style={styles.container}>
