@@ -20,16 +20,26 @@ import {
 } from 'react-native-paper';
 import { useSelector } from 'react-redux';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  BookOpen,
+  ChevronLeft,
+  Menu,
+  Bell,
+  Download,
+  Trophy,
+  PieChart,
+} from 'lucide-react-native';
 import theme from '../../theme/theme';
 import PremiumCard from '../../components/common/PremiumCard';
 import marksService from '../../services/marksService';
+import { useDrawer } from '../../context/DrawerContext';
 
 const { width } = Dimensions.get('window');
 
 const MarksScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [refreshing, setRefreshing] = useState(false);
+  const { toggleDrawer } = useDrawer();
   const [loading, setLoading] = useState(true);
   const [resultsData, setResultsData] = useState(null);
   const [activeTab, setActiveTab] = useState('end_semester'); // 'end_semester', 'mid_term', 'internal_lab'
@@ -173,7 +183,7 @@ const MarksScreen = ({ navigation }) => {
 
         {activeTab === 'end_semester' && (
           <View style={styles.creditsRow}>
-            <Icon name="book-open-variant" size={16} color="#64748b" />
+            <BookOpen size={16} color="#64748b" />
             <Text style={styles.creditsText}>
               Credits: {earnedCredits} / {totalCredits}
             </Text>
@@ -189,16 +199,15 @@ const MarksScreen = ({ navigation }) => {
       style={styles.headerGradient}
     >
       <SafeAreaView edges={['top']}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Icon name="chevron-left" size={28} color="#fff" />
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
+            <Menu size={28} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Academic Results</Text>
+
+          <Text style={styles.headerTitle}>Results</Text>
+
           <TouchableOpacity style={styles.downloadButton}>
-            <Icon name="download" size={20} color="#fff" />
+            <Download size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -258,8 +267,7 @@ const MarksScreen = ({ navigation }) => {
               >
                 OVERALL CGPA
               </Text>
-              <Icon
-                name="trophy"
+              <Trophy
                 size={24}
                 color="rgba(255,255,255,0.3)"
                 style={styles.summaryIcon}
@@ -379,7 +387,7 @@ const MarksScreen = ({ navigation }) => {
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Icon name="chart-pie" size={80} color="#e2e8f0" />
+                <PieChart size={80} color="#e2e8f0" />
                 <Text style={styles.emptyText}>No results published yet</Text>
               </View>
             }
@@ -401,6 +409,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     paddingVertical: 100,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
   },
   headerGradient: {
     paddingBottom: 20,

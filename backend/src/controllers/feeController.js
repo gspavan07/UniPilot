@@ -271,7 +271,7 @@ exports.collectPayment = async (req, res) => {
         resolvedType = "charge";
       }
 
-      // Additional safety check if type is still ambiguous could go here, 
+      // Additional safety check if type is still ambiguous could go here,
       // but let's assume valid input from frontend for now or basic inference.
 
       // A. Try to pay with Wallet
@@ -304,7 +304,10 @@ exports.collectPayment = async (req, res) => {
 
     // 3. Create Parent Record for Wallet (if any items)
     if (walletItems.length > 0) {
-      const totalWalletAmount = walletItems.reduce((sum, item) => sum + item.amount, 0);
+      const totalWalletAmount = walletItems.reduce(
+        (sum, item) => sum + item.amount,
+        0,
+      );
 
       const walletParent = await FeePayment.create(
         {
@@ -317,46 +320,52 @@ exports.collectPayment = async (req, res) => {
           remarks: `Paid from Wallet: ${remarks || "Fee Payment"}`,
           status: "completed",
         },
-        { transaction }
+        { transaction },
       );
       createdParentPayments.push(walletParent);
 
       // Create Children
       for (const item of walletItems) {
         if (item.type === "structure") {
-          await AcademicFeePayment.create({
-            fee_payment_id: walletParent.id,
-            student_id,
-            fee_structure_id: item.id,
-            amount: item.amount
-          }, { transaction });
+          await AcademicFeePayment.create(
+            {
+              fee_payment_id: walletParent.id,
+              student_id,
+              fee_structure_id: item.id,
+              amount: item.amount,
+            },
+            { transaction },
+          );
         } else if (item.type === "charge" || item.type === "fine") {
           // For Fines/Ad-hoc charges that might identify by ID
           if (item.id && item.type === "charge") {
-            await StudentChargePayment.create({
-              fee_payment_id: walletParent.id,
-              student_id,
-              student_fee_charge_id: item.id,
-              amount: item.amount
-            }, { transaction });
+            await StudentChargePayment.create(
+              {
+                fee_payment_id: walletParent.id,
+                student_id,
+                student_fee_charge_id: item.id,
+                amount: item.amount,
+              },
+              { transaction },
+            );
           } else {
-            // If it's a raw fine without a charge ID (just "fine:semester"), we might not link it to a specific charge table 
+            // If it's a raw fine without a charge ID (just "fine:semester"), we might not link it to a specific charge table
             // unless we have a "StudentFeeCharge" for that fine.
             // Current logic supports "fine" type but 'targetId' might be null.
             // If existing system tracked fines solely by 'remarks' or 'semester' in FeePayment, we lose granularity here unless we have a child table.
             // However, the PROMPT requirement says: "if they're academic related there should be academic fee payment record".
             // Non-academic (fines) might just reside on the Parent or we need a generic child?
             // As per models, we have StudentChargePayment. If it's a fine, usually there is a StudentFeeCharge created for it?
-            // If not, we might lose specific tracking. 
+            // If not, we might lose specific tracking.
             // But existing code: "targetStructureId = null" for fines.
             // So fines just sat on FeePayment with no ID.
-            // We can continue that pattern: The Parent Record holds the amount, but no child record? 
+            // We can continue that pattern: The Parent Record holds the amount, but no child record?
             // OR, better: The Parent Record has the TOTAL, if we don't create a child, we lose "what this amount was for" if mixed.
             // BUT, if we have mix of Structure + Fine in one Wallet transaction:
             // Parent = 1500 (1000 struct + 500 fine).
             // Child = 1000 (struct).
             // Gap = 500. We can infer it's fine/other.
-            // For now, let's strictly link what we can. 
+            // For now, let's strictly link what we can.
           }
         }
       }
@@ -364,7 +373,10 @@ exports.collectPayment = async (req, res) => {
 
     // 4. Create Parent Record for External (if any items)
     if (externalItems.length > 0) {
-      const totalExternalAmount = externalItems.reduce((sum, item) => sum + item.amount, 0);
+      const totalExternalAmount = externalItems.reduce(
+        (sum, item) => sum + item.amount,
+        0,
+      );
 
       const externalParent = await FeePayment.create(
         {
@@ -377,32 +389,37 @@ exports.collectPayment = async (req, res) => {
           remarks: remarks || "Fee Collection",
           status: "completed",
         },
-        { transaction }
+        { transaction },
       );
       createdParentPayments.push(externalParent);
 
       // Create Children
       for (const item of externalItems) {
         if (item.type === "structure") {
-          await AcademicFeePayment.create({
-            fee_payment_id: externalParent.id,
-            student_id,
-            fee_structure_id: item.id,
-            amount: item.amount
-          }, { transaction });
-        } else if (item.id && (item.type === "charge")) {
-          await StudentChargePayment.create({
-            fee_payment_id: externalParent.id,
-            student_id,
-            student_fee_charge_id: item.id,
-            amount: item.amount
-          }, { transaction });
+          await AcademicFeePayment.create(
+            {
+              fee_payment_id: externalParent.id,
+              student_id,
+              fee_structure_id: item.id,
+              amount: item.amount,
+            },
+            { transaction },
+          );
+        } else if (item.id && item.type === "charge") {
+          await StudentChargePayment.create(
+            {
+              fee_payment_id: externalParent.id,
+              student_id,
+              student_fee_charge_id: item.id,
+              amount: item.amount,
+            },
+            { transaction },
+          );
         }
       }
     }
 
     await transaction.commit();
-
   } catch (error) {
     if (transaction) await transaction.rollback();
     logger.error("Error collecting payment:", error);
@@ -412,12 +429,20 @@ exports.collectPayment = async (req, res) => {
   // Hydration
   try {
     const hydrated = await FeePayment.findAll({
-      where: { id: createdParentPayments.map(p => p.id) },
+      where: { id: createdParentPayments.map((p) => p.id) },
       include: [
         {
           model: User,
           as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id", "program_id", "department_id", "batch_year"],
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "student_id",
+            "program_id",
+            "department_id",
+            "batch_year",
+          ],
           include: [
             { model: Department, as: "department", attributes: ["name"] },
             { model: Program, as: "program", attributes: ["name"] },
@@ -427,17 +452,20 @@ exports.collectPayment = async (req, res) => {
         {
           model: AcademicFeePayment,
           as: "academic_fee_payments", // Ensure association exists in models!
-          include: [{ model: FeeStructure, as: "structure", include: ["category"] }]
+          include: [
+            { model: FeeStructure, as: "structure", include: ["category"] },
+          ],
         },
         {
           model: StudentChargePayment,
           as: "student_charge_payments", // Ensure association exists!
-          include: [{ model: StudentFeeCharge, as: "charge", include: ["category"] }]
-        }
-      ]
+          include: [
+            { model: StudentFeeCharge, as: "charge", include: ["category"] },
+          ],
+        },
+      ],
     });
     return res.status(201).json({ success: true, data: hydrated });
-
   } catch (err) {
     logger.warn("Hydration failed:", err);
     return res.status(201).json({ success: true, data: createdParentPayments });
@@ -494,7 +522,10 @@ exports.payMyFees = async (req, res) => {
       // If verified, proceed to record payment
       // Use razorpay_payment_id as transaction_id
       // Calculate total amount from the payments array
-      const totalAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const totalAmount = payments.reduce(
+        (sum, p) => sum + parseFloat(p.amount),
+        0,
+      );
 
       // 3. Create Global Fee Payment Record
       const feePayment = await FeePayment.create(
@@ -504,6 +535,7 @@ exports.payMyFees = async (req, res) => {
           payment_date: new Date(),
           transaction_id: razorpay_payment_id,
           payment_method: "razorpay", // Could be card/netbanking etc from webhook, simplified here
+          receipt_url: receipt_url,
           status: "completed",
           remarks: `Online Payment (Order: ${razorpay_order_id})`,
         },
@@ -514,9 +546,12 @@ exports.payMyFees = async (req, res) => {
       // 4. Create Detailed Payment Records
       // Process each payment in the payments array
       for (const payment of payments) {
-        const paymentType = payment.type || 'structure'; // Default to structure if not specified
+        const paymentType = payment.type || "structure"; // Default to structure if not specified
 
-        if (paymentType === 'structure' || paymentType === 'academic_fee_payment') {
+        if (
+          paymentType === "structure" ||
+          paymentType === "academic_fee_payment"
+        ) {
           // Academic fee payment (linked to fee structure)
           if (payment.structure_id) {
             await AcademicFeePayment.create(
@@ -530,24 +565,33 @@ exports.payMyFees = async (req, res) => {
               { transaction },
             );
           }
-        } else if (paymentType === 'charge' || paymentType === 'fee_charge_payment') {
+        } else if (
+          paymentType === "charge" ||
+          paymentType === "fee_charge_payment"
+        ) {
           // Student fee charge payment
           if (payment.structure_id || payment.charge_id) {
             const chargeId = payment.charge_id || payment.structure_id;
-            const charge = await StudentFeeCharge.findByPk(chargeId, { transaction });
+            const charge = await StudentFeeCharge.findByPk(chargeId, {
+              transaction,
+            });
             if (charge) {
-              await StudentChargePayment.create({
-                fee_payment_id: feePayment.id,
-                student_id,
-                student_fee_charge_id: chargeId,
-                amount: parseFloat(payment.amount),
-                semester: payment.semester,
-              }, { transaction });
+              await StudentChargePayment.create(
+                {
+                  fee_payment_id: feePayment.id,
+                  student_id,
+                  student_fee_charge_id: chargeId,
+                  amount: parseFloat(payment.amount),
+                  semester: payment.semester,
+                },
+                { transaction },
+              );
             }
           }
         }
       }
-    } else { // Original loop for non-razorpay payments
+    } else {
+      // Original loop for non-razorpay payments
       createdPayments = [];
       for (let i = 0; i < payments.length; i++) {
         const p = payments[i];
@@ -591,7 +635,9 @@ exports.payMyFees = async (req, res) => {
               fee_structure_id:
                 p.type === "structure" || !p.type ? p.structure_id : null,
               fee_charge_id:
-                p.type === "charge" || p.type === "fine" ? p.structure_id : null,
+                p.type === "charge" || p.type === "fine"
+                  ? p.structure_id
+                  : null,
               semester: p.semester || (p.type === "fine" ? p.semester : null),
               amount_paid: amountRemaining,
               payment_method: payment_method || "online", // Default to online for students
@@ -616,7 +662,6 @@ exports.payMyFees = async (req, res) => {
 
     // Commit the transaction for both payment flows
     await transaction.commit();
-
   } catch (error) {
     if (transaction) await transaction.rollback();
     logger.error("Error processing student payment:", error);
@@ -674,49 +719,57 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
   const { program_id, batch_year, is_hosteller, requires_transport } = student;
   const effectiveBatchYear = batch_year || new Date().getFullYear();
 
-  const results =
-    await Promise.all([
-      FeeStructure.findAll({
-        where: {
-          program_id,
-          batch_year: effectiveBatchYear,
-          is_active: true,
-          student_id: null, // Only return templates here
-        },
-        include: [{ model: FeeCategory, as: "category" }],
-        order: [["semester", "ASC"]],
-      }),
-      FeePayment.findAll({
-        where: { student_id: studentId, status: "completed" },
-      }),
-      FeeSemesterConfig.findAll({
-        where: { program_id, batch_year: effectiveBatchYear },
-      }),
-      FeeWaiver.findAll({
-        where: { student_id: studentId, is_approved: true, is_active: true },
-      }),
-      StudentFeeCharge.findAll({
-        where: { student_id: studentId },
-        include: [{ model: FeeCategory, as: "category" }],
-      }),
-      ExamFeePayment.findAll({
-        where: { student_id: studentId },
-        include: [
-          { model: ExamCycle, as: "cycle" },
-          { model: FeePayment, as: "payment" }, // Get Parent Transaction
-        ],
-      }),
-      AcademicFeePayment.findAll({
-        where: { student_id: studentId },
-        include: [{ model: FeePayment, as: "payment" }], // Get Parent Transaction
-      }),
-      StudentChargePayment.findAll({
-        where: { student_id: studentId },
-        include: [{ model: FeePayment, as: "payment" }], // Get Parent Transaction
-      }),
-    ]);
+  const results = await Promise.all([
+    FeeStructure.findAll({
+      where: {
+        program_id,
+        batch_year: effectiveBatchYear,
+        is_active: true,
+        student_id: null, // Only return templates here
+      },
+      include: [{ model: FeeCategory, as: "category" }],
+      order: [["semester", "ASC"]],
+    }),
+    FeePayment.findAll({
+      where: { student_id: studentId, status: "completed" },
+    }),
+    FeeSemesterConfig.findAll({
+      where: { program_id, batch_year: effectiveBatchYear },
+    }),
+    FeeWaiver.findAll({
+      where: { student_id: studentId, is_approved: true, is_active: true },
+    }),
+    StudentFeeCharge.findAll({
+      where: { student_id: studentId },
+      include: [{ model: FeeCategory, as: "category" }],
+    }),
+    ExamFeePayment.findAll({
+      where: { student_id: studentId },
+      include: [
+        { model: ExamCycle, as: "cycle" },
+        { model: FeePayment, as: "payment" }, // Get Parent Transaction
+      ],
+    }),
+    AcademicFeePayment.findAll({
+      where: { student_id: studentId },
+      include: [{ model: FeePayment, as: "payment" }], // Get Parent Transaction
+    }),
+    StudentChargePayment.findAll({
+      where: { student_id: studentId },
+      include: [{ model: FeePayment, as: "payment" }], // Get Parent Transaction
+    }),
+  ]);
 
-  const [structures, globalPayments, semesterConfigs, waivers, individualCharges, examPayments, academicPayments, chargePaymentsData] = results;
+  const [
+    structures,
+    globalPayments,
+    semesterConfigs,
+    waivers,
+    individualCharges,
+    examPayments,
+    academicPayments,
+    chargePaymentsData,
+  ] = results;
 
   const configMap = {};
   semesterConfigs.forEach((c) => (configMap[c.semester] = c));
@@ -773,7 +826,9 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
     }
 
     // Use fetch from AcademicFeePayment table
-    const structPayments = academicPayments.filter((p) => p.fee_structure_id === s.id);
+    const structPayments = academicPayments.filter(
+      (p) => p.fee_structure_id === s.id,
+    );
     const paid = structPayments.reduce(
       (sum, p) => sum + parseFloat(p.amount),
       0,
@@ -834,7 +889,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
       due,
       excess,
       receipts: structPayments.map((p) => ({
-        number: p.payment?.transaction_id || 'N/A',
+        number: p.payment?.transaction_id || "N/A",
         date: p.payment?.payment_date,
         amount: p.amount,
         method: p.payment?.payment_method,
@@ -854,7 +909,9 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
   // Process Individual Charges
   individualCharges.forEach((c) => {
     // Use fetch from StudentChargePayment table
-    const chargePayments = chargePaymentsData.filter((p) => p.student_fee_charge_id === c.id);
+    const chargePayments = chargePaymentsData.filter(
+      (p) => p.student_fee_charge_id === c.id,
+    );
     const paid = chargePayments.reduce(
       (sum, p) => sum + parseFloat(p.amount),
       0,
@@ -892,7 +949,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
       excess,
       description: c.description,
       receipts: chargePayments.map((p) => ({
-        number: p.payment?.transaction_id || 'N/A',
+        number: p.payment?.transaction_id || "N/A",
         date: p.payment?.payment_date,
         amount: p.amount,
         method: p.payment?.payment_method,
@@ -926,7 +983,11 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
     semesterWise[sem].fees.push({
       id: p.id,
       is_exam_fee: true,
-      category: p.category.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") + " Fee",
+      category:
+        p.category
+          .split("_")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ") + " Fee",
       payable,
       paid,
       due,
@@ -934,12 +995,16 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
       transaction_id: p.payment?.transaction_id || p.transaction_id,
       payment_date: p.payment?.payment_date || p.payment_date,
       remarks: p.payment?.remarks || p.remarks,
-      receipts: isPaid ? [{
-        number: p.payment?.transaction_id || p.transaction_id,
-        date: p.payment?.payment_date || p.payment_date,
-        amount: paid,
-        method: p.payment?.payment_method || p.payment_method,
-      }] : [],
+      receipts: isPaid
+        ? [
+            {
+              number: p.payment?.transaction_id || p.transaction_id,
+              date: p.payment?.payment_date || p.payment_date,
+              amount: paid,
+              method: p.payment?.payment_method || p.payment_method,
+            },
+          ]
+        : [],
     });
 
     semesterWise[sem].totals.payable += payable;
@@ -990,6 +1055,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
   return {
     semesterWise,
     grandTotals,
+    transactions: globalPayments,
     scholarships: waivers.map((w) => ({
       id: w.id,
       type: w.waiver_type,
@@ -1082,7 +1148,6 @@ exports.createPaymentOrder = async (req, res) => {
     res.status(500).json({ error: "Failed to create payment order" });
   }
 };
-
 
 // @desc    Update or create semester config
 exports.updateSemesterConfig = async (req, res) => {
@@ -2039,8 +2104,8 @@ exports.exportDefaulters = async (req, res) => {
           maxOverdueDays,
           student.phone || "",
           student.parent_details?.father_mobile ||
-          student.parent_details?.mother_mobile ||
-          "",
+            student.parent_details?.mother_mobile ||
+            "",
         ].join(",");
         csvContent += row + "\n";
       }
@@ -2103,7 +2168,9 @@ exports.deleteStudentFine = async (req, res) => {
     });
 
     if (payments > 0) {
-      return res.status(400).json({ error: "Cannot delete fine with partial payments" });
+      return res
+        .status(400)
+        .json({ error: "Cannot delete fine with partial payments" });
     }
 
     await charge.destroy();

@@ -6,29 +6,37 @@ import {
   RefreshControl,
   TouchableOpacity,
   Dimensions,
-  StatusBar,
   Animated,
+  Image,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Avatar, ActivityIndicator } from 'react-native-paper';
 import { useSelector } from 'react-redux';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  Menu,
+  Bell,
+  CalendarCheck,
+  TrendingUp,
+  CalendarClock,
+  Banknote,
+} from 'lucide-react-native';
 import theme from '../../theme/theme';
 import PremiumCard from '../../components/common/PremiumCard';
 import dashboardService from '../../services/dashboardService';
+import { useDrawer } from '../../context/DrawerContext';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
+  const { toggleDrawer } = useDrawer();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
   const [dashboardData, setDashboardData] = useState(null);
-  console.log(dashboardData);
-  console.log(user);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const fetchDashboardData = useCallback(async () => {
@@ -89,25 +97,31 @@ const DashboardScreen = ({ navigation }) => {
     {
       id: 1,
       name: 'Attendance',
-      icon: 'calendar-check',
+      icon: CalendarCheck,
       color: '#6366f1',
       screen: 'Attendance',
     },
     {
       id: 2,
       name: 'Marks',
-      icon: 'chart-line',
+      icon: TrendingUp,
       color: '#10b981',
       screen: 'Marks',
     },
     {
       id: 3,
       name: 'Timetable',
-      icon: 'timetable',
+      icon: CalendarClock,
       color: '#f59e0b',
       screen: 'Timetable',
     },
-    { id: 4, name: 'Fees', icon: 'cash', color: '#ef4444', screen: 'Fees' },
+    {
+      id: 4,
+      name: 'Fees',
+      icon: Banknote,
+      color: '#ef4444',
+      screen: 'FeeDashboard',
+    },
   ];
 
   if (loading && !refreshing) {
@@ -120,18 +134,31 @@ const DashboardScreen = ({ navigation }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <StatusBar
-        barStyle="light-content"
-        translucent
-        backgroundColor="transparent"
-      />
-
       {/* Subtle Premium Header */}
       <LinearGradient
         colors={[theme.colors.primary, '#4f46e5']}
         style={styles.headerGradient}
       >
         <SafeAreaView>
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
+              <Menu size={28} color="#fff" />
+            </TouchableOpacity>
+
+            <Image
+              source={{
+                uri: 'https://cdn-icons-png.flaticon.com/512/8074/8074800.png', // Placeholder College Logo
+              }}
+              style={styles.collegeLogo}
+              resizeMode="contain"
+            />
+
+            <TouchableOpacity style={styles.notificationButton}>
+              <Bell size={26} color="#fff" />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.greetingText}>{greeting},</Text>
@@ -226,7 +253,7 @@ const DashboardScreen = ({ navigation }) => {
                         { backgroundColor: action.color + '10' },
                       ]}
                     >
-                      <Icon name={action.icon} size={26} color={action.color} />
+                      <action.icon size={26} color={action.color} />
                     </View>
                     <Text style={styles.actionName}>{action.name}</Text>
                   </PremiumCard>
@@ -303,17 +330,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   headerGradient: {
-    paddingBottom: 30,
+    paddingBottom: Platform.OS === 'android' ? 0 : 30,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
+    marginBottom: 20,
+  },
+  collegeLogo: {
+    width: 36,
+    height: 36,
+    // tintColor: '#fff',
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: 4,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: '#4f46e5',
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Platform.OS === 'android' ? 24 : 24,
-    paddingTop: Platform.OS === 'ios' ? 10 : 10,
-    marginTop: Platform.OS === 'android' ? 30 : 0,
+    paddingHorizontal: 24,
+    // marginBottom: 10,
   },
   greetingText: {
     fontSize: 16,

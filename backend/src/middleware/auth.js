@@ -113,7 +113,7 @@ const checkPermission = (requiredPermission) => {
         : [requiredPermission];
 
       const hasPermission = user.role_data.permissions.some((p) =>
-        requiredPermissions.includes(p.slug)
+        requiredPermissions.includes(p.slug),
       );
 
       if (!hasPermission) {

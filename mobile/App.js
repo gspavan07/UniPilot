@@ -19,19 +19,25 @@ const paperTheme = {
   },
 };
 
+import { AlertProvider } from './src/context/AlertContext';
+import CustomAlert from './src/components/common/CustomAlert';
+
 const App = () => {
   return (
     <ReduxProvider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <SafeAreaProvider>
-          <PaperProvider theme={paperTheme}>
-            <StatusBar
-              barStyle="dark-content"
-              backgroundColor="transparent"
-              translucent
-            />
-            <AppNavigator />
-          </PaperProvider>
+          <AlertProvider>
+            <PaperProvider theme={paperTheme}>
+              <StatusBar
+                barStyle="dark-content"
+                backgroundColor="transparent"
+                translucent
+              />
+              <AppNavigator />
+              <CustomAlert />
+            </PaperProvider>
+          </AlertProvider>
         </SafeAreaProvider>
       </PersistGate>
     </ReduxProvider>

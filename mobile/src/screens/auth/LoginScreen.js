@@ -14,7 +14,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  Rocket,
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckSquare,
+  Square,
+  ChevronRight,
+} from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {
   loginStart,
@@ -95,6 +104,7 @@ const LoginScreen = () => {
 
       if (token) {
         await AsyncStorage.setItem('authToken', token);
+        await AsyncStorage.setItem('userData', JSON.stringify(user));
 
         // Handle Remember Me
         if (rememberMe) {
@@ -152,11 +162,7 @@ const LoginScreen = () => {
             <View style={styles.logoContainer}>
               <View style={styles.appIconContainer}>
                 <View style={styles.appIcon}>
-                  <Icon
-                    name="rocket-launch"
-                    size={44}
-                    color={theme.colors.primary}
-                  />
+                  <Rocket size={44} color={theme.colors.primary} />
                 </View>
               </View>
               <Text style={styles.brandName}>UniPilot</Text>
@@ -184,7 +190,11 @@ const LoginScreen = () => {
                 style={styles.input}
                 backgroundColor="#f8fafc"
                 activeUnderlineColor={theme.colors.primary}
-                left={<TextInput.Icon icon="account" color="#94a3b8" />}
+                left={
+                  <TextInput.Icon
+                    icon={() => <User size={20} color="#94a3b8" />}
+                  />
+                }
                 autoCapitalize="none"
               />
               {errors.email && (
@@ -204,11 +214,20 @@ const LoginScreen = () => {
                 style={styles.input}
                 backgroundColor="#f8fafc"
                 activeUnderlineColor={theme.colors.primary}
-                left={<TextInput.Icon icon="lock" color="#94a3b8" />}
+                left={
+                  <TextInput.Icon
+                    icon={() => <Lock size={20} color="#94a3b8" />}
+                  />
+                }
                 right={
                   <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
-                    color="#94a3b8"
+                    icon={() =>
+                      showPassword ? (
+                        <EyeOff size={20} color="#94a3b8" />
+                      ) : (
+                        <Eye size={20} color="#94a3b8" />
+                      )
+                    }
                     onPress={() => setShowPassword(!showPassword)}
                   />
                 }
@@ -223,13 +242,11 @@ const LoginScreen = () => {
                   onPress={() => setRememberMe(!rememberMe)}
                   activeOpacity={0.7}
                 >
-                  <Icon
-                    name={
-                      rememberMe ? 'checkbox-marked' : 'checkbox-blank-outline'
-                    }
-                    size={22}
-                    color={rememberMe ? theme.colors.primary : '#94a3b8'}
-                  />
+                  {rememberMe ? (
+                    <CheckSquare size={22} color={theme.colors.primary} />
+                  ) : (
+                    <Square size={22} color="#94a3b8" />
+                  )}
                   <Text style={styles.rememberText}>Remember Me</Text>
                 </TouchableOpacity>
 
@@ -258,9 +275,7 @@ const LoginScreen = () => {
                   <Text style={styles.buttonText}>
                     {loading ? 'AUTHENTICATING...' : 'SIGN IN'}
                   </Text>
-                  {!loading && (
-                    <Icon name="chevron-right" size={24} color="#fff" />
-                  )}
+                  {!loading && <ChevronRight size={24} color="#fff" />}
                 </LinearGradient>
               </TouchableOpacity>
             </PremiumCard>

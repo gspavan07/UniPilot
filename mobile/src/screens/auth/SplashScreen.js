@@ -10,11 +10,14 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Text } from 'react-native-paper';
 import theme from '../../theme/theme';
+import { useDispatch } from 'react-redux';
+import { loginSuccess } from '../../redux/slices/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
@@ -33,25 +36,36 @@ const SplashScreen = ({ navigation }) => {
       }),
     ]).start();
 
-    // Navigate based on auth status after delay
-    const checkAuth = async () => {
+    // Restore session and navigate
+    const restoreSession = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
+        const userData = await AsyncStorage.getItem('userData');
+
+        console.log('Restoring Session - Token exists:', !!token);
+
         setTimeout(() => {
-          if (token) {
-            navigation.replace('Main');
+          if (token && userData) {
+            // Restore Redux state - Navigator will auto-switch to 'Main'
+            dispatch(
+              loginSuccess({
+                token,
+                user: JSON.parse(userData),
+              }),
+            );
           } else {
+            // No session, go to login
             navigation.replace('Login');
           }
-        }, 2500);
+        }, 2200);
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('Session restoration error:', error);
         navigation.replace('Login');
       }
     };
 
-    checkAuth();
-  }, []);
+    restoreSession();
+  }, [dispatch]);
 
   return (
     <View style={styles.container}>

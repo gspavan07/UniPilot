@@ -24,17 +24,113 @@ import {
 } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  Info,
+  GraduationCap,
+  Contact,
+  Users,
+  History,
+  FileText,
+  UserCircle,
+  User,
+  Mail,
+  Phone,
+  CheckCircle,
+  Calendar,
+  AlignLeft,
+  BookOpen,
+  Building2,
+  CalendarDays,
+  Hash,
+  School,
+  Award,
+  IdCard,
+  Fingerprint,
+  Cake,
+  Droplet,
+  MapPin,
+  UserCog,
+  Heart,
+  ShieldAlert,
+  ShieldCheck,
+  PhoneCall,
+  Medal,
+  FileStack,
+  File,
+  Check,
+  Clock,
+  Menu,
+  Bell,
+  FileX,
+  Settings,
+  KeyRound,
+  ChevronRight,
+  LogOut,
+  HelpCircle,
+} from 'lucide-react-native';
+
+const ICON_MAP = {
+  information: Info,
+  school: GraduationCap,
+  personal: Contact, // Mapped for tab id generic
+  'account-details': Contact,
+  family: Users, // Mapped for tab id generic
+  'account-group': Users,
+  history: History,
+  documents: FileStack, // Mapped for tab id generic
+  'file-document': FileText,
+  'account-circle': UserCircle,
+  account: User,
+  email: Mail,
+  phone: Phone,
+  'check-circle': CheckCircle,
+  calendar: Calendar,
+  'text-subject': AlignLeft,
+  'book-open-variant': BookOpen,
+  'office-building': Building2,
+  'calendar-star': CalendarDays,
+  'numeric-1-box': Hash,
+  'google-classroom': School,
+  'file-certificate': Award,
+  'card-account-details-outline': IdCard,
+  fingerprint: Fingerprint,
+  'calendar-heart': Cake,
+  'gender-male-female': Users,
+  water: Droplet,
+  'map-marker-outline': MapPin,
+  'account-tie': UserCog,
+  'account-heart': Heart,
+  'shield-alert': ShieldAlert,
+  'shield-account': ShieldCheck,
+  'phone-alert': PhoneCall,
+  medal: Medal,
+  'file-document-multiple': FileStack,
+  'file-pdf-box': File,
+  check: Check,
+  'clock-outline': Clock,
+  'file-cancel': FileX,
+  cog: Settings,
+  'key-variant': KeyRound,
+  'chevron-right': ChevronRight,
+  logout: LogOut,
+};
+
+const DynamicIcon = ({ name, size, color, style }) => {
+  const IconComponent = ICON_MAP[name] || HelpCircle;
+  return <IconComponent size={size} color={color} style={style} />;
+};
 import theme from '../../theme/theme';
 import { logout } from '../../redux/slices/authSlice';
 import profileService from '../../services/profileService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDrawer } from '../../context/DrawerContext';
 
 const { width } = Dimensions.get('window');
 
 const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
+  const { toggleDrawer } = useDrawer();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -116,7 +212,7 @@ const ProfileScreen = ({ navigation }) => {
   const renderDetailItem = (label, value, icon) => (
     <View style={styles.detailItem}>
       <View style={styles.detailIconContainer}>
-        <Icon name={icon} size={20} color={theme.colors.primary} />
+        <DynamicIcon name={icon} size={20} color={theme.colors.primary} />
       </View>
       <View style={styles.detailTextContainer}>
         <Text style={styles.detailLabel}>{label}</Text>
@@ -128,7 +224,7 @@ const ProfileScreen = ({ navigation }) => {
   const SectionTitle = ({ title, icon }) => (
     <View style={styles.sectionTitleRow}>
       <View style={styles.sectionIconBg}>
-        <Icon name={icon} size={18} color={theme.colors.primary} />
+        <DynamicIcon name={icon} size={18} color={theme.colors.primary} />
       </View>
       <Text style={styles.sectionTitleText}>{title}</Text>
     </View>
@@ -279,7 +375,11 @@ const ProfileScreen = ({ navigation }) => {
           <Surface key={idx} style={styles.eduCard}>
             <View style={styles.eduHeader}>
               <View style={styles.eduIconBox}>
-                <Icon name="medal" size={24} color={theme.colors.primary} />
+                <DynamicIcon
+                  name="medal"
+                  size={24}
+                  color={theme.colors.primary}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.eduQual}>
@@ -298,7 +398,7 @@ const ProfileScreen = ({ navigation }) => {
         ))
       ) : (
         <View style={styles.emptyContainer}>
-          <Icon name="history" size={64} color="#e2e8f0" />
+          <DynamicIcon name="history" size={64} color="#e2e8f0" />
           <Text style={styles.emptyText}>No historical records found</Text>
         </View>
       )}
@@ -313,7 +413,7 @@ const ProfileScreen = ({ navigation }) => {
           user.documents.map((doc, idx) => (
             <Surface key={idx} style={styles.docCard}>
               <View style={styles.docIconBox}>
-                <Icon name="file-pdf-box" size={32} color="#ef4444" />
+                <DynamicIcon name="file-pdf-box" size={32} color="#ef4444" />
                 <View
                   style={[
                     styles.docStatus,
@@ -323,7 +423,7 @@ const ProfileScreen = ({ navigation }) => {
                     },
                   ]}
                 >
-                  <Icon
+                  <DynamicIcon
                     name={doc.status === 'approved' ? 'check' : 'clock-outline'}
                     size={12}
                     color="#fff"
@@ -344,7 +444,7 @@ const ProfileScreen = ({ navigation }) => {
           ))
         ) : (
           <View style={[styles.emptyContainer, { width: width - 40 }]}>
-            <Icon name="file-cancel" size={64} color="#e2e8f0" />
+            <DynamicIcon name="file-cancel" size={64} color="#e2e8f0" />
             <Text style={styles.emptyText}>No documents found</Text>
           </View>
         )}
@@ -384,6 +484,18 @@ const ProfileScreen = ({ navigation }) => {
         style={styles.headerGradient}
       >
         <SafeAreaView edges={['top']}>
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
+              <Menu size={28} color="#fff" />
+            </TouchableOpacity>
+
+            <Text style={styles.headerTitle}>Profile</Text>
+
+            <TouchableOpacity style={styles.notificationButton}>
+              <Bell size={26} color="#fff" />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.headerContent}>
             <View style={styles.profileInfo}>
               <View style={styles.avatarWrapper}>
@@ -418,7 +530,7 @@ const ProfileScreen = ({ navigation }) => {
                 style={styles.settingsBtn}
                 onPress={() => setShowSettingsModal(true)}
               >
-                <Icon name="cog" size={26} color="#fff" />
+                <DynamicIcon name="cog" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
@@ -438,7 +550,7 @@ const ProfileScreen = ({ navigation }) => {
                   activeTab === tab.id && styles.activeTabBtn,
                 ]}
               >
-                <Icon
+                <DynamicIcon
                   name={tab.icon}
                   size={18}
                   color={activeTab === tab.id ? theme.colors.primary : '#fff'}
@@ -484,13 +596,17 @@ const ProfileScreen = ({ navigation }) => {
             }}
           >
             <View style={[styles.menuIconBox, { backgroundColor: '#e0e7ff' }]}>
-              <Icon name="key-variant" size={22} color={theme.colors.primary} />
+              <DynamicIcon
+                name="key-variant"
+                size={22}
+                color={theme.colors.primary}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.menuTitle}>Change Password</Text>
               <Text style={styles.menuSub}>Update your login credentials</Text>
             </View>
-            <Icon name="chevron-right" size={24} color="#94a3b8" />
+            <DynamicIcon name="chevron-right" size={24} color="#94a3b8" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -506,7 +622,7 @@ const ProfileScreen = ({ navigation }) => {
               colors={['#ef4444', '#b91c1c']}
               style={styles.logoutGradient}
             >
-              <Icon
+              <DynamicIcon
                 name="logout"
                 size={20}
                 color="#fff"
@@ -598,6 +714,35 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
+    marginBottom: 20,
+  },
+
+  notificationButton: {
+    position: 'relative',
+    padding: 4,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: '#4f46e5',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
   },
   headerContent: {
     paddingHorizontal: 20,

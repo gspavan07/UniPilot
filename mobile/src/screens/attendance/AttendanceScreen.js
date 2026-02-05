@@ -9,6 +9,7 @@ import {
   Dimensions,
   StatusBar,
   Animated,
+  Image,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,16 +21,24 @@ import {
 } from 'react-native-paper';
 import { useSelector } from 'react-redux';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  AlertCircle,
+  ChevronLeft,
+  CalendarX,
+  Menu,
+  Bell,
+} from 'lucide-react-native';
 import theme from '../../theme/theme';
 import PremiumCard from '../../components/common/PremiumCard';
 import attendanceService from '../../services/attendanceService';
+import { useDrawer } from '../../context/DrawerContext';
 
 const { width } = Dimensions.get('window');
 
 const AttendanceScreen = () => {
   const { user } = useSelector(state => state.auth);
   const [refreshing, setRefreshing] = useState(false);
+  const { toggleDrawer } = useDrawer();
   const [loading, setLoading] = useState(true);
   const [attendanceData, setAttendanceData] = useState(null);
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' or 'history'
@@ -156,7 +165,7 @@ const AttendanceScreen = () => {
         </Text>
         {parseFloat(item.percentage) < 75 && (
           <View style={styles.warningBox}>
-            <Icon name="alert-circle" size={14} color="#ef4444" />
+            <AlertCircle size={14} color="#ef4444" />
             <Text style={styles.warningText}>Low Attendance</Text>
           </View>
         )}
@@ -225,15 +234,17 @@ const AttendanceScreen = () => {
         style={styles.headerGradient}
       >
         <SafeAreaView>
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              onPress={() => navigation?.goBack()}
-              style={styles.backButton}
-            >
-              <Icon name="chevron-left" size={28} color="#fff" />
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
+              <Menu size={28} color="#fff" />
             </TouchableOpacity>
+
             <Text style={styles.headerTitle}>Attendance Tracker</Text>
-            <View style={{ width: 40 }} />
+
+            <TouchableOpacity style={styles.notificationButton}>
+              <Bell size={26} color="#fff" />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
           </View>
 
           {/* Semester Selector */}
@@ -311,7 +322,7 @@ const AttendanceScreen = () => {
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Icon name="calendar-blank" size={64} color="#CBD5E1" />
+                <CalendarX size={64} color="#CBD5E1" />
                 <Text style={styles.emptyText}>
                   No attendance records found
                 </Text>
@@ -350,6 +361,30 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
+    marginBottom: 20,
+  },
+
+  notificationButton: {
+    position: 'relative',
+    padding: 4,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: '#4f46e5',
   },
   headerContent: {
     flexDirection: 'row',

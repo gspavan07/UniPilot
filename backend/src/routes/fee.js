@@ -43,8 +43,6 @@ router.get("/my-status", authenticate, getMyFeeStatus);
 router.post("/payment/order", authenticate, createPaymentOrder);
 router.post("/my-payment", authenticate, payMyFees);
 
-
-
 // @Users/pavang/UniPilot/backend/src/routes/fee.js
 // Admin/Accounts routes
 router.get(
@@ -121,7 +119,6 @@ router.get(
 
 router.get("/batches", checkPermission("finance:fees:oversight"), getBatches);
 
-
 // Waivers & Scholarships
 router.post("/waivers", checkPermission("finance:fees:admin"), applyWaiver);
 router.get("/waivers", checkPermission("finance:fees:oversight"), getWaivers);
@@ -156,7 +153,6 @@ router.get(
   checkPermission("finance:fees:oversight"),
   getDefaulters,
 );
-
 
 router.post("/fines", checkPermission("finance:fees:manage"), addStudentFine);
 
