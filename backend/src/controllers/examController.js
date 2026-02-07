@@ -296,11 +296,11 @@ exports.createExamCycle = async (req, res) => {
       status,
     } = req.body;
 
-    let component_breakdown = [];
-    let max_marks = 0;
+    let component_breakdown = req.body.component_breakdown || [];
+    let max_marks = req.body.max_marks || 0;
 
-    // Auto-populate from regulation if provided
-    if (regulation_id && cycle_type) {
+    // Auto-populate from regulation if provided AND max_marks not manually set
+    if (regulation_id && cycle_type && max_marks === 0) {
       const { Regulation } = require("../models");
       const regulation = await Regulation.findByPk(regulation_id);
 
@@ -401,6 +401,8 @@ exports.updateExamCycle = async (req, res) => {
       attendance_condonation_threshold,
       attendance_permission_threshold,
       status,
+      max_marks,
+      component_breakdown,
     } = req.body;
 
     await cycle.update({
@@ -449,6 +451,11 @@ exports.updateExamCycle = async (req, res) => {
           ? attendance_permission_threshold
           : cycle.attendance_permission_threshold,
       status: status !== undefined ? status : cycle.status,
+      max_marks: max_marks !== undefined ? max_marks : cycle.max_marks,
+      component_breakdown:
+        component_breakdown !== undefined
+          ? component_breakdown
+          : cycle.component_breakdown,
     });
 
     res.status(200).json({ success: true, data: cycle });

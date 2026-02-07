@@ -169,7 +169,7 @@ const MarkEntry = () => {
         await dispatch(
           updateModerationStatus({
             exam_schedule_id: scheduleId,
-            status: "verified",
+            status: "locked",
           }),
         ).unwrap();
         toast.success("Marks submitted and locked successfully!");
@@ -260,7 +260,7 @@ const MarkEntry = () => {
                 Total Marks
               </p>
               <p className="text-xl font-black text-indigo-600">
-                {schedule?.cycle?.max_marks}
+                {schedule?.max_marks || schedule?.cycle?.max_marks}
               </p>
             </div>
             <div className="text-right">
@@ -287,7 +287,7 @@ const MarkEntry = () => {
                 )}
                 SAVE DRAFT
               </button>
-              {/* <button
+              <button
                 disabled={saving || submitting}
                 onClick={() => saveMarks(true)}
                 className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 transition-all disabled:opacity-50"
@@ -297,8 +297,8 @@ const MarkEntry = () => {
                 ) : (
                   <Send className="w-5 h-5 mr-2" />
                 )}
-                FINAL SUBMIT
-              </button> */}
+                PUBLISH & LOCK
+              </button>
             </div>
           )}
 
@@ -328,11 +328,10 @@ const MarkEntry = () => {
           {/* Reverification Filter Toggle */}
           <button
             onClick={() => setReverificationOnly(!reverificationOnly)}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-              reverificationOnly
-                ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/30"
-                : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30 hover:bg-purple-100"
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${reverificationOnly
+              ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/30"
+              : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30 hover:bg-purple-100"
+              }`}
           >
             🔄{" "}
             {reverificationOnly
@@ -395,7 +394,7 @@ const MarkEntry = () => {
                 ))}
 
                 <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-center border-b border-gray-100 dark:border-gray-700 bg-indigo-50/30 dark:bg-indigo-900/10">
-                  Total ({schedule?.cycle?.max_marks})
+                  Total ({schedule?.max_marks || schedule?.cycle?.max_marks})
                 </th>
                 <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-700">
                   Remarks
@@ -445,13 +444,12 @@ const MarkEntry = () => {
                               e.target.value,
                             )
                           }
-                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border-2 focus:ring-0 outline-none transition-all cursor-pointer ${
-                            mark.attendance_status === "present"
-                              ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/30"
-                              : mark.attendance_status === "absent"
-                                ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/30"
-                                : "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/30"
-                          }`}
+                          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border-2 focus:ring-0 outline-none transition-all cursor-pointer ${mark.attendance_status === "present"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/30"
+                            : mark.attendance_status === "absent"
+                              ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/30"
+                              : "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/30"
+                            }`}
                         >
                           <option value="present">Present</option>
                           <option value="absent">Absent</option>
@@ -485,11 +483,10 @@ const MarkEntry = () => {
                                 comp.name,
                               );
                             }}
-                            className={`w-20 px-3 py-3 bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-lg transition-all focus:border-indigo-500 outline-none ${
-                              isEntryDisabled
-                                ? "opacity-30 border-gray-100 dark:border-gray-700"
-                                : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
-                            }`}
+                            className={`w-20 px-3 py-3 bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-lg transition-all focus:border-indigo-500 outline-none ${isEntryDisabled
+                              ? "opacity-30 border-gray-100 dark:border-gray-700"
+                              : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
+                              }`}
                           />
                         </div>
                       </td>
@@ -497,33 +494,32 @@ const MarkEntry = () => {
 
                     {(!schedule?.cycle?.component_breakdown ||
                       schedule.cycle.component_breakdown.length === 0) && (
-                      <td className="px-8 py-6">
-                        <div className="flex justify-center">
-                          <input
-                            type="number"
-                            min="0"
-                            max={schedule?.cycle?.max_marks}
-                            disabled={isEntryDisabled}
-                            value={mark.marks_obtained || ""}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (val > schedule?.cycle?.max_marks) {
-                                toast.error(
-                                  `Max marks is ${schedule?.cycle?.max_marks}`,
-                                );
-                                return;
-                              }
-                              handleTotalChange(student.id, e.target.value);
-                            }}
-                            className={`w-20 px-3 py-3 bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-lg transition-all focus:border-indigo-500 outline-none ${
-                              isEntryDisabled
+                        <td className="px-8 py-6">
+                          <div className="flex justify-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max={schedule?.max_marks || schedule?.cycle?.max_marks}
+                              disabled={isEntryDisabled}
+                              value={mark.marks_obtained || ""}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                const maxAllowed =
+                                  schedule?.max_marks || schedule?.cycle?.max_marks;
+                                if (val > maxAllowed) {
+                                  toast.error(`Max marks is ${maxAllowed}`);
+                                  return;
+                                }
+                                handleTotalChange(student.id, e.target.value);
+                              }}
+                              className={`w-20 px-3 py-3 bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-lg transition-all focus:border-indigo-500 outline-none ${isEntryDisabled
                                 ? "opacity-30 border-gray-100 dark:border-gray-700"
                                 : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
-                            }`}
-                          />
-                        </div>
-                      </td>
-                    )}
+                                }`}
+                            />
+                          </div>
+                        </td>
+                      )}
 
                     <td className="px-8 py-6 bg-indigo-50/30 dark:bg-indigo-900/10">
                       <div className="flex justify-center">
