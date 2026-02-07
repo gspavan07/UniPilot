@@ -145,11 +145,10 @@ const StudentResults = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === tab.id
-                    ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === tab.id
+                  ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 <tab.icon className="w-4 h-4 mr-2" />
                 {tab.label}
@@ -163,11 +162,10 @@ const StudentResults = () => {
                 <button
                   key={inst}
                   onClick={() => setSelectedMidInstance(inst)}
-                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                    selectedMidInstance === inst
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                      : "text-indigo-400 hover:text-indigo-600"
-                  }`}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${selectedMidInstance === inst
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                    : "text-indigo-400 hover:text-indigo-600"
+                    }`}
                 >
                   Mid {inst}
                 </button>
@@ -204,32 +202,47 @@ const StudentResults = () => {
               <tr>
                 <th className="px-6 py-4">Subject Code</th>
                 <th className="px-6 py-4">Subject Name</th>
-                {activeTab === "mid_term" ? (
-                  <>
-                    <th className="px-6 py-4 text-center">Assignment</th>
-                    <th className="px-6 py-4 text-center">Objective</th>
-                    <th className="px-6 py-4 text-center">Descriptive</th>
-                    <th className="px-6 py-4 text-center">Total</th>
-                  </>
-                ) : (
-                  <>
-                    {activeTab === "end_semester" ? (
-                      <th className="px-6 py-4 text-center">Credits</th>
-                    ) : (
-                      <th className="px-6 py-4 text-center">Marks</th>
-                    )}
-                    {activeTab === "end_semester" && (
-                      <th className="px-6 py-4 text-center">Grade</th>
-                    )}
-                  </>
+                {/* Dynamic Component Headers */}
+                {activeTab !== "end_semester" &&
+                  Array.from(
+                    new Set(
+                      currentResults.flatMap(
+                        (r) =>
+                          r.schedule?.cycle?.component_breakdown?.map(
+                            (c) => c.name,
+                          ) || [],
+                      ),
+                    ),
+                  ).map((compName) => (
+                    <th key={compName} className="px-6 py-4 text-center">
+                      {compName}
+                    </th>
+                  ))}
+                {activeTab !== "end_semester" && (
+                  <th className="px-6 py-4 text-center">Marks</th>
                 )}
+                <th className="px-6 py-4 text-center">Grade</th>
+                <th className="px-6 py-4 text-center">Credits</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {currentResults.map((res) => {
                 const totalCredits = res.schedule?.course?.credits || 3;
-                const earnedCredits = res.grade === "F" ? 0 : totalCredits;
+                const earnedCredits =
+                  res.grade && !["F", "Ab", "Absent", "MP"].includes(res.grade)
+                    ? totalCredits
+                    : 0;
                 const scores = res.component_scores || {};
+                const dynamicComponents = Array.from(
+                  new Set(
+                    currentResults.flatMap(
+                      (r) =>
+                        r.schedule?.cycle?.component_breakdown?.map(
+                          (c) => c.name,
+                        ) || [],
+                    ),
+                  ),
+                );
 
                 return (
                   <tr
@@ -243,50 +256,41 @@ const StudentResults = () => {
                       {res.schedule?.course?.name}
                     </td>
 
-                    {activeTab === "mid_term" ? (
-                      <>
-                        <td className="px-6 py-4 text-center text-sm font-medium">
-                          {scores.Assignment ?? "-"}
+                    {/* Dynamic Component Values */}
+                    {activeTab !== "end_semester" &&
+                      dynamicComponents.map((compName) => (
+                        <td
+                          key={compName}
+                          className="px-6 py-4 text-center text-sm font-medium"
+                        >
+                          {scores[compName] ?? "-"}
                         </td>
-                        <td className="px-6 py-4 text-center text-sm font-medium">
-                          {scores.Objective ?? "-"}
-                        </td>
-                        <td className="px-6 py-4 text-center text-sm font-medium">
-                          {scores.Descriptive ?? "-"}
-                        </td>
-                        <td className="px-6 py-4 text-center text-sm font-bold">
-                          {res.marks_obtained}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        {activeTab === "end_semester" ? (
-                          <td className="px-6 py-4 text-center text-sm font-bold">
-                            {earnedCredits}/{totalCredits}
-                          </td>
-                        ) : (
-                          <td className="px-6 py-4 text-center text-sm font-bold">
-                            {res.marks_obtained}
-                          </td>
-                        )}
+                      ))}
 
-                        {activeTab === "end_semester" && (
-                          <td className="px-6 py-4 text-center">
-                            <span
-                              className={`px-3 py-1 rounded-lg text-sm font-bold ${
-                                res.grade === "A+" || res.grade === "A"
-                                  ? "bg-green-100 text-green-700"
-                                  : res.grade === "F"
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-indigo-100 text-indigo-700"
-                              }`}
-                            >
-                              {res.grade || "-"}
-                            </span>
-                          </td>
-                        )}
-                      </>
+                    {activeTab !== "end_semester" && (
+                      <td className="px-6 py-4 text-center text-sm font-bold">
+                        {res.marks_obtained}
+                      </td>
                     )}
+
+                    <td className="px-6 py-4 text-center">
+                      <span
+                        className={`px-3 py-1 rounded-lg text-sm font-bold ${res.grade === "A+" ||
+                          res.grade === "A" ||
+                          res.grade === "O"
+                          ? "bg-green-100 text-green-700"
+                          : res.grade === "F"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-indigo-100 text-indigo-700"
+                          }`}
+                      >
+                        {res.grade || "-"}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-center text-sm font-bold">
+                      {earnedCredits}/{totalCredits}
+                    </td>
                   </tr>
                 );
               })}
