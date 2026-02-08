@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -153,6 +153,11 @@ const ExamSchedules = () => {
     program_id: "", // Helper for name generation
   });
   const [editingCycle, setEditingCycle] = useState(null);
+
+  const [availableSemesters, setAvailableSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8]);
+  const [loadingSemesters, setLoadingSemesters] = useState(false);
+  const [validationMsg, setValidationMsg] = useState({ type: "", text: "" });
+  const prevStatus = useRef(cycleForm.status);
 
   const [viewingCycleRaw, setViewingCycleRaw] = useState(null);
   const viewingCycle =
@@ -514,6 +519,125 @@ const ExamSchedules = () => {
     }
   };
 
+  // Sync exam_month and exam_year from start_date
+  useEffect(() => {
+    if (cycleForm.start_date && showCreateModal) {
+      const dateParts = cycleForm.start_date.split("-");
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]);
+        const months = [
+          "January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"
+        ];
+        const monthName = months[month - 1];
+
+        if (monthName && (cycleForm.exam_month !== monthName || cycleForm.exam_year !== year)) {
+          setCycleForm(prev => ({
+            ...prev,
+            exam_month: monthName,
+            exam_year: year
+          }));
+        }
+      }
+    }
+  }, [cycleForm.start_date, showCreateModal]);
+
+  // Sync start_date from exam_month and exam_year
+  useEffect(() => {
+    if (cycleForm.exam_month && cycleForm.exam_year && cycleForm.start_date && showCreateModal) {
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const monthIndex = months.indexOf(cycleForm.exam_month);
+      const year = parseInt(cycleForm.exam_year);
+
+      const dateParts = cycleForm.start_date.split("-");
+      if (dateParts.length === 3 && monthIndex !== -1 && !isNaN(year)) {
+        const currYear = parseInt(dateParts[0]);
+        const currMonth = parseInt(dateParts[1]);
+        const currDay = parseInt(dateParts[2]);
+
+        if (currMonth !== monthIndex + 1 || currYear !== year) {
+          const newMM = (monthIndex + 1).toString().padStart(2, "0");
+          const newYYYY = year.toString();
+
+          // Adjust day if it exceeds the max days in the new month
+          let day = currDay;
+          const maxDaysInNewMonth = new Date(year, monthIndex + 1, 0).getDate();
+          if (day > maxDaysInNewMonth) day = maxDaysInNewMonth;
+          const newDD = day.toString().padStart(2, "0");
+
+          const newStartDate = `${newYYYY}-${newMM}-${newDD}`;
+          if (newStartDate !== cycleForm.start_date) {
+            setCycleForm(prev => ({ ...prev, start_date: newStartDate }));
+          }
+        }
+      }
+    }
+  }, [cycleForm.exam_month, cycleForm.exam_year, showCreateModal]);
+
+  // Filter Semesters based on Batch Year and Student Presence
+  useEffect(() => {
+    const fetchValidSemesters = async () => {
+      if (!cycleForm.batch_year || !cycleForm.program_id) {
+        setAvailableSemesters([1, 2, 3, 4, 5, 6, 7, 8]);
+        return;
+      }
+
+      setLoadingSemesters(true);
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth();
+      const academicYearStart = currentMonth < 5 ? currentYear - 1 : currentYear;
+      const yearOfStudy = academicYearStart - cycleForm.batch_year + 1;
+
+      // Calculate likely semesters (Year 1: 1,2; Year 2: 3,4, etc.)
+      const s1 = (yearOfStudy * 2) - 1;
+      const s2 = (yearOfStudy * 2);
+
+      let potentialSems = [s1, s2].filter(s => s >= 1 && s <= 10);
+
+      // If year of study is out of bounds or calculation seems off, show a wider range for selection
+      if (potentialSems.length === 0) {
+        potentialSems = [1, 2, 3, 4, 5, 6, 7, 8];
+      }
+
+      try {
+        const checkSem = async (sem) => {
+          try {
+            const res = await api.get(`/users?role=student&batch_year=${cycleForm.batch_year}&semester=${sem}&program_id=${cycleForm.program_id}`);
+            return res.data.count > 0 ? sem : null;
+          } catch (e) {
+            return null;
+          }
+        };
+
+        const results = await Promise.all(potentialSems.map(checkSem));
+        const validSems = results.filter(s => s !== null);
+
+        if (validSems.length > 0) {
+          setAvailableSemesters(validSems);
+          // If current selection is not in valid sems, or only one valid sem exists
+          if (validSems.length === 1 || !validSems.includes(cycleForm.semester)) {
+            setCycleForm(prev => ({ ...prev, semester: validSems[0] }));
+          }
+        } else {
+          // If no students found in calculated sems, show all as fallback
+          setAvailableSemesters([1, 2, 3, 4, 5, 6, 7, 8]);
+        }
+      } catch (error) {
+        console.error("Error checking semesters:", error);
+      } finally {
+        setLoadingSemesters(false);
+      }
+    };
+
+    if (showCreateModal) {
+      fetchValidSemesters();
+    }
+  }, [cycleForm.batch_year, cycleForm.program_id, showCreateModal]);
+
   // Auto-generate Cycle Name
   useEffect(() => {
     if (showCreateModal) {
@@ -524,33 +648,58 @@ const ExamSchedules = () => {
         const programCode =
           selectedProgram.code?.split("-")[0] || selectedProgram.name;
         const regName = selectedReg.name;
-        const sem = `Sem ${cycleForm.semester}`;
-        const batch = cycleForm.batch_year ? `- ${cycleForm.batch_year}` : "";
 
-        let typeLabel = "";
+        // Roman Numeral Conversion
+        const toRoman = (num) => {
+          const roman = { 1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII" };
+          return roman[num] || num;
+        };
+        const semNumber = toRoman(cycleForm.semester);
+
+        // Exam Name Generation
+        let examName = "";
         if (cycleForm.cycle_type === "mid_term") {
-          const num = cycleForm.instance_number;
-          const suffix =
-            num === 1 ? "st" : num === 2 ? "nd" : num === 3 ? "rd" : "th";
-          typeLabel = `${num}${suffix} Mid-Term`;
+          examName = `Mid-${cycleForm.instance_number}`;
         } else if (cycleForm.cycle_type === "end_semester") {
-          const mode =
-            cycleForm.exam_mode === "combined"
-              ? "Regular + Supple"
-              : cycleForm.exam_mode;
-          typeLabel = `End Sem (${mode})`;
+          examName = "Semester";
+        } else if (cycleForm.cycle_type === "internal_lab") {
+          examName = "Internal-Lab";
+        } else if (cycleForm.cycle_type === "external_lab") {
+          examName = "External-Lab";
+        } else if (cycleForm.cycle_type === "project_review") {
+          examName = "Project-Review";
         } else {
-          typeLabel = (cycleForm.cycle_type || "")
-            .replace(/_/g, " ")
+          examName = (cycleForm.cycle_type || "")
+            .replace(/_/g, "-")
             .replace(/\b\w/g, (l) => l.toUpperCase());
         }
 
-        const monthYear =
-          cycleForm.exam_month && cycleForm.exam_year
-            ? ` - ${cycleForm.exam_month} ${cycleForm.exam_year}`
-            : "";
+        // Exam Type/Mode Formatting
+        let examType = "Regular";
+        if (cycleForm.exam_mode === "supplementary") {
+          examType = "Supply";
+        } else if (cycleForm.exam_mode === "combined") {
+          examType = "Regular + Supply";
+        }
 
-        const generatedName = `${programCode} - ${regName} - ${typeLabel}${monthYear} - ${sem} ${batch} Batch`;
+        const month = cycleForm.exam_month ? cycleForm.exam_month.substring(0, 3) : "";
+        const year = cycleForm.exam_year || "";
+        const scheduledExamMonth = month && year ? `${month}-${year}` : "";
+        const batchNo = cycleForm.batch_year || "";
+
+        // Format: {program}_{regulation}_{sem_number}_{exam_name}-Examinations_{exam_type}_{scheduled_exam_month}_Batch{batch_no}
+        // Based on examples: B.Tech_R20_VII_Semester_Examinations(Regular)_Feb-2026_Batch-2022
+        // We use -Examinations as per template/other examples, and (Mode) matching examples.
+
+        let generatedName = `${programCode}_${regName}_${semNumber}_${examName}-Examinations(${examType})`;
+
+        if (scheduledExamMonth) {
+          generatedName += `_${scheduledExamMonth}`;
+        }
+        if (batchNo) {
+          generatedName += `_Batch-${batchNo}`;
+        }
+
         setCycleForm((prev) => ({ ...prev, name: generatedName }));
       }
     }
@@ -565,10 +714,66 @@ const ExamSchedules = () => {
     cycleForm.exam_month,
     cycleForm.exam_year,
     showCreateModal,
-    editingCycle,
     programs,
     regulations,
   ]);
+
+  // Status and Date Cross-Validation
+  useEffect(() => {
+    if (!showCreateModal) return;
+
+    const today = new Date().setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today).setDate(new Date(today).getDate() + 1);
+    const start = cycleForm.start_date ? new Date(cycleForm.start_date).setHours(0, 0, 0, 0) : null;
+    const end = cycleForm.end_date ? new Date(cycleForm.end_date).setHours(0, 0, 0, 0) : null;
+    const statusChanged = prevStatus.current !== cycleForm.status;
+
+    let updates = {};
+    let msg = "";
+
+    // Rule 1: Scheduled status requires future start_date
+    if (cycleForm.status === "scheduled") {
+      if (statusChanged && start && start < tomorrow) {
+        updates.start_date = new Date(tomorrow).toISOString().split("T")[0];
+        msg = "Start date reset to tomorrow for Scheduled status.";
+      } else if (!statusChanged && start && start < tomorrow) {
+        if (start < today && end && end < today) {
+          updates.status = "completed";
+          msg = "Status changed to completed (dates in past).";
+        } else if (start <= today) {
+          updates.status = "ongoing";
+          msg = "Status changed to ongoing (start date not in future).";
+        }
+      }
+    }
+
+    // Rule 2: Ongoing status requires start_date <= today
+    if (cycleForm.status === "ongoing" && start && start > today) {
+      updates.start_date = new Date(today).toISOString().split("T")[0];
+      msg = "Start date adjusted to today for Ongoing status.";
+    }
+
+    // Rule 3: Completed/Published status requires end_date <= today
+    if ((cycleForm.status === "completed" || cycleForm.status === "results_published") && end && end > today) {
+      updates.end_date = new Date(today).toISOString().split("T")[0];
+      msg = "End date adjusted to today for Completed status.";
+    }
+
+    // Rule 4: end_date must be >= start_date
+    const finalStart = updates.start_date ? new Date(updates.start_date).setHours(0, 0, 0, 0) : start;
+    const finalEnd = updates.end_date ? new Date(updates.end_date).setHours(0, 0, 0, 0) : end;
+    if (finalStart && finalEnd && finalEnd < finalStart) {
+      updates.end_date = updates.start_date || cycleForm.start_date;
+      msg = "End date adjusted to match start date.";
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setCycleForm(prev => ({ ...prev, ...updates }));
+      setValidationMsg({ type: "info", text: msg });
+    }
+
+    prevStatus.current = cycleForm.status;
+  }, [cycleForm.status, cycleForm.start_date, cycleForm.end_date, showCreateModal]);
 
   const handleDeleteCycle = (id) => {
     if (
@@ -2658,9 +2863,17 @@ const ExamSchedules = () => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Cycle Status
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-sm font-medium uppercase tracking-wider text-gray-400">
+                      Cycle Status
+                    </label>
+                    {validationMsg.text && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg animate-pulse ${validationMsg.type === "warning" ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"
+                        }`}>
+                        {validationMsg.text}
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={cycleForm.status}
                     onChange={(e) =>
@@ -2848,20 +3061,26 @@ const ExamSchedules = () => {
                   </label>
                   <select
                     value={cycleForm.semester}
+                    disabled={loadingSemesters}
                     onChange={(e) =>
                       setCycleForm({
                         ...cycleForm,
                         semester: parseInt(e.target.value),
                       })
                     }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50"
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                    {availableSemesters.map((s) => (
                       <option key={s} value={s}>
                         Semester {s}
                       </option>
                     ))}
                   </select>
+                  {loadingSemesters && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Legacy Weightage and Exam Type removed - derived from regulation/cycle_type */}
