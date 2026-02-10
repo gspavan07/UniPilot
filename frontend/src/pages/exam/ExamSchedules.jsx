@@ -200,7 +200,7 @@ const ExamSchedules = () => {
     venue: "",
     max_marks: 100,
     passing_marks: 35,
-    branches: [],
+    programs: [],
   });
   const [editingSchedule, setEditingSchedule] = useState(null);
 
@@ -845,7 +845,7 @@ const ExamSchedules = () => {
       venue: "",
       max_marks: viewingCycle?.max_marks || 100,
       passing_marks: viewingCycle?.passing_marks || 35,
-      branches: [],
+      programs: [],
     });
     setShowScheduleModal(true);
   };
@@ -918,7 +918,7 @@ const ExamSchedules = () => {
       const schedulesToDelete = schedules.filter(s =>
         !selectedProgram ||
         s.course?.program_id === selectedProgram ||
-        (s.branches && s.branches.includes(selectedProgram))
+        (s.programs && s.programs.includes(selectedProgram))
       );
 
       for (const schedule of schedulesToDelete) {
@@ -1417,10 +1417,10 @@ const ExamSchedules = () => {
                         ?.filter(
                           (s) =>
                             !selectedProgram ||
-                            !s.branches ||
-                            s.branches.length === 0 ||
-                            s.branches.includes(selectedProgram) ||
-                            s.branches.includes(selectedProgram),
+                            !s.programs ||
+                            s.programs.length === 0 ||
+                            s.programs.includes(selectedProgram) ||
+                            s.programs.includes(selectedProgram),
                         )
                         ?.map((s) => {
                           const prog = programs.find(
@@ -1433,8 +1433,8 @@ const ExamSchedules = () => {
                             >
                               <td className="px-6 py-4">
                                 <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                  {s.branches && s.branches.length > 0 ? (
-                                    s.branches.map((bId, idx) => {
+                                  {s.programs && s.programs.length > 0 ? (
+                                    s.programs.map((bId, idx) => {
                                       const bProg = programs.find(
                                         (p) => p.id === bId,
                                       );
@@ -1443,7 +1443,7 @@ const ExamSchedules = () => {
                                           <span className="text-[10px] px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold rounded-md uppercase">
                                             {formatProgramName(bProg)}
                                           </span>
-                                          {idx < s.branches.length - 1 && <span className="text-gray-400">, </span>}
+                                          {idx < s.programs.length - 1 && <span className="text-gray-400">, </span>}
                                         </span>
                                       );
                                     })
@@ -1504,15 +1504,15 @@ const ExamSchedules = () => {
                                               venue: s.venue,
                                               max_marks: s.max_marks,
                                               passing_marks: s.passing_marks,
-                                              branches: s.branches || [],
+                                              programs: s.programs || [],
                                             });
                                             const course = courses.find(
                                               (c) => c.id === s.course_id,
                                             );
                                             setModalFilters({
                                               program_id:
-                                                (s.branches && s.branches.length > 0
-                                                  ? s.branches[0]
+                                                (s.programs && s.programs.length > 0
+                                                  ? s.programs[0]
                                                   : "") || "",
                                               semester: "", // Semester not directly available on generic course anymore
                                             });
@@ -3259,8 +3259,8 @@ const ExamSchedules = () => {
                   onClick={() => setShowBranchDropdown(!showBranchDropdown)}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-xl cursor-pointer min-h-[50px] flex flex-wrap gap-2 items-center border border-transparent hover:border-indigo-500 transition-all"
                 >
-                  {scheduleForm.branches && scheduleForm.branches.length > 0 ? (
-                    scheduleForm.branches.map((bId) => {
+                  {scheduleForm.programs && scheduleForm.programs.length > 0 ? (
+                    scheduleForm.programs.map((bId) => {
                       const prog = programs.find((p) => p.id === bId);
                       return (
                         <span
@@ -3272,10 +3272,10 @@ const ExamSchedules = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const branches = scheduleForm.branches.filter(
+                              const programs = scheduleForm.programs.filter(
                                 (id) => id !== bId,
                               );
-                              setScheduleForm({ ...scheduleForm, branches });
+                              setScheduleForm({ ...scheduleForm, programs });
                             }}
                             className="hover:text-indigo-900 dark:hover:text-white"
                           >
@@ -3304,16 +3304,16 @@ const ExamSchedules = () => {
                       >
                         <input
                           type="checkbox"
-                          checked={scheduleForm.branches?.includes(p.id)}
+                          checked={scheduleForm.programs?.includes(p.id)}
                           onChange={(e) => {
-                            const branches = [...(scheduleForm.branches || [])];
+                            const programs = [...(scheduleForm.programs || [])];
                             if (e.target.checked) {
-                              branches.push(p.id);
+                              programs.push(p.id);
                             } else {
-                              const index = branches.indexOf(p.id);
-                              if (index > -1) branches.splice(index, 1);
+                              const index = programs.indexOf(p.id);
+                              if (index > -1) programs.splice(index, 1);
                             }
-                            setScheduleForm({ ...scheduleForm, branches });
+                            setScheduleForm({ ...scheduleForm, programs });
                           }}
                           className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />

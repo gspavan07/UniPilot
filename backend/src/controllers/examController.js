@@ -654,8 +654,8 @@ exports.getExamSchedules = async (req, res) => {
       if (student && student.program_id) {
         // First filter by branch/program
         const branchFiltered = schedules.filter((s) => {
-          if (!s.branches || s.branches.length === 0) return true;
-          return s.branches.includes(student.program_id);
+          if (!s.programs || s.programs.length === 0) return true;
+          return s.programs.includes(student.program_id);
         });
 
         // Then ensure uniqueness by Course ID (in case of multiple sections/slots)
@@ -883,13 +883,13 @@ exports.autoGenerateTimetable = async (req, res) => {
 
         if (existing) {
           // Update existing schedule instead of creating duplicate
-          // Also verify and update branches if needed
-          let currentBranches = existing.branches || [];
-          if (!Array.isArray(currentBranches)) currentBranches = [];
+          // Also verify and update programs if needed
+          let currentPrograms = existing.programs || [];
+          if (!Array.isArray(currentPrograms)) currentPrograms = [];
 
-          let newBranches = [...currentBranches];
-          if (program_id && !newBranches.includes(program_id)) {
-            newBranches.push(program_id);
+          let newPrograms = [...currentPrograms];
+          if (program_id && !newPrograms.includes(program_id)) {
+            newPrograms.push(program_id);
           }
 
           await existing.update(
@@ -899,14 +899,14 @@ exports.autoGenerateTimetable = async (req, res) => {
               end_time,
               max_marks: max_marks || cycle.max_marks || 100,
               passing_marks: passing_marks || cycle.passing_marks || 35,
-              branches: newBranches,
+              programs: newPrograms,
             },
             { transaction: t },
           );
           results.push(existing);
         } else {
           // Create new schedule
-          const initialBranches = program_id ? [program_id] : [];
+          const initialPrograms = program_id ? [program_id] : [];
 
           const schedule = await ExamSchedule.create(
             {
@@ -917,7 +917,7 @@ exports.autoGenerateTimetable = async (req, res) => {
               end_time,
               max_marks: max_marks || cycle.max_marks || 100,
               passing_marks: passing_marks || cycle.passing_marks || 35,
-              branches: initialBranches,
+              programs: initialPrograms,
             },
             { transaction: t },
           );
@@ -1016,6 +1016,8 @@ exports.getMarkEntryData = async (req, res) => {
             "max_marks",
             "passing_marks",
             "exam_mode",
+            "paper_format",
+            "batch_year",
           ],
           include: [{ model: Regulation, as: "regulation" }],
         },
@@ -1078,50 +1080,87 @@ exports.getMarkEntryData = async (req, res) => {
       is_active: true,
     };
 
-    // For regular exams, filter by current_semester
-    if (!isSupplyOrCombined) {
+    // Unified student filtering logic
+    if (cycleMode === "regular") {
+      // Regular mode: students in matching batch and currently in that semester
+      if (schedule.cycle?.batch_year) studentWhere.batch_year = schedule.cycle.batch_year;
+      studentWhere.current_semester = semester;
+    } else if (cycleMode === "combined") {
+      // Combined mode: can be regular students (matching batch/sem) OR backlog students
+      // We should generally find students who are currently IN this semester, OR were in it previously
+      // For now, let's filter by batch if it's set on the cycle, but be flexible with semester
+      if (schedule.cycle?.batch_year) studentWhere.batch_year = schedule.cycle.batch_year;
+      // In combined mode, we often want anyone registered, but if not Supply, we filter by semester
       studentWhere.current_semester = semester;
     }
+    // Note: Supplementary/Supply is already handled by restricting to registered IDs below
+
+    logger.info('DEBUG: Student filter params:', {
+      cycleMode,
+      semester,
+      cycleBatchYear: schedule.cycle?.batch_year,
+      studentWhere
+    });
 
     if (!isSuperUser && assignedSections.length > 0) {
       studentWhere.section = { [Op.in]: assignedSections };
     }
 
     // Branch/Program filtering
-    if (schedule.branches && schedule.branches.length > 0) {
-      studentWhere.program_id = { [Op.in]: schedule.branches };
+    if (schedule.programs && schedule.programs.length > 0) {
+      studentWhere.program_id = { [Op.in]: schedule.programs };
     } else if (schedule.course.program_id) {
       studentWhere.program_id = schedule.course.program_id;
     }
 
-    // For Supply/Combined, we MUST filter by registered students for this SPECIFIC course
-    if (isSupplyOrCombined) {
+    // For Supply/Combined OR for semester_end_external cycles, filter by registered students
+    // This ensures marks entry shows the same students as the registrations tab
+    if (
+      isSupplyOrCombined ||
+      cycleType === "semester_end_external" ||
+      cycleType === "end_semester"
+    ) {
       const { ExamRegistration } = require("../models");
       const registrations = await ExamRegistration.findAll({
         where: {
           exam_cycle_id: schedule.exam_cycle_id,
           // Only students who are actually registered and cleared (paid, waived, or approved)
           status: { [Op.in]: ["approved", "submitted"] },
-          fee_status: { [Op.in]: ["paid", "waived", "pending"] },
         },
         attributes: ["student_id", "registered_subjects"],
       });
 
-      const registeredStudentIds = registrations
-        .filter((r) => {
-          if (!r.registered_subjects) return false;
-          // Support both UUID objects and strings in JSONB comparison
-          return r.registered_subjects.some(
-            (s) => String(s.course_id) === String(schedule.course_id),
-          );
-        })
-        .map((r) => r.student_id);
+      let registeredStudentIds;
 
-      // CRITICAL: If this is a supply/combined cycle, we MUST restrict to these IDs.
-      studentWhere.id = { [Op.in]: registeredStudentIds };
+      // For semester end exams, if registered_subjects is empty/null, include all registered students
+      // For supply/combined, only include students who registered for this specific course
+      if (isSupplyOrCombined) {
+        registeredStudentIds = registrations
+          .filter((r) => {
+            if (!r.registered_subjects || r.registered_subjects.length === 0) return false;
+            // Support both UUID objects and strings in JSONB comparison
+            return r.registered_subjects.some(
+              (s) => String(s.course_id) === String(schedule.course_id),
+            );
+          })
+          .map((r) => r.student_id);
+      } else {
+        // For regular semester end exams, include all registered students
+        registeredStudentIds = registrations.map((r) => r.student_id);
+      }
 
-      // If no registrations, return empty to avoid showing all students
-      if (registeredStudentIds.length === 0) {
+      // Restrict to these student IDs
+      if (registeredStudentIds.length > 0) {
+        studentWhere.id = { [Op.in]: registeredStudentIds };
+        // If we have specific registered IDs, we don't necessarily need the broad batch/semester filters
+        delete studentWhere.batch_year;
+        delete studentWhere.current_semester;
+
+        logger.info(
+          `Restricting ${cycleMode} mark entry to ${registeredStudentIds.length} registered students`,
+        );
+      } else if (isSupplyOrCombined) {
+        // For supply/combined cycles, no registrations means no eligible students
         return res.status(200).json({
           success: true,
           data: {
@@ -1129,6 +1168,11 @@ exports.getMarkEntryData = async (req, res) => {
             students: [],
           },
         });
+      } else {
+        // For regular semester-end cycles, fall back to batch/semester filters
+        logger.info(
+          "No registrations found for semester-end cycle; falling back to batch/semester filters",
+        );
       }
     }
 
@@ -1284,7 +1328,6 @@ exports.enterMarks = async (req, res) => {
             component_scores: componentScores,
             grade,
             attendance_status: item.attendance_status,
-            remarks: item.remarks,
             entered_by: req.user.userId,
             moderation_status: "draft",
             moderation_history: [
@@ -1324,7 +1367,6 @@ exports.enterMarks = async (req, res) => {
               component_scores: componentScores,
               grade,
               attendance_status: item.attendance_status,
-              remarks: item.remarks,
               entered_by: req.user.userId,
               moderation_history: [
                 ...mark.moderation_history,
@@ -1675,21 +1717,22 @@ exports.getMyExamSchedules = async (req, res) => {
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     const { program_id, current_semester } = student;
+    logger.info(`Fetching schedules for student: ${student.id}, program: ${program_id}, semester: ${current_semester}`);
 
     const schedules = await ExamSchedule.findAll({
       include: [
         {
           model: Course,
           as: "course",
-          where: {
-            semester: current_semester || 1,
-          },
           attributes: ["name", "code", "credits", "course_type"],
         },
         {
           model: ExamCycle,
           as: "cycle",
           where: {
+            // Filter by student's batch and semester
+            batch_year: student.batch_year,
+            semester: current_semester || 1,
             status: {
               [Op.in]: [
                 "scheduled",
@@ -1703,7 +1746,6 @@ exports.getMyExamSchedules = async (req, res) => {
             "id",
             "name",
             "cycle_type",
-            "instance_number",
             "start_date",
             "end_date",
             "max_marks",
@@ -1714,9 +1756,9 @@ exports.getMyExamSchedules = async (req, res) => {
       ],
       where: {
         [Op.or]: [
-          { branches: { [Op.eq]: [] } }, // Empty array = Common
-          { branches: null }, // Null = Common
-          { branches: { [Op.contains]: [program_id] } }, // Specific branch
+          { programs: { [Op.eq]: [] } }, // Empty array = Common
+          { programs: null }, // Null = Common
+          { programs: { [Op.contains]: [program_id] } }, // Specific program
         ],
       },
       order: [

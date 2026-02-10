@@ -22,6 +22,7 @@ import {
   enterBulkMarks,
   updateModerationStatus,
 } from "../../store/slices/examSlice";
+import api from "../../utils/api";
 import { toast } from "react-hot-toast";
 
 const MarkEntry = () => {
@@ -33,11 +34,16 @@ const MarkEntry = () => {
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState(null);
   const [students, setStudents] = useState([]);
-  const [marks, setMarks] = useState({}); // { studentId: { attendance_status, component_scores: {}, marks_obtained, remarks } }
+  const [marks, setMarks] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reverificationOnly, setReverificationOnly] = useState(false);
+
+  // New state for Question Paper Template
+  const [template, setTemplate] = useState(null);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateError, setTemplateError] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -57,7 +63,6 @@ const MarkEntry = () => {
           attendance_status: s.mark?.attendance_status || "present",
           component_scores: s.mark?.component_scores || {},
           marks_obtained: s.mark?.marks_obtained || 0,
-          remarks: s.mark?.remarks || "",
           moderation_status: s.mark?.moderation_status || "draft",
         };
       });
@@ -74,11 +79,44 @@ const MarkEntry = () => {
     fetchData();
   }, [fetchData]);
 
+  // Get Question Paper Template from schedule cycle
+  useEffect(() => {
+    if (schedule?.course_id) {
+      const paperFormat = schedule.cycle?.paper_format || {};
+      const courseFormat = paperFormat[schedule.course_id];
+
+      if (courseFormat) {
+        setTemplate({
+          course_id: schedule.course_id,
+          questions: courseFormat.questions || [],
+          total_marks: courseFormat.total_marks,
+        });
+        setTemplateError(null);
+      } else {
+        setTemplate(null);
+        setTemplateError(
+          "Question Paper Format not configured for this course. Please configure it to enter marks.",
+        );
+      }
+    }
+  }, [schedule]);
+
   const calculateTotal = (componentScores) => {
-    return Object.values(componentScores).reduce(
-      (sum, val) => sum + parseFloat(val || 0),
-      0,
-    );
+    // If using template, sum up question marks strictly
+    if (template && template.questions) {
+      return template.questions.reduce((sum, q) => {
+        const val = componentScores?.[q.q_no];
+        return sum + (parseFloat(val) || 0);
+      }, 0);
+    }
+    // Fallback to existing logic
+    if (componentScores) {
+      return Object.values(componentScores).reduce(
+        (sum, val) => sum + parseFloat(val || 0),
+        0,
+      );
+    }
+    return 0;
   };
 
   const handleMarkChange = (studentId, field, value, componentName = null) => {
@@ -99,6 +137,17 @@ const MarkEntry = () => {
 
       return { ...prev, [studentId]: studentMark };
     });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const inputs = Array.from(document.querySelectorAll(".mark-input"));
+      const index = inputs.indexOf(e.target);
+      if (index > -1 && index < inputs.length - 1) {
+        inputs[index + 1].focus();
+      }
+    }
   };
 
   const handleTotalChange = (studentId, value) => {
@@ -130,19 +179,21 @@ const MarkEntry = () => {
       return;
     }
 
-    // In reverification mode, allow editing locked marks
-    // In normal mode, skip locked marks
     const marksToSave = students
       .filter(
         (s) => reverificationOnly || marks[s.id].moderation_status !== "locked",
       )
       .map((s) => {
         const studentMark = { ...marks[s.id] };
-        // If there are no components defined for this cycle, ensure component_scores is null
-        // rather than an empty object, to prevent backend from incorrectly recalculating total as 0
+
+        // If template exists, ensure component_scores are structured correctly?
+        // Actually the current logic blindly saves what's in marks state, which is fine.
+        // But we should retain the check for component_breakdown removal ONLY if template is NOT present.
+
         if (
-          !schedule?.cycle?.component_breakdown ||
-          schedule.cycle.component_breakdown.length === 0
+          (!schedule?.cycle?.component_breakdown ||
+            schedule.cycle.component_breakdown.length === 0) &&
+          !template // Only clear component_scores if NO template AND no breakdown
         ) {
           studentMark.component_scores = null;
         }
@@ -173,7 +224,7 @@ const MarkEntry = () => {
           }),
         ).unwrap();
         toast.success("Marks submitted and locked successfully!");
-        fetchData(); // Refresh to lock fields
+        fetchData();
       } else {
         toast.success("Marks saved as draft!");
       }
@@ -192,7 +243,6 @@ const MarkEntry = () => {
       s.student_id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  // When in reverification mode, allow editing even if marks are locked
   const isLocked =
     !reverificationOnly &&
     students.some(
@@ -215,35 +265,27 @@ const MarkEntry = () => {
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-20">
-      {/* Premium Navigation Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          {/* <button
-            onClick={() => navigate("/exams/marks-entry")}
-            className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all group"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-400 group-hover:text-indigo-600" />
-          </button> */}
+      {/* Header Section - Redesigned for better hierarchy */}
+      <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDEzNGg3djFoLTd6bTAtNWg3djFoLTd6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
 
-          <div className="h-12 w-px bg-gray-100 dark:bg-gray-700 hidden md:block"></div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-black px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded-full uppercase tracking-widest">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[10px] font-black px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full uppercase tracking-widest">
                 {schedule?.cycle?.cycle_type?.replace("_", " ")}
               </span>
-              <span className="text-[10px] font-black px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full uppercase tracking-widest">
+              <span className="text-[10px] font-black px-3 py-1 bg-amber-500/30 backdrop-blur-sm text-amber-100 rounded-full uppercase tracking-widest">
                 Semester {schedule?.course?.semester}
               </span>
             </div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white leading-none">
-              {schedule?.course?.name}{" "}
-              <span className="text-indigo-600">
-                ({schedule?.course?.code})
-              </span>
+            <h1 className="text-3xl font-black leading-tight mb-2">
+              {schedule?.course?.name}
             </h1>
-            <p className="text-gray-400 text-sm font-medium mt-1">
-              Exam Date:{" "}
+            <p className="text-indigo-100 text-sm font-medium flex items-center gap-2">
+              <span className="font-black text-white">{schedule?.course?.code}</span>
+              <span className="opacity-50">•</span>
+              <Clock className="w-4 h-4" />
               {new Date(schedule?.exam_date).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",
@@ -251,153 +293,137 @@ const MarkEntry = () => {
               })}
             </p>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-4 mr-6">
-            <div className="text-right">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">
-                Total Marks
-              </p>
-              <p className="text-xl font-black text-indigo-600">
-                {schedule?.max_marks || schedule?.cycle?.max_marks}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">
-                Students
-              </p>
-              <p className="text-xl font-black text-gray-700 dark:text-gray-200">
-                {students.length}
-              </p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex gap-6">
+              <div className="text-center">
+                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">
+                  Max Marks
+                </p>
+                <p className="text-3xl font-black">
+                  {schedule?.max_marks || schedule?.cycle?.max_marks}
+                </p>
+              </div>
+              <div className="w-px bg-white/20"></div>
+              <div className="text-center">
+                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">
+                  Students
+                </p>
+                <p className="text-3xl font-black">{students.length}</p>
+              </div>
             </div>
           </div>
-
-          {!isLocked && (
-            <div className="flex gap-3">
-              <button
-                disabled={saving || submitting}
-                onClick={() => saveMarks(false)}
-                className="flex items-center px-6 py-3 bg-white dark:bg-gray-800 border-2 border-indigo-600 text-indigo-600 rounded-2xl font-black text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all disabled:opacity-50"
-              >
-                {saving ? (
-                  <Clock className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-5 h-5 mr-2" />
-                )}
-                SAVE DRAFT
-              </button>
-              <button
-                disabled={saving || submitting}
-                onClick={() => saveMarks(true)}
-                className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 transition-all disabled:opacity-50"
-              >
-                {submitting ? (
-                  <Clock className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5 mr-2" />
-                )}
-                PUBLISH & LOCK
-              </button>
-            </div>
-          )}
-
-          {isLocked && (
-            <div className="flex items-center px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-2xl font-black text-sm border-2 border-emerald-100 dark:border-emerald-900/30">
-              <ShieldCheck className="w-5 h-5 mr-2" />
-              MARKS LOCKED
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by student name or roll number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-          />
-        </div>
+      {/* Action Bar - Redesigned for better visual separation */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by student name or roll number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-sm"
+            />
+          </div>
 
-        <div className="flex items-center gap-3">
-          {/* Reverification Filter Toggle */}
-          <button
-            onClick={() => setReverificationOnly(!reverificationOnly)}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${reverificationOnly
-              ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-500/30"
-              : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 border-purple-100 dark:border-purple-900/30 hover:bg-purple-100"
-              }`}
-          >
-            🔄{" "}
-            {reverificationOnly
-              ? "Showing Reverifications"
-              : "Show Reverification Only"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setReverificationOnly(!reverificationOnly)}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${reverificationOnly
+                ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30"
+                : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 hover:bg-purple-100"
+                }`}
+            >
+              {reverificationOnly ? "✓ Reverification Mode" : "Reverification Mode"}
+            </button>
 
-          {!isLocked && (
-            <>
-              <span className="text-xs font-bold text-gray-400 uppercase mr-2">
-                Bulk Attendance:
-              </span>
-              <button
-                onClick={() => handleBulkAttendance("present")}
-                className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30"
-              >
-                All Present
-              </button>
-              <button
-                onClick={() => handleBulkAttendance("absent")}
-                className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30"
-              >
-                All Absent
-              </button>
-            </>
-          )}
+            {!isLocked && (
+              <>
+                <div className="h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Bulk:
+                </span>
+                <button
+                  onClick={() => handleBulkAttendance("present")}
+                  className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-xl text-xs font-black uppercase hover:bg-emerald-100 transition-all"
+                >
+                  All Present
+                </button>
+                <button
+                  onClick={() => handleBulkAttendance("absent")}
+                  className="px-4 py-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 rounded-xl text-xs font-black uppercase hover:bg-rose-100 transition-all"
+                >
+                  All Absent
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Main Entry Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      {/* Marks Entry Table - Improved spacing and readability */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700/50">
-                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] w-16 text-center border-b border-gray-100 dark:border-gray-700">
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-700/50 dark:to-gray-700/30">
+                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] w-12 text-center">
                   #
                 </th>
-                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-700">
-                  Student Profile
+                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] min-w-[200px]">
+                  Student
                 </th>
-                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-700 text-center">
+                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[140px]">
                   Attendance
                 </th>
 
-                {schedule?.cycle?.component_breakdown?.map((comp, idx) => (
-                  <th
-                    key={idx}
-                    className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-center border-b border-gray-100 dark:border-gray-700"
-                  >
-                    <div className="flex flex-col items-center">
-                      <span className="text-indigo-600 dark:text-indigo-400">
-                        {comp.name}
-                      </span>
-                      <span className="text-[10px] opacity-60 font-medium">
-                        Max: {comp.max_marks}m
-                      </span>
-                    </div>
-                  </th>
-                ))}
+                {template ? (
+                  // Template Questions Columns
+                  template.questions.map((q, idx) => (
+                    <th
+                      key={idx}
+                      className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[80px]"
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-indigo-600 dark:text-indigo-400">
+                          {q.q_no}
+                        </span>
+                        <span className="text-[9px] opacity-60 font-medium">
+                          Max: {q.marks}
+                        </span>
+                      </div>
+                    </th>
+                  ))
+                ) : (
+                  // Existing Component Breakdown Columns
+                  schedule?.cycle?.component_breakdown?.map((comp, idx) => (
+                    <th
+                      key={idx}
+                      className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[100px]"
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-indigo-600 dark:text-indigo-400">
+                          {comp.name}
+                        </span>
+                        <span className="text-[9px] opacity-60 font-medium">
+                          Max: {comp.max_marks}
+                        </span>
+                      </div>
+                    </th>
+                  ))
+                )}
 
-                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] text-center border-b border-gray-100 dark:border-gray-700 bg-indigo-50/30 dark:bg-indigo-900/10">
-                  Total ({schedule?.max_marks || schedule?.cycle?.max_marks})
-                </th>
-                <th className="px-8 py-6 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-700">
-                  Remarks
+                <th className="px-6 py-5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.15em] text-center bg-indigo-50/50 dark:bg-indigo-900/10 min-w-[100px]">
+                  <div className="flex flex-col items-center gap-1">
+                    <span>Total</span>
+                    <span className="text-[9px] opacity-60">
+                      {schedule?.max_marks || schedule?.cycle?.max_marks}
+                    </span>
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -411,28 +437,31 @@ const MarkEntry = () => {
                 return (
                   <tr
                     key={student.id}
-                    className={`group transition-colors ${isAbsent ? "bg-rose-50/30 dark:bg-rose-900/5" : "hover:bg-gray-50/50 dark:hover:bg-gray-700/20"}`}
+                    className={`group transition-all ${isAbsent
+                      ? "bg-rose-50/30 dark:bg-rose-900/5"
+                      : "hover:bg-gray-50/70 dark:hover:bg-gray-700/20"
+                      }`}
                   >
-                    <td className="px-8 py-6 text-center text-sm font-black text-gray-300 group-hover:text-indigo-400 transition-colors">
+                    <td className="px-6 py-5 text-center text-sm font-black text-gray-300 group-hover:text-indigo-400 transition-colors">
                       {index + 1}
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/20 uppercase">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-sm shadow-md uppercase">
                           {student.first_name[0]}
                           {student.last_name[0]}
                         </div>
                         <div>
-                          <p className="font-black text-gray-900 dark:text-white leading-none mb-1">
+                          <p className="font-black text-gray-900 dark:text-white leading-tight">
                             {student.first_name} {student.last_name}
                           </p>
-                          <p className="text-xs font-bold text-indigo-600 tracking-tight">
+                          <p className="text-xs font-bold text-indigo-600 mt-0.5">
                             {student.student_id}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-6 py-5">
                       <div className="flex justify-center">
                         <select
                           disabled={isLocked}
@@ -445,10 +474,10 @@ const MarkEntry = () => {
                             )
                           }
                           className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border-2 focus:ring-0 outline-none transition-all cursor-pointer ${mark.attendance_status === "present"
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/30"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-900/30"
                             : mark.attendance_status === "absent"
-                              ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/30"
-                              : "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/30"
+                              ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:border-rose-900/30"
+                              : "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-900/30"
                             }`}
                         >
                           <option value="present">Present</option>
@@ -458,43 +487,81 @@ const MarkEntry = () => {
                       </div>
                     </td>
 
-                    {/* Component Inputs */}
-                    {schedule?.cycle?.component_breakdown?.map((comp, idx) => (
-                      <td key={idx} className="px-8 py-6">
-                        <div className="flex justify-center">
-                          <input
-                            type="number"
-                            min="0"
-                            max={comp.max_marks}
-                            disabled={isEntryDisabled}
-                            value={mark.component_scores[comp.name] || ""}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (val > comp.max_marks) {
-                                toast.error(
-                                  `${comp.name} max marks is ${comp.max_marks}`,
+                    {template ? (
+                      // Question Inputs
+                      template.questions.map((q, idx) => (
+                        <td key={idx} className="px-6 py-5">
+                          <div className="flex justify-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max={q.marks}
+                              disabled={isEntryDisabled}
+                              value={mark.component_scores?.[q.q_no] || ""}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (val > q.marks) {
+                                  toast.error(
+                                    `${q.q_no} max marks is ${q.marks}`,
+                                  );
+                                  return;
+                                }
+                                handleMarkChange(
+                                  student.id,
+                                  null, // field
+                                  e.target.value,
+                                  q.q_no // componentName matches q_no (e.g., "Q1")
                                 );
-                                return;
-                              }
-                              handleMarkChange(
-                                student.id,
-                                null,
-                                e.target.value,
-                                comp.name,
-                              );
-                            }}
-                            className={`w-20 px-3 py-3 bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-lg transition-all focus:border-indigo-500 outline-none ${isEntryDisabled
-                              ? "opacity-30 border-gray-100 dark:border-gray-700"
-                              : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
-                              }`}
-                          />
-                        </div>
-                      </td>
-                    ))}
+                              }}
+                              onKeyDown={handleKeyDown}
+                              className={`w-16 px-2 py-2 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
+                                ? "opacity-30 border-gray-100 dark:border-gray-700"
+                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                                }`}
+                            />
+                          </div>
+                        </td>
+                      ))
+                    ) : (
+                      // Existing Component Breakdown Inputs
+                      schedule?.cycle?.component_breakdown?.map((comp, idx) => (
+                        <td key={idx} className="px-6 py-5">
+                          <div className="flex justify-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max={comp.max_marks}
+                              disabled={isEntryDisabled}
+                              value={mark.component_scores?.[comp.name] || ""}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (val > comp.max_marks) {
+                                  toast.error(
+                                    `${comp.name} max marks is ${comp.max_marks}`,
+                                  );
+                                  return;
+                                }
+                                handleMarkChange(
+                                  student.id,
+                                  null,
+                                  e.target.value,
+                                  comp.name,
+                                );
+                              }}
+                              onKeyDown={handleKeyDown}
+                              className={`w-20 px-3 py-2.5 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-base transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
+                                ? "opacity-30 border-gray-100 dark:border-gray-700"
+                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                                }`}
+                            />
+                          </div>
+                        </td>
+                      ))
+                    )}
 
                     {(!schedule?.cycle?.component_breakdown ||
-                      schedule.cycle.component_breakdown.length === 0) && (
-                        <td className="px-8 py-6">
+                      schedule.cycle.component_breakdown.length === 0) && !template && (
+                        <td className="px-6 py-5">
                           <div className="flex justify-center">
                             <input
                               type="number"
@@ -512,41 +579,28 @@ const MarkEntry = () => {
                                 }
                                 handleTotalChange(student.id, e.target.value);
                               }}
-                              className={`w-20 px-3 py-3 bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-lg transition-all focus:border-indigo-500 outline-none ${isEntryDisabled
+                              onKeyDown={handleKeyDown}
+                              className={`w-20 px-3 py-2.5 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-base transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
                                 ? "opacity-30 border-gray-100 dark:border-gray-700"
-                                : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
+                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
                                 }`}
                             />
                           </div>
                         </td>
                       )}
 
-                    <td className="px-8 py-6 bg-indigo-50/30 dark:bg-indigo-900/10">
+                    <td className="px-6 py-5 bg-indigo-50/30 dark:bg-indigo-900/10">
                       <div className="flex justify-center">
                         <div
-                          className={`text-2xl font-black ${isEntryDisabled ? "text-gray-300" : "text-indigo-600"}`}
+                          className={`text-2xl font-black ${isEntryDisabled ? "text-gray-300" : "text-indigo-600"
+                            }`}
                         >
                           {mark.marks_obtained}
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-8 py-6">
-                      <input
-                        type="text"
-                        disabled={isLocked}
-                        placeholder="Add note..."
-                        value={mark.remarks}
-                        onChange={(e) =>
-                          handleMarkChange(
-                            student.id,
-                            "remarks",
-                            e.target.value,
-                          )
-                        }
-                        className="w-full bg-transparent border-b border-gray-100 dark:border-gray-700 focus:border-indigo-500 py-1 text-sm font-medium transition-all outline-none"
-                      />
-                    </td>
+                    {/* Remarks removed */}
                   </tr>
                 );
               })}
@@ -560,55 +614,64 @@ const MarkEntry = () => {
             <h3 className="text-xl font-black text-gray-400">
               No Students Found
             </h3>
-            <p className="text-gray-500 text-sm max-w-xs mx-auto mt-1">
-              We couldn't find any students matching your search criteria for
-              this exam session.
+            <p className="text-gray-500 text-sm max-w-xs mx-auto mt-2">
+              We couldn't find any students matching your search criteria.
             </p>
           </div>
         )}
       </div>
 
-      {/* Professional Footer Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-2xl">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="font-black text-gray-900 dark:text-white leading-none">
-              Integrity Verified
-            </h4>
-            <p className="text-xs text-gray-400 mt-1 font-bold uppercase tracking-wider">
-              Regulation Compliant Entry
-            </p>
-          </div>
-        </div>
+      {/* Action Buttons - Fixed at bottom for better UX */}
+      <div className="sticky bottom-6 z-20">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-2xl border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                <Layers className="w-5 h-5 text-gray-400" />
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">
+                    Components
+                  </p>
+                  <p className="text-sm font-black text-gray-700 dark:text-gray-200">
+                    {template ? template.questions.length + " Questions" : (schedule?.cycle?.component_breakdown?.length || 0) + " Vectors"}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-2xl">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="font-black text-gray-900 dark:text-white leading-none">
-              Auto-Save Enabled
-            </h4>
-            <p className="text-xs text-gray-400 mt-1 font-bold uppercase tracking-wider">
-              Local Snapshots Active
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-2xl">
-            <Layers className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="font-black text-gray-900 dark:text-white leading-none">
-              Component Sync
-            </h4>
-            <p className="text-xs text-gray-400 mt-1 font-bold uppercase tracking-wider">
-              {schedule?.cycle?.component_breakdown?.length} Evaluation Vectors
-            </p>
+            {!isLocked ? (
+              <div className="flex gap-3">
+                <button
+                  disabled={saving || submitting}
+                  onClick={() => saveMarks(false)}
+                  className="flex items-center px-6 py-3 bg-white dark:bg-gray-800 border-2 border-indigo-600 text-indigo-600 rounded-xl font-black text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all disabled:opacity-50 shadow-sm"
+                >
+                  {saving ? (
+                    <Clock className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-5 h-5 mr-2" />
+                  )}
+                  SAVE DRAFT
+                </button>
+                <button
+                  disabled={saving || submitting}
+                  onClick={() => saveMarks(true)}
+                  className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 transition-all disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <Clock className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5 mr-2" />
+                  )}
+                  PUBLISH & LOCK
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-xl font-black text-sm border-2 border-emerald-200 dark:border-emerald-900/30">
+                <ShieldCheck className="w-5 h-5 mr-2" />
+                MARKS LOCKED
+              </div>
+            )}
           </div>
         </div>
       </div>

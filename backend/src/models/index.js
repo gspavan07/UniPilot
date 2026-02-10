@@ -54,7 +54,6 @@ const SemesterResult = require("./SemesterResult");
 const ProgramOutcome = require("./ProgramOutcome");
 const CourseOutcome = require("./CourseOutcome");
 const CoPoMap = require("./CoPoMap");
-const QuestionPaperTemplate = require("./QuestionPaperTemplate");
 
 // Placement Module Models
 const Company = require("./Company");
@@ -196,7 +195,6 @@ const models = {
   ProgramOutcome,
   CourseOutcome,
   CoPoMap,
-  QuestionPaperTemplate,
 };
 
 // Define associations
@@ -1272,24 +1270,6 @@ CoPoMap.belongsTo(ProgramOutcome, {
   as: "programOutcome",
 });
 
-// QuestionPaperTemplate Associations
-QuestionPaperTemplate.belongsTo(Course, {
-  foreignKey: "course_id",
-  as: "course",
-});
-Course.hasMany(QuestionPaperTemplate, {
-  foreignKey: "course_id",
-  as: "question_paper_templates",
-});
-
-QuestionPaperTemplate.belongsTo(Program, {
-  foreignKey: "program_id",
-  as: "program",
-});
-Program.hasMany(QuestionPaperTemplate, {
-  foreignKey: "program_id",
-  as: "question_paper_templates",
-});
 
 // Export models and sequelize instance
 module.exports = {

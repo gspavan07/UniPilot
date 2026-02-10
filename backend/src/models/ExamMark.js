@@ -44,8 +44,9 @@ const ExamMark = sequelize.define(
       type: DataTypes.JSONB,
       defaultValue: [],
     },
-    remarks: {
-      type: DataTypes.TEXT,
+    moderation_history: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
     },
     entered_by: {
       type: DataTypes.UUID,

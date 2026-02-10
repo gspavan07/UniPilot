@@ -65,8 +65,8 @@ const QuestionPaperFormat = ({ currentCycle }) => {
                         setCourseCos(coRes.data.data);
                     }
 
-                    // 2. Fetch Existing Template
-                    const tmplRes = await api.get(`/question-paper-templates?course_id=${selectedCourse}&program_id=${selectedProgram}`);
+                    // 2. Fetch Existing Template from Cycle
+                    const tmplRes = await api.get(`/question-paper-templates?course_id=${selectedCourse}&cycle_id=${currentCycle.id}`);
                     if (tmplRes.data.success && tmplRes.data.data) {
                         setQuestions(tmplRes.data.data.questions || []);
                     } else {
@@ -131,7 +131,7 @@ const QuestionPaperFormat = ({ currentCycle }) => {
         try {
             const payload = {
                 course_id: selectedCourse,
-                program_id: selectedProgram || null,
+                cycle_id: currentCycle.id,
                 questions: questions,
                 total_marks: totalMarks,
             };
@@ -146,6 +146,23 @@ const QuestionPaperFormat = ({ currentCycle }) => {
             setError(err.response?.data?.error || "Failed to save template.");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleEditTemplate = (template) => {
+        setSelectedCourse(template.course_id);
+    };
+
+    const handleDeleteTemplate = async (courseId) => {
+        if (!window.confirm("Are you sure you want to delete this format?")) return;
+        try {
+            await api.delete(`/question-paper-templates/0?cycle_id=${currentCycle.id}&course_id=${courseId}`);
+            setSuccessMsg("Format deleted successfully");
+            // Note: In a real app, you'd trigger a reload of currentCycle here
+            setTimeout(() => setSuccessMsg(""), 3000);
+        } catch (err) {
+            console.error("Delete error:", err);
+            setError("Failed to delete format.");
         }
     };
 
@@ -174,23 +191,36 @@ const QuestionPaperFormat = ({ currentCycle }) => {
         return courses.filter(c => validCourseIds.includes(c.id));
     }, [selectedProgram, currentRegulation, currentCycle, courses]);
 
-    // Filter Saved Templates for Current Cycle (Regulation + Semester)
+    // List templates from the current cycle's paper_format
     const displayedTemplates = useMemo(() => {
-        if (!process.env.NODE_ENV || !savedTemplates.length || !currentRegulation || !currentCycle?.semester) return [];
+        if (!currentCycle?.paper_format) return [];
 
-        // Get all valid course IDs for this semester across all programs
-        const validCourseIds = new Set();
-        if (currentRegulation.courses_list) {
-            Object.values(currentRegulation.courses_list).forEach(semMap => {
-                const semCourses = semMap[currentCycle.semester];
-                if (semCourses) {
-                    semCourses.forEach(cId => validCourseIds.add(cId));
+        // Formats are stored as { course_id: { questions, total_marks } }
+        return Object.entries(currentCycle.paper_format).map(([courseId, format]) => {
+            const course = courses.find(c => c.id === courseId);
+
+            // Resolve program from regulation course list for the current semester
+            let program = null;
+            if (currentRegulation?.courses_list) {
+                const progId = Object.keys(currentRegulation.courses_list).find(pId => {
+                    const semCourses = currentRegulation.courses_list[pId]?.[currentCycle.semester] || [];
+                    return semCourses.includes(courseId);
+                });
+                if (progId) {
+                    program = programs.find(p => p.id === progId);
                 }
-            });
-        }
+            }
 
-        return savedTemplates.filter(t => validCourseIds.has(t.course_id));
-    }, [savedTemplates, currentRegulation, currentCycle]);
+            return {
+                id: courseId, // Use courseId as ID for deletion
+                course_id: courseId,
+                course: course,
+                program: program,
+                total_marks: format.total_marks,
+                status: 'active'
+            };
+        });
+    }, [currentCycle, courses, programs, currentRegulation]);
 
     const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
 

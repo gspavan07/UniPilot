@@ -185,6 +185,11 @@ const ExamCycle = sequelize.define(
       allowNull: true,
       comment: "Year of the examination (e.g., 2024)",
     },
+    paper_format: {
+      type: DataTypes.JSONB,
+      defaultValue: {},
+      comment: "Question paper formats per course: { course_id: [questions] }",
+    },
   },
   {
     tableName: "exam_cycles",

@@ -42,7 +42,7 @@ const ExamSchedule = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 35,
     },
-    branches: {
+    programs: {
       type: DataTypes.JSONB,
       defaultValue: [],
       comment: "Array of program IDs this exam schedule applies to",
