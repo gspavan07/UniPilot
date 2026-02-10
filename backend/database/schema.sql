@@ -1865,17 +1865,17 @@ CREATE TABLE public.exam_schedules (
     passing_marks integer DEFAULT 35,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    branches jsonb DEFAULT '[]'::jsonb
+    programs jsonb DEFAULT '[]'::jsonb
 );
 
 
 ALTER TABLE public.exam_schedules OWNER TO postgres;
 
 --
--- Name: COLUMN exam_schedules.branches; Type: COMMENT; Schema: public; Owner: postgres
+-- Name: COLUMN exam_schedules.programs; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN public.exam_schedules.branches IS 'Array of program IDs this exam schedule applies to';
+COMMENT ON COLUMN public.exam_schedules.programs IS 'Array of program IDs this exam schedule applies to';
 
 
 --

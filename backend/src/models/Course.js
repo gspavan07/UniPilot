@@ -34,7 +34,7 @@ const Course = sequelize.define(
       defaultValue: 3,
     },
     course_type: {
-      type: DataTypes.ENUM("theory", "lab", "project"),
+      type: DataTypes.ENUM("theory", "lab", "project", "internship"),
       defaultValue: "theory",
     },
 
@@ -47,21 +47,8 @@ const Course = sequelize.define(
         key: "id",
       },
     },
-    program_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: "programs",
-        key: "id",
-      },
-      comment: "If null, course is common across programs",
-    },
 
-    // Semester Information
-    semester: {
-      type: DataTypes.INTEGER,
-      comment: "Which semester this course is offered in",
-    },
+
 
     // Syllabus
     syllabus_url: {
@@ -79,16 +66,6 @@ const Course = sequelize.define(
       type: DataTypes.JSONB,
       defaultValue: [],
       comment: "Array of course IDs that are prerequisites",
-    },
-
-    // Regulation Link
-    regulation_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: "regulations",
-        key: "id",
-      },
     },
 
     // Status
@@ -114,8 +91,7 @@ const Course = sequelize.define(
     indexes: [
       { fields: ["code"], unique: true },
       { fields: ["department_id"] },
-      { fields: ["program_id"] },
-      { fields: ["regulation_id"] },
+
       { fields: ["is_active"] },
     ],
   },

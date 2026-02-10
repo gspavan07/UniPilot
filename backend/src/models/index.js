@@ -51,6 +51,9 @@ const InstitutionSetting = require("./InstitutionSetting");
 const Block = require("./Block");
 const Room = require("./Room");
 const SemesterResult = require("./SemesterResult");
+const ProgramOutcome = require("./ProgramOutcome");
+const CourseOutcome = require("./CourseOutcome");
+const CoPoMap = require("./CoPoMap");
 
 // Placement Module Models
 const Company = require("./Company");
@@ -187,9 +190,17 @@ const models = {
   PlacementPolicy,
   PlacementNotification,
   PlacementDocument,
+
+  // Outcome-Based Education (OBE) Models
+  ProgramOutcome,
+  CourseOutcome,
+  CoPoMap,
 };
 
 // Define associations
+
+
+
 // Department <-> User (HOD)
 Department.belongsTo(User, {
   as: "hod",
@@ -248,25 +259,10 @@ Department.hasMany(Course, {
   foreignKey: "department_id",
 });
 
-// Course <-> Program
-Course.belongsTo(Program, {
-  as: "program",
-  foreignKey: "program_id",
-});
-Program.hasMany(Course, {
-  as: "courses",
-  foreignKey: "program_id",
-});
+// NOTE: Course <-> Program association removed
+// Courses are now mapped to programs via Regulation.courses_list JSON field
 
-// Regulation <-> Course (One Regulation has Many Courses)
-Regulation.hasMany(Course, {
-  as: "courses",
-  foreignKey: "regulation_id",
-});
-Course.belongsTo(Regulation, {
-  as: "regulation",
-  foreignKey: "regulation_id",
-});
+// Regulation <-> Course association removed as courses are now mapped via JSONB
 
 // Self-referencing for parent-child departments
 Department.belongsTo(Department, {
@@ -1231,6 +1227,58 @@ PlacementDocument.belongsTo(User, {
   as: "uploader",
   foreignKey: "uploaded_by",
 });
+
+// ===============================
+// Outcome-Based Education (OBE) Associations
+// ===============================
+
+// Program <-> ProgramOutcome
+Program.hasMany(ProgramOutcome, {
+  foreignKey: "program_id",
+  as: "outcomes",
+  onDelete: "CASCADE",
+});
+ProgramOutcome.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
+});
+
+// Course <-> CourseOutcome
+Course.hasMany(CourseOutcome, {
+  foreignKey: "course_id",
+  as: "outcomes",
+  onDelete: "CASCADE",
+});
+CourseOutcome.belongsTo(Course, {
+  foreignKey: "course_id",
+  as: "course",
+});
+
+// CourseOutcome <-> ProgramOutcome (Many-to-Many through CoPoMap)
+CourseOutcome.belongsToMany(ProgramOutcome, {
+  through: CoPoMap,
+  foreignKey: "course_outcome_id",
+  otherKey: "program_outcome_id",
+  as: "programOutcomes",
+});
+
+ProgramOutcome.belongsToMany(CourseOutcome, {
+  through: CoPoMap,
+  foreignKey: "program_outcome_id",
+  otherKey: "course_outcome_id",
+  as: "courseOutcomes",
+});
+
+// Direct access to CoPoMap for explicit mapping queries
+CoPoMap.belongsTo(CourseOutcome, {
+  foreignKey: "course_outcome_id",
+  as: "courseOutcome",
+});
+CoPoMap.belongsTo(ProgramOutcome, {
+  foreignKey: "program_outcome_id",
+  as: "programOutcome",
+});
+
 
 // Export models and sequelize instance
 module.exports = {

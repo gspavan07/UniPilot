@@ -21,6 +21,8 @@ import dashboardReducer from "./slices/dashboardSlice";
 import reverificationReducer from "../redux/slices/reverificationSlice";
 import studentReverificationReducer from "../redux/slices/studentReverificationSlice";
 import placementReducer from "./slices/placementSlice";
+import coPoMapReducer from "./slices/coPoMapSlice";
+
 
 export const store = configureStore({
   reducer: {
@@ -46,6 +48,7 @@ export const store = configureStore({
     reverification: reverificationReducer,
     studentReverification: studentReverificationReducer,
     placement: placementReducer,
+    coPoMap: coPoMapReducer,
   },
 });
 

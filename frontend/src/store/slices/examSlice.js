@@ -144,6 +144,21 @@ export const deleteExamSchedule = createAsyncThunk(
   },
 );
 
+// @desc    Delete all schedules for a cycle
+export const deleteCycleTimetable = createAsyncThunk(
+  "exam/deleteCycleTimetable",
+  async (cycleId, { rejectWithValue }) => {
+    try {
+      await api.delete(`/exam/schedules/cycle/${cycleId}`);
+      return cycleId;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to delete cycle timetable",
+      );
+    }
+  },
+);
+
 export const autoGenerateTimetable = createAsyncThunk(
   "exam/autoGenerate",
   async (config, { rejectWithValue }) => {
@@ -544,9 +559,19 @@ export const examSlice = createSlice({
           (s) => s.id !== action.payload,
         );
       })
+      .addCase(deleteCycleTimetable.fulfilled, (state, action) => {
+        state.schedules = state.schedules.filter(
+          (s) => s.exam_cycle_id !== action.payload,
+        );
+      })
       .addCase(autoGenerateTimetable.fulfilled, (state, action) => {
-        // Auto-generation returns an array of new schedules
-        state.schedules = [...state.schedules, ...action.payload];
+        const newSchedules = action.payload;
+        // 1. Remove any existing schedules that are being replaced/updated
+        state.schedules = state.schedules.filter(
+          (existing) => !newSchedules.some((n) => n.id === existing.id),
+        );
+        // 2. Add the new schedules
+        state.schedules.push(...newSchedules);
       })
       .addCase(fetchBacklogs.fulfilled, (state, action) => {
         state.backlogs = action.payload;

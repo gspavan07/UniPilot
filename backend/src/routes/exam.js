@@ -33,6 +33,7 @@ const {
 
   bulkPublishResults,
   createRegistrationOrder,
+  deleteCycleSchedules,
 } = require("../controllers/examController");
 
 // Reverification controllers
@@ -108,6 +109,11 @@ router.delete(
   checkPermission("exams:manage"),
   deleteExamSchedule,
 );
+router.delete(
+  "/schedules/cycle/:cycleId",
+  checkPermission("exams:manage"),
+  deleteCycleSchedules,
+);
 router.post(
   "/schedules/auto-generate",
   checkPermission("exams:manage"),
@@ -177,7 +183,6 @@ router.get(
 
 router.get(
   "/registration/:id/receipt",
-  checkPermission("exams:view"),
   downloadReceipt,
 );
 

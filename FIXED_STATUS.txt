@@ -1,0 +1,18 @@
+TASK COMPLETED: Manage Saved Question Paper Formats
+
+I have successfully updated the application to support listing, editing, and deleting saved question paper formats.
+
+Backend:
+- [x] Updated `questionPaperTemplateController.js` to list all templates if no course_id specific filter is passed.
+- [x] Added `deleteTemplate` method and `DELETE` route.
+- [x] Fixed issue with duplicate model associations.
+- [x] Server running on port 3000.
+
+Frontend:
+- [x] Updated `QuestionPaperFormat.jsx` to fetch and display saved templates.
+- [x] Added "Saved Formats" table with Edit/Delete actions.
+- [x] Implemented filtering to show only relevant templates for the current cycle.
+- [x] Fixed UI layout and syntax.
+
+You can now use the "Question Paper Format" tab to manage formats directly.
+Ready for next instructions.

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import api from "../../utils/api";
 import {
   X,
   Save,
@@ -24,7 +25,7 @@ const schema = yup.object().shape({
   name: yup.string().min(3).required("Course title is required"),
   code: yup.string().uppercase().required("Course code is required"),
   department_id: yup.string().required("Department is required"),
-  regulation_id: yup.string().required("Regulation is required"),
+  regulation_id: yup.string().nullable().notRequired(),
   program_id: yup
     .string()
     .nullable()
@@ -89,6 +90,8 @@ const CourseForm = ({
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [courseOutcomes, setCourseOutcomes] = useState([]);
+  const [existingCoIds, setExistingCoIds] = useState([]);
 
   const {
     register,
@@ -158,6 +161,45 @@ const CourseForm = ({
     }
   }, [course, isOpen, reset]);
 
+  // Fetch existing COs when editing a course
+  useEffect(() => {
+    const fetchCourseOutcomes = async () => {
+      if (course?.id) {
+        try {
+          const response = await api.get(`/ course - outcomes ? course_id = ${course.id} `);
+          if (response.data.success && response.data.data) {
+            setCourseOutcomes(response.data.data);
+            setExistingCoIds(response.data.data.map(co => co.id));
+          }
+        } catch (err) {
+          console.error("Failed to fetch course outcomes:", err);
+        }
+      } else {
+        setCourseOutcomes([]);
+        setExistingCoIds([]);
+      }
+    };
+
+    if (isOpen) {
+      fetchCourseOutcomes();
+    }
+  }, [course, isOpen]);
+
+  // CO Management Functions
+  const addCourseOutcome = () => {
+    setCourseOutcomes([...courseOutcomes, { co_code: "", description: "", target_attainment: 60 }]);
+  };
+
+  const removeCourseOutcome = (index) => {
+    setCourseOutcomes(courseOutcomes.filter((_, i) => i !== index));
+  };
+
+  const updateCourseOutcome = (index, field, value) => {
+    const updated = [...courseOutcomes];
+    updated[index] = { ...updated[index], [field]: value };
+    setCourseOutcomes(updated);
+  };
+
   const handleNext = async () => {
     let fieldsToValidate = [];
     if (step === 1) {
@@ -199,7 +241,7 @@ const CourseForm = ({
       setError("Please fix errors in the Structure step.");
     } else {
       setError(
-        `Please check the form for errors: ${Object.keys(errors).join(", ")}`,
+        `Please check the form for errors: ${Object.keys(errors).join(", ")} `,
       );
     }
   };
@@ -208,7 +250,31 @@ const CourseForm = ({
     setLoading(true);
     setError(null);
     try {
-      await onSave(data);
+      const savedCourse = await onSave(data);
+      const courseId = savedCourse?.id || course?.id;
+
+      // Save Course Outcomes
+      if (courseId) {
+        // Delete existing COs if we had any before
+        if (existingCoIds.length > 0) {
+          await api.delete(`/course-outcomes/course/${courseId}`);
+        }
+
+        // Create new COs if we have any now
+        if (courseOutcomes.length > 0) {
+          const coData = courseOutcomes.map(co => ({
+            co_code: co.co_code,
+            description: co.description,
+            target_attainment: co.target_attainment || 60,
+          }));
+
+          await api.post("/course-outcomes/bulk", {
+            course_id: courseId,
+            outcomes: coData
+          });
+        }
+      }
+
       onClose();
     } catch (err) {
       setError(err.message || "Failed to save course");
@@ -384,7 +450,7 @@ const CourseForm = ({
               <div className="w-full h-0.5 bg-gray-100 dark:bg-gray-800 rounded-full">
                 <div
                   className="h-full bg-primary-500 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${((step - 1) / 2) * 100}%` }}
+                  style={{ width: `${((step - 1) / 3) * 100}%` }}
                 />
               </div>
             </div>
@@ -393,6 +459,7 @@ const CourseForm = ({
               { num: 1, label: "Identity", icon: Book },
               { num: 2, label: "Structure", icon: Building },
               { num: 3, label: "Syllabus", icon: List },
+              { num: 4, label: "Outcomes", icon: Award },
             ].map((s) => {
               const Icon = s.icon;
               const isActive = step >= s.num;
@@ -406,10 +473,9 @@ const CourseForm = ({
                   <div
                     className={`
                       w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ring-4 ring-white dark:ring-gray-900
-                      ${
-                        isActive
-                          ? "bg-primary-600 text-white shadow-lg shadow-primary-500/30 scale-110"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                      ${isActive
+                        ? "bg-primary-600 text-white shadow-lg shadow-primary-500/30 scale-110"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400"
                       }
                     `}
                   >
@@ -449,7 +515,7 @@ const CourseForm = ({
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 ml-1">
                       Academic Regulation{" "}
-                      <span className="text-error-500">*</span>
+                      <span className="text-gray-400 font-normal lowercase">(optional)</span>
                     </label>
                     <select
                       {...register("regulation_id")}
@@ -561,7 +627,7 @@ const CourseForm = ({
                         <input
                           type="number"
                           {...register("credits")}
-                          className={`form-input w-full rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-semibold text-center ${errors.credits ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""}`}
+                          className={`form - input w - full rounded - xl bg - gray - 50 border - gray - 200 focus: bg - white focus: border - primary - 500 focus: ring - 4 focus: ring - primary - 500 / 10 transition - all dark: bg - gray - 800 dark: border - gray - 700 dark: text - white font - semibold text - center ${errors.credits ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""} `}
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">
                           pts
@@ -580,7 +646,7 @@ const CourseForm = ({
                       <input
                         type="number"
                         {...register("semester")}
-                        className={`form-input w-full rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-semibold text-center ${errors.semester ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""}`}
+                        className={`form - input w - full rounded - xl bg - gray - 50 border - gray - 200 focus: bg - white focus: border - primary - 500 focus: ring - 4 focus: ring - primary - 500 / 10 transition - all dark: bg - gray - 800 dark: border - gray - 700 dark: text - white font - semibold text - center ${errors.semester ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""} `}
                       />
                       {errors.semester && (
                         <p className="text-xs text-error-500 mt-1.5 ml-1 font-medium">
@@ -594,7 +660,7 @@ const CourseForm = ({
                       </label>
                       <select
                         {...register("course_type")}
-                        className={`form-select w-full rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white ${errors.course_type ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""}`}
+                        className={`form - select w - full rounded - xl bg - gray - 50 border - gray - 200 focus: bg - white focus: border - primary - 500 focus: ring - 4 focus: ring - primary - 500 / 10 transition - all dark: bg - gray - 800 dark: border - gray - 700 dark: text - white ${errors.course_type ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""} `}
                       >
                         {["theory", "lab", "project"].map((t) => (
                           <option key={t} value={t}>
@@ -616,7 +682,7 @@ const CourseForm = ({
                     </label>
                     <input
                       {...register("prerequisites")}
-                      className={`form-input w-full rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white ${errors.prerequisites ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""}`}
+                      className={`form - input w - full rounded - xl bg - gray - 50 border - gray - 200 focus: bg - white focus: border - primary - 500 focus: ring - 4 focus: ring - primary - 500 / 10 transition - all dark: bg - gray - 800 dark: border - gray - 700 dark: text - white ${errors.prerequisites ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""} `}
                       placeholder="e.g. CS101, MA101"
                     />
                     {errors.prerequisites && (
@@ -633,7 +699,7 @@ const CourseForm = ({
                     <textarea
                       {...register("description")}
                       rows="4"
-                      className={`form-textarea w-full rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white resize-none ${errors.description ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""}`}
+                      className={`form - textarea w - full rounded - xl bg - gray - 50 border - gray - 200 focus: bg - white focus: border - primary - 500 focus: ring - 4 focus: ring - primary - 500 / 10 transition - all dark: bg - gray - 800 dark: border - gray - 700 dark: text - white resize - none ${errors.description ? "border-error-500 focus:border-error-500 focus:ring-error-500/10" : ""} `}
                       placeholder="Enter course description, objectives and outcomes..."
                     ></textarea>
                     {errors.description && (
@@ -676,6 +742,116 @@ const CourseForm = ({
                 </div>
               </div>
             )}
+
+            {step === 4 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                        Course Outcomes (COs)
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Define learning outcomes for this course
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addCourseOutcome}
+                      className="btn btn-primary btn-sm flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add CO
+                    </button>
+                  </div>
+
+                  {courseOutcomes.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                      <Book className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        No course outcomes defined yet
+                      </p>
+                      <button
+                        type="button"
+                        onClick={addCourseOutcome}
+                        className="btn btn-primary btn-sm"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add First CO
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {courseOutcomes.map((co, index) => (
+                        <div
+                          key={index}
+                          className="group relative bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                            <div className="md:col-span-3">
+                              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                                CO Code
+                              </label>
+                              <input
+                                type="text"
+                                value={co.co_code || ""}
+                                onChange={(e) =>
+                                  updateCourseOutcome(index, "co_code", e.target.value)
+                                }
+                                placeholder="e.g., CO1"
+                                className="input input-sm"
+                              />
+                            </div>
+                            <div className="md:col-span-6">
+                              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                                Description
+                              </label>
+                              <textarea
+                                value={co.description || ""}
+                                onChange={(e) =>
+                                  updateCourseOutcome(index, "description", e.target.value)
+                                }
+                                placeholder="Describe the learning outcome..."
+                                rows="2"
+                                className="input input-sm resize-none"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                                Target %
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={co.target_attainment || 60}
+                                onChange={(e) =>
+                                  updateCourseOutcome(
+                                    index,
+                                    "target_attainment",
+                                    parseFloat(e.target.value)
+                                  )
+                                }
+                                className="input input-sm"
+                              />
+                            </div>
+                            <div className="md:col-span-1 flex items-end">
+                              <button
+                                type="button"
+                                onClick={() => removeCourseOutcome(index)}
+                                className="btn btn-sm bg-error-50 text-error-600 hover:bg-error-100 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/40 w-full h-9"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
@@ -701,7 +877,7 @@ const CourseForm = ({
             )}
           </div>
 
-          {step < 3 ? (
+          {step < 4 ? (
             <button
               onClick={handleNext}
               type="button"

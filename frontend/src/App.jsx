@@ -76,6 +76,7 @@ import RegulationViewer from "./pages/academics/RegulationViewer";
 import RegulationManager from "./pages/admin/RegulationManager";
 import SectionManager from "./pages/academics/SectionManager";
 import AcademicsManagement from "./pages/academics/AcademicsManagement";
+import CoPoMapping from "./pages/academics/CoPoMapping";
 import HRManagement from "./pages/hr/HRManagement";
 import ExamManagement from "./pages/exam/ExamManagement";
 import ReverificationManagement from "./pages/exam/ReverificationManagement";
@@ -140,6 +141,10 @@ function App() {
           <Route
             path="/regulations/:id/exams"
             element={<RegulationManager />}
+          />
+          <Route
+            path="/regulations/:id/co-po-mapping"
+            element={<CoPoMapping />}
           />
           <Route path="/courses" element={<CourseList />} />
           <Route path="/faculty" element={<UserList role="faculty" />} />

@@ -24,6 +24,11 @@ const transportRoutes = require("./transport"); // Transport Management
 const hostelRoutes = require("./hostel"); // Hostel Management
 const dashboardRoutes = require("./dashboard");
 const placementRoutes = require("./placement"); // Placement Module
+const programOutcomeRoutes = require("./programOutcome"); // OBE: Program Outcomes
+const courseOutcomeRoutes = require("./courseOutcome"); // OBE: Course Outcomes
+const coPoMapRoutes = require("./coPoMap"); // OBE: CO-PO Mapping
+const questionPaperTemplateRoutes = require("./questionPaperTemplate"); // Question Paper Templates
+
 
 const router = express.Router();
 
@@ -65,4 +70,11 @@ router.use("/hostel", hostelRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/placement", placementRoutes);
 
+// Outcome-Based Education (OBE) routes
+router.use("/program-outcomes", programOutcomeRoutes);
+router.use("/course-outcomes", courseOutcomeRoutes);
+router.use("/co-po-maps", coPoMapRoutes);
+router.use("/question-paper-templates", questionPaperTemplateRoutes);
+
 module.exports = router;
+

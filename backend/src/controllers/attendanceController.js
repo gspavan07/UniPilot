@@ -7,6 +7,7 @@ const {
   TimetableSlot,
   Timetable,
   Program,
+  Regulation,
   sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
@@ -126,14 +127,48 @@ exports.getMyAttendance = async (req, res) => {
     const courseInclude = {
       model: Course,
       as: "course",
-      attributes: ["name", "code", "id", "semester"],
+      attributes: ["name", "code", "id"],
       required: false, // LEFT JOIN by default
     };
 
-    // If semester is specified, filter courses by semester
+    // If semester is specified, filter courses by fetching IDs from Regulation
     if (semester) {
-      courseInclude.where = { semester: parseInt(semester) };
-      courseInclude.required = true; // INNER JOIN when filtering
+      const student = await User.findByPk(student_id);
+
+      let targetIds = new Set();
+
+      if (student && student.regulation_id && student.program_id) {
+        const regulation = await Regulation.findByPk(student.regulation_id);
+
+        if (regulation && regulation.courses_list) {
+          const coursesList = regulation.courses_list;
+          const progId = student.program_id;
+          const semKey = String(semester);
+
+          // Program Courses
+          if (coursesList[progId] && coursesList[progId][semKey]) {
+            coursesList[progId][semKey].forEach(id => targetIds.add(id));
+          }
+
+          // Common Courses
+          // if (coursesList["common"] && coursesList["common"][semKey]) {
+          //   coursesList["common"][semKey].forEach(id => targetIds.add(id));
+          // }
+        }
+      }
+
+      if (targetIds.size > 0) {
+        console.log("targetIds", targetIds);
+        if (where.course_id) {
+          if (!targetIds.has(where.course_id)) {
+            return res.status(200).json({ success: true, data: { records: [], summary: { total: 0, present: 0, percentage: 0 }, courseWise: [] } });
+          }
+        } else {
+          where.course_id = { [Op.in]: Array.from(targetIds) };
+        }
+      } else {
+        return res.status(200).json({ success: true, data: { records: [], summary: { total: 0, present: 0, percentage: 0 }, courseWise: [] } });
+      }
     }
 
     const records = await Attendance.findAll({

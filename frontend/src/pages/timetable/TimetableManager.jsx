@@ -41,7 +41,39 @@ const TimetableManager = () => {
     semester: 1,
     academic_year: "2025-2026",
     section: "A",
+    batch_year: new Date().getFullYear(),
   });
+
+  // Auto-fetch semester based on batch year and program
+  useEffect(() => {
+    if (criteria.batch_year && criteria.program_id) {
+      api.get(`/users/semesters?batch_year=${criteria.batch_year}&program_id=${criteria.program_id}&department_id=${criteria.department_id}`)
+        .then(res => {
+          const sems = res.data.data;
+          if (sems && sems.length > 0) {
+            // Assuming the batch is generally synchronized, take the highest semester
+            const currentSem = Math.max(...sems);
+            setCriteria(prev => ({ ...prev, semester: currentSem }));
+          } else {
+            // Fallback if no students found? keep current or default to 1?
+            // Maybe default calculation is better fallback?
+            // For now, if no students, we default to 1 or calculation.
+            // Let's rely on calculation as fallback if API returns empty
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth();
+            const batchYear = parseInt(criteria.batch_year);
+            let diff = currentYear - batchYear;
+            let sem = diff * 2 + (currentMonth >= 6 ? 1 : 0);
+            if (sem < 1) sem = 1;
+            setCriteria(prev => ({ ...prev, semester: sem }));
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch batch semester", err);
+        });
+    }
+  }, [criteria.batch_year, criteria.program_id]);
 
   // Local state for new slot
   const [slotForm, setSlotForm] = useState({
@@ -61,6 +93,7 @@ const TimetableManager = () => {
   const [faculty, setFaculty] = useState([]);
   const [blocks, setBlocks] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [isSatWorking, setIsSatWorking] = useState(false);
 
   useEffect(() => {
@@ -73,13 +106,15 @@ const TimetableManager = () => {
       api.get("/users?role=hod"),
       api.get("/infrastructure/blocks"),
       api.get("/settings?keys=student_saturday_working"),
-    ]).then(([facultyRes, hodRes, blocksRes, settingsRes]) => {
+      api.get("/users/batch-years"),
+    ]).then(([facultyRes, hodRes, blocksRes, settingsRes, batchesRes]) => {
       const allInstructors = [...facultyRes.data.data, ...hodRes.data.data];
       setFaculty(allInstructors);
       setBlocks(blocksRes.data.data || []);
       setIsSatWorking(
         settingsRes.data.data.student_saturday_working === "true",
       );
+      setBatches(batchesRes.data.data || []);
     });
   }, [dispatch]);
 
@@ -105,36 +140,55 @@ const TimetableManager = () => {
   );
 
   // Fetch courses and sections when program/semester changes
+  // Fetch courses and sections when program/semester changes
   useEffect(() => {
-    if (criteria.program_id) {
-      // Fetch courses
-      api
-        .get(
-          `/courses?program_id=${criteria.program_id}&semester=${criteria.semester}`,
-        )
-        .then((res) => setCourses(res.data.data));
+    if (criteria.program_id && criteria.semester) { // batch_year needed for regulation context
+      const fetchContextAndCourses = async () => {
+        try {
+          let regId = "";
+          // Try to find regulation ID from students of this batch
+          if (criteria.batch_year) {
+            const usersRes = await api.get(`/users?program_id=${criteria.program_id}&batch_year=${criteria.batch_year}&role=student`);
+            if (usersRes.data.data && usersRes.data.data.length > 0) {
+              regId = usersRes.data.data[0].regulation_id;
+            }
+          }
 
-      // Fetch dynamic sections
-      api
-        .get(
-          `/users/sections?program_id=${criteria.program_id}&semester=${criteria.semester}`,
-        )
-        .then((res) => {
-          setSections(res.data.data || []);
-          // If current section is not in new sections, reset it
-          if (res.data.data && res.data.data.length > 0) {
-            if (!res.data.data.includes(criteria.section)) {
-              setCriteria((prev) => ({ ...prev, section: res.data.data[0] }));
+          // Fetch courses with regulation context if available
+          const coursesRes = await api.get(
+            `/courses?program_id=${criteria.program_id}&semester=${criteria.semester}${regId ? `&regulation_id=${regId}` : ''}`
+          );
+          setCourses(coursesRes.data.data || []);
+
+          // Fetch sections
+          const sectionsRes = await api.get(
+            `/users/sections?program_id=${criteria.program_id}&semester=${criteria.semester}`
+          );
+
+          const newSections = sectionsRes.data.data || [];
+          setSections(newSections);
+
+          if (newSections.length > 0) {
+            if (!newSections.includes(criteria.section)) {
+              setCriteria((prev) => ({ ...prev, section: newSections[0] }));
             }
           } else {
             setCriteria((prev) => ({ ...prev, section: "" }));
           }
-        });
+
+        } catch (err) {
+          console.error("Error fetching context/courses", err);
+          setCourses([]);
+        }
+      };
+
+      fetchContextAndCourses();
+
     } else {
       setCourses([]);
       setSections([]);
     }
-  }, [criteria.program_id, criteria.semester]);
+  }, [criteria.program_id, criteria.semester, criteria.batch_year]);
 
   // Fetch rooms when block changes
   useEffect(() => {
@@ -293,17 +347,22 @@ const TimetableManager = () => {
 
             <select
               className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
-              value={criteria.semester}
+              value={criteria.batch_year}
               onChange={(e) =>
-                setCriteria({ ...criteria, semester: e.target.value })
+                setCriteria({ ...criteria, batch_year: e.target.value })
               }
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                <option key={s} value={s}>
-                  Sem {s}
+              <option value="">Select Batch</option>
+              {batches.map((year) => (
+                <option key={year} value={year}>
+                  Batch {year}
                 </option>
               ))}
             </select>
+
+            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl flex items-center justify-center border border-indigo-100 dark:border-indigo-800">
+              Sem {criteria.semester}
+            </div>
 
             <select
               className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -431,11 +490,10 @@ const TimetableManager = () => {
                           activity_name: "",
                         })
                       }
-                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${
-                        !slotForm.is_activity
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-50 dark:bg-gray-900 text-gray-600"
-                      }`}
+                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${!slotForm.is_activity
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-50 dark:bg-gray-900 text-gray-600"
+                        }`}
                     >
                       Course
                     </button>
@@ -448,11 +506,10 @@ const TimetableManager = () => {
                           course_id: "",
                         })
                       }
-                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${
-                        slotForm.is_activity
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-50 dark:bg-gray-900 text-gray-600"
-                      }`}
+                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${slotForm.is_activity
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-50 dark:bg-gray-900 text-gray-600"
+                        }`}
                     >
                       Activity
                     </button>
@@ -648,11 +705,10 @@ const TimetableManager = () => {
                       return (
                         <div
                           key={`${day}-${time}`}
-                          className={`min-h-[140px] rounded-2xl p-4 transition-all duration-300 border-2 ${
-                            slot
-                              ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/20 shadow-sm"
-                              : "bg-gray-50/30 dark:bg-gray-900/20 border-gray-50 dark:border-gray-800 border-dashed"
-                          }`}
+                          className={`min-h-[140px] rounded-2xl p-4 transition-all duration-300 border-2 ${slot
+                            ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/20 shadow-sm"
+                            : "bg-gray-50/30 dark:bg-gray-900/20 border-gray-50 dark:border-gray-800 border-dashed"
+                            }`}
                         >
                           {slot ? (
                             <div className="h-full flex flex-col justify-between group relative">
