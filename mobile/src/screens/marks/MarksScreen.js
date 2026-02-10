@@ -42,6 +42,7 @@ const MarksScreen = ({ navigation }) => {
   const { toggleDrawer } = useDrawer();
   const [loading, setLoading] = useState(true);
   const [resultsData, setResultsData] = useState(null);
+  const [overallStats, setOverallStats] = useState(null);
   const [activeTab, setActiveTab] = useState('end_semester'); // 'end_semester', 'mid_term', 'internal_lab'
   const [selectedSemester, setSelectedSemester] = useState(
     user?.current_semester || 1,
@@ -59,6 +60,7 @@ const MarksScreen = ({ navigation }) => {
         });
         // The backend returns as { success: true, data: { myResults, gpa } }
         setResultsData(response.data);
+        setOverallStats(response.gpa);
         resultsDataRef.current = response.data;
       } catch (error) {
         console.error('Marks fetch error:', error);
@@ -103,8 +105,8 @@ const MarksScreen = ({ navigation }) => {
   const currentMidInstances = getAvailableMidInstances();
 
   const getActiveResults = () => {
-    if (!resultsData?.data) return [];
-    const myResults = resultsData.data;
+    if (!resultsData) return [];
+    const myResults = resultsData;
 
     if (activeTab === 'mid_term') {
       const mids = myResults.mid_term || [];
@@ -245,7 +247,7 @@ const MarksScreen = ({ navigation }) => {
           {/* SEM GPA */}
           <View style={styles.summaryCard}>
             <Text style={styles.summaryValue}>
-              {resultsData?.gpa?.currentSemester || '0.00'}
+              {overallStats?.currentSemester || '0.00'}
             </Text>
             <Text style={styles.summaryLabel}>SEM GPA</Text>
           </View>
@@ -257,7 +259,7 @@ const MarksScreen = ({ navigation }) => {
               style={styles.gradientFill}
             >
               <Text style={[styles.summaryValue, { color: '#fff' }]}>
-                {resultsData?.gpa?.overall || '0.00'}
+                {overallStats?.overall || '0.00'}
               </Text>
               <Text
                 style={[
@@ -278,9 +280,9 @@ const MarksScreen = ({ navigation }) => {
           {/* SEM CREDITS */}
           <View style={styles.summaryCard}>
             <Text style={[styles.summaryValue, { fontSize: 20 }]}>
-              {resultsData?.gpa?.semesterGainedCredits || 0}
+              {overallStats?.semesterGainedCredits || 0}
               <Text style={{ fontSize: 14, color: '#94a3b8' }}>
-                /{resultsData?.gpa?.semesterPossibleCredits || 0}
+                /{overallStats?.semesterPossibleCredits || 0}
               </Text>
             </Text>
             <Text style={styles.summaryLabel}>SEM CREDITS</Text>
@@ -294,9 +296,9 @@ const MarksScreen = ({ navigation }) => {
                 { fontSize: 20, color: theme.colors.primary },
               ]}
             >
-              {resultsData?.gpa?.totalGainedCredits || 0}
+              {overallStats?.totalGainedCredits || 0}
               <Text style={{ fontSize: 14, color: '#94a3b8' }}>
-                /{resultsData?.gpa?.totalPossibleCredits || 0}
+                /{overallStats?.totalPossibleCredits || 0}
               </Text>
             </Text>
             <Text style={styles.summaryLabel}>TOTAL CREDITS</Text>

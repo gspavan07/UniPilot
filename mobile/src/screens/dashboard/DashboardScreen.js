@@ -24,6 +24,7 @@ import {
 } from 'lucide-react-native';
 import theme from '../../theme/theme';
 import PremiumCard from '../../components/common/PremiumCard';
+import CircularProgress from '../../components/common/CircularProgress';
 import dashboardService from '../../services/dashboardService';
 import { useDrawer } from '../../context/DrawerContext';
 
@@ -41,7 +42,7 @@ const DashboardScreen = ({ navigation }) => {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const data = await dashboardService.getDashboard();
+      const data = await dashboardService.getDashboard(user?.current_semester);
 
       // 1. Map Attendance
       const att = data.attendance;
@@ -120,7 +121,7 @@ const DashboardScreen = ({ navigation }) => {
       name: 'Fees',
       icon: Banknote,
       color: '#ef4444',
-      screen: 'FeeDashboard',
+      screen: 'Fees',
     },
   ];
 
@@ -202,12 +203,13 @@ const DashboardScreen = ({ navigation }) => {
 
             <View style={styles.attendanceBody}>
               <View style={styles.progressCircleContainer}>
-                <View style={styles.progressCircle}>
-                  <Text style={styles.progressValue}>
-                    {dashboardData?.attendance?.overall || 0}%
-                  </Text>
-                  <Text style={styles.progressLabel}>Overall</Text>
-                </View>
+                <CircularProgress
+                  value={dashboardData?.attendance?.overall || 0}
+                  size={120}
+                  strokeWidth={8}
+                  color={theme.colors.primary}
+                  label="Overall"
+                />
               </View>
 
               <View style={styles.statsList}>
@@ -429,26 +431,6 @@ const styles = StyleSheet.create({
   },
   progressCircleContainer: {
     marginRight: 24,
-  },
-  progressCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 8,
-    borderColor: '#e2e8f0',
-    borderTopColor: '#6366f1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1e293b',
-  },
-  progressLabel: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: '600',
   },
   statsList: {
     flex: 1,

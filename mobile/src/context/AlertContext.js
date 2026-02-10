@@ -14,6 +14,7 @@ export const AlertProvider = ({ children }) => {
     onConfirm: null,
     onSecondary: null,
     secondaryLabel: '',
+    confirmLabel: '',
   });
 
   const showAlert = useCallback(
@@ -27,6 +28,7 @@ export const AlertProvider = ({ children }) => {
       onConfirm,
       onSecondary,
       secondaryLabel = '',
+      confirmLabel = 'Dismiss',
     }) => {
       setAlert({
         visible: true,
@@ -39,6 +41,7 @@ export const AlertProvider = ({ children }) => {
         onConfirm,
         onSecondary,
         secondaryLabel,
+        confirmLabel,
       });
     },
     [],

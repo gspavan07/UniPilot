@@ -26,6 +26,8 @@ import {
   Bell,
   Receipt,
   ArrowUpRight,
+  GraduationCap,
+  RefreshCw,
 } from 'lucide-react-native';
 import theme from '../../theme/theme';
 import feeService from '../../services/feeService';
@@ -217,22 +219,42 @@ const FeeDashboardScreen = ({ navigation }) => {
             <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('ExamRegistrationPayment')}
+          >
             <View
-              style={[styles.actionIconBox, { backgroundColor: '#f59e0b15' }]}
+              style={[styles.actionIconBox, { backgroundColor: '#10b98115' }]}
             >
-              <AlertCircle size={24} color="#f59e0b" />
+              <GraduationCap size={24} color="#10b981" />
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Fines & Penalties</Text>
+              <Text style={styles.actionTitle}>Exam Registration</Text>
               <Text style={styles.actionSubtitle}>
-                Late payment or discipline fines
+                Register & pay for upcoming exams
+              </Text>
+            </View>
+            <ChevronRight size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('ReverificationPayment')}
+          >
+            <View
+              style={[styles.actionIconBox, { backgroundColor: '#a855f715' }]}
+            >
+              <RefreshCw size={24} color="#a855f7" />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Reverification Fees</Text>
+              <Text style={styles.actionSubtitle}>
+                Apply for mark reverification
               </Text>
             </View>
             <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
         </View>
-
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>

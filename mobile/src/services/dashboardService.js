@@ -2,11 +2,11 @@ import api from './api';
 
 export const dashboardService = {
   // Get dashboard data by aggregating existing granular endpoints
-  getDashboard: async () => {
+  getDashboard: async semester => {
     try {
       // Use standard authenticated endpoints
       const [attendanceRes, timetableRes] = await Promise.all([
-        api.get('/attendance/my-attendance'),
+        api.get(`/attendance/my-attendance?semester=${semester}`),
         api.get('/timetable/my/view'),
       ]);
 

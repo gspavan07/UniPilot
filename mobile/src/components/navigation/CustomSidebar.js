@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import theme from '../../theme/theme';
+import NavigationService from '../../services/NavigationService';
 
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = width * 0.75;
@@ -53,13 +54,13 @@ const CustomSidebar = ({ visible, onClose, navigation, user, onLogout }) => {
       label: 'My Timetable',
       icon: CalendarClock,
       screen: 'Timetable',
-    }, // Placeholder
+    }, // Placeholder - not yet in navigator
     {
       id: 'courses',
       label: 'My Courses',
       icon: BookOpen,
       screen: 'Courses',
-    }, // Placeholder
+    }, // Placeholder - not yet in navigator
     {
       id: 'marks',
       label: 'Marks & Results',
@@ -71,73 +72,70 @@ const CustomSidebar = ({ visible, onClose, navigation, user, onLogout }) => {
       label: 'Exams',
       icon: FileText,
       screen: 'Exams',
-    }, // Placeholder
+    },
     {
       id: 'fee',
       label: 'Fee Payments',
       icon: Banknote,
-      screen: 'FeeDashboard',
-    }, // Fee Module Implementation
+      screen: 'Fees',
+    },
     {
       id: 'placement',
       label: 'My Placement',
       icon: Briefcase,
       screen: 'Placement',
-    }, // Placeholder
+    }, // Placeholder - not yet in navigator
     {
       id: 'hostel',
       label: 'My Hostel',
       icon: BedDouble,
       screen: 'Hostel',
-    }, // Placeholder
+    }, // Placeholder - not yet in navigator
   ];
 
   const handleNavigation = screen => {
     onClose();
-    // Navigate if screen exists in navigator, else just close (or show toast in future)
-    if (navigation) {
-      // Simple check to avoid crashing if screen doesn't exist yet
-      // In a real app, you might want a more robust navigation handler
-      try {
-        navigation.navigate(screen);
-      } catch (e) {
-        console.warn(`Screen ${screen} not implemented yet`);
-      }
+
+    // Using global NavigationService ensures reachable screens anywhere in the tree
+    try {
+      NavigationService.navigate(screen);
+    } catch (e) {
+      console.warn(`Navigation error to ${screen}:`, e.message);
     }
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
+      {/* <LinearGradient
         colors={[theme.colors.primary, '#4f46e5']}
         style={styles.header}
-      >
-        <SafeAreaView edges={['top']}>
-          <View style={styles.profileContainer}>
-            <View style={styles.avatarWrapper}>
-              <Image
-                source={{
-                  uri:
-                    user?.profile_picture ||
-                    `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=fff&color=4f46e5&size=128`,
-                }}
-                style={styles.avatar}
-              />
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName} numberOfLines={1}>
-                {user?.first_name} {user?.last_name}
-              </Text>
-              <Text style={styles.userRole}>
-                {user?.student_id || user?.employee_id || 'ID: --'}
-              </Text>
-              <Text style={styles.userEmail} numberOfLines={1}>
-                {user?.email || 'email@university.edu'}
-              </Text>
-            </View>
+      > */}
+      <SafeAreaView edges={['top']}>
+        <View style={styles.profileContainer}>
+          <View style={styles.avatarWrapper}>
+            <Image
+              source={{
+                uri:
+                  user?.profile_picture ||
+                  `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=fff&color=4f46e5&size=128`,
+              }}
+              style={styles.avatar}
+            />
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {user?.first_name} {user?.last_name}
+            </Text>
+            <Text style={styles.userRole}>
+              {user?.student_id || user?.employee_id || 'ID: --'}
+            </Text>
+            <Text style={styles.userEmail} numberOfLines={1}>
+              {user?.email || 'email@university.edu'}
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+      {/* </LinearGradient> */}
 
       <ScrollView
         style={styles.menuContainer}
@@ -198,6 +196,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   profileContainer: {
+    paddingHorizontal: 15,
     marginTop: 0,
   },
   avatarWrapper: {
@@ -212,6 +211,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: '100%',
     height: '100%',
+    borderRadius: 30,
     backgroundColor: '#e0e7ff',
   },
   userInfo: {

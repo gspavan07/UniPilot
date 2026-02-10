@@ -19,7 +19,7 @@ export const marksService = {
       if (queryString) url += `?${queryString}`;
 
       const response = await api.get(url);
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error fetching marks:', error);
       throw error;

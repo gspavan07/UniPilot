@@ -70,6 +70,7 @@ const CustomAlert = () => {
   };
 
   const handleSecondary = () => {
+    hideAlert();
     if (alert.onSecondary) {
       alert.onSecondary();
     } else if (alert.transactionData) {
@@ -217,7 +218,9 @@ const CustomAlert = () => {
                   onPress={handleConfirm}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.confirmBtnText}>Dismiss</Text>
+                  <Text style={styles.confirmBtnText}>
+                    {alert.confirmLabel || 'Dismiss'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

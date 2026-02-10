@@ -6,6 +6,7 @@ import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 import DrawerRoot from './DrawerRoot';
 import { DrawerProvider } from '../context/DrawerContext';
+import { navigationRef } from '../services/NavigationService';
 
 const Stack = createStackNavigator();
 
@@ -14,7 +15,7 @@ const AppNavigator = () => {
 
   return (
     <DrawerProvider>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!isAuthenticated ? (
             <Stack.Screen name="Auth" component={AuthNavigator} />

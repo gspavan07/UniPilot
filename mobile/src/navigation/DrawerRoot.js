@@ -7,9 +7,12 @@ import {
   StatusBar,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector, useDispatch } from 'react-redux';
 import { useDrawer } from '../context/DrawerContext';
+import { useAlert } from '../context/AlertContext';
 import CustomSidebar from '../components/navigation/CustomSidebar';
 import { logout } from '../redux/slices/authSlice';
 import theme from '../theme/theme';
@@ -18,6 +21,7 @@ const { width } = Dimensions.get('window');
 
 const DrawerRoot = ({ navigation, children }) => {
   const { isDrawerOpen, closeDrawer } = useDrawer();
+  const { showAlert } = useAlert();
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
 
@@ -47,6 +51,21 @@ const DrawerRoot = ({ navigation, children }) => {
     }).start();
   }, [isDrawerOpen]);
 
+  const confirmLogout = () => {
+    showAlert({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      type: 'warning',
+      confirmLabel: 'Logout',
+      secondaryLabel: 'Cancel',
+      onConfirm: async () => {
+        await AsyncStorage.removeItem('authToken');
+        dispatch(logout());
+      },
+      onSecondary: () => {},
+    });
+  };
+
   return (
     <View style={styles.outerContainer}>
       {/* 1. Background Menu Layer */}
@@ -55,7 +74,7 @@ const DrawerRoot = ({ navigation, children }) => {
           navigation={navigation}
           user={user}
           onClose={closeDrawer}
-          onLogout={() => dispatch(logout())}
+          onLogout={confirmLogout}
         />
       </View>
 

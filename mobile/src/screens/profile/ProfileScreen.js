@@ -124,11 +124,13 @@ import { logout } from '../../redux/slices/authSlice';
 import profileService from '../../services/profileService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDrawer } from '../../context/DrawerContext';
+import { useAlert } from '../../context/AlertContext';
 
 const { width } = Dimensions.get('window');
 
 const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { showAlert } = useAlert();
   const { user } = useSelector(state => state.auth);
   const { toggleDrawer } = useDrawer();
   const [activeTab, setActiveTab] = useState('overview');
@@ -166,17 +168,18 @@ const ProfileScreen = ({ navigation }) => {
   }, []);
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.removeItem('authToken');
-          dispatch(logout());
-        },
+    showAlert({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      type: 'warning',
+      confirmLabel: 'Logout',
+      secondaryLabel: 'Cancel',
+      onConfirm: async () => {
+        await AsyncStorage.removeItem('authToken');
+        dispatch(logout());
       },
-    ]);
+      onSecondary: () => {},
+    });
   };
 
   const handlePasswordChange = async () => {
@@ -618,18 +621,13 @@ const ProfileScreen = ({ navigation }) => {
               handleLogout();
             }}
           >
-            <LinearGradient
-              colors={['#ef4444', '#b91c1c']}
-              style={styles.logoutGradient}
-            >
-              <DynamicIcon
-                name="logout"
-                size={20}
-                color="#fff"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.logoutText}>LOGOUT SESSION</Text>
-            </LinearGradient>
+            <DynamicIcon
+              name="logout"
+              size={20}
+              color="#fff"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.logoutText}>LOGOUT SESSION</Text>
           </TouchableOpacity>
 
           <Button
@@ -1090,14 +1088,19 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   logoutBtn: {
-    marginTop: 20,
+    // marginTop: 20,
     borderRadius: 16,
+    backgroundColor: '#ef4444',
     overflow: 'hidden',
     shadowColor: '#ef4444',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
   },
   logoutGradient: {
     flexDirection: 'row',

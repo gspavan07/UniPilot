@@ -37,7 +37,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: ../docker/backend.Dockerfile
     container_name: unipilot-backend
     ports:
       - "3000:3000"
@@ -67,7 +67,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: ../docker/frontend.Dockerfile
     container_name: unipilot-frontend
     ports:
       - "3001:3001"
