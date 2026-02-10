@@ -10,6 +10,7 @@ const {
   updateBankDetails,
   bulkUpdateSections,
   getBatchYears,
+  getStudentSemesters,
 } = require("../controllers/userController");
 const upload = require("../middleware/upload");
 const studentUpload = require("../middleware/studentUpload");
@@ -72,6 +73,13 @@ router.get(
   require("../controllers/userController").getStudentSections,
 );
 router.get("/batch-years", checkDynamicPermission("view"), getBatchYears);
+
+// Dynamic Semesters route
+router.get(
+  "/semesters",
+  checkDynamicPermission("view"),
+  getStudentSemesters,
+);
 
 router
   .route("/")

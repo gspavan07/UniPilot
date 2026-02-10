@@ -7,19 +7,19 @@ router.get("/", authenticate, holidayController.getHolidays);
 router.post(
   "/",
   authenticate,
-  authorize("admin", "hr_admin"),
+  authorize("super_admin", "admin", "hr_admin"),
   holidayController.createHoliday
 );
 router.put(
   "/:id",
   authenticate,
-  authorize("admin", "hr_admin"),
+  authorize("super_admin", "admin", "hr_admin"),
   holidayController.updateHoliday
 );
 router.delete(
   "/:id",
   authenticate,
-  authorize("admin", "hr_admin"),
+  authorize("super_admin", "admin", "hr_admin"),
   holidayController.deleteHoliday
 );
 

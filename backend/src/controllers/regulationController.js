@@ -9,13 +9,6 @@ const logger = require("../utils/logger");
 exports.getAllRegulations = async (req, res) => {
   try {
     const regulations = await Regulation.findAll({
-      include: [
-        {
-          model: require("../models/Course"),
-          as: "courses",
-          attributes: ["id"],
-        },
-      ],
       order: [["academic_year", "DESC"]],
     });
     res.status(200).json({ success: true, data: regulations });
@@ -32,15 +25,7 @@ exports.getAllRegulations = async (req, res) => {
  */
 exports.getRegulationById = async (req, res) => {
   try {
-    const regulation = await Regulation.findByPk(req.params.id, {
-      include: [
-        {
-          model: require("../models/Course"),
-          as: "courses",
-          attributes: ["id"],
-        },
-      ],
-    });
+    const regulation = await Regulation.findByPk(req.params.id);
     if (!regulation) {
       return res.status(404).json({ error: "Regulation not found" });
     }

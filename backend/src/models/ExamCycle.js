@@ -15,20 +15,21 @@ const ExamCycle = sequelize.define(
     },
     start_date: {
       type: DataTypes.DATEONLY,
-      allowNull: false,
+      allowNull: true,
     },
     end_date: {
       type: DataTypes.DATEONLY,
-      allowNull: false,
+      allowNull: true,
     },
     status: {
       type: DataTypes.ENUM(
+        "scheduling",
         "scheduled",
         "ongoing",
         "completed",
         "results_published",
       ),
-      defaultValue: "scheduled",
+      defaultValue: "scheduling",
     },
     batch_year: {
       type: DataTypes.INTEGER,
@@ -39,8 +40,8 @@ const ExamCycle = sequelize.define(
       allowNull: true,
     },
     exam_type: {
-      type: DataTypes.ENUM("mid_term", "semester_end", "re_exam", "internal"),
-      defaultValue: "semester_end",
+      type: DataTypes.ENUM("mid_term_1", "mid_term_2", "semester_end_external", "re_exam", "internal_lab", "external_lab"),
+      defaultValue: "semester_end_external",
     },
     weightage: {
       type: DataTypes.INTEGER,
@@ -61,11 +62,7 @@ const ExamCycle = sequelize.define(
       comment:
         "Type from regulation config: mid_term, end_semester, internal_lab, external_lab, project_review",
     },
-    instance_number: {
-      type: DataTypes.INTEGER,
-      defaultValue: 1,
-      comment: "1st Mid, 2nd Mid, etc.",
-    },
+
     exam_mode: {
       type: DataTypes.STRING(50),
       defaultValue: "regular",

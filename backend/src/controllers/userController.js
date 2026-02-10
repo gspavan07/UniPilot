@@ -305,6 +305,48 @@ exports.getStudentSections = async (req, res) => {
   }
 };
 
+// @desc    Get distinct semesters for students based on filters
+// @route   GET /api/users/semesters
+// @access  Private
+exports.getStudentSemesters = async (req, res) => {
+  try {
+    const { department_id, program_id, batch_year } = req.query;
+    const where = {
+      role: "student",
+      current_semester: { [Op.ne]: null },
+    };
+
+    if (department_id) where.department_id = department_id;
+    if (program_id) where.program_id = program_id;
+    if (batch_year) where.batch_year = batch_year;
+
+    const semesters = await User.findAll({
+      attributes: [
+        [
+          User.sequelize.fn("DISTINCT", User.sequelize.col("current_semester")),
+          "current_semester",
+        ],
+      ],
+      where,
+      order: [["current_semester", "ASC"]],
+      raw: true,
+    });
+
+    const semesterList = semesters.map((s) => s.current_semester).filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      data: semesterList,
+    });
+  } catch (error) {
+    logger.error("Error in getStudentSemesters:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
 // @desc    Get distinct batch years for students
 // @route   GET /api/users/batch-years
 // @access  Private

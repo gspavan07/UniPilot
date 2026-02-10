@@ -14,25 +14,74 @@ exports.getAllCourses = async (req, res) => {
     const { regulation_id, department_id, program_id, semester, course_type } =
       req.query;
     const whereClause = {};
+    const { Regulation } = require("../models");
+    const { Op } = require("sequelize");
 
-    if (regulation_id) {
-      whereClause.regulation_id = regulation_id;
-    }
-
+    // 1. Basic Filters (Columns that exist)
     if (department_id) {
       whereClause.department_id = department_id;
     }
 
-    if (program_id) {
-      whereClause.program_id = program_id;
-    }
-
-    if (semester) {
-      whereClause.semester = semester;
-    }
-
     if (course_type) {
       whereClause.course_type = course_type;
+    }
+
+    // 2. Complex Filters (Program/Semester via Regulation)
+    if (regulation_id) {
+      const regulation = await Regulation.findByPk(regulation_id);
+
+      if (regulation && regulation.courses_list) {
+        let targetCourseIds = new Set();
+        const coursesList = regulation.courses_list;
+
+        // Helper to add IDs from a specific program's semester list
+        const collectIds = (pId, sem) => {
+          if (coursesList[pId]) {
+            if (sem) {
+              const ids = coursesList[pId][sem] || [];
+              ids.forEach(id => targetCourseIds.add(id));
+            } else {
+              Object.values(coursesList[pId]).forEach(semIds => {
+                if (Array.isArray(semIds)) {
+                  semIds.forEach(id => targetCourseIds.add(id));
+                }
+              });
+            }
+          }
+        };
+
+        if (program_id) {
+          collectIds(program_id, semester);
+        } else {
+          // If no program_id, iterate ALL programs in this regulation
+          Object.keys(coursesList).forEach(pKey => {
+            collectIds(pKey, semester);
+          });
+        }
+
+        if (targetCourseIds.size > 0) {
+          whereClause.id = { [Op.in]: Array.from(targetCourseIds) };
+        } else {
+          return res.status(200).json({ success: true, count: 0, data: [] });
+        }
+      }
+    } else if (program_id || semester) {
+      // If program/semester is requested but NO regulation, we technically can't fulfill this 
+      // because the link exists only in Regulation.courses_list.
+      // Option A: Return empty.
+      // Option B: Search ALL regulations (expensive).
+      // Option C: Return all courses (ignore filter - bad UX).
+      // User said: "In the courses catalog every course ... doesn't need to be in regulation".
+      // But "In case if they select a program filter ... fetch from courses_list".
+      // This implies the filter is meant to utilize the link. 
+      // I will return empty data if filtering by prog/sem without regulation, or maybe query all regulations?
+      // Let's assume the UI ensures Regulation is selected or we just return nothing/error.
+      // For now, I will treat it as "No results" if you filter by Program without a Regulation context,
+      // because a "Program" only owns courses *within* a Regulation context in this new model.
+      // Wait, does a Course belong to a Department? Yes. Does Program belong to Department? Yes.
+      // Is there a direct Program->Course link? NO, we removed it.
+      // So yes, Program filtering requires Regulation context.
+      return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
     const courses = await Course.findAll({
@@ -43,15 +92,21 @@ exports.getAllCourses = async (req, res) => {
           as: "department",
           attributes: ["id", "name", "code"],
         },
+        // Program relation on Course model might be deprecated if program_id column is gone?
+        // Checking model definition... user said "course table no longer have program_id".
+        // So we should REMOVE the include for Program if the relation is broken.
+        // Keeping it safe: Only include if model supports it. 
+        // For now, I'll comment it out to be safe based on user input.
+        /* 
         {
           model: Program,
           as: "program",
           attributes: ["id", "name", "code"],
         },
+        */
       ],
       order: [
-        ["semester", "ASC"],
-        ["name", "ASC"],
+        ["name", "ASC"], // Semester column also removed from Course?, so sort by Name
       ],
     });
 
@@ -79,11 +134,6 @@ exports.getCourse = async (req, res) => {
         {
           model: Department,
           as: "department",
-          attributes: ["id", "name", "code"],
-        },
-        {
-          model: Program,
-          as: "program",
           attributes: ["id", "name", "code"],
         },
       ],
@@ -215,28 +265,52 @@ exports.getMyCourses = async (req, res) => {
       });
     }
 
-    // 2. Fetch courses for their program and semester
-    const whereClause = {
-      program_id: student.program_id,
-      semester: student.current_semester || 1,
-    };
+    // 2. Fetch derived course IDs from Regulation
+    // Note: Assuming student.regulation_id is mandatory for course mapping now.
+    // If not, we have a problem: "Which courses belong to Semester 1 of Program X?" 
+    // without a regulation, this question is unanswerable in the new model.
 
-    // If student has a regulation assigned, strictly filter by it
-    if (student.regulation_id) {
-      whereClause.regulation_id = student.regulation_id;
+    if (!student.regulation_id) {
+      return res.status(404).json({ error: "Student has no regulation assigned" });
     }
 
+    const { Regulation } = require("../models");
+    const { Op } = require("sequelize");
+    const regulation = await Regulation.findByPk(student.regulation_id);
+
+    if (!regulation || !regulation.courses_list) {
+      return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+
+    const { program_id, current_semester } = student;
+    const coursesList = regulation.courses_list;
+    let targetIds = new Set();
+
+    // Add Program Specific Courses
+    if (program_id && coursesList[program_id]) {
+      const semCourses = coursesList[program_id][current_semester] || [];
+      semCourses.forEach(id => targetIds.add(id));
+    }
+
+    // Add Common Courses? (If your model supports it, e.g. key "common")
+    if (coursesList["common"]) {
+      const commonCourses = coursesList["common"][current_semester] || [];
+      commonCourses.forEach(id => targetIds.add(id));
+    }
+
+    if (targetIds.size === 0) {
+      return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+
+    // 3. Fetch actual course data
     const courses = await Course.findAll({
-      where: whereClause,
+      where: {
+        id: { [Op.in]: Array.from(targetIds) }
+      },
       include: [
         {
           model: Department,
           as: "department",
-          attributes: ["id", "name", "code"],
-        },
-        {
-          model: Program,
-          as: "program",
           attributes: ["id", "name", "code"],
         },
       ],

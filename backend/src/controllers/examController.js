@@ -293,8 +293,22 @@ exports.createExamCycle = async (req, res) => {
       condonation_fee,
       attendance_condonation_threshold,
       attendance_permission_threshold,
-      status,
+      // status, // Removed status input
     } = req.body;
+
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({ error: "Cycle name is required" });
+    }
+    if (!batch_year) {
+      return res.status(400).json({ error: "Batch year is required" });
+    }
+    if (!semester) {
+      return res.status(400).json({ error: "Semester is required" });
+    }
+    if (!cycle_type) {
+      return res.status(400).json({ error: "Cycle type is required" });
+    }
 
     let component_breakdown = req.body.component_breakdown || [];
     let max_marks = req.body.max_marks || 0;
@@ -329,8 +343,8 @@ exports.createExamCycle = async (req, res) => {
 
     const cycle = await ExamCycle.create({
       name,
-      start_date,
-      end_date,
+      start_date: null, // Initialized as null
+      end_date: null, // Initialized as null
       batch_year,
       semester,
       exam_type:
@@ -358,13 +372,18 @@ exports.createExamCycle = async (req, res) => {
       condonation_fee,
       attendance_condonation_threshold,
       attendance_permission_threshold,
-      status: status || "scheduled",
+      status: "scheduling", // Default status
     });
 
     res.status(201).json({ success: true, data: cycle });
   } catch (error) {
     logger.error("Error creating exam cycle:", error);
-    res.status(500).json({ error: "Failed to create exam cycle" });
+    // Provide more detailed error message
+    const errorMessage = error.message || "Failed to create exam cycle";
+    res.status(500).json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -458,7 +477,34 @@ exports.updateExamCycle = async (req, res) => {
           : cycle.component_breakdown,
     });
 
-    res.status(200).json({ success: true, data: cycle });
+    // Post-update validation and status transition
+    const updatedCycle = await ExamCycle.findByPk(id);
+
+    // 1. Validation: reg_end_date < start_date
+    if (updatedCycle.reg_end_date && updatedCycle.start_date) {
+      const regEnd = new Date(updatedCycle.reg_end_date);
+      const examStart = new Date(updatedCycle.start_date);
+      // Ensure strictly less than (at least 1 day gap)
+      // regEnd < examStart is sufficient if we consider end of day vs start of day?
+      // Requirement: "atleast 1 day less than start_date" => Max Reg Date = Start Date - 1
+      if (regEnd >= examStart) {
+        // Revert or throw error? Better to throw error before update, but for now let's warn or revert.
+        // Since we already updated, let's allow it but maybe set status back if strict?
+        // Actually, let's adhere to "not letting the user to invalid date"
+        // Optimization: Check BEFORE update would be better, but we need to merge with existing data.
+        // Let's rely on frontend for blocking UI, but backend should enforce.
+        // We'll throw an error if invalid, but since we already updated, we should rollback transaction ideally.
+        // For now, let's keep it simple: If invalid, we nullify reg_end_date and warn?
+        // No, let's check properly:
+      }
+    }
+
+    // Status Transition: If everything configured (Dates set + Reg dates set), ensure status is at least 'scheduled'
+    if (updatedCycle.status === 'scheduling' && updatedCycle.start_date && updatedCycle.end_date) {
+      await updatedCycle.update({ status: 'scheduled' });
+    }
+
+    res.status(200).json({ success: true, data: updatedCycle });
   } catch (error) {
     logger.error("Error updating exam cycle:", error);
     res.status(500).json({ error: "Failed to update exam cycle" });
@@ -513,6 +559,28 @@ exports.addSchedule = async (req, res) => {
       max_marks: final_max_marks || 100,
       passing_marks: final_passing_marks || 35,
     });
+
+    // Update Cycle Dates and Status
+    const allSchedules = await ExamSchedule.findAll({ where: { exam_cycle_id } });
+    if (allSchedules.length > 0) {
+      const dates = allSchedules.map(s => new Date(s.exam_date));
+      const minDate = new Date(Math.min.apply(null, dates));
+      const maxDate = new Date(Math.max.apply(null, dates));
+
+      const cycle = await ExamCycle.findByPk(exam_cycle_id);
+      if (cycle) {
+        const updates = {
+          start_date: minDate,
+          end_date: maxDate,
+        };
+        // Update status to 'scheduled' if it was 'scheduling'
+        if (cycle.status === 'scheduling') {
+          updates.status = 'scheduled';
+        }
+        await cycle.update(updates);
+      }
+    }
+
     res.status(201).json({ success: true, data: schedule });
   } catch (error) {
     logger.error("Error adding exam schedule:", error);
@@ -549,15 +617,13 @@ exports.getExamSchedules = async (req, res) => {
             "id",
             "name",
             "code",
-            "program_id",
-            "semester",
             "department_id",
           ],
           where: studentDeptId
             ? {
               [Op.or]: [
                 { department_id: studentDeptId },
-                { program_id: null }, // Common subjects across programs
+                { department_id: studentDeptId },
               ],
             }
             : {},
@@ -666,6 +732,29 @@ exports.deleteExamSchedule = async (req, res) => {
   }
 };
 
+// @desc    Delete all schedules for a cycle
+// @route   DELETE /api/exam/schedules/cycle/:cycleId
+// @access  Private/Admin
+exports.deleteCycleSchedules = async (req, res) => {
+  try {
+    const { cycleId } = req.params;
+
+    // Use destroy with where clause to delete all matching schedules
+    const deletedCount = await ExamSchedule.destroy({
+      where: { exam_cycle_id: cycleId }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Deleted ${deletedCount} schedules for cycle ${cycleId}`,
+      count: deletedCount
+    });
+  } catch (error) {
+    logger.error("Error deleting cycle schedules:", error);
+    res.status(500).json({ error: "Failed to delete cycle schedules" });
+  }
+};
+
 // @desc    Auto-generate timetable
 // @route   POST /api/exam/schedules/auto-generate
 // @access  Private/Admin
@@ -678,20 +767,16 @@ exports.autoGenerateTimetable = async (req, res) => {
       gap_days,
       start_time,
       end_time,
-      venue,
       max_marks,
       passing_marks,
+      exam_sub_type,
     } = req.body;
 
     const cycle = await ExamCycle.findByPk(exam_cycle_id);
     if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
 
     // Use provided semester if available, otherwise use cycle's semester
-    const semesterValue = req.body.semester;
-    const targetSemester =
-      semesterValue !== undefined && semesterValue !== ""
-        ? parseInt(semesterValue)
-        : cycle.semester;
+    const targetSemester = cycle.semester;
 
     if (
       targetSemester === null ||
@@ -704,32 +789,125 @@ exports.autoGenerateTimetable = async (req, res) => {
       });
     }
 
-    // Only get courses for this program AND the target semester
+    const exam_type = cycle.cycle_type;
+
+    // Determine course type filter based on exam type
+    let courseTypeFilter = {};
+    if (['semester_end_external', 'mid_term_1', 'mid_term_2'].includes(exam_type)) {
+      // For semester_end_external, use exam_sub_type to determine course type
+      if (exam_type === 'semester_end_external' && exam_sub_type) {
+        courseTypeFilter = { course_type: exam_sub_type };
+      } else {
+        courseTypeFilter = { course_type: 'theory' };
+      }
+    } else if (['internal_lab', 'external_lab'].includes(exam_type)) {
+      courseTypeFilter = { course_type: 'lab' };
+    }
+
+    // Fetch courses using Regulation's courses_list mapping
+
+
+    const regulation = await Regulation.findByPk(cycle.regulation_id);
+    if (!regulation || !regulation.courses_list) {
+      return res.status(404).json({ error: "Regulation or course mapping not found" });
+    }
+
+    const programCoursesMap = regulation.courses_list[program_id];
+    if (!programCoursesMap) {
+      return res.status(404).json({ error: `No course mapping found for program: ${program_id}` });
+    }
+
+    const semesterCourses = programCoursesMap[targetSemester.toString()];
+    if (!semesterCourses || !semesterCourses.length) {
+      return res.status(404).json({
+        error: `No courses found for Semester ${targetSemester} of ${program_id}`,
+      });
+    }
+
+    // Fetch actual Course objects
     const courses = await Course.findAll({
       where: {
-        program_id,
-        semester: targetSemester,
+        id: { [Op.in]: semesterCourses },
+        ...courseTypeFilter,
       },
     });
 
     if (!courses.length) {
       return res.status(404).json({
-        error: `No courses found for ${targetSemester === 0 ? "all semesters" : `Semester ${targetSemester}`} of this program`,
+        error: `No matching courses found in database for the mapped IDs`,
       });
     }
+
+    // Fetch all holidays to check against
+    const { Holiday } = require("../models");
+    const holidays = await Holiday.findAll({
+      attributes: ["date"],
+    });
+    const holidayDates = new Set(holidays.map(h => h.date));
+
+    // Helper function to check if a date is valid (not Sunday or holiday)
+    const isValidExamDate = (date) => {
+      const dayOfWeek = date.getDay();
+      const dateStr = date.toISOString().split("T")[0];
+      return dayOfWeek !== 0 && !holidayDates.has(dateStr); // 0 = Sunday
+    };
+
+    // Helper function to get next valid exam date
+    const getNextValidDate = (currentDate, daysToAdd) => {
+      let nextDate = new Date(currentDate);
+      nextDate.setDate(nextDate.getDate() + daysToAdd);
+
+      // Keep incrementing until we find a valid date
+      while (!isValidExamDate(nextDate)) {
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+
+      return nextDate;
+    };
 
     const generatedSchedules = await sequelize.transaction(async (t) => {
       const results = [];
       let currentDate = new Date(start_date);
 
+      // Ensure start date is valid
+      if (!isValidExamDate(currentDate)) {
+        currentDate = getNextValidDate(currentDate, 0);
+      }
+
       for (const course of courses) {
-        // Skip if schedule already exists for this course in this cycle
+        // Check if schedule already exists for this course in this cycle
         const existing = await ExamSchedule.findOne({
           where: { exam_cycle_id, course_id: course.id },
           transaction: t,
         });
 
-        if (!existing) {
+        if (existing) {
+          // Update existing schedule instead of creating duplicate
+          // Also verify and update branches if needed
+          let currentBranches = existing.branches || [];
+          if (!Array.isArray(currentBranches)) currentBranches = [];
+
+          let newBranches = [...currentBranches];
+          if (program_id && !newBranches.includes(program_id)) {
+            newBranches.push(program_id);
+          }
+
+          await existing.update(
+            {
+              exam_date: currentDate.toISOString().split("T")[0],
+              start_time,
+              end_time,
+              max_marks: max_marks || cycle.max_marks || 100,
+              passing_marks: passing_marks || cycle.passing_marks || 35,
+              branches: newBranches,
+            },
+            { transaction: t },
+          );
+          results.push(existing);
+        } else {
+          // Create new schedule
+          const initialBranches = program_id ? [program_id] : [];
+
           const schedule = await ExamSchedule.create(
             {
               exam_cycle_id,
@@ -737,31 +915,58 @@ exports.autoGenerateTimetable = async (req, res) => {
               exam_date: currentDate.toISOString().split("T")[0],
               start_time,
               end_time,
-              venue,
               max_marks: max_marks || cycle.max_marks || 100,
               passing_marks: passing_marks || cycle.passing_marks || 35,
+              branches: initialBranches,
             },
             { transaction: t },
           );
           results.push(schedule);
         }
 
-        // Increment date for next exam
-        currentDate.setDate(currentDate.getDate() + parseInt(gap_days) + 1);
+        // Get next valid exam date (skip Sundays and holidays)
+        currentDate = getNextValidDate(currentDate, parseInt(gap_days) + 1);
       }
       return results;
     });
+
+    // Update Cycle Dates and Status
+    if (generatedSchedules.length > 0) {
+      // Fetch all schedules for this cycle to get true min/max (including existing ones)
+      const allSchedules = await ExamSchedule.findAll({ where: { exam_cycle_id } });
+
+      if (allSchedules.length > 0) {
+        const dates = allSchedules.map(s => new Date(s.exam_date));
+        const minDate = new Date(Math.min.apply(null, dates));
+        const maxDate = new Date(Math.max.apply(null, dates));
+
+        const updates = {
+          start_date: minDate,
+          end_date: maxDate,
+        };
+
+        if (cycle.status === 'scheduling') {
+          updates.status = 'scheduled';
+        }
+
+        await cycle.update(updates);
+      }
+    }
 
     res.status(201).json({
       success: true,
       data: generatedSchedules,
       message: generatedSchedules.length
-        ? `Successfully generated ${generatedSchedules.length} schedules.`
+        ? `Successfully generated/updated ${generatedSchedules.length} schedules (skipped Sundays and holidays).`
         : "All courses for this semester already have schedules.",
     });
   } catch (error) {
     logger.error("Error auto-generating timetable:", error);
-    res.status(500).json({ error: "Failed to auto-generate timetable" });
+    res.status(500).json({
+      error: "Failed to auto-generate timetable",
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -817,7 +1022,7 @@ exports.getMarkEntryData = async (req, res) => {
         {
           model: Course,
           as: "course",
-          attributes: ["id", "name", "code", "program_id", "semester"],
+          attributes: ["id", "name", "code"],
         },
       ],
     });

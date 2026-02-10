@@ -13,7 +13,12 @@ import {
   Calendar,
   Bookmark,
   BarChart,
+  Plus,
+  Trash2,
+  Target,
 } from "lucide-react";
+import api from "../../utils/api";
+
 
 const schema = yup.object().shape({
   name: yup
@@ -43,6 +48,8 @@ const ProgramForm = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [programOutcomes, setProgramOutcomes] = useState([]);
+
 
   const {
     register,
@@ -65,6 +72,23 @@ const ProgramForm = ({
   });
 
   useEffect(() => {
+    const fetchProgramOutcomes = async () => {
+      if (program?.id) {
+        try {
+          const response = await api.get(`/program-outcomes?program_id=${program.id}`);
+          if (response.data.success) {
+            setProgramOutcomes(response.data.data.map(po => ({
+              id: po.id,
+              po_code: po.po_code,
+              description: po.description,
+            })));
+          }
+        } catch (err) {
+          console.error("Error fetching program outcomes:", err);
+        }
+      }
+    };
+
     if (program && isOpen) {
       reset({
         name: program.name || "",
@@ -77,6 +101,7 @@ const ProgramForm = ({
         admission_criteria: program.admission_criteria || "",
         is_active: program.is_active ?? true,
       });
+      fetchProgramOutcomes();
     } else if (isOpen) {
       reset({
         name: "",
@@ -89,15 +114,57 @@ const ProgramForm = ({
         admission_criteria: "",
         is_active: true,
       });
+      setProgramOutcomes([]);
     }
     setError(null);
   }, [program, isOpen, reset]);
+
+  // PO Management Functions
+  const addProgramOutcome = () => {
+    setProgramOutcomes([...programOutcomes, { po_code: "", description: "" }]);
+  };
+
+  const removeProgramOutcome = (index) => {
+    setProgramOutcomes(programOutcomes.filter((_, i) => i !== index));
+  };
+
+  const updateProgramOutcome = (index, field, value) => {
+    const updated = [...programOutcomes];
+    updated[index][field] = value;
+    setProgramOutcomes(updated);
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
     setError(null);
     try {
-      await onSave(data);
+      const savedProgram = await onSave(data);
+      const programId = program?.id || savedProgram?.id;
+
+      // Save POs if any are defined
+      if (programId && programOutcomes.length > 0) {
+        const validPOs = programOutcomes.filter(
+          (po) => po.po_code && po.description
+        );
+
+        if (validPOs.length > 0) {
+          try {
+            // Delete existing POs if editing
+            if (program?.id) {
+              await api.delete(`/program-outcomes/program/${programId}`);
+            }
+
+            // Bulk create new POs
+            await api.post("/program-outcomes/bulk", {
+              program_id: programId,
+              outcomes: validPOs,
+            });
+          } catch (poError) {
+            console.error("Error saving program outcomes:", poError);
+          }
+        }
+      }
+
       onClose();
     } catch (err) {
       setError(err || "Failed to save program");
@@ -105,6 +172,7 @@ const ProgramForm = ({
       setLoading(false);
     }
   };
+
 
   if (!isOpen) return null;
 
@@ -292,7 +360,83 @@ const ProgramForm = ({
                   </div>
                 </div>
 
+                {/* Program Outcomes Section */}
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center space-x-2">
+                      <Target className="w-4 h-4 text-accent-500" />
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        Program Outcomes (POs)
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addProgramOutcome}
+                      className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors text-xs font-semibold"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add PO</span>
+                    </button>
+                  </div>
+
+                  {programOutcomes.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                      <Target className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No program outcomes defined yet
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Click "Add PO" to define learning outcomes
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {programOutcomes.map((po, index) => (
+                        <div
+                          key={index}
+                          className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
+                        >
+                          <div className="flex-shrink-0 w-24">
+                            <label className="label text-xs">PO Code</label>
+                            <input
+                              type="text"
+                              value={po.po_code}
+                              onChange={(e) =>
+                                updateProgramOutcome(index, "po_code", e.target.value)
+                              }
+                              className="input text-sm"
+                              placeholder={`PO${index + 1}`}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="label text-xs">Description</label>
+                            <textarea
+                              value={po.description}
+                              onChange={(e) =>
+                                updateProgramOutcome(index, "description", e.target.value)
+                              }
+                              rows="2"
+                              className="input resize-none text-sm"
+                              placeholder="Describe the program outcome..."
+                            />
+                          </div>
+                          <div className="flex-shrink-0 flex items-end">
+                            <button
+                              type="button"
+                              onClick={() => removeProgramOutcome(index)}
+                              className="p-2 rounded-lg text-error-600 hover:bg-error-50 dark:hover:bg-error-900/30 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Status Toggle */}
+
                 <div className="pt-4 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-gray-900 dark:text-white">

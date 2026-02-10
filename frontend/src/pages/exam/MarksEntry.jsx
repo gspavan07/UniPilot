@@ -25,6 +25,7 @@ import {
   bulkImportMarks,
   downloadTemplate,
 } from "../../store/slices/examSlice";
+import { fetchPrograms } from "../../store/slices/programSlice";
 import toast from "react-hot-toast";
 
 const BulkImportModal = ({ isOpen, onClose, cycle, onImportSuccess }) => {
@@ -40,7 +41,7 @@ const BulkImportModal = ({ isOpen, onClose, cycle, onImportSuccess }) => {
     if (selectedFile) {
       if (
         selectedFile.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
         selectedFile.type === "text/csv" ||
         selectedFile.name.endsWith(".xlsx") ||
         selectedFile.name.endsWith(".csv")
@@ -126,11 +127,10 @@ const BulkImportModal = ({ isOpen, onClose, cycle, onImportSuccess }) => {
                 />
                 <label
                   htmlFor="modal-file-upload"
-                  className={`w-full flex flex-col items-center justify-center px-4 py-12 border-2 border-dashed rounded-3xl cursor-pointer transition-all ${
-                    file
+                  className={`w-full flex flex-col items-center justify-center px-4 py-12 border-2 border-dashed rounded-3xl cursor-pointer transition-all ${file
                       ? "border-green-400 bg-green-50/50"
                       : "border-gray-200 dark:border-gray-700 hover:border-indigo-400 group-hover:bg-indigo-50/20"
-                  }`}
+                    }`}
                 >
                   {file ? (
                     <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
@@ -149,11 +149,10 @@ const BulkImportModal = ({ isOpen, onClose, cycle, onImportSuccess }) => {
               <button
                 disabled={!file || isUploading}
                 onClick={handleUpload}
-                className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all ${
-                  !file || isUploading
+                className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all ${!file || isUploading
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-indigo-600 text-white hover:bg-indigo-700"
-                }`}
+                  }`}
               >
                 {isUploading ? "Processing..." : "Commence Import"}
               </button>
@@ -215,16 +214,19 @@ const BulkImportModal = ({ isOpen, onClose, cycle, onImportSuccess }) => {
 const MarksEntry = () => {
   const dispatch = useDispatch();
   const { cycles, schedules, status } = useSelector((state) => state.exam);
+  const { programs } = useSelector((state) => state.programs);
   const { user } = useSelector((state) => state.auth);
 
   const [selectedCycle, setSelectedCycle] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
+  const [selectedProgram, setSelectedProgram] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchExamCycles());
+    dispatch(fetchPrograms());
   }, [dispatch]);
 
   useEffect(() => {
@@ -263,7 +265,19 @@ const MarksEntry = () => {
     if (!s.is_teaching && !user?.permissions?.includes("exams:results:entry"))
       return false;
 
-    // 2. Search filter
+    // 2. Program Filter
+    if (selectedProgram) {
+      // If branches is defined and not empty, it must include selectedProgram
+      // If branches is empty/null, we assume it's common? 
+      // Strategy: If user filters by Program, they usually want specific subjects.
+      // But Common subjects (empty branches) should also appear?
+      // Let's assume strict filtering: If branches exist, check match. If empty, include.
+      if (s.branches && s.branches.length > 0 && !s.branches.includes(selectedProgram)) {
+        return false;
+      }
+    }
+
+    // 3. Search filter
     const searchLower = searchTerm.toLowerCase();
     return (
       s.course?.name?.toLowerCase().includes(searchLower) ||
@@ -307,7 +321,7 @@ const MarksEntry = () => {
               Current Exam Session
             </h2>
             <div className="flex flex-wrap gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <select
                   value={selectedBatch}
                   onChange={(e) => setSelectedBatch(e.target.value)}
@@ -333,6 +347,20 @@ const MarksEntry = () => {
                   {uniqueSemesters.map((sem) => (
                     <option key={sem} value={sem} className="text-gray-900">
                       Semester {sem}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={selectedProgram}
+                  onChange={(e) => setSelectedProgram(e.target.value)}
+                  className="bg-white/20 border-white/20 text-white rounded-xl py-2 px-4 focus:ring-2 focus:ring-white outline-none font-bold backdrop-blur-md"
+                >
+                  <option value="" className="text-gray-900">
+                    Select Program
+                  </option>
+                  {programs.map((prog) => (
+                    <option key={prog.id} value={prog.id} className="text-gray-900">
+                      {prog.name} ({prog.code})
                     </option>
                   ))}
                 </select>

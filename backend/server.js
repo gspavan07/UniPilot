@@ -37,10 +37,10 @@ const startServer = async () => {
     logger.info("✓ Redis connected successfully");
 
     // Start HTTP server
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📝 Environment: ${process.env.NODE_ENV}`);
-      logger.info(`🔗 API URL: http://localhost:${PORT}/api`);
+      logger.info(`🔗 API URL: http://0.0.0.0:${PORT}/api`);
     });
   } catch (error) {
     logger.error("Failed to start server:", error);

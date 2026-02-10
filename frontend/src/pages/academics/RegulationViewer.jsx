@@ -9,7 +9,7 @@ import {
 } from "../../store/slices/courseSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
-import { fetchRegulations } from "../../store/slices/regulationSlice";
+import { fetchRegulations, updateRegulation } from "../../store/slices/regulationSlice";
 import CourseForm from "../courses/CourseForm";
 import {
   X,
@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Settings,
   Filter,
+  Network,
 } from "lucide-react";
 
 /**
@@ -61,68 +62,159 @@ const RegulationViewer = () => {
     }
   }, [dispatch, regulationId]);
 
-  // Derive regulation-specific courses filtered by program (including common courses)
-  const regulationCourses = (
-    Array.isArray(allCourses) ? allCourses : []
-  ).filter(
-    (c) =>
-      c.regulation_id === regulationId &&
-      (!selectedProgramId ||
-        c.program_id === selectedProgramId ||
-        c.program_id === null),
-  );
-
   const availablePrograms = programs.filter(
     (p) => !selectedDeptId || p.department_id === selectedDeptId,
   );
 
   const academicDepartments = departments.filter((d) => d.type === "academic");
 
-  const handleDelete = async (id) => {
+  // Helper to derive context from Regulation's courses_list
+  const getCourseContext = (courseId, preferredProgramId = null) => {
+    if (!regulation?.courses_list) return { semester: null, program_id: null };
+
+    // If preferred program is specified, look there first
+    if (preferredProgramId && regulation.courses_list[preferredProgramId]) {
+      const semesters = regulation.courses_list[preferredProgramId];
+      for (const [sem, courses] of Object.entries(semesters)) {
+        if (Array.isArray(courses) && courses.includes(courseId)) {
+          return { semester: Number(sem), program_id: preferredProgramId };
+        }
+      }
+    }
+
+    // Otherwise scan all (fallback for "common" or initial list view)
+    for (const [progId, semesters] of Object.entries(regulation.courses_list)) {
+      for (const [sem, courses] of Object.entries(semesters)) {
+        if (Array.isArray(courses) && courses.includes(courseId)) {
+          return { semester: Number(sem), program_id: progId === "common" ? null : progId };
+        }
+      }
+    }
+    return { semester: null, program_id: null };
+  };
+
+  // Helper to sync courses_list in Regulation model
+  const syncRegulationCourses = async (newCourseId = null, context = null, action = "add") => {
+    if (!regulation) return;
+
+    const currentList = JSON.parse(JSON.stringify(regulation.courses_list || {}));
+    const progKey = context?.program_id || selectedProgramId || "common";
+    const semKey = context?.semester || targetSemester;
+
+    // Ensure structure exists
+    if (!currentList[progKey]) currentList[progKey] = {};
+    if (!currentList[progKey][semKey]) currentList[progKey][semKey] = [];
+
+    // Remove ID from CURRENT program only (to handle moves within program or deletes)
+    // If action is delete and we are in a program context, remove from that program.
+    // If action is add, we remove from this program's other semesters to ensure unique semester placement within program.
+    if (newCourseId && currentList[progKey]) {
+      Object.keys(currentList[progKey]).forEach(s => {
+        currentList[progKey][s] = currentList[progKey][s].filter(id => id !== newCourseId);
+      });
+    }
+
+    // Add to new location if not delete
+    if (action !== "delete" && newCourseId) {
+      if (!currentList[progKey]) currentList[progKey] = {};
+      if (!currentList[progKey][semKey]) currentList[progKey][semKey] = [];
+
+      if (!currentList[progKey][semKey].includes(newCourseId)) {
+        currentList[progKey][semKey].push(newCourseId);
+      }
+    }
+
+    await dispatch(updateRegulation({
+      id: regulationId,
+      data: { courses_list: currentList }
+    })).unwrap();
+  };
+
+  // Derive regulation-specific courses filtered by program (including common courses)
+  const regulationCourses = (Array.isArray(allCourses) ? allCourses : []).filter(c => {
+    if (!regulation?.courses_list) return false;
+
+    // Check if course ID exists in the current regulation's list for the SELECTED program
+    const context = getCourseContext(c.id, selectedProgramId);
+
+    // If context returns nulls, it's not in this program (or regulation if no prog selected)
+    if (context.semester === null) return false;
+
+    // If a program is selected, duplicate check: getCourseContext with arg ensures we found it IN that program
+    if (selectedProgramId && context.program_id !== selectedProgramId) {
+      // This handles the case where getCourseContext fell back to another program but we want strict
+      return false;
+    }
+
+    return true;
+  }).map(c => {
+    const context = getCourseContext(c.id, selectedProgramId);
+    return { ...c, ...context }; // Inject derived semester
+  });
+
+  const handleDelete = async (courseId) => {
     if (
       window.confirm(
         "Are you sure you want to remove this course from this regulation?",
       )
     ) {
-      await dispatch(
-        updateCourse({ id, data: { regulation_id: null, semester: null } }),
-      ).unwrap();
-      dispatch(fetchCourses({}));
+      // 1. Update Regulation courses_list (Remove ID)
+      await syncRegulationCourses(courseId, null, "delete");
+
+      // No need to update Course model anymore as regulation_id column is gone.
+
+      dispatch(fetchRegulations()); // Refresh regulation to get new courses_list
+      // validation: maybe fetchCourses not needed if we rely on list? 
+      // but we need to trigger re-render of regulationCourses
     }
   };
 
   const handleSave = async (formData) => {
+    let savedCourse;
+    // Extract context from form data (passed up from CourseForm or state)
+    const context = {
+      program_id: formData.program_id,
+      semester: formData.semester
+    };
+
+    // Clean up formData to not send regulation_id if backend doesn't support it, 
+    // though existing backend ignores extra fields usually.
+    // CourseForm might still send it, but we can strip it if we want flexibility.
+
     if (selectedCourse) {
-      await dispatch(
+      savedCourse = await dispatch(
         updateCourse({ id: selectedCourse.id, data: formData }),
       ).unwrap();
     } else {
-      await dispatch(
+      savedCourse = await dispatch(
         createCourse({
           ...formData,
-          department_id: selectedDeptId,
-          program_id: selectedProgramId,
-          regulation_id: regulationId,
+          // regulation_id: regulationId, // Removed as per new schema
         }),
       ).unwrap();
     }
+
+    // Sync with Regulation.courses_list
+    if (savedCourse?.id) {
+      await syncRegulationCourses(savedCourse.id, context, "add");
+    }
+
     dispatch(fetchCourses({}));
+    dispatch(fetchRegulations());
     setIsFormOpen(false);
   };
 
   const handleSelectExisting = async (courseId) => {
-    await dispatch(
-      updateCourse({
-        id: courseId,
-        data: {
-          regulation_id: regulationId,
-          semester: targetSemester,
-          department_id: selectedDeptId,
-          program_id: selectedProgramId,
-        },
-      }),
-    ).unwrap();
-    dispatch(fetchCourses({}));
+    // 1. No Course update needed for regulation_id
+
+    // 2. Add to Regulation.courses_list
+    const context = {
+      program_id: selectedProgramId,
+      semester: targetSemester
+    };
+    await syncRegulationCourses(courseId, context, "add");
+
+    dispatch(fetchRegulations());
     setIsSelectorOpen(false);
   };
 
@@ -143,7 +235,9 @@ const RegulationViewer = () => {
   };
 
   const openEditForm = (course) => {
-    setSelectedCourse(course);
+    // Inject context (semester/program) so form knows current state
+    const context = getCourseContext(course.id);
+    setSelectedCourse({ ...course, ...context });
     setIsFormOpen(true);
   };
 
@@ -217,6 +311,15 @@ const RegulationViewer = () => {
             >
               Configure Exams
             </button>
+            {selectedProgramId && (
+              <button
+                onClick={() => navigate(`/regulations/${regulationId}/co-po-mapping?program_id=${selectedProgramId}`)}
+                className="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-teal-700 dark:text-teal-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all border border-transparent flex items-center gap-2"
+              >
+                <Network className="w-4 h-4" />
+                CO-PO Mapping
+              </button>
+            )}
             {selectedProgramId && (
               <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest">
                 <Book className="w-3.5 h-3.5" />
@@ -414,11 +517,11 @@ const RegulationViewer = () => {
             selectedCourse
               ? selectedCourse
               : {
-                  regulation_id: regulationId,
-                  semester: targetSemester,
-                  department_id: selectedDeptId,
-                  program_id: selectedProgramId,
-                }
+                regulation_id: regulationId,
+                semester: targetSemester,
+                department_id: selectedDeptId,
+                program_id: selectedProgramId,
+              }
           }
           departmentList={departments}
           programList={programs}
@@ -523,7 +626,14 @@ const RegulationViewer = () => {
 
             <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
               {(Array.isArray(allCourses) ? allCourses : [])
-                .filter((c) => c.regulation_id !== regulationId)
+                .filter((c) => {
+                  const ctx = getCourseContext(c.id, selectedProgramId);
+                  // Hide if found in the current program context
+                  if (ctx.semester !== null && ctx.program_id === selectedProgramId) {
+                    return false;
+                  }
+                  return true;
+                })
                 .filter(
                   (c) =>
                     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
