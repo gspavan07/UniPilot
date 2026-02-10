@@ -92,11 +92,47 @@ export const deleteJobPosting = createAsyncThunk(
 );
 
 // Async Thunks - Drives
+export const deleteDrive = createAsyncThunk(
+  "placement/deleteDrive",
+  async (id, { rejectWithValue }) => {
+    try {
+      await api.delete(`/placement/drives/${id}`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const fetchDrives = createAsyncThunk(
   "placement/fetchDrives",
   async (filters, { rejectWithValue }) => {
     try {
       const response = await api.get("/placement/drives", { params: filters });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
+export const createDrive = createAsyncThunk(
+  "placement/createDrive",
+  async (driveData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/placement/drives", driveData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
+export const updateDrive = createAsyncThunk(
+  "placement/updateDrive",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/placement/drives/${id}`, data);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -168,11 +204,37 @@ export const applyToDrive = createAsyncThunk(
   },
 );
 
+export const fetchSystemFields = createAsyncThunk(
+  "placement/fetchSystemFields",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/placement/system-fields");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const fetchMyApplications = createAsyncThunk(
   "placement/fetchMyApplications",
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get("/placement/my-applications");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
+export const uploadResume = createAsyncThunk(
+  "placement/uploadResume",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/placement/upload-resume", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -190,6 +252,7 @@ const initialState = {
   currentDrive: null,
   currentCompany: null,
   currentJobPosting: null,
+  systemFields: null, // New field
   loading: false,
   error: null,
   success: false,
@@ -284,6 +347,45 @@ const placementSlice = createSlice({
       .addCase(fetchDriveById.fulfilled, (state, action) => {
         state.currentDrive = action.payload;
       })
+      .addCase(createDrive.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(createDrive.fulfilled, (state, action) => {
+        state.loading = false;
+        state.drives.unshift(action.payload);
+        state.success = true;
+      })
+      .addCase(createDrive.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.error || "Failed to schedule drive";
+      })
+      .addCase(updateDrive.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateDrive.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.drives.findIndex((d) => d.id === action.payload.id);
+        if (index !== -1) {
+          state.drives[index] = action.payload;
+        }
+        state.currentDrive = action.payload;
+        state.success = true;
+      })
+      .addCase(updateDrive.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.error || "Failed to update drive";
+      })
+      .addCase(deleteDrive.fulfilled, (state, action) => {
+        state.drives = state.drives.filter((d) => d.id !== action.payload);
+        // Also remove from current job posting drives if applicable
+        if (state.currentJobPosting && state.currentJobPosting.drives) {
+          state.currentJobPosting.drives =
+            state.currentJobPosting.drives.filter(
+              (d) => d.id !== action.payload,
+            );
+        }
+        state.success = true;
+      })
       // Student Profile
       .addCase(fetchMyProfile.fulfilled, (state, action) => {
         state.myProfile = action.payload;
@@ -302,6 +404,19 @@ const placementSlice = createSlice({
       })
       // Apply
       .addCase(applyToDrive.fulfilled, (state) => {
+        state.success = true;
+        // Clear these to force a refresh on the dashboard/applications page
+        state.eligibleDrives = [];
+        state.myApplications = [];
+      })
+      // System Fields
+      .addCase(fetchSystemFields.fulfilled, (state, action) => {
+        state.systemFields = action.payload;
+      })
+      .addCase(uploadResume.fulfilled, (state, action) => {
+        if (state.systemFields) {
+          state.systemFields.resume = action.payload.resume_url;
+        }
         state.success = true;
       });
   },

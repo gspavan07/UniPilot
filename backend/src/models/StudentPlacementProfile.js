@@ -47,6 +47,10 @@ const StudentPlacementProfile = sequelize.define(
     resume_versions: {
       type: DataTypes.JSONB,
     },
+    resume_url: {
+      type: DataTypes.TEXT,
+      comment: "URL/Path to the latest master resume",
+    },
     profile_completion_percentage: {
       type: DataTypes.INTEGER,
       defaultValue: 0,

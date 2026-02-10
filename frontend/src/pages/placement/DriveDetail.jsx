@@ -2,18 +2,22 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDriveById } from "../../store/slices/placementSlice";
+import { fetchDepartments } from "../../store/slices/departmentSlice";
 import {
   Clock,
   CalendarDays,
   MapPin,
   Briefcase,
+  Calendar,
   ExternalLink,
   Globe,
   Building,
   ShieldCheck,
   CheckCircle2,
+  Users,
 } from "lucide-react";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
+import SelectionPipeline from "./SelectionPipeline";
 
 const DriveDetail = () => {
   const { id } = useParams();
@@ -21,11 +25,13 @@ const DriveDetail = () => {
   const { currentDrive: drive, loading } = useSelector(
     (state) => state.placement,
   );
+  const { departments } = useSelector((state) => state.departments);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     if (id) {
       dispatch(fetchDriveById(id));
+      dispatch(fetchDepartments({ type: "academic" }));
     }
   }, [dispatch, id]);
 
@@ -116,12 +122,18 @@ const DriveDetail = () => {
             </div>
           </div>
           <div className="flex flex-col gap-3 justify-center">
-            <button className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 dark:shadow-none">
+            <button
+              onClick={() => setActiveTab("applicants")}
+              className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 dark:shadow-none"
+            >
               Manage Applicants
             </button>
-            <button className="px-6 py-2.5 bg-white dark:bg-gray-750 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <Link
+              to={`/placement/drives/${drive.id}/edit`}
+              className="px-6 py-2.5 bg-white dark:bg-gray-750 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-center"
+            >
               Edit Drive Details
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -277,25 +289,54 @@ const DriveDetail = () => {
               </div>
             </div>
 
-            <div className="mt-8">
-              <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
-                Eligible Departments
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {drive.eligibility?.department_ids?.length > 0 ? (
-                  drive.eligibility.department_ids.map((id) => (
-                    <span
-                      key={id}
-                      className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-medium"
-                    >
-                      Dept ID: {id}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+              <div>
+                <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                  <Building className="w-4 h-4 text-gray-400" />
+                  Eligible Departments
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {drive.eligibility?.department_ids?.length > 0 ? (
+                    drive.eligibility.department_ids.map((deptId) => {
+                      const dept = departments.find((d) => d.id === deptId);
+                      return (
+                        <span
+                          key={deptId}
+                          className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 shadow-sm"
+                        >
+                          {dept ? dept.name : `Dept ID: ${deptId}`}
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="text-gray-500 text-sm italic">
+                      Open to all departments
                     </span>
-                  ))
-                ) : (
-                  <span className="text-gray-500 text-sm">
-                    Open to all departments
-                  </span>
-                )}
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-gray-400" />
+                  Eligible Batches
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {drive.eligibility?.batch_ids?.length > 0 ? (
+                    drive.eligibility.batch_ids.map((batch) => (
+                      <span
+                        key={batch}
+                        className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 shadow-sm"
+                      >
+                        Batch {batch}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm italic">
+                      Open to all batches
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -309,7 +350,7 @@ const DriveDetail = () => {
             </h3>
             <div className="space-y-4">
               {drive.rounds?.length > 0 ? (
-                drive.rounds
+                [...drive.rounds]
                   .sort((a, b) => a.round_number - b.round_number)
                   .map((round, idx) => (
                     <div
@@ -367,20 +408,8 @@ const DriveDetail = () => {
         )}
 
         {activeTab === "applicants" && (
-          <div className="bg-white dark:bg-gray-800 p-12 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
-            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              Student Applications
-            </h3>
-            <p className="text-gray-500 mt-2 font-medium">
-              Use the "Manage Applicants" button to view the pipeline.
-            </p>
-            <Link
-              to={`/placement/drives/${drive.id}/pipeline`}
-              className="mt-6 inline-block px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-            >
-              View Pipeline
-            </Link>
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <SelectionPipeline driveId={drive.id} />
           </div>
         )}
       </div>

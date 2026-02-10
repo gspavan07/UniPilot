@@ -129,45 +129,94 @@ const MyApplications = () => {
                 </div>
               </div>
 
-              {/* Funnel Progress (Simplified) */}
-              <div className="px-8 pb-8 pt-2">
-                <div className="flex items-center w-full">
+              {/* Funnel Progress (Dynamic) */}
+              <div className="px-8 pb-8 pt-2 overflow-x-auto">
+                <div className="flex items-center w-full min-w-[500px]">
+                  {/* Step 0: Applied */}
                   <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold ring-4 ring-indigo-50">
-                      1
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold ring-4 ring-emerald-50 dark:ring-emerald-900/20">
+                      <CheckCircle2 className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] uppercase font-bold text-indigo-600 mt-2">
+                    <span className="text-[10px] uppercase font-black text-emerald-600 mt-2 whitespace-nowrap">
                       Applied
                     </span>
                   </div>
-                  <div className="flex-1 h-1 bg-indigo-200 mx-2 mb-6"></div>
 
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${app.status === "applied" ? "bg-gray-100 text-gray-400" : "bg-indigo-100 text-indigo-600"}`}
-                    >
-                      2
-                    </div>
-                    <span
-                      className={`text-[10px] uppercase font-bold mt-2 ${app.status === "applied" ? "text-gray-400" : "text-indigo-600"}`}
-                    >
-                      Shortlisted
-                    </span>
-                  </div>
+                  {app.drive?.rounds?.map((round, index) => {
+                    const isCompleted =
+                      app.status === "placed" ||
+                      (app.current_round &&
+                        app.current_round.round_number > round.round_number);
+                    const isCurrent =
+                      app.status !== "rejected" &&
+                      app.status !== "placed" &&
+                      app.current_round_id === round.id;
+                    const isRejected =
+                      app.status === "rejected" &&
+                      app.current_round_id === round.id;
+
+                    return (
+                      <React.Fragment key={round.id}>
+                        <div
+                          className={`flex-1 h-1 mx-2 mb-6 transition-colors duration-500 ${isCompleted || isCurrent || isRejected ? "bg-indigo-500" : "bg-gray-100 dark:bg-gray-700"}`}
+                        ></div>
+
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
+                              isCompleted
+                                ? "bg-emerald-600 text-white ring-4 ring-emerald-50 dark:ring-emerald-900/20"
+                                : isCurrent
+                                  ? "bg-indigo-600 text-white ring-4 ring-indigo-50 dark:ring-indigo-900/20 animate-pulse"
+                                  : isRejected
+                                    ? "bg-red-500 text-white ring-4 ring-red-50 dark:ring-red-900/20"
+                                    : "bg-gray-100 dark:bg-gray-700 text-gray-400"
+                            }`}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : isRejected ? (
+                              <XCircle className="w-4 h-4" />
+                            ) : (
+                              index + 1
+                            )}
+                          </div>
+                          <span
+                            className={`text-[10px] uppercase font-black mt-2 whitespace-nowrap ${
+                              isCompleted
+                                ? "text-emerald-600"
+                                : isCurrent
+                                  ? "text-indigo-600"
+                                  : isRejected
+                                    ? "text-red-500"
+                                    : "text-gray-400"
+                            }`}
+                          >
+                            {round.round_name}
+                          </span>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Final Step: Selected/Placed */}
                   <div
-                    className={`flex-1 h-1 mx-2 mb-6 ${app.status === "applied" ? "bg-gray-100" : "bg-indigo-100"}`}
+                    className={`flex-1 h-1 mx-2 mb-6 ${app.status === "placed" ? "bg-emerald-500" : "bg-gray-100 dark:bg-gray-700"}`}
                   ></div>
-
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${["placed", "rejected"].includes(app.status) ? (app.status === "placed" ? "bg-emerald-600 text-white" : "bg-red-500 text-white") : "bg-gray-100 text-gray-400"}`}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${app.status === "placed" ? "bg-emerald-600 text-white ring-4 ring-emerald-50 dark:ring-emerald-900/20" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}
                     >
-                      3
+                      {app.status === "placed" ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        (app.drive?.rounds?.length || 0) + 1
+                      )}
                     </div>
                     <span
-                      className={`text-[10px] uppercase font-bold mt-2 ${["placed", "rejected"].includes(app.status) ? (app.status === "placed" ? "text-emerald-600" : "text-red-500") : "text-gray-400"}`}
+                      className={`text-[10px] uppercase font-black mt-2 whitespace-nowrap ${app.status === "placed" ? "text-emerald-600" : "text-gray-400"}`}
                     >
-                      {app.status === "rejected" ? "Rejected" : "Selected"}
+                      Selected
                     </span>
                   </div>
                 </div>

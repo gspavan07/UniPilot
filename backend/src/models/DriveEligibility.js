@@ -19,6 +19,10 @@ const DriveEligibility = sequelize.define(
     regulation_ids: {
       type: DataTypes.ARRAY(DataTypes.UUID),
     },
+    batch_ids: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+      comment: "Eligible student joining years (e.g. 2022, 2023)",
+    },
     min_cgpa: {
       type: DataTypes.DECIMAL(3, 2),
     },

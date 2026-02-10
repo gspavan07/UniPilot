@@ -111,6 +111,10 @@ class AuthService {
           email: user.email,
           role: user.role,
           department_id: user.department_id,
+          name: `${user.first_name}_${user.last_name || ""}`.replace(
+            /\s+/g,
+            "_",
+          ),
         },
         tokenExpiry,
       );
@@ -131,6 +135,7 @@ class AuthService {
           department: user.department,
           program: user.program,
           regulation: user.regulation,
+          is_placement_coordinator: user.is_placement_coordinator,
           // Add missing student/employee fields
           current_semester: user.current_semester,
           student_id: user.student_id,

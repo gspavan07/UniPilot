@@ -98,6 +98,7 @@ import DriveForm from "./pages/placement/DriveForm";
 import DriveDetail from "./pages/placement/DriveDetail";
 import CompanyProfile from "./pages/placement/CompanyProfile";
 import JobPostingDetail from "./pages/placement/JobPostingDetail";
+import CoordinatorManagement from "./pages/placement/CoordinatorManagement";
 import { getLandingPage } from "./utils/routeUtils";
 
 function App() {
@@ -251,10 +252,10 @@ function App() {
           <Route path="/placement/profile" element={<MyPlacementProfile />} />
           <Route path="/placement/eligible" element={<BrowseDrives />} />
           <Route
-            path="/placement/drive/:id/pipeline"
+            path="/placement/drives/:id/pipeline"
             element={<SelectionPipeline />}
           />
-          <Route path="/placement/drive/:id/apply" element={<ApplyDrive />} />
+          <Route path="/placement/drives/:id/apply" element={<ApplyDrive />} />
           <Route
             path="/placement/my-applications"
             element={<MyApplications />}
@@ -283,6 +284,10 @@ function App() {
           <Route path="/placement/drives/new" element={<DriveForm />} />
           <Route path="/placement/drives/:id/edit" element={<DriveForm />} />
           <Route path="/placement/drives/:id" element={<DriveDetail />} />
+          <Route
+            path="/placement/coordinators"
+            element={<CoordinatorManagement />}
+          />
 
           {/* Add more transport sub-routes here */}
 

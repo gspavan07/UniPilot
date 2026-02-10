@@ -636,7 +636,10 @@ ExamFeePayment.belongsTo(FeePayment, {
 
 // 2. AcademicFeePayment Associations
 AcademicFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(AcademicFeePayment, { as: "academic_payments", foreignKey: "student_id" });
+User.hasMany(AcademicFeePayment, {
+  as: "academic_payments",
+  foreignKey: "student_id",
+});
 
 AcademicFeePayment.belongsTo(FeeStructure, {
   as: "fee_structure",
@@ -648,8 +651,14 @@ FeeStructure.hasMany(AcademicFeePayment, {
 });
 
 // 3. StudentChargePayment Associations
-StudentChargePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(StudentChargePayment, { as: "charge_payments", foreignKey: "student_id" });
+StudentChargePayment.belongsTo(User, {
+  as: "student",
+  foreignKey: "student_id",
+});
+User.hasMany(StudentChargePayment, {
+  as: "charge_payments",
+  foreignKey: "student_id",
+});
 
 StudentChargePayment.belongsTo(StudentFeeCharge, {
   as: "fee_charge",

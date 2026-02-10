@@ -11,16 +11,16 @@ const initialState = {
 // Async thunks
 export const fetchDepartments = createAsyncThunk(
   "departments/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get("/departments");
+      const response = await api.get("/departments", { params });
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to fetch departments"
+        error.response?.data?.error || "Failed to fetch departments",
       );
     }
-  }
+  },
 );
 
 export const createDepartment = createAsyncThunk(
@@ -31,10 +31,10 @@ export const createDepartment = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to create department"
+        error.response?.data?.error || "Failed to create department",
       );
     }
-  }
+  },
 );
 
 export const updateDepartment = createAsyncThunk(
@@ -45,10 +45,10 @@ export const updateDepartment = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to update department"
+        error.response?.data?.error || "Failed to update department",
       );
     }
-  }
+  },
 );
 
 export const deleteDepartment = createAsyncThunk(
@@ -59,10 +59,10 @@ export const deleteDepartment = createAsyncThunk(
       return id;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || "Failed to delete department"
+        error.response?.data?.error || "Failed to delete department",
       );
     }
-  }
+  },
 );
 
 export const departmentSlice = createSlice({
@@ -97,7 +97,7 @@ export const departmentSlice = createSlice({
       // Update Department
       .addCase(updateDepartment.fulfilled, (state, action) => {
         const index = state.departments.findIndex(
-          (d) => d.id === action.payload.id
+          (d) => d.id === action.payload.id,
         );
         if (index !== -1) {
           state.departments[index] = action.payload;
@@ -106,7 +106,7 @@ export const departmentSlice = createSlice({
       // Delete Department
       .addCase(deleteDepartment.fulfilled, (state, action) => {
         state.departments = state.departments.filter(
-          (d) => d.id !== action.payload
+          (d) => d.id !== action.payload,
         );
       });
   },

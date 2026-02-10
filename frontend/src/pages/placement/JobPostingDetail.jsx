@@ -2,8 +2,9 @@ import React, { useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  fetchJobPostingById,
   deleteJobPosting,
+  deleteDrive,
+  fetchJobPostingById,
 } from "../../store/slices/placementSlice";
 import {
   Building2,
@@ -47,6 +48,24 @@ const JobPostingDetail = () => {
         navigate("/placement/job-postings");
       } catch (error) {
         toast.error(error.error || "Failed to delete job posting");
+      }
+    }
+  };
+
+  const handleDeleteDrive = async (driveId, e) => {
+    e.preventDefault(); // Prevent Link navigation
+    if (
+      window.confirm(
+        "Are you sure you want to delete this scheduled drive? This action cannot be undone.",
+      )
+    ) {
+      try {
+        await dispatch(deleteDrive(driveId)).unwrap();
+        toast.success("Drive deleted successfully");
+        // Refresh job posting to update list
+        dispatch(fetchJobPostingById(id));
+      } catch (error) {
+        toast.error(error.error || "Failed to delete drive");
       }
     }
   };
@@ -250,11 +269,81 @@ const JobPostingDetail = () => {
                 </h4>
                 <div className="space-y-3">
                   {/* Placeholder for drives associated with this posting if we had them in the response */}
-                  <p className="text-xs text-gray-500 italic">
-                    No associated drives found for this posting.
-                  </p>
+                  {posting.drives && posting.drives.length > 0 ? (
+                    posting.drives.map((drive) => (
+                      <Link
+                        key={drive.id}
+                        to={`/placement/drives/${drive.id}`}
+                        className="group relative block p-5 bg-white dark:bg-gray-800 rounded-2xl hover:shadow-md transition-all border-2 border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/30 ring-1 ring-gray-100 dark:ring-gray-700"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h5 className="font-bold text-gray-900 dark:text-white text-base mb-1">
+                              {drive.drive_name}
+                            </h5>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide ${
+                                drive.status === "scheduled"
+                                  ? "bg-blue-50 text-blue-700 border border-blue-100"
+                                  : drive.status === "ongoing"
+                                    ? "bg-amber-50 text-amber-700 border border-amber-100"
+                                    : "bg-green-50 text-green-700 border border-green-100"
+                              }`}
+                            >
+                              {drive.status}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => handleDeleteDrive(drive.id, e)}
+                            className="p-2 bg-gray-50 dark:bg-gray-700 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Delete Drive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4 text-indigo-500" />
+                            <span className="font-medium">
+                              {drive.drive_date
+                                ? new Date(drive.drive_date).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    },
+                                  )
+                                : "No date"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4 text-indigo-500" />
+                            <span className="font-medium capitalize">
+                              {drive.mode}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 translate-x-full opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                          <ChevronLeft className="w-5 h-5 text-indigo-400 rotate-180" />
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="text-center p-8 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 italic mb-2">
+                        No drives scheduled yet
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Create a drive to start tracking applications
+                      </p>
+                    </div>
+                  )}
                   <Link
                     to="/placement/drives/new"
+                    state={{ jobPostingId: posting.id }}
                     className="mt-4 flex items-center justify-center w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 dark:shadow-none text-sm"
                   >
                     Schedule New Drive

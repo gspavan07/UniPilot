@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchMyProfile,
   updateMyProfile,
+  fetchSystemFields,
 } from "../../store/slices/placementSlice";
 import {
   UserCircle,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
+import ResumeManager from "./components/ResumeManager";
 
 const MyPlacementProfile = () => {
   const dispatch = useDispatch();
@@ -33,6 +35,7 @@ const MyPlacementProfile = () => {
 
   useEffect(() => {
     dispatch(fetchMyProfile());
+    dispatch(fetchSystemFields());
   }, [dispatch]);
 
   useEffect(() => {
@@ -120,6 +123,9 @@ const MyPlacementProfile = () => {
             </div>
           </div>
         </div>
+
+        {/* Master Resume Manager */}
+        <ResumeManager />
 
         {/* Skills & Experience */}
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">

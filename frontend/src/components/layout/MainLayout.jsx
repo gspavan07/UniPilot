@@ -208,14 +208,14 @@ const MainLayout = () => {
       name: "Placements",
       href: "/placement/dashboard",
       icon: Briefcase,
-      // permission: ["placement.company.manage", "placement.drive.manage"],
-      roles: ["super_admin", "principal", "tpo", "placement_coordinator"],
+      roles: ["super_admin", "principal", "tpo"],
     },
     {
       name: "Dept. Placements",
       href: "/placement/department",
       icon: Briefcase,
       roles: ["hod"],
+      isCoordinator: true,
     },
     {
       name: "My Placements",
@@ -264,10 +264,11 @@ const MainLayout = () => {
     // const adminRoles = ["super_admin", "admin", "administrator"];
     // if (adminRoles.includes(user?.role)) return true;
 
-    // 2. Role Check
-    if (item.roles && Array.isArray(item.roles)) {
-      if (!item.roles.includes(user?.role)) return false;
-    }
+    // 2. Role & Special Access Check (Coordinator Flag)
+    const hasRoleMatch = !item.roles || item.roles.includes(user?.role);
+    const hasPCMatch = item.isCoordinator && user?.is_placement_coordinator;
+
+    if (!hasRoleMatch && !hasPCMatch) return false;
 
     // 3. Specific Student-Level Restrictions (e.g., Hostel)
     if (

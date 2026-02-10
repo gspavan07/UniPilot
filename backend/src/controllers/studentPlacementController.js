@@ -5,11 +5,80 @@ const {
   JobPosting,
   Company,
   DriveEligibility,
+  DriveRound,
   User,
+  SemesterResult,
+  Graduation,
 } = require("../models");
 const eligibilityService = require("../services/eligibilityService");
 const policyService = require("../services/placementPolicyService");
 const logger = require("../utils/logger");
+
+/**
+ * Get system-mapped fields for student (CGPA, 10th%, email, mobile)
+ */
+exports.getStudentSystemFields = async (req, res) => {
+  try {
+    const student = await User.findByPk(req.user.userId, {
+      attributes: ["email", "phone", "previous_academics"],
+    });
+
+    const profile = await StudentPlacementProfile.findOne({
+      where: { student_id: req.user.userId },
+      attributes: ["resume_url"],
+    });
+
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Student not found" });
+    }
+
+    // 1. Get CGPA from latest SemesterResult or Graduation
+    let cgpa = 0;
+    const graduation = await Graduation.findOne({
+      where: { student_id: req.user.userId },
+    });
+
+    if (graduation?.final_cgpa) {
+      cgpa = graduation.final_cgpa;
+    } else {
+      const latestResult = await SemesterResult.findOne({
+        where: { student_id: req.user.userId },
+        order: [["semester", "DESC"]],
+      });
+      if (latestResult) cgpa = latestResult.sgpa; // Simplification: using SGPA of latest sem if CGPA not calculated
+    }
+
+    // 2. Extract 10th and Inter/Diploma from previous_academics
+    // Assuming structure: [{ type: '10th', percentage: 90 }, { type: 'Inter', percentage: 85 }]
+    const academics = student.previous_academics || [];
+    const ten =
+      academics.find((a) => a.type?.toLowerCase().includes("10"))?.percentage ||
+      "";
+    const inter =
+      academics.find(
+        (a) =>
+          a.type?.toLowerCase().includes("inter") ||
+          a.type?.toLowerCase().includes("diploma"),
+      )?.percentage || "";
+
+    res.status(200).json({
+      success: true,
+      data: {
+        cgpa: parseFloat(cgpa).toFixed(2),
+        ten_percent: ten,
+        inter_percent: inter,
+        email: student.email,
+        mobile: student.phone,
+        resume: profile?.resume_url || "",
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching system fields:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
 
 /**
  * Get student's placement profile
@@ -64,6 +133,39 @@ exports.updateMyProfile = async (req, res) => {
 };
 
 /**
+ * Upload master resume
+ */
+exports.uploadMasterResume = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, error: "No file uploaded" });
+    }
+
+    const resumeUrl = `/uploads/student_docs/resumes/${req.file.filename}`;
+
+    const [profile, created] = await StudentPlacementProfile.findOrCreate({
+      where: { student_id: req.user.userId },
+      defaults: { student_id: req.user.userId, resume_url: resumeUrl },
+    });
+
+    if (!created) {
+      await profile.update({ resume_url: resumeUrl });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { resume_url: resumeUrl },
+      message: "Master resume updated successfully",
+    });
+  } catch (error) {
+    logger.error("Error uploading master resume:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
+
+/**
  * Get eligible drives for the student
  */
 exports.getEligibleDrives = async (req, res) => {
@@ -90,7 +192,17 @@ exports.getEligibleDrives = async (req, res) => {
       ],
     });
 
-    // 3. Filter drives based on eligibility rules
+    // 3. Fetch student's existing applications
+    const studentApplications = await StudentApplication.findAll({
+      where: { student_id: req.user.userId },
+      attributes: ["drive_id", "status"],
+    });
+
+    const appliedDriveIds = new Set(
+      studentApplications.map((app) => app.drive_id),
+    );
+
+    // 4. Filter drives based on eligibility rules
     // For this POC, we'll mark eligibility on each drive
     const eligibleDrives = drives.map((drive) => {
       const eligibility = drive.eligibility;
@@ -112,6 +224,10 @@ exports.getEligibleDrives = async (req, res) => {
         ...drive.toJSON(),
         isEligible,
         ineligible_reason: reason,
+        hasApplied: appliedDriveIds.has(drive.id),
+        applicationStatus: studentApplications.find(
+          (app) => app.drive_id === drive.id,
+        )?.status,
       };
     });
 
@@ -182,6 +298,28 @@ exports.applyToDrive = async (req, res) => {
       status: "applied",
     });
 
+    // Sync master resume if a resume was uploaded/changed in the form
+    // We look for any field that might be a resume URL (typically string ending in .pdf)
+    // Or we check if the drive has any 'system' field mapped to 'resume'
+    const driveFields = await PlacementDrive.findByPk(driveId, {
+      attributes: ["registration_form_fields"],
+    });
+
+    const resumeField = driveFields?.registration_form_fields?.find(
+      (f) => f.type === "system" && f.systemField === "resume",
+    );
+
+    if (resumeField && registrationFormData[resumeField.id]) {
+      const newResumeUrl = registrationFormData[resumeField.id];
+      const [profile] = await StudentPlacementProfile.findOrCreate({
+        where: { student_id: req.user.userId },
+        defaults: { student_id: req.user.userId, resume_url: newResumeUrl },
+      });
+      if (profile.resume_url !== newResumeUrl) {
+        await profile.update({ resume_url: newResumeUrl });
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: application,
@@ -202,6 +340,10 @@ exports.getMyApplications = async (req, res) => {
       where: { student_id: req.user.userId },
       include: [
         {
+          model: DriveRound,
+          as: "current_round",
+        },
+        {
           model: PlacementDrive,
           as: "drive",
           include: [
@@ -210,7 +352,12 @@ exports.getMyApplications = async (req, res) => {
               as: "job_posting",
               include: [{ model: Company, as: "company" }],
             },
+            {
+              model: DriveRound,
+              as: "rounds",
+            },
           ],
+          order: [[{ model: DriveRound, as: "rounds" }, "round_number", "ASC"]],
         },
       ],
     });

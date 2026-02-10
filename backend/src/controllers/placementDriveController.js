@@ -1,10 +1,12 @@
 const {
   PlacementDrive,
+  StudentApplication,
   JobPosting,
   Company,
   DriveEligibility,
   DriveRound,
   User,
+  sequelize,
 } = require("../models");
 const logger = require("../utils/logger");
 
@@ -43,14 +45,32 @@ exports.getDrives = async (req, res) => {
           as: "coordinator",
           attributes: ["id", "first_name", "last_name"],
         },
+        {
+          model: DriveEligibility,
+          as: "eligibility",
+          attributes: ["department_ids"],
+        },
       ],
       order: [["drive_date", "DESC"]],
     });
 
+    // Scoping for Placement Coordinator
+    const requester = await User.findByPk(req.user.userId);
+    let filteredDrives = drives;
+
+    if (requester.is_placement_coordinator && requester.department_id) {
+      filteredDrives = drives.filter(
+        (drive) =>
+          !drive.eligibility?.department_ids || // Empty means open to all
+          drive.eligibility.department_ids.length === 0 ||
+          drive.eligibility.department_ids.includes(requester.department_id),
+      );
+    }
+
     res.status(200).json({
       success: true,
-      count: drives.length,
-      data: drives,
+      count: filteredDrives.length,
+      data: filteredDrives,
     });
   } catch (error) {
     logger.error("Error in getDrives:", error);
@@ -127,6 +147,7 @@ exports.createDrive = async (req, res) => {
       await DriveEligibility.create({
         ...eligibility,
         drive_id: drive.id,
+        batch_ids: eligibility.batch_ids || [],
       });
     }
 
@@ -178,11 +199,16 @@ exports.updateDrive = async (req, res) => {
     drive = await drive.update(driveData);
 
     if (eligibility) {
+      const eligibilityData = {
+        ...eligibility,
+        drive_id: drive.id,
+        batch_ids: eligibility.batch_ids || [],
+      };
       const [elig, created] = await DriveEligibility.findOrCreate({
         where: { drive_id: drive.id },
-        defaults: { ...eligibility, drive_id: drive.id },
+        defaults: eligibilityData,
       });
-      if (!created) await elig.update(eligibility);
+      if (!created) await elig.update(eligibilityData);
     }
 
     if (rounds && Array.isArray(rounds)) {
@@ -379,7 +405,7 @@ exports.getDriveApplications = async (req, res) => {
         {
           model: User,
           as: "student",
-          attributes: ["id", "first_name", "last_name", "id_number", "email"],
+          attributes: ["id", "first_name", "last_name", "student_id", "email"],
         },
       ],
       order: [["applied_at", "DESC"]],
@@ -434,5 +460,103 @@ exports.updateApplicationStatus = async (req, res) => {
   } catch (error) {
     logger.error("Error updating application status:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
+
+// @desc    Delete placement drive
+// @route   DELETE /api/placement/drives/:id
+// @access  Private/TPO
+exports.deleteDrive = async (req, res) => {
+  try {
+    const drive = await PlacementDrive.findByPk(req.params.id);
+
+    if (!drive) {
+      return res.status(404).json({
+        success: false,
+        error: "Placement drive not found",
+      });
+    }
+
+    // Optional: Check if drive has active applications or results before deleting
+    // For now, we assume simple deletion (database constraints might apply)
+
+    await drive.destroy();
+
+    res.status(200).json({
+      success: true,
+      data: {},
+      message: "Drive deleted successfully",
+    });
+  } catch (error) {
+    logger.error("Error in deleteDrive:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
+/**
+ * Bulk update application status
+ */
+exports.bulkUpdateApplicationStatus = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { applicationIds, status, roundId } = req.body;
+
+    if (!applicationIds || !Array.isArray(applicationIds) || !status) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid request data",
+      });
+    }
+
+    const updates = { status };
+    if (roundId) {
+      updates.current_round_id = roundId;
+    }
+
+    // If status is 'placed', we might want to update student profile or similar logic
+    // For now, just update the application status
+
+    await StudentApplication.update(updates, {
+      where: {
+        id: applicationIds,
+      },
+      transaction,
+    });
+
+    // If status is 'placed', create Placement records for all affected applications
+    if (status === "placed") {
+      const applications = await StudentApplication.findAll({
+        where: { id: applicationIds },
+        include: [{ model: PlacementDrive, as: "drive" }],
+        transaction,
+      });
+
+      const placementRecords = applications.map((app) => ({
+        student_id: app.student_id,
+        drive_id: app.drive_id,
+        job_posting_id: app.drive.job_posting_id,
+        application_id: app.id,
+        status: "offered",
+      }));
+
+      await Placement.bulkCreate(placementRecords, { transaction });
+    }
+
+    await transaction.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully updated ${applicationIds.length} applications`,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    logger.error("Error in bulk update application status:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+    });
   }
 };

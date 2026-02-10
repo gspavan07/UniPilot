@@ -153,14 +153,14 @@ const BrowseDrives = () => {
 
               <div className="flex gap-2">
                 <Link
-                  to={`/placement/drive/${drive.id}`}
+                  to={`/placement/drives/${drive.id}/apply`}
                   className="flex-1 py-2 text-center bg-gray-50 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-bold border border-gray-100 dark:border-gray-700 hover:bg-gray-100"
                 >
                   Details
                 </Link>
                 {drive.isEligible && (
                   <Link
-                    to={`/placement/drive/${drive.id}/apply`}
+                    to={`/placement/drives/${drive.id}/apply`}
                     className="flex-1 py-2 text-center bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-md shadow-indigo-100 dark:shadow-none hover:bg-indigo-700"
                   >
                     Apply Now

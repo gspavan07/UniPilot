@@ -8,8 +8,12 @@
 export const getLandingPage = (user) => {
   if (!user) return "/auth/login";
 
-  // Use role_data slug if available, otherwise fallback to basic role string
-  const roleSlug = user.role_data?.slug || user.role;
+  // Use role_data slug    // Higher level staff roles can land on their specific module dashboard
+  const roleSlug = user.role_data?.slug;
+
+  if (user.is_placement_coordinator) {
+    return "/placement/department";
+  }
 
   switch (roleSlug) {
     case "finance_staff":
@@ -26,8 +30,6 @@ export const getLandingPage = (user) => {
       return "/transport";
     case "tpo":
       return "/placement/dashboard";
-    case "placement_coordinator":
-      return "/placement/department";
     case "student":
       return "/dashboard"; // StudentDashboard is well defined
     case "faculty":

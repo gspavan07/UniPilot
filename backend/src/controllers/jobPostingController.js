@@ -54,6 +54,10 @@ exports.getJobPostingById = async (req, res) => {
           model: Company,
           as: "company",
         },
+        {
+          model: require("../models").PlacementDrive,
+          as: "drives",
+        },
       ],
     });
 

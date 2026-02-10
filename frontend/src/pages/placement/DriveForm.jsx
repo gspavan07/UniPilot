@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchJobPostings,
   fetchDriveById,
+  createDrive,
+  updateDrive,
 } from "../../store/slices/placementSlice";
-import api from "../../utils/api";
+import { fetchBatchYears } from "../../store/slices/userSlice";
+import { fetchDepartments } from "../../store/slices/departmentSlice";
+import { fetchRegulations } from "../../store/slices/regulationSlice";
 import FormBuilder from "./components/FormBuilder";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
 import {
@@ -26,15 +30,17 @@ const DriveForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { jobPostings, currentDrive } = useSelector((state) => state.placement);
+  const { departments } = useSelector((state) => state.departments);
+  const { regulations } = useSelector((state) => state.regulations);
+  const { batchYears: availableBatches } = useSelector((state) => state.users);
 
   const [step, setStep] = useState(1);
-  const [departments, setDepartments] = useState([]);
-  const [regulations, setRegulations] = useState([]);
 
   const [formData, setFormData] = useState({
-    job_posting_id: "",
+    job_posting_id: location.state?.jobPostingId || "",
     drive_name: "",
     drive_type: "on_campus",
     drive_date: "",
@@ -50,13 +56,17 @@ const DriveForm = () => {
     max_active_backlogs: "0",
     department_ids: [],
     regulation_ids: [],
+    batch_ids: [],
     // Selection Process
     rounds: [],
   });
 
   useEffect(() => {
     dispatch(fetchJobPostings());
-    fetchMetadata();
+    dispatch(fetchDepartments({ type: "academic" }));
+    dispatch(fetchRegulations());
+    dispatch(fetchBatchYears());
+
     if (isEdit) {
       if (currentDrive && currentDrive.id === id) {
         populateForm(currentDrive);
@@ -65,19 +75,6 @@ const DriveForm = () => {
       }
     }
   }, [isEdit, id, currentDrive, dispatch]);
-
-  const fetchMetadata = async () => {
-    try {
-      const [deptRes, regRes] = await Promise.all([
-        api.get("/departments?type=academic"),
-        api.get("/regulations"),
-      ]);
-      setDepartments(deptRes.data.data);
-      setRegulations(regRes.data.data);
-    } catch (error) {
-      console.error("Failed to fetch metadata", error);
-    }
-  };
 
   const populateForm = (drive) => {
     setFormData({
@@ -102,6 +99,7 @@ const DriveForm = () => {
       max_active_backlogs: drive.eligibility?.max_active_backlogs || "0",
       department_ids: drive.eligibility?.department_ids || [],
       regulation_ids: drive.eligibility?.regulation_ids || [],
+      batch_ids: drive.eligibility?.batch_ids || [],
       rounds: drive.rounds || [],
     });
   };
@@ -136,19 +134,20 @@ const DriveForm = () => {
           max_active_backlogs: parseInt(formData.max_active_backlogs),
           department_ids: formData.department_ids,
           regulation_ids: formData.regulation_ids,
+          batch_ids: formData.batch_ids,
         },
       };
 
       if (isEdit) {
-        await api.put(`/placement/drives/${id}`, payload);
+        await dispatch(updateDrive({ id, data: payload })).unwrap();
         toast.success("Drive updated successfully");
       } else {
-        await api.post("/placement/drives", payload);
+        await dispatch(createDrive(payload)).unwrap();
         toast.success("Drive scheduled successfully");
       }
       navigate("/placement/drives");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to save drive");
+      toast.error(error?.error || error || "Failed to save drive");
     }
   };
 
@@ -233,6 +232,32 @@ const DriveForm = () => {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  Registration Start
+                </label>
+                <input
+                  type="datetime-local"
+                  name="registration_start"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={formData.registration_start}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  Registration Deadline
+                </label>
+                <input
+                  type="datetime-local"
+                  name="registration_end"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={formData.registration_end}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                   Mode
                 </label>
                 <select
@@ -299,29 +324,81 @@ const DriveForm = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
-                  Eligible Departments
-                </label>
-                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  {departments.map((dept) => (
-                    <label
-                      key={dept.id}
-                      className="flex items-center group cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
-                        checked={formData.department_ids.includes(dept.id)}
-                        onChange={() =>
-                          handleMultiSelect("department_ids", dept.id)
-                        }
-                      />
-                      <span className="ml-3 text-sm text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 transition-colors">
-                        {dept.name}
-                      </span>
-                    </label>
-                  ))}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
+                    Eligible Departments
+                  </label>
+                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    {departments.map((dept) => (
+                      <label
+                        key={dept.id}
+                        className="flex items-center group cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                          checked={formData.department_ids?.includes(dept.id)}
+                          onChange={() =>
+                            handleMultiSelect("department_ids", dept.id)
+                          }
+                        />
+                        <span className="ml-3 text-sm text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 transition-colors">
+                          {dept.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
+                    Eligible Batches (Joining Years)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    {availableBatches.length > 0 ? (
+                      availableBatches.map((batch) => (
+                        <label
+                          key={batch}
+                          className="flex items-center group cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                            checked={formData.batch_ids?.includes(batch)}
+                            onChange={() =>
+                              handleMultiSelect("batch_ids", batch)
+                            }
+                          />
+                          <span className="ml-3 text-sm text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 transition-colors">
+                            Batch {batch}
+                          </span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="col-span-2 text-xs text-gray-400 italic">
+                        No batches found. Using default list...
+                        {[2022, 2023, 2024, 2025].map((batch) => (
+                          <label
+                            key={batch}
+                            className="flex items-center mt-2 group cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                              checked={formData.batch_ids?.includes(batch)}
+                              onChange={() =>
+                                handleMultiSelect("batch_ids", batch)
+                              }
+                            />
+                            <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                              Batch {batch}
+                            </span>
+                          </label>
+                        ))}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

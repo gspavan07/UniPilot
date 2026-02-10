@@ -82,23 +82,64 @@ const FormBuilder = ({ fields, onChange }) => {
                     <option value="date">Date</option>
                     <option value="dropdown">Dropdown</option>
                     <option value="file">File Upload</option>
+                    <option value="system">System Field (Auto-fetch)</option>
                   </select>
                 </div>
-                <div className="flex items-end pb-2">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                      checked={field.required}
-                      onChange={(e) =>
-                        updateField(field.id, { required: e.target.checked })
-                      }
-                    />
-                    <span className="ml-2 text-xs font-medium text-gray-600">
-                      Required
-                    </span>
-                  </label>
-                </div>
+                {field.type === "system" ? (
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">
+                      Choose Field
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-lg text-sm outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-indigo-700 dark:text-indigo-300"
+                      value={field.systemField || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const labelMap = {
+                          cgpa: "Current CGPA",
+                          ten_percent: "10th Percentage",
+                          inter_percent: "Inter/Diploma Percentage",
+                          email: "Email Address",
+                          mobile: "Mobile Number",
+                          resume: "Latest Resume",
+                        };
+                        updateField(field.id, {
+                          systemField: val,
+                          label: labelMap[val] || field.label,
+                          required: true,
+                        });
+                      }}
+                    >
+                      <option value="">Select Field...</option>
+                      <optgroup label="Academic (Read-Only)">
+                        <option value="cgpa">CGPA</option>
+                        <option value="ten_percent">10th Percentage</option>
+                        <option value="inter_percent">Inter/Diploma %</option>
+                      </optgroup>
+                      <optgroup label="Contact & Career (Editable)">
+                        <option value="email">Email</option>
+                        <option value="mobile">Mobile Number</option>
+                        <option value="resume">Resume (PDF)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        checked={field.required}
+                        onChange={(e) =>
+                          updateField(field.id, { required: e.target.checked })
+                        }
+                      />
+                      <span className="ml-2 text-xs font-medium text-gray-600">
+                        Required
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
               <button
                 type="button"

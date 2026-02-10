@@ -7,6 +7,7 @@ const jobPostingController = require("../controllers/jobPostingController");
 const placementDriveController = require("../controllers/placementDriveController");
 const studentPlacementController = require("../controllers/studentPlacementController");
 const departmentPlacementController = require("../controllers/departmentPlacementController");
+const studentUpload = require("../middleware/studentUpload");
 
 // ============================================
 // COMPANY ROUTES
@@ -140,6 +141,13 @@ router.put(
   placementDriveController.updateDrive,
 );
 
+router.delete(
+  "/drives/:id",
+  authenticate,
+  checkPermission("placement.drive.manage"),
+  placementDriveController.deleteDrive,
+);
+
 // Drive Eligibility
 router.put(
   "/drives/:id/eligibility",
@@ -179,6 +187,13 @@ router.get(
 );
 
 router.put(
+  "/applications/bulk/status",
+  authenticate,
+  checkPermission("placement.drive.manage"),
+  placementDriveController.bulkUpdateApplicationStatus,
+);
+
+router.put(
   "/applications/:id/status",
   authenticate,
   checkPermission("placement.drive.manage"),
@@ -198,6 +213,27 @@ router.get(
   authenticate,
   checkPermission(["placement.department.view", "placement.drive.manage"]),
   departmentPlacementController.getDepartmentStudentList,
+);
+
+router.get(
+  "/department/:departmentId/drives",
+  authenticate,
+  checkPermission(["placement.department.view", "placement.drive.manage"]),
+  departmentPlacementController.getDepartmentDrives,
+);
+
+router.get(
+  "/department/:departmentId/drives/:driveId/students",
+  authenticate,
+  checkPermission(["placement.department.view", "placement.drive.manage"]),
+  departmentPlacementController.getDriveStudentMatrix,
+);
+
+router.get(
+  "/department/:departmentId/drives/:driveId",
+  authenticate,
+  checkPermission(["placement.department.view", "placement.drive.manage"]),
+  departmentPlacementController.getDepartmentDriveDetail,
 );
 
 module.exports = router;
@@ -221,6 +257,21 @@ router.post(
 );
 
 router.get(
+  "/system-fields",
+  authenticate,
+  checkPermission("placement.profile.manage_own"),
+  studentPlacementController.getStudentSystemFields,
+);
+
+router.post(
+  "/upload-resume",
+  authenticate,
+  checkPermission("placement.profile.manage_own"),
+  studentUpload.single("resume"),
+  studentPlacementController.uploadMasterResume,
+);
+
+router.get(
   "/eligible-drives",
   authenticate,
   checkPermission("placement.drive.view"),
@@ -237,6 +288,6 @@ router.post(
 router.get(
   "/my-applications",
   authenticate,
-  checkPermission("placement.application.view_own"),
+  // checkPermission("placement.application.view_own"),
   studentPlacementController.getMyApplications,
 );

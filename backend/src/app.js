@@ -23,6 +23,7 @@ app.use(
   "/uploads/student_docs",
   express.static(path.join(__dirname, "../uploads/student_docs")),
 );
+// app.use("/resumes", express.static(path.join(__dirname, "../uploads/resumes")));
 // Make sure other subfolders in uploads are not accidentally exposed unless explicitly added
 
 // Security middleware

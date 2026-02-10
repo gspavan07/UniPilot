@@ -71,7 +71,7 @@ router.get(
   checkDynamicPermission("view"),
   require("../controllers/userController").getStudentSections,
 );
-router.get("/batch-years", checkDynamicPermission("view"), getBatchYears);
+router.get("/batch-years", getBatchYears);
 
 router
   .route("/")

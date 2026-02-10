@@ -270,6 +270,12 @@ const User = sequelize.define(
       type: DataTypes.DATE,
     },
 
+    is_placement_coordinator: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment:
+        "Whether the user is a placement coordinator for their department",
+    },
     // Timestamps
     created_at: {
       type: DataTypes.DATE,
