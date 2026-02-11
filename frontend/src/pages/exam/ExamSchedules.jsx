@@ -181,6 +181,7 @@ const ExamSchedules = () => {
     status: "scheduled",
     program_id: "", // Helper for name generation
   });
+  const [submittingCycle, setSubmittingCycle] = useState(false);
   const [editingCycle, setEditingCycle] = useState(null);
 
   const [availableSemesters, setAvailableSemesters] = useState([1, 2, 3, 4, 5, 6, 7, 8]);
@@ -533,10 +534,12 @@ const ExamSchedules = () => {
     const payload = { ...cycleForm };
     delete payload.program_id;
 
+    setSubmittingCycle(true);
     if (editingCycle) {
       dispatch(
         updateExamCycle({ id: editingCycle.id, cycleData: payload }),
       ).then(async (res) => {
+        setSubmittingCycle(false);
         if (!res.error) {
           // Trigger timeline deletion for the cycle
           await dispatch(deleteCycleTimetable(editingCycle.id));
@@ -546,9 +549,10 @@ const ExamSchedules = () => {
           setViewingCycleRaw(res.payload); // Update active view if needed
           alert("Exam cycle updated and previous timetable deleted successfully!");
         }
-      });
+      }).catch(() => setSubmittingCycle(false));
     } else {
       dispatch(createExamCycle(payload)).then((res) => {
+        setSubmittingCycle(false);
         if (!res.error) {
           setShowCreateModal(false);
           setCycleForm({
@@ -578,7 +582,7 @@ const ExamSchedules = () => {
           });
           alert("Exam cycle created successfully!");
         }
-      });
+      }).catch(() => setSubmittingCycle(false));
     }
   };
 
@@ -736,7 +740,8 @@ const ExamSchedules = () => {
         // Based on examples: B.Tech_R20_VII_Semester_Examinations(Regular)_Feb-2026_Batch-2022
         // We use -Examinations as per template/other examples, and (Mode) matching examples.
 
-        let generatedName = `${programCode}_${regName}_${semNumber}_${examName}-Examinations(${examType})`;
+        const modeSuffix = cycleForm.cycle_type === "semester_end_external" ? `(${examType})` : "";
+        let generatedName = `${programCode}_${regName}_${semNumber}_${examName}-Examinations${modeSuffix}`;
 
         if (scheduledExamMonth) {
           generatedName += `_${scheduledExamMonth}`;
@@ -1734,236 +1739,381 @@ const ExamSchedules = () => {
                 )}
 
                 {selectedCourse && activeSchedule && (
-                  <div className="flex gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-indigo-400 uppercase">
-                        Max Marks
-                      </p>
-                      <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
-                        {activeSchedule.max_marks}
-                      </p>
+                  <>
+                    <div className="flex gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-xl">
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-indigo-400 uppercase">
+                          Max Marks
+                        </p>
+                        <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                          {activeSchedule.max_marks}
+                        </p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-indigo-400 uppercase">
+                          Passing Marks
+                        </p>
+                        <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                          {activeSchedule.passing_marks}
+                        </p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-indigo-400 uppercase">
+                          Date
+                        </p>
+                        <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                          {new Date(
+                            activeSchedule.exam_date,
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-indigo-400 uppercase">
-                        Passing Marks
-                      </p>
-                      <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
-                        {activeSchedule.passing_marks}
-                      </p>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-indigo-400 uppercase">
-                        Date
-                      </p>
-                      <p className="text-lg font-black text-indigo-700 dark:text-indigo-300">
-                        {new Date(
-                          activeSchedule.exam_date,
-                        ).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
 
-                <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
-                  <table className="w-full text-left">
-                    <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 text-xs uppercase font-bold">
-                      <tr>
-                        <th className="px-6 py-4">Student</th>
-                        <th className="px-6 py-4">Roll No</th>
-                        {activeSchedule?.cycle?.component_breakdown?.map(
-                          (comp, idx) => (
-                            <th key={idx} className="px-6 py-4 text-center">
-                              {comp.name} ({comp.max_marks})
-                            </th>
-                          ),
-                        )}
-                        <th className="px-6 py-4 text-center w-40">
-                          Total Marks
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {studentList?.map((student) => {
-                        const hasComponents =
-                          activeSchedule?.cycle?.component_breakdown?.length >
-                          0;
-                        const data = marksData[student.id] || {
-                          marks_obtained: "",
-                          component_scores: {},
-                        };
 
-                        return (
-                          <tr
-                            key={student.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30"
-                          >
-                            <td className="px-6 py-4">
-                              <div className="font-bold text-sm">
-                                {student.first_name} {student.last_name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {student.email}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm font-medium">
-                              {student.student_id}
-                            </td>
+                    {(() => {
+                      const cycleType = (activeSchedule?.cycle?.cycle_type || "").toLowerCase();
+                      const isLabCycle = cycleType === "internal_lab" || cycleType === "external_lab";
 
-                            {activeSchedule?.cycle?.component_breakdown?.map(
-                              (comp, idx) => (
-                                <td key={idx} className="px-6 py-4 text-center">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={comp.max_marks}
-                                    disabled={
-                                      !activeSchedule ||
-                                      sheetStatus === "locked"
-                                    }
-                                    value={
-                                      data.component_scores?.[comp.name] || ""
-                                    }
-                                    onChange={(e) => {
-                                      const newVal = e.target.value;
-                                      const newComponentScores = {
-                                        ...data.component_scores,
-                                        [comp.name]: newVal,
-                                      };
+                      // Simplified: only 'descriptive' for theory cycles should expand
+                      const isQuestionWiseComponent = (compName) => {
+                        const name = (compName || "").toLowerCase();
+                        return name === "descriptive";
+                      };
 
-                                      // Auto-calculate total
-                                      const newTotal = Object.values(
-                                        newComponentScores,
-                                      ).reduce(
-                                        (sum, val) =>
-                                          sum + parseFloat(val || 0),
-                                        0,
-                                      );
+                      // Get paper format once
+                      const paperFormatRaw = activeSchedule?.cycle?.paper_format;
+                      const paperFormat = paperFormatRaw?.theory?.[activeSchedule.course_id] ||
+                        paperFormatRaw?.lab?.[activeSchedule.course_id] ||
+                        paperFormatRaw?.[activeSchedule.course_id];
+                      const questions = paperFormat?.questions || paperFormat?.experiments || [];
 
-                                      setMarksData({
-                                        ...marksData,
-                                        [student.id]: {
-                                          ...data,
-                                          component_scores: newComponentScores,
-                                          marks_obtained: newTotal,
-                                        },
-                                      });
-                                    }}
-                                    className="w-20 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-medium disabled:opacity-50"
-                                    placeholder="0"
-                                  />
-                                </td>
-                              ),
-                            )}
+                      // For lab cycles, find which component should expand based on name AND paper format existence
+                      const labExpansionIndex = isLabCycle && questions.length > 0
+                        ? (activeSchedule?.cycle?.component_breakdown || []).findIndex(c => {
+                          const name = (c.name || "").toLowerCase();
+                          return ["lab record", "execution", "execution / output", "practical exam"].includes(name);
+                        })
+                        : -1;
 
-                            <td className="px-6 py-4 text-center">
-                              <input
-                                type="number"
-                                disabled={
-                                  !activeSchedule ||
-                                  sheetStatus === "locked" ||
-                                  hasComponents
-                                }
-                                value={data.marks_obtained || ""}
-                                onChange={(e) =>
-                                  setMarksData({
-                                    ...marksData,
-                                    [student.id]: {
-                                      ...data,
-                                      marks_obtained: e.target.value,
-                                    },
-                                  })
-                                }
-                                className={`w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold disabled:opacity-50 ${hasComponents
-                                  ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
-                                  : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                                  }`}
-                                placeholder="0.0"
-                              />
-                            </td>
-                          </tr>
+                      // Determine which component should be expanded
+                      const expansionIndex = isLabCycle ? labExpansionIndex :
+                        (activeSchedule?.cycle?.component_breakdown || []).findIndex(
+                          c => isQuestionWiseComponent(c.name)
                         );
-                      })}
-                      {studentList.length === 0 && !loadingStudents && (
-                        <tr>
-                          <td
-                            colSpan="3"
-                            className="px-6 py-12 text-center text-gray-400"
+
+                      return (
+                        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
+                          <table className="w-full text-left">
+                            <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 text-xs uppercase font-bold">
+                              <tr>
+                                <th rowSpan={2} className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">Student</th>
+                                <th rowSpan={2} className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">Roll No</th>
+                                {activeSchedule?.cycle?.component_breakdown?.map(
+                                  (comp, idx) => {
+                                    // Expand THIS component if it's at expansionIndex AND has questions
+                                    if (idx === expansionIndex && questions.length > 0) {
+                                      return (
+                                        <th
+                                          key={idx}
+                                          colSpan={questions.length}
+                                          className="px-6 py-2 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] text-center bg-indigo-50/30 dark:bg-indigo-900/10 border-b border-indigo-100/50 dark:border-indigo-900/30"
+                                        >
+                                          {comp.name}
+                                        </th>
+                                      );
+                                    }
+
+                                    // Otherwise ALWAYS show as regular column
+                                    return (
+                                      <th key={idx} rowSpan={2} className="px-6 py-4 text-center border-b border-gray-100 dark:border-gray-700">
+                                        {comp.name} ({comp.max_marks})
+                                      </th>
+                                    );
+                                  },
+                                )}
+
+                                {/* Fallback for when breakdown is empty but template exists */}
+                                {(!activeSchedule?.cycle?.component_breakdown || activeSchedule.cycle.component_breakdown.length === 0) && (() => {
+                                  const paperFormatRaw = activeSchedule?.cycle?.paper_format;
+                                  const paperFormat = paperFormatRaw?.theory?.[activeSchedule.course_id] ||
+                                    paperFormatRaw?.lab?.[activeSchedule.course_id] ||
+                                    paperFormatRaw?.[activeSchedule.course_id];
+                                  const questions = paperFormat?.questions || paperFormat?.experiments || [];
+
+                                  if (questions.length > 0) {
+                                    return (
+                                      <th
+                                        colSpan={questions.length}
+                                        className="px-6 py-2 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] text-center bg-indigo-50/30 dark:bg-indigo-900/10 border-b border-indigo-100/50 dark:border-indigo-900/30"
+                                      >
+                                        {isLabCycle ? "Experiments" : "Descriptive"}
+                                      </th>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
+                                <th rowSpan={2} className="px-6 py-4 text-center w-40 border-b border-gray-100 dark:border-gray-700">
+                                  Total Marks
+                                </th>
+                              </tr>
+                              <tr className="bg-gray-50/30 dark:bg-gray-700/10">
+                                {activeSchedule?.cycle?.component_breakdown?.map(
+                                  (comp, idx) => {
+                                    // Only render subheaders for expanded component
+                                    if (idx === expansionIndex && questions.length > 0) {
+                                      return questions.map((q, qIdx) => {
+                                        const displayQNo = (q.q_no || "").startsWith("E") || (q.q_no || "").startsWith("Q") ? q.q_no : (isLabCycle ? `E${q.q_no}` : q.q_no);
+                                        return (
+                                          <th key={`${idx}-${qIdx}`} className="px-4 py-2 text-center border-x border-gray-100 dark:border-gray-700 bg-indigo-50/10 dark:bg-indigo-900/5">
+                                            <div className="text-[10px] text-indigo-500 font-black">{displayQNo}</div>
+                                            <div className="text-[8px] opacity-70">({q.marks}M)</div>
+                                          </th>
+                                        );
+                                      });
+                                    }
+                                    return null;
+                                  },
+                                )}
+
+                                {/* Fallback questions row */}
+                                {(!activeSchedule?.cycle?.component_breakdown || activeSchedule.cycle.component_breakdown.length === 0) && (() => {
+                                  const paperFormatRaw = activeSchedule?.cycle?.paper_format;
+                                  const paperFormat = paperFormatRaw?.theory?.[activeSchedule.course_id] ||
+                                    paperFormatRaw?.lab?.[activeSchedule.course_id] ||
+                                    paperFormatRaw?.[activeSchedule.course_id];
+                                  const questions = paperFormat?.questions || paperFormat?.experiments || [];
+
+                                  if (questions.length > 0) {
+                                    return questions.map((q, qIdx) => (
+                                      <th key={`fallback-q-${qIdx}`} className="px-4 py-2 text-center border-x border-gray-100 dark:border-gray-700 bg-indigo-50/10 dark:bg-indigo-900/5">
+                                        <div className="text-[10px] text-indigo-500 font-black">{q.q_no}</div>
+                                        <div className="text-[8px] opacity-70">({q.marks}M)</div>
+                                      </th>
+                                    ));
+                                  }
+                                  return null;
+                                })()}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                              {studentList?.map((student) => {
+                                const data = marksData[student.id] || {
+                                  marks_obtained: "",
+                                  component_scores: {},
+                                };
+                                const hasComponents = activeSchedule?.cycle?.component_breakdown?.length > 0;
+
+                                return (
+                                  <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                    <td className="px-6 py-4">
+                                      <div className="font-bold text-sm">{student.first_name} {student.last_name}</div>
+                                      <div className="text-xs text-gray-500">{student.email}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-medium">{student.student_id}</td>
+
+                                    {activeSchedule?.cycle?.component_breakdown?.map((comp, idx) => {
+                                      // Render expanded inputs for component at expansionIndex
+                                      if (idx === expansionIndex && questions.length > 0) {
+                                        return questions.map((q, qIdx) => {
+                                          const currentQScore = data.component_scores?.[comp.name]?.q_scores?.[q.q_no] || "";
+                                          return (
+                                            <td key={`${idx}-${qIdx}`} className="px-2 py-4 text-center border-x border-gray-100 dark:border-gray-700 bg-indigo-50/10 dark:bg-indigo-900/5">
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max={q.marks}
+                                                disabled={!activeSchedule || sheetStatus === "locked"}
+                                                value={currentQScore}
+                                                onChange={(e) => {
+                                                  const newVal = e.target.value;
+                                                  const prevCompData = data.component_scores?.[comp.name] || { q_scores: {}, total: 0 };
+                                                  const newQScores = { ...prevCompData.q_scores, [q.q_no]: newVal };
+                                                  const descriptiveTotal = Object.values(newQScores).reduce((sum, val) => sum + parseFloat(val || 0), 0);
+                                                  const newComponentScores = { ...data.component_scores, [comp.name]: { q_scores: newQScores, total: descriptiveTotal } };
+                                                  const newTotal = Object.entries(newComponentScores).reduce((sum, [cN, cV]) => sum + (typeof cV === "object" ? (cV.total || 0) : parseFloat(cV || 0)), 0);
+
+                                                  setMarksData({
+                                                    ...marksData,
+                                                    [student.id]: { ...data, component_scores: newComponentScores, marks_obtained: newTotal },
+                                                  });
+                                                }}
+                                                className="w-14 px-2 py-1 bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-center text-xs font-bold"
+                                                placeholder="0"
+                                              />
+                                            </td>
+                                          );
+                                        });
+                                      }
+
+                                      // ALWAYS render regular input for all other components
+                                      return (
+                                        <td key={idx} className="px-6 py-4 text-center">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            max={comp.max_marks}
+                                            disabled={!activeSchedule || sheetStatus === "locked"}
+                                            value={data.component_scores?.[comp.name] || ""}
+                                            onChange={(e) => {
+                                              const newVal = e.target.value;
+                                              const newComponentScores = { ...data.component_scores, [comp.name]: newVal };
+                                              const newTotal = Object.entries(newComponentScores).reduce((sum, [cN, cV]) => sum + (typeof cV === "object" ? (cV.total || 0) : parseFloat(cV || 0)), 0);
+
+                                              setMarksData({
+                                                ...marksData,
+                                                [student.id]: { ...data, component_scores: newComponentScores, marks_obtained: newTotal },
+                                              });
+                                            }}
+                                            className="w-20 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-medium disabled:opacity-50"
+                                            placeholder="0"
+                                          />
+                                        </td>
+                                      );
+                                    })}
+
+                                    {/* Fallback inputs if breakdown is empty */}
+                                    {(!activeSchedule?.cycle?.component_breakdown || activeSchedule.cycle.component_breakdown.length === 0) && (() => {
+                                      const pfRaw = activeSchedule?.cycle?.paper_format;
+                                      const pf = pfRaw?.theory?.[activeSchedule.course_id] || pfRaw?.lab?.[activeSchedule.course_id] || pfRaw?.[activeSchedule.course_id];
+                                      const questions = pf?.questions || pf?.experiments || [];
+                                      const defaultCompName = isLabCycle ? "Execution" : "Descriptive";
+
+                                      if (questions.length > 0) {
+                                        return questions.map((q, qIdx) => {
+                                          const currentQScore = data.component_scores?.[defaultCompName]?.q_scores?.[q.q_no] || "";
+                                          return (
+                                            <td key={`fallback-${qIdx}`} className="px-2 py-4 text-center border-x border-gray-100 dark:border-gray-700 bg-indigo-50/10 dark:bg-indigo-900/5">
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max={q.marks}
+                                                disabled={!activeSchedule || sheetStatus === "locked"}
+                                                value={currentQScore}
+                                                onChange={(e) => {
+                                                  const newVal = e.target.value;
+                                                  const prevData = data.component_scores?.[defaultCompName] || { q_scores: {}, total: 0 };
+                                                  const newQS = { ...prevData.q_scores, [q.q_no]: newVal };
+                                                  const dTot = Object.values(newQS).reduce((s, v) => s + parseFloat(v || 0), 0);
+                                                  const newCS = { ...data.component_scores, [defaultCompName]: { q_scores: newQS, total: dTot } };
+                                                  const nTot = Object.entries(newCS).reduce((s, [cN, cV]) => s + (typeof cV === "object" ? (cV.total || 0) : parseFloat(cV || 0)), 0);
+                                                  setMarksData({ ...marksData, [student.id]: { ...data, component_scores: newCS, marks_obtained: nTot } });
+                                                }}
+                                                className="w-14 px-2 py-1 bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-center text-xs font-bold"
+                                                placeholder="0"
+                                              />
+                                            </td>
+                                          );
+                                        });
+                                      }
+                                      return null;
+                                    })()}
+
+                                    <td className="px-6 py-4 text-center">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={activeSchedule.max_marks}
+                                        disabled={!activeSchedule || sheetStatus === "locked" || hasComponents || (() => {
+                                          const pfRaw = activeSchedule?.cycle?.paper_format;
+                                          const pf = pfRaw?.theory?.[activeSchedule.course_id] || pfRaw?.lab?.[activeSchedule.course_id] || pfRaw?.[activeSchedule.course_id];
+                                          return (pf?.questions?.length > 0 || pf?.experiments?.length > 0);
+                                        })()}
+                                        value={data.marks_obtained || ""}
+                                        onChange={(e) => setMarksData({ ...marksData, [student.id]: { ...data, marks_obtained: e.target.value } })}
+                                        className={`w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-center font-bold disabled:opacity-50 ${hasComponents || (() => {
+                                          const pfRaw = activeSchedule?.cycle?.paper_format;
+                                          const pf = pfRaw?.theory?.[activeSchedule.course_id] || pfRaw?.lab?.[activeSchedule.course_id] || pfRaw?.[activeSchedule.course_id];
+                                          return (pf?.questions?.length > 0 || pf?.experiments?.length > 0);
+                                        })() ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400" : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                          }`}
+                                        placeholder="0.0"
+                                      />
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {(!studentList || studentList.length === 0) && !loadingStudents && (
+                                <tr>
+                                  <td colSpan="100%" className="px-6 py-12 text-center text-gray-400">
+                                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-10" />
+                                    Please select a course to load marks entry sheet.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                    <div className="flex flex-wrap items-center justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                      {/* Phase 1: Faculty Entry */}
+                      {(user.role === "faculty" ||
+                        user.role === "admin" ||
+                        user.role === "super_admin") &&
+                        (sheetStatus === "draft" || sheetStatus === "verified") && (
+                          <button
+                            onClick={handleMarksSubmit}
+                            disabled={
+                              !selectedCourse ||
+                              !activeSchedule ||
+                              studentList.length === 0
+                            }
+                            className="px-6 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-indigo-500 text-gray-700 dark:text-gray-300 rounded-xl transition-all font-bold shadow-sm"
                           >
-                            <FileText className="w-12 h-12 mx-auto mb-3 opacity-10" />
-                            Please select a course to load marks entry sheet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                            Save as Draft
+                          </button>
+                        )}
 
-                <div className="flex flex-wrap items-center justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                  {/* Phase 1: Faculty Entry */}
-                  {(user.role === "faculty" ||
-                    user.role === "admin" ||
-                    user.role === "super_admin") &&
-                    (sheetStatus === "draft" || sheetStatus === "verified") && (
-                      <button
-                        onClick={handleMarksSubmit}
-                        disabled={
-                          !selectedCourse ||
-                          !activeSchedule ||
-                          studentList.length === 0
-                        }
-                        className="px-6 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-indigo-500 text-gray-700 dark:text-gray-300 rounded-xl transition-all font-bold shadow-sm"
-                      >
-                        Save as Draft
-                      </button>
-                    )}
+                      {/* Phase 2: HOD Verification */}
+                      {(user.role === "hod" ||
+                        user.role === "admin" ||
+                        user.role === "super_admin") &&
+                        sheetStatus === "draft" && (
+                          <button
+                            onClick={() => handleModeration("verified")}
+                            disabled={
+                              !selectedCourse ||
+                              !activeSchedule ||
+                              studentList.length === 0
+                            }
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-blue-500/20"
+                          >
+                            Verify Mark Sheet
+                          </button>
+                        )}
 
-                  {/* Phase 2: HOD Verification */}
-                  {(user.role === "hod" ||
-                    user.role === "admin" ||
-                    user.role === "super_admin") &&
-                    sheetStatus === "draft" && (
-                      <button
-                        onClick={() => handleModeration("verified")}
-                        disabled={
-                          !selectedCourse ||
-                          !activeSchedule ||
-                          studentList.length === 0
-                        }
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-blue-500/20"
-                      >
-                        Verify Mark Sheet
-                      </button>
-                    )}
+                      {/* Phase 3: CoE Approval */}
+                      {(user.role === "admin" || user.role === "super_admin") &&
+                        sheetStatus === "verified" && (
+                          <button
+                            onClick={() => handleModeration("approved")}
+                            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-green-500/20"
+                          >
+                            Approve Results
+                          </button>
+                        )}
 
-                  {/* Phase 3: CoE Approval */}
-                  {(user.role === "admin" || user.role === "super_admin") &&
-                    sheetStatus === "verified" && (
-                      <button
-                        onClick={() => handleModeration("approved")}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-green-500/20"
-                      >
-                        Approve Results
-                      </button>
-                    )}
-
-                  {/* Phase 4: Locking */}
-                  {(user.role === "admin" || user.role === "super_admin") &&
-                    sheetStatus === "approved" && (
-                      <button
-                        onClick={() => handleModeration("locked")}
-                        className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-red-500/20"
-                      >
-                        Lock & Finalize
-                      </button>
-                    )}
-
-                  {sheetStatus === "locked" && (
-                    <div className="flex items-center gap-2 text-red-600 font-bold px-4 py-2 bg-red-50 rounded-lg">
-                      <Lock className="w-4 h-4" />
-                      Results are Locked
+                      {/* Phase 4: Locking */}
+                      {(user.role === "admin" || user.role === "super_admin") &&
+                        sheetStatus === "approved" && (
+                          <button
+                            onClick={() => handleModeration("locked")}
+                            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-bold shadow-lg shadow-red-500/20"
+                          >
+                            Lock & Finalize
+                          </button>
+                        )}
                     </div>
-                  )}
-                </div>
+
+                    {sheetStatus === "locked" && (
+                      <div className="flex items-center gap-2 text-red-600 font-bold px-4 py-2 bg-red-50 rounded-lg">
+                        <Lock className="w-4 h-4" />
+                        Results are Locked
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
@@ -2926,188 +3076,190 @@ const ExamSchedules = () => {
                 </div>
               )}
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Create Cycle Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="text-xl font-bold">
-                {editingCycle ? "Edit Exam Cycle" : "New Exam Cycle"}
-              </h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                  Cycle Name <span className="text-[10px] text-gray-400 lowercase italic">(auto-generated)</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  readOnly
-                  placeholder="Will be generated automatically"
-                  value={cycleForm.name}
-                  className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 border-none rounded-xl focus:ring-0 outline-none mb-4 cursor-not-allowed"
-                />
+      {
+        showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-xl font-bold">
+                  {editingCycle ? "Edit Exam Cycle" : "New Exam Cycle"}
+                </h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                    Cycle Name <span className="text-[10px] text-gray-400 lowercase italic">(auto-generated)</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    readOnly
+                    placeholder="Will be generated automatically"
+                    value={cycleForm.name}
+                    className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-500 border-none rounded-xl focus:ring-0 outline-none mb-4 cursor-not-allowed"
+                  />
 
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                      Degree
-                    </label>
-                    <select
-                      required
-                      value={cycleForm.program_id}
-                      onChange={(e) =>
-                        setCycleForm({
-                          ...cycleForm,
-                          program_id: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    >
-                      <option value="">Select Degree</option>
-                      {uniqueDegrees.map((degree) => (
-                        <option key={degree} value={degree}>
-                          {degree}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                        Degree
+                      </label>
+                      <select
+                        required
+                        value={cycleForm.program_id}
+                        onChange={(e) =>
+                          setCycleForm({
+                            ...cycleForm,
+                            program_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        <option value="">Select Degree</option>
+                        {uniqueDegrees.map((degree) => (
+                          <option key={degree} value={degree}>
+                            {degree}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                        Exam Month
+                      </label>
+                      <select
+                        required
+                        value={cycleForm.exam_month}
+                        onChange={(e) =>
+                          setCycleForm({
+                            ...cycleForm,
+                            exam_month: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        <option value="">Select Month</option>
+                        {[
+                          "January",
+                          "February",
+                          "March",
+                          "April",
+                          "May",
+                          "June",
+                          "July",
+                          "August",
+                          "September",
+                          "October",
+                          "November",
+                          "December",
+                        ].map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                        Exam Year
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="YYYY"
+                        value={cycleForm.exam_year}
+                        onChange={(e) =>
+                          setCycleForm({
+                            ...cycleForm,
+                            exam_year: e.target.value === "" ? "" : parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                      Exam Month
-                    </label>
-                    <select
-                      required
-                      value={cycleForm.exam_month}
-                      onChange={(e) =>
-                        setCycleForm({
-                          ...cycleForm,
-                          exam_month: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    >
-                      <option value="">Select Month</option>
-                      {[
-                        "January",
-                        "February",
-                        "March",
-                        "April",
-                        "May",
-                        "June",
-                        "July",
-                        "August",
-                        "September",
-                        "October",
-                        "November",
-                        "December",
-                      ].map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                      Exam Year
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="YYYY"
-                      value={cycleForm.exam_year}
-                      onChange={(e) =>
-                        setCycleForm({
-                          ...cycleForm,
-                          exam_year: e.target.value === "" ? "" : parseInt(e.target.value),
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                      Regulation
-                    </label>
-                    <select
-                      value={cycleForm.regulation_id}
-                      onChange={(e) =>
-                        setCycleForm({
-                          ...cycleForm,
-                          regulation_id: e.target.value,
-                          cycle_type: "", // Reset cycle type when regulation changes
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    >
-                      <option value="">Select Regulation</option>
-                      {regulations.map((reg) => (
-                        <option key={reg.id} value={reg.id}>
-                          {reg.name}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                        Regulation
+                      </label>
+                      <select
+                        value={cycleForm.regulation_id}
+                        onChange={(e) =>
+                          setCycleForm({
+                            ...cycleForm,
+                            regulation_id: e.target.value,
+                            cycle_type: "", // Reset cycle type when regulation changes
+                          })
+                        }
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        <option value="">Select Regulation</option>
+                        {regulations.map((reg) => (
+                          <option key={reg.id} value={reg.id}>
+                            {reg.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                        Cycle Type
+                      </label>
+                      <select
+                        value={cycleForm.cycle_type}
+                        onChange={(e) =>
+                          setCycleForm({
+                            ...cycleForm,
+                            cycle_type: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        <option value="">Select Type</option>
+                        <option value="mid_term_1">Mid-Term 1</option>
+                        <option value="mid_term_2">Mid-Term 2</option>
+                        <option value="internal_lab">Internal Lab</option>
+                        <option value="semester_end_external">Semester End + External</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                      Cycle Type
-                    </label>
-                    <select
-                      value={cycleForm.cycle_type}
-                      onChange={(e) =>
-                        setCycleForm({
-                          ...cycleForm,
-                          cycle_type: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    >
-                      <option value="">Select Type</option>
-                      <option value="mid_term_1">Mid-Term 1</option>
-                      <option value="mid_term_2">Mid-Term 2</option>
-                      <option value="internal_lab">Internal Lab</option>
-                      <option value="semester_end_external">Semester End + External</option>
-                    </select>
-                  </div>
-                </div>
 
-                {cycleForm.cycle_type === "semester_end_external" && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                      Exam Mode
-                    </label>
-                    <select
-                      value={cycleForm.exam_mode}
-                      onChange={(e) =>
-                        setCycleForm({
-                          ...cycleForm,
-                          exam_mode: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    >
-                      <option value="regular">Regular Only</option>
-                      <option value="supplementary">Supplementary Only</option>
-                      <option value="combined">Regular + Supplementary</option>
-                    </select>
-                  </div>
-                )}
+                  {cycleForm.cycle_type === "semester_end_external" && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                        Exam Mode
+                      </label>
+                      <select
+                        value={cycleForm.exam_mode}
+                        onChange={(e) =>
+                          setCycleForm({
+                            ...cycleForm,
+                            exam_mode: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        <option value="regular">Regular Only</option>
+                        <option value="supplementary">Supplementary Only</option>
+                        <option value="combined">Regular + Supplementary</option>
+                      </select>
+                    </div>
+                  )}
 
-                {/* {cycleForm.cycle_type === "semester_end_external" && (
+                  {/* {cycleForm.cycle_type === "semester_end_external" && (
                   <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/30 space-y-4">
                     <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest text-center">
                       Fee Configuration
@@ -3158,537 +3310,561 @@ const ExamSchedules = () => {
                     </div>
                   </div>
                 )} */}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Dates removed as they are derived from Time Table */}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Batch Year
-                  </label>
-                  <select
-                    required
-                    value={cycleForm.batch_year}
-                    onChange={(e) =>
-                      setCycleForm({
-                        ...cycleForm,
-                        batch_year: e.target.value === "" ? "" : parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    <option value="">Select Year</option>
-                    {batchYears?.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Dates removed as they are derived from Time Table */}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Batch Year
+                    </label>
+                    <select
+                      required
+                      value={cycleForm.batch_year}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          batch_year: e.target.value === "" ? "" : parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Select Year</option>
+                      {batchYears?.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
 
-                  </select>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Semester
+                    </label>
+                    <select
+                      value={cycleForm.semester}
+                      disabled={loadingSemesters}
+                      onChange={(e) =>
+                        setCycleForm({
+                          ...cycleForm,
+                          semester: e.target.value === "" ? "" : parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50"
+                    >
+                      {availableSemesters.map((s) => (
+                        <option key={s} value={s}>
+                          Semester {s}
+                        </option>
+                      ))}
+                    </select>
+                    {loadingSemesters && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Semester
-                  </label>
-                  <select
-                    value={cycleForm.semester}
-                    disabled={loadingSemesters}
-                    onChange={(e) =>
-                      setCycleForm({
-                        ...cycleForm,
-                        semester: e.target.value === "" ? "" : parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50"
+                {/* Legacy Weightage and Exam Type removed - derived from regulation/cycle_type */}
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-all"
                   >
-                    {availableSemesters.map((s) => (
-                      <option key={s} value={s}>
-                        Semester {s}
-                      </option>
-                    ))}
-                  </select>
-                  {loadingSemesters && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                    </div>
-                  )}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingCycle}
+                    className="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                  >
+                    {submittingCycle ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {editingCycle ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      editingCycle ? "Update Cycle" : "Create Cycle"
+                    )}
+                  </button>
                 </div>
-              </div>
-              {/* Legacy Weightage and Exam Type removed - derived from regulation/cycle_type */}
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all"
-                >
-                  {editingCycle ? "Update Cycle" : "Create Cycle"}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal for Details (removed, since it's now a view mode) */}
 
       {/* Add Schedule Modal */}
-      {showScheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden transition-all">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="text-xl font-bold">
-                {editingSchedule ? "Edit Exam Schedule" : "Add Exam Schedule"}
-              </h3>
-              <button
-                onClick={() => setShowScheduleModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <form onSubmit={handleScheduleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Filter Program
-                  </label>
-                  <select
-                    value={modalFilters.program_id}
-                    onChange={(e) =>
-                      setModalFilters({
-                        ...modalFilters,
-                        program_id: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    <option value="">All Programs</option>
-                    {programs?.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Filter Semester
-                  </label>
-                  <select
-                    value={modalFilters.semester}
-                    onChange={(e) =>
-                      setModalFilters({
-                        ...modalFilters,
-                        semester: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    <option value="">Any Sem</option>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                      <option key={s} value={s}>
-                        Sem {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Course / Subject
-                  </label>
-                  <select
-                    required
-                    value={scheduleForm.course_id}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        course_id: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  >
-                    <option value="">Select Course</option>
-                    {courses
-                      ?.filter((c) => {
-                        const programMatch =
-                          !modalFilters.program_id ||
-                          c.program_id === modalFilters.program_id;
-                        const semesterMatch =
-                          !modalFilters.semester ||
-                          c.semester == modalFilters.semester;
-                        return programMatch && semesterMatch;
-                      })
-                      ?.map((c) => {
-                        const prog = programs.find(
-                          (p) => p.id === c.program_id,
-                        );
-                        return (
-                          <option key={c.id} value={c.id}>
-                            {c.name} ({c.code}) {prog ? ` - ${prog.name}` : ""}
-                          </option>
-                        );
-                      })}
-                  </select>
-                </div>
-              </div>
-
-              <div className="relative">
-                <label className="block text-sm font-medium mb-2 uppercase tracking-wider text-gray-400">
-                  Target Programs
-                </label>
-
-                {/* Custom Multi-Select Trigger */}
-                <div
-                  onClick={() => setShowBranchDropdown(!showBranchDropdown)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-xl cursor-pointer min-h-[50px] flex flex-wrap gap-2 items-center border border-transparent hover:border-indigo-500 transition-all"
+      {
+        showScheduleModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden transition-all">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-xl font-bold">
+                  {editingSchedule ? "Edit Exam Schedule" : "Add Exam Schedule"}
+                </h3>
+                <button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                 >
-                  {scheduleForm.programs && scheduleForm.programs.length > 0 ? (
-                    scheduleForm.programs.map((bId) => {
-                      const prog = programs.find((p) => p.id === bId);
-                      return (
-                        <span
-                          key={bId}
-                          className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold flex items-center gap-1"
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <form onSubmit={handleScheduleSubmit} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Filter Program
+                    </label>
+                    <select
+                      value={modalFilters.program_id}
+                      onChange={(e) =>
+                        setModalFilters({
+                          ...modalFilters,
+                          program_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">All Programs</option>
+                      {programs?.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Filter Semester
+                    </label>
+                    <select
+                      value={modalFilters.semester}
+                      onChange={(e) =>
+                        setModalFilters({
+                          ...modalFilters,
+                          semester: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Any Sem</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                        <option key={s} value={s}>
+                          Sem {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Course / Subject
+                    </label>
+                    <select
+                      required
+                      value={scheduleForm.course_id}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          course_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value="">Select Course</option>
+                      {courses
+                        ?.filter((c) => {
+                          const programMatch =
+                            !modalFilters.program_id ||
+                            c.program_id === modalFilters.program_id;
+                          const semesterMatch =
+                            !modalFilters.semester ||
+                            c.semester == modalFilters.semester;
+
+                          if (!programMatch || !semesterMatch) return false;
+
+                          // Filter by course type based on cycle
+                          const cycleType = viewingCycle?.cycle_type;
+                          const isLabCycle = cycleType === "internal_lab" || cycleType === "external_lab";
+                          const isTheoryCycle = cycleType?.startsWith("mid_term") || cycleType === "semester_end_external" || cycleType === "end_semester";
+
+                          if (isLabCycle) return c.course_type === "lab";
+                          if (isTheoryCycle) return c.course_type === "theory";
+
+                          return true;
+                        })
+                        ?.map((c) => {
+                          const prog = programs.find(
+                            (p) => p.id === c.program_id,
+                          );
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.code}) {prog ? ` - ${prog.name}` : ""}
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-sm font-medium mb-2 uppercase tracking-wider text-gray-400">
+                    Target Programs
+                  </label>
+
+                  {/* Custom Multi-Select Trigger */}
+                  <div
+                    onClick={() => setShowBranchDropdown(!showBranchDropdown)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-xl cursor-pointer min-h-[50px] flex flex-wrap gap-2 items-center border border-transparent hover:border-indigo-500 transition-all"
+                  >
+                    {scheduleForm.programs && scheduleForm.programs.length > 0 ? (
+                      scheduleForm.programs.map((bId) => {
+                        const prog = programs.find((p) => p.id === bId);
+                        return (
+                          <span
+                            key={bId}
+                            className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold flex items-center gap-1"
+                          >
+                            {formatProgramName(prog)}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const programs = scheduleForm.programs.filter(
+                                  (id) => id !== bId,
+                                );
+                                setScheduleForm({ ...scheduleForm, programs });
+                              }}
+                              className="hover:text-indigo-900 dark:hover:text-white"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-gray-400">Select programs...</span>
+                    )}
+                    <div className="ml-auto">
+                      <ChevronRight
+                        className={`w-5 h-5 text-gray-400 transition-transform ${showBranchDropdown ? "rotate-90" : ""}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dropdown Options */}
+                  {showBranchDropdown && (
+                    <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto p-2">
+                      {programs?.map((p) => (
+                        <label
+                          key={p.id}
+                          className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         >
-                          {formatProgramName(prog)}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const programs = scheduleForm.programs.filter(
-                                (id) => id !== bId,
-                              );
+                          <input
+                            type="checkbox"
+                            checked={scheduleForm.programs?.includes(p.id)}
+                            onChange={(e) => {
+                              const programs = [...(scheduleForm.programs || [])];
+                              if (e.target.checked) {
+                                programs.push(p.id);
+                              } else {
+                                const index = programs.indexOf(p.id);
+                                if (index > -1) programs.splice(index, 1);
+                              }
                               setScheduleForm({ ...scheduleForm, programs });
                             }}
-                            className="hover:text-indigo-900 dark:hover:text-white"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      );
-                    })
-                  ) : (
-                    <span className="text-gray-400">Select programs...</span>
+                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm font-medium">
+                            {p.name} ({p.code})
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   )}
-                  <div className="ml-auto">
-                    <ChevronRight
-                      className={`w-5 h-5 text-gray-400 transition-transform ${showBranchDropdown ? "rotate-90" : ""}`}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Exam Date
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={scheduleForm.exam_date}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          exam_date: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={scheduleForm.start_time}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          start_time: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={scheduleForm.end_time}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          end_time: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+                {/* Max Marks derived from Exam Cycle */}
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowScheduleModal(false)}
+                    className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all"
+                  >
+                    {editingSchedule ? "Update Schedule" : "Add Schedule"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Auto-Generate Modal */}
+      {
+        showAutoModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold">Auto-Generate Timetable</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Generate timetables for all programs
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAutoModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <form onSubmit={handleAutoGenerate} className="p-6 space-y-4">
+                {viewingCycle?.cycle_type === "semester_end_external" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Exam Sub-Type
+                    </label>
+                    <select
+                      required
+                      value={autoForm.exam_sub_type}
+                      onChange={(e) =>
+                        setAutoForm({ ...autoForm, exam_sub_type: e.target.value })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                    >
+                      <option value="theory">Theory Courses</option>
+                      <option value="lab">Lab Courses (External)</option>
+                    </select>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={autoForm.start_date}
+                      onChange={(e) =>
+                        setAutoForm({ ...autoForm, start_date: e.target.value })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Gap Days
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={autoForm.gap_days}
+                      onChange={(e) =>
+                        setAutoForm({
+                          ...autoForm,
+                          gap_days: e.target.value === "" ? "" : parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={autoForm.start_time}
+                      onChange={(e) =>
+                        setAutoForm({ ...autoForm, start_time: e.target.value })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={autoForm.end_time}
+                      onChange={(e) =>
+                        setAutoForm({ ...autoForm, end_time: e.target.value })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 </div>
 
-                {/* Dropdown Options */}
-                {showBranchDropdown && (
-                  <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto p-2">
-                    {programs?.map((p) => (
-                      <label
-                        key={p.id}
-                        className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      >
+                {viewingCycle?.cycle_type?.includes("mid_term") && (
+                  <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div className="relative">
                         <input
                           type="checkbox"
-                          checked={scheduleForm.programs?.includes(p.id)}
-                          onChange={(e) => {
-                            const programs = [...(scheduleForm.programs || [])];
-                            if (e.target.checked) {
-                              programs.push(p.id);
-                            } else {
-                              const index = programs.indexOf(p.id);
-                              if (index > -1) programs.splice(index, 1);
-                            }
-                            setScheduleForm({ ...scheduleForm, programs });
-                          }}
-                          className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          className="sr-only peer"
+                          checked={autoForm.isTwoExamsPerDay}
+                          onChange={(e) =>
+                            setAutoForm({ ...autoForm, isTwoExamsPerDay: e.target.checked })
+                          }
                         />
-                        <span className="text-sm font-medium">
-                          {p.name} ({p.code})
-                        </span>
-                      </label>
-                    ))}
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-600 dark:text-gray-300 group-hover:text-indigo-600 transition-colors">
+                        Schedule Two Exams Per Day
+                      </span>
+                    </label>
+
+                    {autoForm.isTwoExamsPerDay && (
+                      <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                        <div>
+                          <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                            Afternoon Start
+                          </label>
+                          <input
+                            type="time"
+                            required
+                            value={autoForm.afternoon_start_time}
+                            onChange={(e) =>
+                              setAutoForm({ ...autoForm, afternoon_start_time: e.target.value })
+                            }
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
+                            Afternoon End
+                          </label>
+                          <input
+                            type="time"
+                            required
+                            value={autoForm.afternoon_end_time}
+                            onChange={(e) =>
+                              setAutoForm({ ...autoForm, afternoon_end_time: e.target.value })
+                            }
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Exam Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={scheduleForm.exam_date}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        exam_date: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-800/50 rounded-lg">
+                      <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-blue-900 dark:text-blue-400">
+                        Smart Scheduling
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-500 mt-1">
+                        The system will automatically skip Sundays and holidays from the academic calendar when scheduling exams.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={scheduleForm.start_time}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        start_time: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={scheduleForm.end_time}
-                    onChange={(e) =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        end_time: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-              {/* Max Marks derived from Exam Cycle */}
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowScheduleModal(false)}
-                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all"
-                >
-                  {editingSchedule ? "Update Schedule" : "Add Schedule"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Auto-Generate Modal */}
-      {showAutoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold">Auto-Generate Timetable</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Generate timetables for all programs
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAutoModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <form onSubmit={handleAutoGenerate} className="p-6 space-y-4">
-              {viewingCycle?.cycle_type === "semester_end_external" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Exam Sub-Type
-                  </label>
-                  <select
-                    required
-                    value={autoForm.exam_sub_type}
-                    onChange={(e) =>
-                      setAutoForm({ ...autoForm, exam_sub_type: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAutoModal(false)}
+                    className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-all"
                   >
-                    <option value="theory">Theory Courses</option>
-                    <option value="lab">Lab Courses (External)</option>
-                  </select>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={autoGenerating}
+                    className="flex-1 py-3 px-4 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {autoGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate All"
+                    )}
+                  </button>
                 </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={autoForm.start_date}
-                    onChange={(e) =>
-                      setAutoForm({ ...autoForm, start_date: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Gap Days
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={autoForm.gap_days}
-                    onChange={(e) =>
-                      setAutoForm({
-                        ...autoForm,
-                        gap_days: e.target.value === "" ? "" : parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={autoForm.start_time}
-                    onChange={(e) =>
-                      setAutoForm({ ...autoForm, start_time: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={autoForm.end_time}
-                    onChange={(e) =>
-                      setAutoForm({ ...autoForm, end_time: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              {viewingCycle?.cycle_type?.includes("mid_term") && (
-                <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={autoForm.isTwoExamsPerDay}
-                        onChange={(e) =>
-                          setAutoForm({ ...autoForm, isTwoExamsPerDay: e.target.checked })
-                        }
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                    </div>
-                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300 group-hover:text-indigo-600 transition-colors">
-                      Schedule Two Exams Per Day
-                    </span>
-                  </label>
-
-                  {autoForm.isTwoExamsPerDay && (
-                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                          Afternoon Start
-                        </label>
-                        <input
-                          type="time"
-                          required
-                          value={autoForm.afternoon_start_time}
-                          onChange={(e) =>
-                            setAutoForm({ ...autoForm, afternoon_start_time: e.target.value })
-                          }
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5 uppercase tracking-wider text-gray-400">
-                          Afternoon End
-                        </label>
-                        <input
-                          type="time"
-                          required
-                          value={autoForm.afternoon_end_time}
-                          onChange={(e) =>
-                            setAutoForm({ ...autoForm, afternoon_end_time: e.target.value })
-                          }
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-800/50 rounded-lg">
-                    <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-blue-900 dark:text-blue-400">
-                      Smart Scheduling
-                    </p>
-                    <p className="text-xs text-blue-700 dark:text-blue-500 mt-1">
-                      The system will automatically skip Sundays and holidays from the academic calendar when scheduling exams.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAutoModal(false)}
-                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={autoGenerating}
-                  className="flex-1 py-3 px-4 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {autoGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Generate All"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div >
-      )}
+              </form>
+            </div>
+          </div >
+        )
+      }
       {/* Manual Override Modal */}
       {
         showOverrideModal && (
@@ -3971,31 +4147,33 @@ const ExamSchedules = () => {
         )
       }
 
-      {undoData && (
-        <div className="fixed bottom-8 right-8 z-[100] animate-bounce-in">
-          <div className="bg-gray-900 border border-gray-700 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
-            <div className="flex flex-col mr-2">
-              <span className="font-bold">{undoData.message}</span>
-              <span className="text-xs text-gray-400">Action can be undone</span>
+      {
+        undoData && (
+          <div className="fixed bottom-8 right-8 z-[100] animate-bounce-in">
+            <div className="bg-gray-900 border border-gray-700 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
+              <div className="flex flex-col mr-2">
+                <span className="font-bold">{undoData.message}</span>
+                <span className="text-xs text-gray-400">Action can be undone</span>
+              </div>
+              <button
+                onClick={handleUndoClick}
+                className="px-4 py-2 bg-white text-gray-900 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors uppercase tracking-wider"
+              >
+                Undo
+              </button>
+              <button
+                onClick={() => {
+                  if (undoData.timer) clearTimeout(undoData.timer);
+                  setUndoData(null);
+                }}
+                className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
             </div>
-            <button
-              onClick={handleUndoClick}
-              className="px-4 py-2 bg-white text-gray-900 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors uppercase tracking-wider"
-            >
-              Undo
-            </button>
-            <button
-              onClick={() => {
-                if (undoData.timer) clearTimeout(undoData.timer);
-                setUndoData(null);
-              }}
-              className="p-2 hover:bg-gray-800 rounded-full transition-colors"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
           </div>
-        </div>
-      )}
+        )
+      }
     </div >
   );
 };

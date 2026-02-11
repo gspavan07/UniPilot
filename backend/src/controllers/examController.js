@@ -321,20 +321,23 @@ exports.createExamCycle = async (req, res) => {
       if (regulation && regulation.exam_structure) {
         const structure = regulation.exam_structure;
 
-        // Determine which category to pull from based on common cycle types
-        // This logic mapping can be expanded as needed
-        if (cycle_type === "mid_term") {
+        // Map cycle_type to regulation structure keys
+        if (cycle_type.startsWith("mid_term")) {
           const midConfig = structure.theory_courses?.mid_terms || {};
           component_breakdown = midConfig.components || [];
           max_marks = midConfig.total_marks || 0;
-        } else if (cycle_type === "end_semester") {
+        } else if (cycle_type === "end_semester" || cycle_type === "semester_end_external") {
           const endConfig = structure.theory_courses?.end_semester || {};
           component_breakdown = endConfig.components || [];
           max_marks = endConfig.total_marks || 0;
         } else if (cycle_type === "internal_lab") {
-          max_marks = structure.lab_courses?.internal_lab?.total_marks || 0;
+          const labConfig = structure.lab_courses?.internal_lab || {};
+          component_breakdown = labConfig.components || [];
+          max_marks = labConfig.total_marks || 0;
         } else if (cycle_type === "external_lab") {
-          max_marks = structure.lab_courses?.external_lab?.total_marks || 0;
+          const labConfig = structure.lab_courses?.external_lab || {};
+          component_breakdown = labConfig.components || [];
+          max_marks = labConfig.total_marks || 0;
         } else if (cycle_type === "project_review") {
           max_marks = structure.project_courses?.total_marks || 0;
         }
@@ -1127,7 +1130,24 @@ exports.getMarkEntryData = async (req, res) => {
     }
 
     // 3. Determine target students
-    const semester = schedule.course.semester || 1;
+    // Derive semester from regulation's courses_list since Course model doesn't have semester field
+    let semester = 1; // default
+    if (schedule.cycle?.regulation?.courses_list && schedule.programs?.length > 0) {
+      // Check the first program's courses_list
+      const programId = schedule.programs[0];
+      const programCourses = schedule.cycle.regulation.courses_list[programId];
+
+      if (programCourses) {
+        // Find which semester this course belongs to
+        for (const [sem, courseIds] of Object.entries(programCourses)) {
+          if (courseIds.includes(schedule.course_id)) {
+            semester = parseInt(sem);
+            break;
+          }
+        }
+      }
+    }
+
     const cycleMode = (schedule.cycle?.exam_mode || "").toLowerCase();
     const cycleType = (schedule.cycle?.cycle_type || "").toLowerCase();
 
@@ -1138,7 +1158,7 @@ exports.getMarkEntryData = async (req, res) => {
       cycleType.includes("supplementary");
 
     logger.info(
-      `Mark Entry Data: ScheduleID=${scheduleId}, Mode=${cycleMode}, Type=${cycleType}, DetectSupply=${isSupplyOrCombined}`,
+      `Mark Entry Data: ScheduleID=${scheduleId}, Mode=${cycleMode}, Type=${cycleType}, DetectSupply=${isSupplyOrCombined}, DerivedSemester=${semester}`,
     );
 
     let studentWhere = {
@@ -1148,10 +1168,26 @@ exports.getMarkEntryData = async (req, res) => {
 
     // Unified student filtering logic
     if (cycleMode === "regular") {
-      // Regular mode: students in matching batch and currently in that semester
-      if (schedule.cycle?.batch_year) studentWhere.batch_year = schedule.cycle.batch_year;
-      studentWhere.current_semester = semester;
-    } else if (cycleMode === "combined") {
+      // Regular mode: students in matching batch
+      if (schedule.cycle?.batch_year)
+        studentWhere.batch_year = schedule.cycle.batch_year;
+
+      // First check if students match the specific semester
+      const strictCount = await User.count({
+        where: { ...studentWhere, current_semester: semester },
+      });
+
+      if (strictCount > 0) {
+        studentWhere.current_semester = semester;
+      } else {
+        // Fallback: If no students match strict semester, show all students of that batch/program
+        // This handles cases where students have been promoted in the system but are taking past exams
+        console.log(
+          `[info]: No students found for strict semester ${semester}, falling back to broader batch filter.`
+        );
+      }
+    }
+    else if (cycleMode === "combined") {
       // Combined mode: can be regular students (matching batch/sem) OR backlog students
       // We should generally find students who are currently IN this semester, OR were in it previously
       // For now, let's filter by batch if it's set on the cycle, but be flexible with semester
@@ -1181,11 +1217,14 @@ exports.getMarkEntryData = async (req, res) => {
 
     // For Supply/Combined OR for semester_end_external cycles, filter by registered students
     // This ensures marks entry shows the same students as the registrations tab
-    if (
+    // EXCEPTION: Mid-terms and internal labs don't require registration
+    const requiresRegistration = (
       isSupplyOrCombined ||
       cycleType === "semester_end_external" ||
       cycleType === "end_semester"
-    ) {
+    ) && !cycleType.includes("mid_term") && !cycleType.includes("internal_lab");
+
+    if (requiresRegistration) {
       const { ExamRegistration } = require("../models");
       const registrations = await ExamRegistration.findAll({
         where: {
@@ -1358,10 +1397,11 @@ exports.enterMarks = async (req, res) => {
           typeof componentScores === "object" &&
           Object.keys(componentScores).length > 0
         ) {
-          totalMarks = Object.values(componentScores).reduce(
-            (sum, val) => sum + (parseFloat(val) || 0),
-            0,
-          );
+          totalMarks = Object.values(componentScores).reduce((sum, val) => {
+            const score =
+              typeof val === "object" ? val.total || 0 : parseFloat(val || 0);
+            return sum + score;
+          }, 0);
         }
 
         // Apply grade scale from cycle/regulation if available
