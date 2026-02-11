@@ -34,6 +34,9 @@ const {
   bulkPublishResults,
   createRegistrationOrder,
   deleteCycleSchedules,
+  deleteManySchedules,
+  restoreManySchedules,
+  restoreExamSchedule,
 } = require("../controllers/examController");
 
 // Reverification controllers
@@ -103,6 +106,21 @@ router.put(
   "/schedules/:id",
   checkPermission("exams:manage"),
   updateExamSchedule,
+);
+router.delete(
+  "/schedules/bulk",
+  checkPermission("exams:manage"),
+  deleteManySchedules,
+);
+router.post(
+  "/schedules/restore-bulk",
+  checkPermission("exams:manage"),
+  restoreManySchedules,
+);
+router.post(
+  "/schedules/:id/restore",
+  checkPermission("exams:manage"),
+  restoreExamSchedule,
 );
 router.delete(
   "/schedules/:id",

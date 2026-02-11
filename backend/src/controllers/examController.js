@@ -715,6 +715,75 @@ exports.updateExamSchedule = async (req, res) => {
   }
 };
 
+// @desc    Restore multiple exam schedules
+// @route   POST /api/exam/schedules/restore-bulk
+// @access  Private/Admin
+exports.restoreManySchedules = async (req, res) => {
+  try {
+    const { scheduleIds } = req.body;
+
+    if (!scheduleIds || !Array.isArray(scheduleIds) || scheduleIds.length === 0) {
+      return res.status(400).json({ error: "No exam schedules selected for restoration" });
+    }
+
+    await ExamSchedule.restore({
+      where: {
+        id: { [Op.in]: scheduleIds },
+      },
+    });
+
+    res.status(200).json({ success: true, count: scheduleIds.length });
+  } catch (error) {
+    logger.error("Error restoring schedules:", error);
+    res.status(500).json({ error: "Failed to restore exam schedules" });
+  }
+};
+
+// @desc    Restore an exam schedule
+// @route   POST /api/exam/schedules/:id/restore
+// @access  Private/Admin
+exports.restoreExamSchedule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const schedule = await ExamSchedule.findByPk(id, { paranoid: false });
+    if (!schedule) return res.status(404).json({ error: "Schedule not found" });
+
+    await schedule.restore();
+    res.status(200).json({ success: true, message: "Schedule restored" });
+  } catch (error) {
+    logger.error("Error restoring exam schedule:", error);
+    res.status(500).json({ error: "Failed to restore schedule" });
+  }
+};
+
+// @desc    Delete multiple exam schedules
+// @route   DELETE /api/exam/schedules/bulk
+// @access  Private/Admin
+exports.deleteManySchedules = async (req, res) => {
+  try {
+    const { scheduleIds } = req.body;
+
+    if (!scheduleIds || !Array.isArray(scheduleIds) || scheduleIds.length === 0) {
+      return res.status(400).json({ error: "No exam schedules selected for deletion" });
+    }
+
+    // Optional: Check if marks exist for any schedule before deleting
+    // const conflict = await ExamMark.findOne({ where: { exam_schedule_id: { [Op.in]: scheduleIds } } });
+    // if (conflict) return res.status(400).json({ error: "Cannot delete schedules with marks entered." });
+
+    await ExamSchedule.destroy({
+      where: {
+        id: { [Op.in]: scheduleIds },
+      },
+    });
+
+    res.status(200).json({ success: true, count: scheduleIds.length });
+  } catch (error) {
+    logger.error("Error destroying schedules:", error);
+    res.status(500).json({ error: "Failed to delete exam schedules" });
+  }
+};
+
 // @desc    Delete an exam schedule
 // @route   DELETE /api/exam/schedules/:id
 // @access  Private/Admin
@@ -762,20 +831,19 @@ exports.autoGenerateTimetable = async (req, res) => {
   try {
     const {
       exam_cycle_id,
-      program_id,
       start_date,
       gap_days,
       start_time,
       end_time,
-      max_marks,
-      passing_marks,
       exam_sub_type,
+      isTwoExamsPerDay,
+      afternoon_start_time,
+      afternoon_end_time,
     } = req.body;
 
     const cycle = await ExamCycle.findByPk(exam_cycle_id);
     if (!cycle) return res.status(404).json({ error: "Exam cycle not found" });
 
-    // Use provided semester if available, otherwise use cycle's semester
     const targetSemester = cycle.semester;
 
     if (
@@ -794,7 +862,6 @@ exports.autoGenerateTimetable = async (req, res) => {
     // Determine course type filter based on exam type
     let courseTypeFilter = {};
     if (['semester_end_external', 'mid_term_1', 'mid_term_2'].includes(exam_type)) {
-      // For semester_end_external, use exam_sub_type to determine course type
       if (exam_type === 'semester_end_external' && exam_sub_type) {
         courseTypeFilter = { course_type: exam_sub_type };
       } else {
@@ -804,30 +871,34 @@ exports.autoGenerateTimetable = async (req, res) => {
       courseTypeFilter = { course_type: 'lab' };
     }
 
-    // Fetch courses using Regulation's courses_list mapping
-
-
     const regulation = await Regulation.findByPk(cycle.regulation_id);
     if (!regulation || !regulation.courses_list) {
       return res.status(404).json({ error: "Regulation or course mapping not found" });
     }
 
-    const programCoursesMap = regulation.courses_list[program_id];
-    if (!programCoursesMap) {
-      return res.status(404).json({ error: `No course mapping found for program: ${program_id}` });
+    // New logic: Collect courses from all programs for the target semester
+    const courseProgramsMap = {}; // { [course_id]: [program_ids] }
+    for (const [pId, semMap] of Object.entries(regulation.courses_list)) {
+      const semCourses = semMap[targetSemester.toString()];
+      if (semCourses && semCourses.length > 0) {
+        semCourses.forEach(cId => {
+          if (!courseProgramsMap[cId]) courseProgramsMap[cId] = [];
+          courseProgramsMap[cId].push(pId);
+        });
+      }
     }
 
-    const semesterCourses = programCoursesMap[targetSemester.toString()];
-    if (!semesterCourses || !semesterCourses.length) {
+    const uniqueCourseIds = Object.keys(courseProgramsMap);
+    if (uniqueCourseIds.length === 0) {
       return res.status(404).json({
-        error: `No courses found for Semester ${targetSemester} of ${program_id}`,
+        error: `No courses found for Semester ${targetSemester} across any programs`,
       });
     }
 
     // Fetch actual Course objects
     const courses = await Course.findAll({
       where: {
-        id: { [Op.in]: semesterCourses },
+        id: { [Op.in]: uniqueCourseIds },
         ...courseTypeFilter,
       },
     });
@@ -857,7 +928,6 @@ exports.autoGenerateTimetable = async (req, res) => {
       let nextDate = new Date(currentDate);
       nextDate.setDate(nextDate.getDate() + daysToAdd);
 
-      // Keep incrementing until we find a valid date
       while (!isValidExamDate(nextDate)) {
         nextDate.setDate(nextDate.getDate() + 1);
       }
@@ -868,69 +938,70 @@ exports.autoGenerateTimetable = async (req, res) => {
     const generatedSchedules = await sequelize.transaction(async (t) => {
       const results = [];
       let currentDate = new Date(start_date);
+      let isAfternoonSlot = false;
 
-      // Ensure start date is valid
       if (!isValidExamDate(currentDate)) {
         currentDate = getNextValidDate(currentDate, 0);
       }
 
       for (const course of courses) {
+        const associatedPrograms = courseProgramsMap[course.id] || [];
+
         // Check if schedule already exists for this course in this cycle
         const existing = await ExamSchedule.findOne({
           where: { exam_cycle_id, course_id: course.id },
           transaction: t,
         });
 
+        const slot_start_time = isAfternoonSlot ? afternoon_start_time : start_time;
+        const slot_end_time = isAfternoonSlot ? afternoon_end_time : end_time;
+
         if (existing) {
-          // Update existing schedule instead of creating duplicate
-          // Also verify and update programs if needed
-          let currentPrograms = existing.programs || [];
-          if (!Array.isArray(currentPrograms)) currentPrograms = [];
-
-          let newPrograms = [...currentPrograms];
-          if (program_id && !newPrograms.includes(program_id)) {
-            newPrograms.push(program_id);
-          }
-
           await existing.update(
             {
               exam_date: currentDate.toISOString().split("T")[0],
-              start_time,
-              end_time,
-              max_marks: max_marks || cycle.max_marks || 100,
-              passing_marks: passing_marks || cycle.passing_marks || 35,
-              programs: newPrograms,
+              start_time: slot_start_time,
+              end_time: slot_end_time,
+              programs: associatedPrograms,
+              // Omit max_marks and passing_marks as per user request
             },
             { transaction: t },
           );
           results.push(existing);
         } else {
-          // Create new schedule
-          const initialPrograms = program_id ? [program_id] : [];
-
           const schedule = await ExamSchedule.create(
             {
               exam_cycle_id,
               course_id: course.id,
               exam_date: currentDate.toISOString().split("T")[0],
-              start_time,
-              end_time,
-              max_marks: max_marks || cycle.max_marks || 100,
-              passing_marks: passing_marks || cycle.passing_marks || 35,
-              programs: initialPrograms,
+              start_time: slot_start_time,
+              end_time: slot_end_time,
+              programs: associatedPrograms,
+              // Omit max_marks and passing_marks as per user request
             },
             { transaction: t },
           );
           results.push(schedule);
         }
 
-        // Get next valid exam date (skip Sundays and holidays)
-        currentDate = getNextValidDate(currentDate, parseInt(gap_days) + 1);
+        if (isTwoExamsPerDay) {
+          if (isAfternoonSlot) {
+            // Already scheduled morning & afternoon, move to next day
+            currentDate = getNextValidDate(currentDate, parseInt(gap_days) + 1);
+            isAfternoonSlot = false;
+          } else {
+            // Scheduled morning, now schedule afternoon on same day
+            isAfternoonSlot = true;
+          }
+        } else {
+          // Standard: one exam per day
+          currentDate = getNextValidDate(currentDate, parseInt(gap_days) + 1);
+        }
       }
       return results;
     });
 
-    // Update Cycle Dates and Status
+    // Update Cycle Dates and Status if schedules were generated
     if (generatedSchedules.length > 0) {
       // Fetch all schedules for this cycle to get true min/max (including existing ones)
       const allSchedules = await ExamSchedule.findAll({ where: { exam_cycle_id } });
@@ -945,6 +1016,7 @@ exports.autoGenerateTimetable = async (req, res) => {
           end_date: maxDate,
         };
 
+        // Update status to 'scheduled' if it was 'scheduling'
         if (cycle.status === 'scheduling') {
           updates.status = 'scheduled';
         }
@@ -953,20 +1025,14 @@ exports.autoGenerateTimetable = async (req, res) => {
       }
     }
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
+      message: `Successfully generated ${generatedSchedules.length} schedules across all programs`,
       data: generatedSchedules,
-      message: generatedSchedules.length
-        ? `Successfully generated/updated ${generatedSchedules.length} schedules (skipped Sundays and holidays).`
-        : "All courses for this semester already have schedules.",
     });
   } catch (error) {
     logger.error("Error auto-generating timetable:", error);
-    res.status(500).json({
-      error: "Failed to auto-generate timetable",
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ error: "Failed to auto-generate timetable" });
   }
 };
 
