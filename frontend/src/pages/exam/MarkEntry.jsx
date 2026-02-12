@@ -83,12 +83,19 @@ const MarkEntry = () => {
   useEffect(() => {
     if (schedule?.course_id) {
       const paperFormat = schedule.cycle?.paper_format || {};
-      const courseFormat = paperFormat[schedule.course_id];
+
+      // Try resolving from new nested structure first
+      let courseFormat = paperFormat.theory?.[schedule.course_id] || paperFormat.lab?.[schedule.course_id];
+
+      // Fallback for old flat structure
+      if (!courseFormat) {
+        courseFormat = paperFormat[schedule.course_id];
+      }
 
       if (courseFormat) {
         setTemplate({
           course_id: schedule.course_id,
-          questions: courseFormat.questions || [],
+          questions: courseFormat.questions || courseFormat.experiments || [],
           total_marks: courseFormat.total_marks,
         });
         setTemplateError(null);
@@ -102,32 +109,43 @@ const MarkEntry = () => {
   }, [schedule]);
 
   const calculateTotal = (componentScores) => {
-    // If using template, sum up question marks strictly
-    if (template && template.questions) {
-      return template.questions.reduce((sum, q) => {
-        const val = componentScores?.[q.q_no];
-        return sum + (parseFloat(val) || 0);
-      }, 0);
-    }
-    // Fallback to existing logic
-    if (componentScores) {
-      return Object.values(componentScores).reduce(
-        (sum, val) => sum + parseFloat(val || 0),
-        0,
-      );
-    }
-    return 0;
+    if (!componentScores) return 0;
+    return Object.entries(componentScores).reduce((sum, [cName, cVal]) => {
+      const score = typeof cVal === "object" ? (cVal.total || 0) : parseFloat(cVal || 0);
+      return sum + score;
+    }, 0);
   };
 
-  const handleMarkChange = (studentId, field, value, componentName = null) => {
+  const handleMarkChange = (studentId, field, value, componentName = null, qNo = null) => {
     setMarks((prev) => {
       const studentMark = { ...prev[studentId] };
 
       if (componentName) {
-        studentMark.component_scores = {
-          ...studentMark.component_scores,
-          [componentName]: value,
-        };
+        if (qNo) {
+          // Nested question score for a component (usually Descriptive)
+          const prevCompData = studentMark.component_scores?.[componentName] || { q_scores: {}, total: 0 };
+          const newQScores = {
+            ...prevCompData.q_scores,
+            [qNo]: value
+          };
+          const newCompTotal = Object.values(newQScores).reduce(
+            (sum, v) => sum + parseFloat(v || 0),
+            0
+          );
+          studentMark.component_scores = {
+            ...studentMark.component_scores,
+            [componentName]: {
+              q_scores: newQScores,
+              total: newCompTotal
+            }
+          };
+        } else {
+          // Regular scalar component score
+          studentMark.component_scores = {
+            ...studentMark.component_scores,
+            [componentName]: value,
+          };
+        }
         studentMark.marks_obtained = calculateTotal(
           studentMark.component_scores,
         );
@@ -252,6 +270,29 @@ const MarkEntry = () => {
         marks[s.id]?.moderation_status === "approved",
     );
 
+  const cycleType = (schedule?.cycle?.cycle_type || "").toLowerCase();
+  const isLabCycle = cycleType === "internal_lab" || cycleType === "external_lab";
+
+  // Simplified: only 'descriptive' for theory cycles should expand
+  const isQuestionWiseComponent = (compName) => {
+    const name = (compName || "").toLowerCase();
+    return name === "descriptive";
+  };
+
+  // For lab cycles, find which component should expand based on name AND paper format existence
+  const labExpansionIndex = isLabCycle && template?.questions?.length > 0
+    ? (schedule?.cycle?.component_breakdown || []).findIndex(c => {
+      const name = (c.name || "").toLowerCase();
+      return ["lab record", "execution", "execution / output", "practical exam"].includes(name);
+    })
+    : -1;
+
+  // Determine which component should be expanded
+  const expansionIndex = isLabCycle ? labExpansionIndex :
+    (schedule?.cycle?.component_breakdown || []).findIndex(
+      c => isQuestionWiseComponent(c.name)
+    );
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -371,39 +412,36 @@ const MarkEntry = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-700/50 dark:to-gray-700/30">
-                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] w-12 text-center">
+                <th rowSpan={2} className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] w-12 text-center border-b border-gray-100 dark:border-gray-700">
                   #
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] min-w-[200px]">
+                <th rowSpan={2} className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] min-w-[200px] border-b border-gray-100 dark:border-gray-700">
                   Student
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[140px]">
+                <th rowSpan={2} className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[140px] border-b border-gray-100 dark:border-gray-700">
                   Attendance
                 </th>
 
-                {template ? (
-                  // Template Questions Columns
-                  template.questions.map((q, idx) => (
+                {schedule?.cycle?.component_breakdown?.map((comp, idx) => {
+                  // Expand THIS component if it's at expansionIndex AND has questions
+                  if (idx === expansionIndex && template?.questions?.length > 0) {
+                    return (
+                      <th
+                        key={idx}
+                        colSpan={template.questions.length}
+                        className="px-6 py-3 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] text-center bg-indigo-50/30 dark:bg-indigo-900/10 border-b border-indigo-100/50 dark:border-indigo-900/30"
+                      >
+                        {comp.name} (Max: {comp.max_marks})
+                      </th>
+                    );
+                  }
+
+                  // Otherwise ALWAYS show as regular column
+                  return (
                     <th
                       key={idx}
-                      className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[80px]"
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-indigo-600 dark:text-indigo-400">
-                          {q.q_no}
-                        </span>
-                        <span className="text-[9px] opacity-60 font-medium">
-                          Max: {q.marks}
-                        </span>
-                      </div>
-                    </th>
-                  ))
-                ) : (
-                  // Existing Component Breakdown Columns
-                  schedule?.cycle?.component_breakdown?.map((comp, idx) => (
-                    <th
-                      key={idx}
-                      className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[100px]"
+                      rowSpan={2}
+                      className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[100px] border-b border-gray-100 dark:border-gray-700"
                     >
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-indigo-600 dark:text-indigo-400">
@@ -414,10 +452,19 @@ const MarkEntry = () => {
                         </span>
                       </div>
                     </th>
-                  ))
+                  );
+                })}
+
+                {(!schedule?.cycle?.component_breakdown || schedule.cycle.component_breakdown.length === 0) && template?.questions?.length > 0 && (
+                  <th
+                    colSpan={template.questions.length}
+                    className="px-6 py-3 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] text-center bg-indigo-50/30 dark:bg-indigo-900/10 border-b border-indigo-100/50 dark:border-indigo-900/30"
+                  >
+                    {isLabCycle ? "Experiments" : "Descriptive"} (Max: {template.total_marks})
+                  </th>
                 )}
 
-                <th className="px-6 py-5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.15em] text-center bg-indigo-50/50 dark:bg-indigo-900/10 min-w-[100px]">
+                <th rowSpan={2} className="px-6 py-5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.15em] text-center bg-indigo-50/50 dark:bg-indigo-900/10 min-w-[100px] border-b border-gray-100 dark:border-gray-700">
                   <div className="flex flex-col items-center gap-1">
                     <span>Total</span>
                     <span className="text-[9px] opacity-60">
@@ -425,6 +472,40 @@ const MarkEntry = () => {
                     </span>
                   </div>
                 </th>
+              </tr>
+              <tr className="bg-gray-50/30 dark:bg-gray-700/10">
+                {schedule?.cycle?.component_breakdown?.map((comp, idx) => {
+                  // Only render subheaders for expanded component
+                  if (idx === expansionIndex && template?.questions?.length > 0) {
+                    return template.questions.map((q, qIdx) => {
+                      const displayQNo = (q.q_no || "").startsWith("E") || (q.q_no || "").startsWith("Q") ? q.q_no : (isLabCycle ? `E${q.q_no}` : q.q_no);
+                      return (
+                        <th
+                          key={`${idx}-${qIdx}`}
+                          className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[80px] border-b border-gray-100 dark:border-gray-700"
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="text-indigo-400">{displayQNo}</span>
+                            <span className="text-[8px] opacity-50">({q.marks}M)</span>
+                          </div>
+                        </th>
+                      );
+                    });
+                  }
+                  return null;
+                })}
+
+                {(!schedule?.cycle?.component_breakdown || schedule.cycle.component_breakdown.length === 0) && template?.questions?.length > 0 && template.questions.map((q, qIdx) => (
+                  <th
+                    key={`q-fallback-${qIdx}`}
+                    className="px-4 py-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center min-w-[80px] border-b border-gray-100 dark:border-gray-700"
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-indigo-400">{q.q_no}</span>
+                      <span className="text-[8px] opacity-50">({q.marks}M)</span>
+                    </div>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -487,44 +568,42 @@ const MarkEntry = () => {
                       </div>
                     </td>
 
-                    {template ? (
-                      // Question Inputs
-                      template.questions.map((q, idx) => (
-                        <td key={idx} className="px-6 py-5">
-                          <div className="flex justify-center">
-                            <input
-                              type="number"
-                              min="0"
-                              max={q.marks}
-                              disabled={isEntryDisabled}
-                              value={mark.component_scores?.[q.q_no] || ""}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (val > q.marks) {
-                                  toast.error(
-                                    `${q.q_no} max marks is ${q.marks}`,
+                    {schedule?.cycle?.component_breakdown?.map((comp, idx) => {
+                      if (idx === expansionIndex && template?.questions?.length > 0) {
+                        return template.questions.map((q, qIdx) => (
+                          <td key={`${idx}-${qIdx}`} className="px-6 py-5">
+                            <div className="flex justify-center">
+                              <input
+                                type="number"
+                                min="0"
+                                max={q.marks}
+                                disabled={isEntryDisabled}
+                                value={mark.component_scores?.[comp.name]?.q_scores?.[q.q_no] || ""}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (val > q.marks) {
+                                    toast.error(`${q.q_no} max marks is ${q.marks}`);
+                                    return;
+                                  }
+                                  handleMarkChange(
+                                    student.id,
+                                    null,
+                                    e.target.value,
+                                    comp.name,
+                                    q.q_no
                                   );
-                                  return;
-                                }
-                                handleMarkChange(
-                                  student.id,
-                                  null, // field
-                                  e.target.value,
-                                  q.q_no // componentName matches q_no (e.g., "Q1")
-                                );
-                              }}
-                              onKeyDown={handleKeyDown}
-                              className={`w-16 px-2 py-2 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
-                                ? "opacity-30 border-gray-100 dark:border-gray-700"
-                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                                }`}
-                            />
-                          </div>
-                        </td>
-                      ))
-                    ) : (
-                      // Existing Component Breakdown Inputs
-                      schedule?.cycle?.component_breakdown?.map((comp, idx) => (
+                                }}
+                                onKeyDown={handleKeyDown}
+                                className={`w-16 px-2 py-2 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
+                                  ? "opacity-30 border-gray-100 dark:border-gray-700"
+                                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                                  }`}
+                              />
+                            </div>
+                          </td>
+                        ));
+                      }
+                      return (
                         <td key={idx} className="px-6 py-5">
                           <div className="flex justify-center">
                             <input
@@ -549,15 +628,49 @@ const MarkEntry = () => {
                                 );
                               }}
                               onKeyDown={handleKeyDown}
-                              className={`w-20 px-3 py-2.5 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-base transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
+                              className={`w-16 px-2 py-2 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
                                 ? "opacity-30 border-gray-100 dark:border-gray-700"
                                 : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
                                 }`}
                             />
                           </div>
                         </td>
-                      ))
-                    )}
+                      );
+                    })}
+
+                    {/* Fallback questions if breakdown is empty */}
+                    {(!schedule?.cycle?.component_breakdown || schedule.cycle.component_breakdown.length === 0) && template?.questions?.map((q, qIdx) => (
+                      <td key={`fallback-${qIdx}`} className="px-6 py-5">
+                        <div className="flex justify-center">
+                          <input
+                            type="number"
+                            min="0"
+                            max={q.marks}
+                            disabled={isEntryDisabled}
+                            value={mark.component_scores?.[isLabCycle ? "Execution" : "Descriptive"]?.q_scores?.[q.q_no] || ""}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (val > q.marks) {
+                                toast.error(`${q.q_no} max marks is ${q.marks}`);
+                                return;
+                              }
+                              handleMarkChange(
+                                student.id,
+                                null,
+                                e.target.value,
+                                isLabCycle ? "Execution" : "Descriptive",
+                                q.q_no
+                              );
+                            }}
+                            onKeyDown={handleKeyDown}
+                            className={`w-16 px-2 py-2 mark-input bg-white dark:bg-gray-800 border-2 rounded-xl text-center font-black text-sm transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none ${isEntryDisabled
+                              ? "opacity-30 border-gray-100 dark:border-gray-700"
+                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                              }`}
+                          />
+                        </div>
+                      </td>
+                    ))}
 
                     {(!schedule?.cycle?.component_breakdown ||
                       schedule.cycle.component_breakdown.length === 0) && !template && (

@@ -144,6 +144,51 @@ export const deleteExamSchedule = createAsyncThunk(
   },
 );
 
+// @desc    Restore multiple schedules
+export const restoreManySchedules = createAsyncThunk(
+  "exam/restoreManySchedules",
+  async (scheduleIds, { rejectWithValue }) => {
+    try {
+      await api.post("/exam/schedules/restore-bulk", { scheduleIds });
+      return scheduleIds;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to restore schedules",
+      );
+    }
+  },
+);
+
+// @desc    Restore a single schedule
+export const restoreExamSchedule = createAsyncThunk(
+  "exam/restoreSchedule",
+  async (id, { rejectWithValue }) => {
+    try {
+      await api.post(`/exam/schedules/${id}/restore`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to restore schedule",
+      );
+    }
+  },
+);
+
+// @desc    Delete multiple schedules
+export const deleteManySchedules = createAsyncThunk(
+  "exam/deleteManySchedules",
+  async (scheduleIds, { rejectWithValue }) => {
+    try {
+      await api.delete("/exam/schedules/bulk", { data: { scheduleIds } });
+      return scheduleIds;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to delete schedules",
+      );
+    }
+  },
+);
+
 // @desc    Delete all schedules for a cycle
 export const deleteCycleTimetable = createAsyncThunk(
   "exam/deleteCycleTimetable",
@@ -572,6 +617,11 @@ export const examSlice = createSlice({
         );
         // 2. Add the new schedules
         state.schedules.push(...newSchedules);
+      })
+      .addCase(deleteManySchedules.fulfilled, (state, action) => {
+        state.schedules = state.schedules.filter(
+          (s) => !action.payload.includes(s.id),
+        );
       })
       .addCase(fetchBacklogs.fulfilled, (state, action) => {
         state.backlogs = action.payload;

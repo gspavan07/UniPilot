@@ -58,10 +58,12 @@ const RegulationManager = () => {
     lab_courses: {
       internal_lab: {
         total_marks: 50,
+        components: [],
         aggregation_formula: "DIRECT",
       },
       external_lab: {
         total_marks: 50,
+        components: [],
         aggregation_formula: "DIRECT",
       },
     },
@@ -148,15 +150,15 @@ const RegulationManager = () => {
     }
   };
 
-  const addComponent = () => {
+  const addComponent = (category, type) => {
     setExamStructure({
       ...examStructure,
-      theory_courses: {
-        ...examStructure.theory_courses,
-        mid_terms: {
-          ...examStructure.theory_courses.mid_terms,
+      [category]: {
+        ...examStructure[category],
+        [type]: {
+          ...examStructure[category][type],
           components: [
-            ...examStructure.theory_courses.mid_terms.components,
+            ...(examStructure[category][type].components || []),
             { name: "", max_marks: 0 },
           ],
         },
@@ -164,35 +166,32 @@ const RegulationManager = () => {
     });
   };
 
-  const updateComponent = (index, field, value) => {
-    const newComponents = [
-      ...examStructure.theory_courses.mid_terms.components,
-    ];
+  const updateComponent = (category, type, index, field, value) => {
+    const newComponents = [...(examStructure[category][type].components || [])];
     newComponents[index][field] =
       field === "max_marks" ? parseInt(value) || 0 : value;
     setExamStructure({
       ...examStructure,
-      theory_courses: {
-        ...examStructure.theory_courses,
-        mid_terms: {
-          ...examStructure.theory_courses.mid_terms,
+      [category]: {
+        ...examStructure[category],
+        [type]: {
+          ...examStructure[category][type],
           components: newComponents,
         },
       },
     });
   };
 
-  const removeComponent = (index) => {
-    const newComponents =
-      examStructure.theory_courses.mid_terms.components.filter(
-        (_, i) => i !== index,
-      );
+  const removeComponent = (category, type, index) => {
+    const newComponents = (
+      examStructure[category][type].components || []
+    ).filter((_, i) => i !== index);
     setExamStructure({
       ...examStructure,
-      theory_courses: {
-        ...examStructure.theory_courses,
-        mid_terms: {
-          ...examStructure.theory_courses.mid_terms,
+      [category]: {
+        ...examStructure[category],
+        [type]: {
+          ...examStructure[category][type],
           components: newComponents,
         },
       },
@@ -257,11 +256,10 @@ const RegulationManager = () => {
           <div className="flex gap-10">
             <button
               onClick={() => setActiveTab("structure")}
-              className={`py-5 px-1 font-bold text-sm tracking-tight transition-all relative ${
-                activeTab === "structure"
-                  ? "text-indigo-600"
-                  : "text-gray-400 hover:text-gray-700"
-              }`}
+              className={`py-5 px-1 font-bold text-sm tracking-tight transition-all relative ${activeTab === "structure"
+                ? "text-indigo-600"
+                : "text-gray-400 hover:text-gray-700"
+                }`}
             >
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
@@ -273,11 +271,10 @@ const RegulationManager = () => {
             </button>
             <button
               onClick={() => setActiveTab("grades")}
-              className={`py-5 px-1 font-bold text-sm tracking-tight transition-all relative ${
-                activeTab === "grades"
-                  ? "text-indigo-600"
-                  : "text-gray-400 hover:text-gray-700"
-              }`}
+              className={`py-5 px-1 font-bold text-sm tracking-tight transition-all relative ${activeTab === "grades"
+                ? "text-indigo-600"
+                : "text-gray-400 hover:text-gray-700"
+                }`}
             >
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4" />
@@ -410,7 +407,7 @@ const RegulationManager = () => {
                       </span>
                     </h5>
                     <button
-                      onClick={addComponent}
+                      onClick={() => addComponent("theory_courses", "mid_terms")}
                       className="text-xs font-black text-indigo-600 hover:text-indigo-700 px-4 py-2 hover:bg-indigo-50 rounded-lg transition-all"
                     >
                       + Add Component
@@ -428,7 +425,7 @@ const RegulationManager = () => {
                             placeholder="Component Name (e.g. Assignment)"
                             value={comp.name}
                             onChange={(e) =>
-                              updateComponent(index, "name", e.target.value)
+                              updateComponent("theory_courses", "mid_terms", index, "name", e.target.value)
                             }
                             className="flex-1 px-5 py-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none font-medium"
                           />
@@ -439,6 +436,8 @@ const RegulationManager = () => {
                               value={comp.max_marks}
                               onChange={(e) =>
                                 updateComponent(
+                                  "theory_courses",
+                                  "mid_terms",
                                   index,
                                   "max_marks",
                                   e.target.value,
@@ -448,7 +447,7 @@ const RegulationManager = () => {
                             />
                           </div>
                           <button
-                            onClick={() => removeComponent(index)}
+                            onClick={() => removeComponent("theory_courses", "mid_terms", index)}
                             className="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -514,6 +513,7 @@ const RegulationManager = () => {
                             lab_courses: {
                               ...examStructure.lab_courses,
                               internal_lab: {
+                                ...examStructure.lab_courses.internal_lab,
                                 total_marks: parseInt(e.target.value) || 0,
                               },
                             },
@@ -537,6 +537,7 @@ const RegulationManager = () => {
                             lab_courses: {
                               ...examStructure.lab_courses,
                               external_lab: {
+                                ...examStructure.lab_courses.external_lab,
                                 total_marks: parseInt(e.target.value) || 0,
                               },
                             },
@@ -544,6 +545,86 @@ const RegulationManager = () => {
                         }
                         className="w-full px-5 py-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 outline-none font-bold"
                       />
+                    </div>
+
+                    {/* Lab Components Management */}
+                    <div className="space-y-6 pt-6 border-t border-gray-50 dark:border-gray-700">
+                      {["internal_lab", "external_lab"].map((type) => (
+                        <div key={type} className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                              {type.replace("_", " ")} components
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full ${(examStructure.lab_courses[type].components || []).reduce(
+                                  (sum, c) => sum + (c.max_marks || 0),
+                                  0,
+                                ) === examStructure.lab_courses[type].total_marks
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                                  }`}
+                              >
+                                {(examStructure.lab_courses[type].components || []).reduce(
+                                  (sum, c) => sum + (c.max_marks || 0),
+                                  0,
+                                )}{" "}
+                                / {examStructure.lab_courses[type].total_marks}
+                              </span>
+                            </h5>
+                            <button
+                              onClick={() => addComponent("lab_courses", type)}
+                              className="text-[10px] font-black text-indigo-600 hover:underline"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            {(examStructure.lab_courses[type].components || []).map(
+                              (comp, idx) => (
+                                <div key={idx} className="flex gap-3">
+                                  <input
+                                    type="text"
+                                    placeholder="Component"
+                                    value={comp.name}
+                                    onChange={(e) =>
+                                      updateComponent(
+                                        "lab_courses",
+                                        type,
+                                        idx,
+                                        "name",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="flex-1 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                                  />
+                                  <input
+                                    type="number"
+                                    placeholder="Marks"
+                                    value={comp.max_marks}
+                                    onChange={(e) =>
+                                      updateComponent(
+                                        "lab_courses",
+                                        type,
+                                        idx,
+                                        "max_marks",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-20 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-center font-bold outline-none"
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      removeComponent("lab_courses", type, idx)
+                                    }
+                                    className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
