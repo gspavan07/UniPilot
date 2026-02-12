@@ -4,6 +4,7 @@ import {
   fetchEligibleDrives,
   fetchMyApplications,
   fetchMyProfile,
+  fetchMyOffers,
 } from "../../store/slices/placementSlice";
 import {
   Briefcase,
@@ -18,15 +19,15 @@ import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
 
 const StudentPlacementDashboard = () => {
   const dispatch = useDispatch();
-  const { eligibleDrives, myApplications, myProfile, loading } = useSelector(
-    (state) => state.placement,
-  );
+  const { eligibleDrives, myApplications, myOffers, myProfile, loading } =
+    useSelector((state) => state.placement);
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(fetchEligibleDrives());
     dispatch(fetchMyApplications());
     dispatch(fetchMyProfile());
+    dispatch(fetchMyOffers());
   }, [dispatch]);
 
   const stats = [
@@ -46,7 +47,7 @@ const StudentPlacementDashboard = () => {
     },
     {
       name: "Offers Received",
-      value: "0",
+      value: myOffers.length,
       icon: BadgeCheck,
       color: "text-emerald-600",
       bg: "bg-emerald-100",
@@ -58,7 +59,7 @@ const StudentPlacementDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 pb-12">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-indigo-700 to-indigo-900 border-b border-indigo-500 overflow-hidden mb-8">
+      <div className="relative bg-gradient-to-br from-indigo-700 to-indigo-900 border-b border-indigo-500 overflow-hidden rounded-xl mb-8">
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 opacity-50"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl -ml-16 -mb-16 opacity-50"></div>
@@ -193,6 +194,16 @@ const StudentPlacementDashboard = () => {
                           >
                             Track Application
                           </Link>
+                        ) : !drive.isEligible ? (
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="px-3 py-1 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100 dark:border-red-900/50">
+                              Ineligible
+                            </span>
+                            <p className="text-[10px] text-gray-400 max-w-[150px] text-right">
+                              {drive.ineligible_reason ||
+                                "Requirements not met"}
+                            </p>
+                          </div>
                         ) : (
                           <Link
                             to={`/placement/drives/${drive.id}/apply`}

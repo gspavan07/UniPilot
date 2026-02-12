@@ -9,6 +9,7 @@ const {
   User,
   SemesterResult,
   Graduation,
+  Placement,
 } = require("../models");
 const eligibilityService = require("../services/eligibilityService");
 const policyService = require("../services/placementPolicyService");
@@ -53,14 +54,17 @@ exports.getStudentSystemFields = async (req, res) => {
     // 2. Extract 10th and Inter/Diploma from previous_academics
     // Assuming structure: [{ type: '10th', percentage: 90 }, { type: 'Inter', percentage: 85 }]
     const academics = student.previous_academics || [];
+
     const ten =
-      academics.find((a) => a.type?.toLowerCase().includes("10"))?.percentage ||
-      "";
+      academics.find((a) => a.qualification?.toLowerCase().includes("10"))
+        ?.percentage || "";
+
     const inter =
       academics.find(
         (a) =>
-          a.type?.toLowerCase().includes("inter") ||
-          a.type?.toLowerCase().includes("diploma"),
+          a.qualification?.toLowerCase().includes("12") ||
+          a.qualification?.toLowerCase().includes("inter") ||
+          a.qualification?.toLowerCase().includes("diploma"),
       )?.percentage || "";
 
     res.status(200).json({
@@ -203,33 +207,24 @@ exports.getEligibleDrives = async (req, res) => {
     );
 
     // 4. Filter drives based on eligibility rules
-    // For this POC, we'll mark eligibility on each drive
-    const eligibleDrives = drives.map((drive) => {
-      const eligibility = drive.eligibility;
-      let isEligible = true;
-      let reason = "";
+    const eligibleDrives = await Promise.all(
+      drives.map(async (drive) => {
+        const eligibilityRes = await eligibilityService.isStudentEligible(
+          req.user.userId,
+          drive.id,
+        );
 
-      if (eligibility) {
-        if (
-          eligibility.department_ids?.length > 0 &&
-          !eligibility.department_ids.includes(student.department_id)
-        ) {
-          isEligible = false;
-          reason = "Department not eligible";
-        }
-        // Additional checks (CGPA, etc.) would go here
-      }
-
-      return {
-        ...drive.toJSON(),
-        isEligible,
-        ineligible_reason: reason,
-        hasApplied: appliedDriveIds.has(drive.id),
-        applicationStatus: studentApplications.find(
-          (app) => app.drive_id === drive.id,
-        )?.status,
-      };
-    });
+        return {
+          ...drive.toJSON(),
+          isEligible: eligibilityRes.eligible,
+          ineligible_reason: eligibilityRes.errors.join(". "),
+          hasApplied: appliedDriveIds.has(drive.id),
+          applicationStatus: studentApplications.find(
+            (app) => app.drive_id === drive.id,
+          )?.status,
+        };
+      }),
+    );
 
     res.status(200).json({
       success: true,
@@ -368,6 +363,39 @@ exports.getMyApplications = async (req, res) => {
     });
   } catch (error) {
     logger.error("Error fetching student applications:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
+
+/**
+ * Get student's placement offers
+ */
+exports.getMyOffers = async (req, res) => {
+  try {
+    const placements = await Placement.findAll({
+      where: { student_id: req.user.userId },
+      include: [
+        {
+          model: PlacementDrive,
+          as: "drive",
+          include: [
+            {
+              model: JobPosting,
+              as: "job_posting",
+              include: [{ model: Company, as: "company" }],
+            },
+          ],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: placements,
+    });
+  } catch (error) {
+    logger.error("Error fetching student offers:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };

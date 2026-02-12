@@ -307,6 +307,22 @@ const ApplyDrive = () => {
                         {currentDrive.eligibility?.min_cgpa || "N/A"}
                       </span>
                     </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-indigo-900 dark:text-indigo-200">
+                        Min 10th %
+                      </span>
+                      <span className="font-bold text-indigo-700 dark:text-indigo-300">
+                        {currentDrive.eligibility?.min_10th_percent || "0"}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-indigo-900 dark:text-indigo-200">
+                        Min Inter %
+                      </span>
+                      <span className="font-bold text-indigo-700 dark:text-indigo-300">
+                        {currentDrive.eligibility?.min_inter_percent || "0"}%
+                      </span>
+                    </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-indigo-900 dark:text-indigo-200">
                         Max Backlogs
@@ -317,11 +333,35 @@ const ApplyDrive = () => {
                     </div>
                   </div>
 
+                  {!currentDrive.isEligible && (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-2xl">
+                      <div className="flex gap-3">
+                        <X className="w-5 h-5 text-red-500 shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold text-red-700 dark:text-red-400">
+                            You are not eligible
+                          </p>
+                          <p className="text-xs text-red-600 dark:text-red-400/80 mt-1">
+                            {currentDrive.ineligible_reason ||
+                              "Requirements not met"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => setStep(1)}
-                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none transform hover:-translate-y-1"
+                    disabled={!currentDrive.isEligible}
+                    className={`w-full py-4 rounded-2xl font-bold transition-all shadow-lg transform hover:-translate-y-1 ${
+                      currentDrive.isEligible
+                        ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed transform-none hover:translate-y-0"
+                    }`}
                   >
-                    Apply Now
+                    {currentDrive.isEligible
+                      ? "Apply Now"
+                      : "Currently Ineligible"}
                   </button>
                   <p className="text-center text-xs text-gray-400">
                     Application closes on{" "}
@@ -361,12 +401,36 @@ const ApplyDrive = () => {
                     </li>
                     <li className="flex items-center text-gray-700 dark:text-gray-300">
                       <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2" />
+                      Min 10th %:{" "}
+                      <span className="font-bold ml-1">
+                        {currentDrive.eligibility?.min_10th_percent}%
+                      </span>
+                    </li>
+                    <li className="flex items-center text-gray-700 dark:text-gray-300">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2" />
+                      Min Inter %:{" "}
+                      <span className="font-bold ml-1">
+                        {currentDrive.eligibility?.min_inter_percent}%
+                      </span>
+                    </li>
+                    <li className="flex items-center text-gray-700 dark:text-gray-300">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-2" />
                       Max Active Backlogs:{" "}
                       <span className="font-bold ml-1">
                         {currentDrive.eligibility?.max_active_backlogs}
                       </span>
                     </li>
                   </ul>
+                  {!currentDrive.isEligible && (
+                    <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-xl">
+                      <p className="text-sm font-bold text-red-700 dark:text-red-400">
+                        Ineligibility Reason:
+                      </p>
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        {currentDrive.ineligible_reason}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50 rounded-xl">
@@ -626,7 +690,7 @@ const ApplyDrive = () => {
                     <div>
                       <span className="block text-gray-500 text-xs">Phone</span>
                       <span className="font-bold text-gray-900 dark:text-white">
-                        {user?.phone_number || "N/A"}
+                        {user?.phone || "N/A"}
                       </span>
                     </div>
                   </div>

@@ -85,11 +85,12 @@ import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
 import PlacementDashboard from "./pages/placement/PlacementDashboard";
 import StudentPlacementDashboard from "./pages/placement/StudentPlacementDashboard";
 import MyPlacementProfile from "./pages/placement/MyPlacementProfile";
-import BrowseDrives from "./pages/placement/BrowseDrives";
 import SelectionPipeline from "./pages/placement/SelectionPipeline";
 import DepartmentPlacementDashboard from "./pages/placement/DepartmentPlacementDashboard";
 import ApplyDrive from "./pages/placement/ApplyDrive";
 import MyApplications from "./pages/placement/MyApplications";
+import MyOffers from "./pages/placement/MyOffers";
+import BrowseDrives from "./pages/placement/BrowseDrives";
 import CompanyManagement from "./pages/placement/CompanyManagement";
 import CompanyForm from "./pages/placement/CompanyForm";
 import JobPostings from "./pages/placement/JobPostings";
@@ -265,6 +266,7 @@ function App() {
             path="/placement/my-applications"
             element={<MyApplications />}
           />
+          <Route path="/placement/offers" element={<MyOffers />} />
           <Route path="/placement/companies" element={<CompanyManagement />} />
           <Route path="/placement/companies/new" element={<CompanyForm />} />
           <Route

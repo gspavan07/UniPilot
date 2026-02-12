@@ -228,6 +228,18 @@ export const fetchMyApplications = createAsyncThunk(
   },
 );
 
+export const fetchMyOffers = createAsyncThunk(
+  "placement/fetchMyOffers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/placement/my-offers");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const uploadResume = createAsyncThunk(
   "placement/uploadResume",
   async (formData, { rejectWithValue }) => {
@@ -248,6 +260,7 @@ const initialState = {
   drives: [],
   eligibleDrives: [],
   myApplications: [],
+  myOffers: [],
   myProfile: null,
   currentDrive: null,
   currentCompany: null,
@@ -401,6 +414,18 @@ const placementSlice = createSlice({
       // My Applications
       .addCase(fetchMyApplications.fulfilled, (state, action) => {
         state.myApplications = action.payload;
+      })
+      // My Offers
+      .addCase(fetchMyOffers.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchMyOffers.fulfilled, (state, action) => {
+        state.loading = false;
+        state.myOffers = action.payload;
+      })
+      .addCase(fetchMyOffers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.error || "Failed to fetch offers";
       })
       // Apply
       .addCase(applyToDrive.fulfilled, (state) => {

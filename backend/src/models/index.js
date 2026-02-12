@@ -199,8 +199,6 @@ const models = {
 
 // Define associations
 
-
-
 // Department <-> User (HOD)
 Department.belongsTo(User, {
   as: "hod",
@@ -1210,6 +1208,14 @@ Placement.belongsTo(StudentApplication, {
   as: "application",
   foreignKey: "application_id",
 });
+StudentApplication.hasMany(Placement, {
+  as: "placement_records",
+  foreignKey: "application_id",
+});
+PlacementDrive.hasMany(Placement, {
+  as: "placement_records",
+  foreignKey: "drive_id",
+});
 
 // PlacementNotification Associations
 PlacementNotification.belongsTo(User, { as: "user", foreignKey: "user_id" });
@@ -1278,7 +1284,6 @@ CoPoMap.belongsTo(ProgramOutcome, {
   foreignKey: "program_outcome_id",
   as: "programOutcome",
 });
-
 
 // Export models and sequelize instance
 module.exports = {

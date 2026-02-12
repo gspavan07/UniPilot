@@ -200,6 +200,21 @@ router.put(
   placementDriveController.updateApplicationStatus,
 );
 
+// Placement Record Management
+router.get(
+  "/drives/:id/placements",
+  authenticate,
+  checkPermission(["placement.drive.manage", "placement.drive.view"]),
+  placementDriveController.getPlacementRecords,
+);
+
+router.put(
+  "/placements/:id",
+  authenticate,
+  checkPermission("placement.drive.manage"),
+  placementDriveController.updatePlacementRecord,
+);
+
 // Department Placement Routes
 router.get(
   "/department/:departmentId/stats",
@@ -290,4 +305,11 @@ router.get(
   authenticate,
   // checkPermission("placement.application.view_own"),
   studentPlacementController.getMyApplications,
+);
+
+router.get(
+  "/my-offers",
+  authenticate,
+  // checkPermission("placement.application.view_own"),
+  studentPlacementController.getMyOffers,
 );

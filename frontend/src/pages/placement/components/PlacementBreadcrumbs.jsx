@@ -6,7 +6,7 @@ import { ChevronRight, Home } from "lucide-react";
 /**
  * items: Array<{ label: string, href?: string }>
  */
-const PlacementBreadcrumbs = ({ items }) => {
+const PlacementBreadcrumbs = ({ items, className = "" }) => {
   const { user } = useSelector((state) => state.auth);
 
   const getDashboardPath = () => {

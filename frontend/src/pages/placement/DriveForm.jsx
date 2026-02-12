@@ -53,6 +53,8 @@ const DriveForm = () => {
     external_registration_url: "",
     // Eligibility fields
     min_cgpa: "0.0",
+    min_10th_percent: "0.0",
+    min_inter_percent: "0.0",
     max_active_backlogs: "0",
     department_ids: [],
     regulation_ids: [],
@@ -96,6 +98,8 @@ const DriveForm = () => {
         !drive.external_registration_url,
       external_registration_url: drive.external_registration_url || "",
       min_cgpa: drive.eligibility?.min_cgpa || "0.0",
+      min_10th_percent: drive.eligibility?.min_10th_percent || "0.0",
+      min_inter_percent: drive.eligibility?.min_inter_percent || "0.0",
       max_active_backlogs: drive.eligibility?.max_active_backlogs || "0",
       department_ids: drive.eligibility?.department_ids || [],
       regulation_ids: drive.eligibility?.regulation_ids || [],
@@ -131,6 +135,8 @@ const DriveForm = () => {
           : [],
         eligibility: {
           min_cgpa: parseFloat(formData.min_cgpa),
+          min_10th_percent: parseFloat(formData.min_10th_percent),
+          min_inter_percent: parseFloat(formData.min_inter_percent),
           max_active_backlogs: parseInt(formData.max_active_backlogs),
           department_ids: formData.department_ids,
           regulation_ids: formData.regulation_ids,
@@ -308,6 +314,34 @@ const DriveForm = () => {
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                     value={formData.min_cgpa}
                     onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    Min 10th Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="min_10th_percent"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={formData.min_10th_percent}
+                    onChange={handleChange}
+                    placeholder="e.g. 60"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    Min Inter/Diploma %
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="min_inter_percent"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={formData.min_inter_percent}
+                    onChange={handleChange}
+                    placeholder="e.g. 60"
                   />
                 </div>
                 <div>

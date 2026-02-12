@@ -15,9 +15,11 @@ import {
   ShieldCheck,
   CheckCircle2,
   Users,
+  Trophy,
 } from "lucide-react";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
 import SelectionPipeline from "./SelectionPipeline";
+import PlacementResults from "./components/PlacementResults";
 
 const DriveDetail = () => {
   const { id } = useParams();
@@ -58,6 +60,7 @@ const DriveDetail = () => {
     { id: "eligibility", name: "Eligibility" },
     { id: "rounds", name: "Selection Rounds" },
     { id: "applicants", name: "Applicants" },
+    { id: "results", name: "Placements \u0026 Results" },
   ];
 
   return (
@@ -281,6 +284,22 @@ const DriveDetail = () => {
               </div>
               <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Min 10th Percentage
+                </p>
+                <p className="text-3xl font-bold text-indigo-600">
+                  {drive.eligibility?.min_10th_percent || "0"}%
+                </p>
+              </div>
+              <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Min Inter/Diploma %
+                </p>
+                <p className="text-3xl font-bold text-indigo-600">
+                  {drive.eligibility?.min_inter_percent || "0"}%
+                </p>
+              </div>
+              <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                   Active Backlogs
                 </p>
                 <p className="text-3xl font-bold text-amber-600">
@@ -410,6 +429,16 @@ const DriveDetail = () => {
         {activeTab === "applicants" && (
           <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
             <SelectionPipeline driveId={drive.id} />
+          </div>
+        )}
+
+        {activeTab === "results" && (
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <h3 className="text-xl font-bold mb-8 text-gray-900 dark:text-white flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-emerald-500" />
+              Final Placement Results
+            </h3>
+            <PlacementResults driveId={drive.id} />
           </div>
         )}
       </div>

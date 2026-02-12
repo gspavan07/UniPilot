@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   XCircle,
   FileSpreadsheet,
+  FileText,
+  Calendar,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
@@ -31,6 +33,12 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [filterRound, setFilterRound] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPlacementModal, setShowPlacementModal] = useState(false);
+  const [placementDetails, setPlacementDetails] = useState({
+    joining_date: "",
+    offer_letter_url: "",
+  });
+  const [editingPlacement, setEditingPlacement] = useState(null); // { id, joining_date, offer_letter_url }
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -177,6 +185,11 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
     }
 
     // Confirmation
+    if (status === "placed") {
+      setShowPlacementModal(true);
+      return;
+    }
+
     if (!window.confirm(`Move ${selectedIds.size} candidates to next stage?`))
       return;
 
@@ -208,6 +221,37 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
       setSelectedIds(new Set());
     } catch (error) {
       toast.error("Failed to reject candidates");
+    }
+  };
+
+  const confirmPlacement = async () => {
+    try {
+      await api.put("/placement/applications/bulk/status", {
+        applicationIds: Array.from(selectedIds),
+        status: "placed",
+        joining_date: placementDetails.joining_date,
+        offer_letter_url: placementDetails.offer_letter_url,
+      });
+      toast.success("Candidates placed successfully");
+      setShowPlacementModal(false);
+      fetchCandidates();
+      setSelectedIds(new Set());
+    } catch (error) {
+      toast.error("Failed to place candidates");
+    }
+  };
+
+  const updateIndividualPlacement = async (placementId) => {
+    try {
+      await api.put(`/placement/placements/${placementId}`, {
+        joining_date: editingPlacement.joining_date,
+        offer_letter_url: editingPlacement.offer_letter_url,
+      });
+      toast.success("Placement details updated");
+      setEditingPlacement(null);
+      fetchCandidates();
+    } catch (error) {
+      toast.error("Failed to update placement details");
     }
   };
 
@@ -355,6 +399,16 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                   <th className="px-6 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
                     Pipeline Status
                   </th>
+                  {filterRound === "selected" && (
+                    <>
+                      <th className="px-6 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
+                        Joining Date
+                      </th>
+                      <th className="px-6 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
+                        Offer Letter
+                      </th>
+                    </>
+                  )}
                   <th className="px-6 py-5 text-right text-xs font-black text-gray-400 uppercase tracking-widest">
                     Stage
                   </th>
@@ -419,14 +473,117 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                         {candidate.status === "rejected" && (
                           <XCircle className="w-3 h-3 mr-1" />
                         )}
-                        {candidate.status}
+                        {candidate.status.toUpperCase()}
                       </span>
                     </td>
+                    {filterRound === "selected" && (
+                      <>
+                        <td className="px-6 py-5">
+                          {editingPlacement?.id ===
+                          candidate.placement_records?.[0]?.id ? (
+                            <input
+                              type="date"
+                              value={editingPlacement.joining_date}
+                              onChange={(e) =>
+                                setEditingPlacement({
+                                  ...editingPlacement,
+                                  joining_date: e.target.value,
+                                })
+                              }
+                              className="bg-white border rounded px-2 py-1 text-xs"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                              <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                              {candidate.placement_records?.[0]?.joining_date ||
+                                "Not Set"}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-5">
+                          {editingPlacement?.id ===
+                          candidate.placement_records?.[0]?.id ? (
+                            <input
+                              type="url"
+                              value={editingPlacement.offer_letter_url}
+                              onChange={(e) =>
+                                setEditingPlacement({
+                                  ...editingPlacement,
+                                  offer_letter_url: e.target.value,
+                                })
+                              }
+                              placeholder="URL"
+                              className="bg-white border rounded px-2 py-1 text-xs w-32"
+                            />
+                          ) : candidate.placement_records?.[0]
+                              ?.offer_letter_url ? (
+                            <a
+                              href={
+                                candidate.placement_records[0].offer_letter_url
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:text-indigo-800"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                      </>
+                    )}
                     <td className="px-6 py-5 text-right">
-                      <div className="text-sm font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-xl inline-block">
-                        {rounds.find((r) => r.id === candidate.current_round_id)
-                          ?.round_name || "Applied"}
-                      </div>
+                      {filterRound === "selected" &&
+                      candidate.placement_records?.[0] ? (
+                        editingPlacement?.id ===
+                        candidate.placement_records[0].id ? (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditingPlacement(null)}
+                              className="p-1.5 hover:bg-gray-100 rounded text-gray-400"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                updateIndividualPlacement(editingPlacement.id)
+                              }
+                              className="p-1.5 hover:bg-emerald-50 rounded text-emerald-600"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              setEditingPlacement({
+                                id: candidate.placement_records[0].id,
+                                joining_date:
+                                  candidate.placement_records[0].joining_date ||
+                                  "",
+                                offer_letter_url:
+                                  candidate.placement_records[0]
+                                    .offer_letter_url || "",
+                              })
+                            }
+                            className="text-indigo-600 hover:underline text-xs font-bold"
+                          >
+                            Edit
+                          </button>
+                        )
+                      ) : (
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                            {rounds.find(
+                              (r) => r.id === candidate.current_round_id,
+                            )?.round_name || "Applied"}{" "}
+                            {candidate.status === "shortlisted" && "(Next)"}
+                          </span>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -487,6 +644,91 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Placement Details Modal */}
+      {showPlacementModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-8">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
+                    Finalize Placements
+                  </h3>
+                  <p className="text-sm text-gray-500 font-medium">
+                    Setting details for {selectedIds.size} students
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
+                    Expected Joining Date
+                  </label>
+                  <div className="relative">
+                    <Calendar className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="date"
+                      value={placementDetails.joining_date}
+                      onChange={(e) =>
+                        setPlacementDetails({
+                          ...placementDetails,
+                          joining_date: e.target.value,
+                        })
+                      }
+                      className="w-full pl-12 pr-6 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
+                    Offer Letter Link (Optional)
+                  </label>
+                  <div className="relative">
+                    <FileText className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={placementDetails.offer_letter_url}
+                      onChange={(e) =>
+                        setPlacementDetails({
+                          ...placementDetails,
+                          offer_letter_url: e.target.value,
+                        })
+                      }
+                      className="w-full pl-12 pr-6 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2 px-1 font-medium">
+                    Note: You can also upload files individually for each
+                    student later.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setShowPlacementModal(false)}
+                  className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl text-sm font-black hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmPlacement}
+                  className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                >
+                  Confirm
+                </button>
+              </div>
             </div>
           </div>
         </div>

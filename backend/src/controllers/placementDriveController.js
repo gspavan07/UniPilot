@@ -6,8 +6,10 @@ const {
   DriveEligibility,
   DriveRound,
   User,
+  Placement,
   sequelize,
 } = require("../models");
+const eligibilityService = require("../services/eligibilityService");
 const logger = require("../utils/logger");
 
 /**
@@ -121,9 +123,31 @@ exports.getDriveById = async (req, res) => {
       });
     }
 
+    // Convert to JSON to add dynamic properties
+    let driveData = drive.toJSON();
+
+    // If requester is a student, calculate eligibility and application status
+    const student = await User.findByPk(req.user.userId);
+    if (student && student.role === "student") {
+      const eligibilityRes = await eligibilityService.isStudentEligible(
+        req.user.userId,
+        drive.id,
+      );
+
+      const existingApp = await StudentApplication.findOne({
+        where: { drive_id: drive.id, student_id: req.user.userId },
+        attributes: ["status"],
+      });
+
+      driveData.isEligible = eligibilityRes.eligible;
+      driveData.ineligible_reason = eligibilityRes.errors.join(". ");
+      driveData.hasApplied = !!existingApp;
+      driveData.applicationStatus = existingApp?.status;
+    }
+
     res.status(200).json({
       success: true,
-      data: drive,
+      data: driveData,
     });
   } catch (error) {
     logger.error("Error in getDriveById:", error);
@@ -407,6 +431,10 @@ exports.getDriveApplications = async (req, res) => {
           as: "student",
           attributes: ["id", "first_name", "last_name", "student_id", "email"],
         },
+        {
+          model: Placement,
+          as: "placement_records",
+        },
       ],
       order: [["applied_at", "DESC"]],
     });
@@ -427,7 +455,7 @@ exports.getDriveApplications = async (req, res) => {
 exports.updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params; // application id
-    const { status, roundId } = req.body;
+    const { status, roundId, joining_date, offer_letter_url } = req.body;
 
     const application = await StudentApplication.findByPk(id);
     if (!application) {
@@ -443,12 +471,26 @@ exports.updateApplicationStatus = async (req, res) => {
 
     // If placed, create a global Placement record
     if (status === "placed") {
-      const drive = await PlacementDrive.findByPk(application.drive_id);
+      const drive = await PlacementDrive.findByPk(application.drive_id, {
+        include: [
+          {
+            model: JobPosting,
+            as: "job_posting",
+            include: [{ model: Company, as: "company" }],
+          },
+        ],
+      });
+
       await Placement.create({
         student_id: application.student_id,
         drive_id: application.drive_id,
         job_posting_id: drive.job_posting_id,
         application_id: application.id,
+        company_name: drive.job_posting.company.name,
+        designation: drive.job_posting.role_title,
+        package_lpa: drive.job_posting.ctc_lpa,
+        joining_date,
+        offer_letter_url,
         status: "offered",
       });
     }
@@ -502,7 +544,8 @@ exports.deleteDrive = async (req, res) => {
 exports.bulkUpdateApplicationStatus = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { applicationIds, status, roundId } = req.body;
+    const { applicationIds, status, roundId, joining_date, offer_letter_url } =
+      req.body;
 
     if (!applicationIds || !Array.isArray(applicationIds) || !status) {
       return res.status(400).json({
@@ -530,7 +573,19 @@ exports.bulkUpdateApplicationStatus = async (req, res) => {
     if (status === "placed") {
       const applications = await StudentApplication.findAll({
         where: { id: applicationIds },
-        include: [{ model: PlacementDrive, as: "drive" }],
+        include: [
+          {
+            model: PlacementDrive,
+            as: "drive",
+            include: [
+              {
+                model: JobPosting,
+                as: "job_posting",
+                include: [{ model: Company, as: "company" }],
+              },
+            ],
+          },
+        ],
         transaction,
       });
 
@@ -539,6 +594,11 @@ exports.bulkUpdateApplicationStatus = async (req, res) => {
         drive_id: app.drive_id,
         job_posting_id: app.drive.job_posting_id,
         application_id: app.id,
+        company_name: app.drive.job_posting.company.name,
+        designation: app.drive.job_posting.role_title,
+        package_lpa: app.drive.job_posting.ctc_lpa,
+        joining_date,
+        offer_letter_url,
         status: "offered",
       }));
 
@@ -558,5 +618,62 @@ exports.bulkUpdateApplicationStatus = async (req, res) => {
       success: false,
       error: "Internal Server Error",
     });
+  }
+};
+
+/**
+ * Get all placement records for a drive
+ */
+exports.getPlacementRecords = async (req, res) => {
+  try {
+    const { id } = req.params; // drive id
+    const placements = await Placement.findAll({
+      where: { drive_id: id },
+      include: [
+        {
+          model: User,
+          as: "student",
+          attributes: ["id", "first_name", "last_name", "student_id", "email"],
+        },
+      ],
+    });
+
+    res.status(200).json({ success: true, data: placements });
+  } catch (error) {
+    logger.error("Error fetching placement records:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
+
+/**
+ * Update an individual placement record (offer letter, joining date)
+ */
+exports.updatePlacementRecord = async (req, res) => {
+  try {
+    const { id } = req.params; // placement record id
+    const { joining_date, offer_letter_url, package_lpa, status } = req.body;
+
+    const placement = await Placement.findByPk(id);
+    if (!placement) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Placement record not found" });
+    }
+
+    await placement.update({
+      joining_date: joining_date || placement.joining_date,
+      offer_letter_url: offer_letter_url || placement.offer_letter_url,
+      package_lpa: package_lpa || placement.package_lpa,
+      status: status || placement.status,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Placement record updated successfully",
+      data: placement,
+    });
+  } catch (error) {
+    logger.error("Error updating placement record:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };

@@ -59,7 +59,7 @@ const PlacementDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 pb-12">
       {/* Hero Section */}
-      <div className="relative bg-indigo-600 dark:bg-indigo-900 border-b border-indigo-500 overflow-hidden mb-8">
+      <div className="relative bg-indigo-600 dark:bg-indigo-900 rounded-xl border-b border-indigo-500 overflow-hidden mb-8">
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl -ml-16 -mb-16"></div>
@@ -291,25 +291,6 @@ const PlacementDashboard = () => {
                     <ChevronRight className="w-4 h-4 ml-auto text-gray-300 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
                   </Link>
                 ))}
-              </div>
-            </div>
-
-            <div className="relative group bg-gradient-to-br from-indigo-700 to-indigo-900 p-8 rounded-3xl shadow-xl text-white overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
-                    <Trophy className="w-5 h-5 text-amber-300" />
-                  </div>
-                  <h3 className="text-lg font-bold">TPO Intelligence</h3>
-                </div>
-                <p className="text-indigo-100 text-sm leading-relaxed mb-6 font-medium">
-                  Take full control of the selection process. Automate rounds,
-                  communicate with candidates, and generate reports.
-                </p>
-                <button className="w-full py-3 bg-white text-indigo-700 rounded-xl text-sm font-black shadow-lg shadow-indigo-900/20 hover:bg-indigo-50 transition-colors uppercase tracking-widest">
-                  View Toolkit
-                </button>
               </div>
             </div>
           </div>

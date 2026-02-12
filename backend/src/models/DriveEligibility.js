@@ -26,6 +26,14 @@ const DriveEligibility = sequelize.define(
     min_cgpa: {
       type: DataTypes.DECIMAL(3, 2),
     },
+    min_10th_percent: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0.0,
+    },
+    min_inter_percent: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0.0,
+    },
     max_active_backlogs: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
