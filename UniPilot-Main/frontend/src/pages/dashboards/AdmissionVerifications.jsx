@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 import DocumentVerificationModal from "../../components/admission/DocumentVerificationModal";
 import BulkCommunicationModal from "../../components/admission/BulkCommunicationModal";
 
-const AdmissionDashboard = () => {
+const AdmissionVerifications = () => {
   const { user } = useSelector((state) => state.auth);
   const [loading, setLoading] = useState(true);
 
@@ -239,4 +239,4 @@ const AdmissionDashboard = () => {
   );
 };
 
-export default AdmissionDashboard;
+export default AdmissionVerifications;

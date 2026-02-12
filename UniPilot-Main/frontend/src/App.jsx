@@ -1,35 +1,57 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadUser } from "./store/slices/authSlice";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+
+// Store
+import { loadUser } from "./store/slices/authSlice";
+
+// Shared Components
+import MainLayout from "./components/layout/MainLayout";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+
+// Utils
+import { getLandingPage } from "./utils/routeUtils";
+
+// --- Pages ---
+
+// Auth
 import Login from "./pages/auth/Login";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+
+// Dashboard & Profile
 import Dashboard from "./pages/Dashboard";
-import DepartmentList from "./pages/departments/DepartmentList";
-import ProgramList from "./pages/programs/ProgramList";
+import UserProfile from "./pages/profile/UserProfile";
+
+// Academics
+import AcademicsManagement from "./pages/academics/AcademicsManagement";
+import RegulationList from "./pages/academics/RegulationList";
+import RegulationViewer from "./pages/academics/RegulationViewer";
+import CoPoMapping from "./pages/academics/CoPoMapping";
+import SectionManager from "./pages/academics/SectionManager";
+import CourseList from "./pages/courses/CourseList";
+import MyCourses from "./pages/courses/MyCourses";
+
+// Infrastructure
+import BlockList from "./pages/infrastructure/BlockList";
+import BlockDetails from "./pages/infrastructure/BlockDetails";
+
+// Users & Students
 import UserList from "./pages/users/UserList";
 import StudentList from "./pages/users/StudentList";
 import StudentRegistration from "./pages/users/StudentRegistration";
 import MySections from "./pages/users/MySections";
 import SectionStudentList from "./pages/users/SectionStudentList";
-import CourseList from "./pages/courses/CourseList";
-import MyCourses from "./pages/courses/MyCourses";
-import RoleManagement from "./pages/settings/RoleManagement";
-import ProctorDashboard from "./pages/proctoring/ProctorDashboard";
-import AdmissionDashboard from "./pages/dashboards/AdmissionDashboard";
+
+// Admission
+import AdmissionDashboard from "./pages/dashboards/AdmissionVerifications";
+import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
+import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
 import AdmissionSettings from "./pages/settings/AdmissionSettings";
-import PromotionManager from "./pages/promotion/PromotionManager";
-import AttendanceTracker from "./pages/attendance/AttendanceTracker";
-import LeaveManager from "./pages/attendance/LeaveManager";
-import FeeManagement from "./pages/fee/FeeManagement";
-import MyFees from "./pages/fee/MyFees";
-import LibraryDashboard from "./pages/library/LibraryDashboard";
-import MyLibrary from "./pages/library/MyLibrary";
-import TimetableManager from "./pages/timetable/TimetableManager";
-import MyTimetable from "./pages/timetable/MyTimetable";
-import UserProfile from "./pages/profile/UserProfile";
+
+// HR & Staff
+import HRManagement from "./pages/hr/HRManagement";
 import StaffList from "./pages/hr/StaffList";
 import StaffProfile from "./pages/hr/StaffProfile";
 import PayrollDashboard from "./pages/hr/PayrollDashboard";
@@ -38,6 +60,8 @@ import LeaveDashboard from "./pages/hr/LeaveDashboard";
 import StaffAttendance from "./pages/hr/StaffAttendance";
 import EmployeeOnboarding from "./pages/hr/EmployeeOnboarding";
 import AcademicCalendar from "./pages/hr/AcademicCalendar";
+
+// Transport
 import TransportDashboard from "./pages/transport/TransportDashboard";
 import RouteManagement from "./pages/transport/RouteManagement";
 import StopManagement from "./pages/transport/StopManagement";
@@ -45,7 +69,8 @@ import VehicleManagement from "./pages/transport/VehicleManagement";
 import DriverManagement from "./pages/transport/DriverManagement";
 import StudentAllocation from "./pages/transport/StudentAllocation";
 import TripManagement from "./pages/transport/TripManagement";
-// Hostel Management
+
+// Hostel
 import HostelDashboard from "./pages/hostel/HostelDashboard";
 import BuildingManagement from "./pages/hostel/BuildingManagement";
 import RoomManagement from "./pages/hostel/RoomManagement";
@@ -58,19 +83,8 @@ import HostelReports from "./pages/hostel/HostelReports";
 import GatePassManagement from "./pages/hostel/GatePassManagement";
 import HostelFines from "./pages/hostel/HostelFines";
 import HostelRoomBills from "./pages/hostel/HostelRoomBills";
-import MainLayout from "./components/layout/MainLayout";
-import ProtectedRoute from "./components/common/ProtectedRoute";
-import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
-import BlockList from "./pages/infrastructure/BlockList";
-import BlockDetails from "./pages/infrastructure/BlockDetails";
-import RegulationList from "./pages/academics/RegulationList";
-import RegulationViewer from "./pages/academics/RegulationViewer";
 
-import SectionManager from "./pages/academics/SectionManager";
-import AcademicsManagement from "./pages/academics/AcademicsManagement";
-import CoPoMapping from "./pages/academics/CoPoMapping";
-import HRManagement from "./pages/hr/HRManagement";
-import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
+// Placement
 import PlacementDashboard from "./pages/placement/PlacementDashboard";
 import StudentPlacementDashboard from "./pages/placement/StudentPlacementDashboard";
 import MyPlacementProfile from "./pages/placement/MyPlacementProfile";
@@ -90,7 +104,21 @@ import DriveDetail from "./pages/placement/DriveDetail";
 import CompanyProfile from "./pages/placement/CompanyProfile";
 import JobPostingDetail from "./pages/placement/JobPostingDetail";
 import CoordinatorManagement from "./pages/placement/CoordinatorManagement";
-import { getLandingPage } from "./utils/routeUtils";
+
+// Other Modules
+import DepartmentList from "./pages/departments/DepartmentList";
+import ProgramList from "./pages/programs/ProgramList";
+import RoleManagement from "./pages/settings/RoleManagement";
+import ProctorDashboard from "./pages/proctoring/ProctorDashboard";
+import PromotionManager from "./pages/promotion/PromotionManager";
+import AttendanceTracker from "./pages/attendance/AttendanceTracker";
+import LeaveManager from "./pages/attendance/LeaveManager";
+import FeeManagement from "./pages/fee/FeeManagement";
+import MyFees from "./pages/fee/MyFees";
+import LibraryDashboard from "./pages/library/LibraryDashboard";
+import MyLibrary from "./pages/library/MyLibrary";
+import TimetableManager from "./pages/timetable/TimetableManager";
+import MyTimetable from "./pages/timetable/MyTimetable";
 
 function App() {
   const dispatch = useDispatch();
@@ -119,7 +147,11 @@ function App() {
             </ProtectedRoute>
           }
         >
+          {/* Dashboard & Profile */}
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<UserProfile />} />
+
+          {/* Academics Management */}
           <Route path="/academics" element={<AcademicsManagement />} />
           <Route path="/departments" element={<DepartmentList />} />
           <Route path="/programs" element={<ProgramList />} />
@@ -133,41 +165,43 @@ function App() {
             element={<CoPoMapping />}
           />
           <Route path="/courses" element={<CourseList />} />
-          <Route path="/faculty" element={<UserList role="faculty" />} />
+          <Route path="/my-courses" element={<MyCourses />} />
+          <Route path="/academic/sections" element={<SectionManager />} />
+
+          {/* Infrastructure */}
+          <Route path="/infrastructure" element={<BlockList />} />
+          <Route path="/infrastructure/blocks/:id" element={<BlockDetails />} />
+
+          {/* User & Student Management */}
+          <Route path="/users" element={<UserList />} />
           <Route path="/students" element={<StudentList />} />
           <Route path="/student/register" element={<StudentRegistration />} />
+          <Route path="/faculty" element={<UserList role="faculty" />} />
           <Route path="/staff" element={<UserList role="staff" />} />
           <Route path="/admins" element={<UserList role="admin" />} />
-          <Route path="/admission/dashboard" element={<AdmissionDashboard />} />
-          <Route
-            path="/admission-management"
-            element={<AdmissionManagement />}
-          />
-          <Route path="/admission/settings" element={<AdmissionSettings />} />
-          <Route path="/users" element={<UserList />} />
-          <Route path="/timetable/manage" element={<TimetableManager />} />
-          <Route path="/timetable/my" element={<MyTimetable />} />
-          <Route path="/settings/roles" element={<RoleManagement />} />
-          <Route path="/proctoring" element={<ProctorDashboard />} />
-          <Route path="/lifecycle" element={<PromotionManager />} />
-          <Route path="/attendance" element={<AttendanceTracker />} />
-          <Route path="/leave" element={<LeaveManager />} />
-          <Route path="/attendance" element={<AttendanceTracker />} />
-          <Route path="/leave" element={<LeaveManager />} />
           <Route path="/my-students" element={<MySections />} />
           <Route
             path="/my-students/view/:programId/:batchYear/:section"
             element={<SectionStudentList />}
           />
-          <Route path="/fees" element={<FeeManagement />} />
-          <Route path="/my-fees" element={<MyFees />} />
-          <Route path="/my-courses" element={<MyCourses />} />
-          <Route path="/library" element={<LibraryDashboard />} />
-          <Route path="/my-library" element={<MyLibrary />} />
+
+          {/* Admission Management */}
+          <Route
+            path="/admission/verifications"
+            element={<AdmissionVerifications />}
+          />
+          <Route
+            path="/admission-management"
+            element={<AdmissionManagement />}
+          />
+          <Route path="/admission/settings" element={<AdmissionSettings />} />
+
+          {/* HR & Staff Management */}
           <Route path="/hr-management" element={<HRManagement />} />
           <Route path="/hr/onboard" element={<EmployeeOnboarding />} />
           <Route path="/employees" element={<StaffList />} />
           <Route path="/employee/:id" element={<StaffProfile />} />
+          <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />
           <Route path="/hr/payroll" element={<PayrollDashboard />} />
           <Route path="/hr/payroll/grades" element={<GradeManagement />} />
           <Route path="/hr/leaves" element={<LeaveDashboard />} />
@@ -180,9 +214,20 @@ function App() {
             path="/academic/calendar"
             element={<AcademicCalendar target="student" />}
           />
-          <Route path="/academic/sections" element={<SectionManager />} />
-          <Route path="/infrastructure" element={<BlockList />} />
-          <Route path="/infrastructure/blocks/:id" element={<BlockDetails />} />
+
+          {/* Attendance & Leave (Common) */}
+          <Route path="/attendance" element={<AttendanceTracker />} />
+          <Route path="/leave" element={<LeaveManager />} />
+
+          {/* Fees & Library */}
+          <Route path="/fees" element={<FeeManagement />} />
+          <Route path="/my-fees" element={<MyFees />} />
+          <Route path="/library" element={<LibraryDashboard />} />
+          <Route path="/my-library" element={<MyLibrary />} />
+
+          {/* Timetable */}
+          <Route path="/timetable/manage" element={<TimetableManager />} />
+          <Route path="/timetable/my" element={<MyTimetable />} />
 
           {/* Transport Management */}
           <Route path="/transport" element={<TransportDashboard />} />
@@ -267,10 +312,10 @@ function App() {
             element={<CoordinatorManagement />}
           />
 
-          {/* Add more transport sub-routes here */}
-
-          <Route path="/hr/my-profile" element={<StaffProfile isSelf />} />
-          <Route path="/profile" element={<UserProfile />} />
+          {/* Settings */}
+          <Route path="/settings/roles" element={<RoleManagement />} />
+          <Route path="/proctoring" element={<ProctorDashboard />} />
+          <Route path="/lifecycle" element={<PromotionManager />} />
           <Route
             path="/settings"
             element={<Navigate to="/settings/roles" replace />}

@@ -21,7 +21,7 @@ export const getLandingPage = (user) => {
       return "/fees";
     case "admission_admin":
     case "admission_staff":
-      return "/admission/dashboard";
+      return "/admission/verifications";
     case "hr":
     case "hr_admin":
       return "/hr/onboard";

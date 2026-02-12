@@ -16,12 +16,12 @@ const AdmissionManagement = () => {
 
   const admissionModules = [
     {
-      id: "analytics",
-      name: "Admission Analytics",
+      id: "verifications",
+      name: "Admission Verifications",
       description:
-        "Comprehensive dashboard for tracking admission trends, leads, and student demographics.",
-      icon: TrendingUp,
-      href: "/admission/dashboard",
+        "Verify student documents, manage applications, and ensure compliance with admission policies.",
+      icon: ClipboardCheck,
+      href: "/admission/verifications",
       permission: "admissions:view",
       color: "blue",
     },
