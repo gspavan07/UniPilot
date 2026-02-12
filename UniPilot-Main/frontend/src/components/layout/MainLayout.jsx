@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 const MainLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -149,7 +149,18 @@ const MainLayout = () => {
       roles: ["student", "faculty", "hod", "principal", "super_admin"],
     },
 
-
+    {
+      name: "Examination Hub",
+      href: "/my-exams",
+      icon: Award,
+      roles: ["student"],
+    },
+    {
+      name: "My Results",
+      href: "/results",
+      icon: FileText,
+      roles: ["student"],
+    },
     {
       name: "Fee Management",
       href: "/fees",
@@ -181,14 +192,14 @@ const MainLayout = () => {
       name: "Placements",
       href: "/placement/dashboard",
       icon: Briefcase,
-      roles: ["super_admin", "principal", "tpo"],
+      // permission: ["placement.company.manage", "placement.drive.manage"],
+      roles: ["super_admin", "principal", "tpo", "placement_coordinator"],
     },
     {
       name: "Dept. Placements",
       href: "/placement/department",
       icon: Briefcase,
       roles: ["hod"],
-      isCoordinator: true,
     },
     {
       name: "My Placements",
@@ -237,11 +248,10 @@ const MainLayout = () => {
     // const adminRoles = ["super_admin", "admin", "administrator"];
     // if (adminRoles.includes(user?.role)) return true;
 
-    // 2. Role & Special Access Check (Coordinator Flag)
-    const hasRoleMatch = !item.roles || item.roles.includes(user?.role);
-    const hasPCMatch = item.isCoordinator && user?.is_placement_coordinator;
-
-    if (!hasRoleMatch && !hasPCMatch) return false;
+    // 2. Role Check
+    if (item.roles && Array.isArray(item.roles)) {
+      if (!item.roles.includes(user?.role)) return false;
+    }
 
     // 3. Specific Student-Level Restrictions (e.g., Hostel)
     if (
@@ -272,141 +282,174 @@ const MainLayout = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-white flex">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Archivo:wght@600;700;800&display=swap');
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+        .nav-link { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .nav-link:hover .nav-accent { width: 3px; }
+        .nav-accent { transition: width 0.25s ease; }
+        .tooltip { position: absolute; left: 100%; margin-left: 12px; padding: 6px 12px; background: #1f2937; color: white; font-size: 13px; font-weight: 500; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 50; }
+        .nav-link:hover .tooltip { opacity: 1; }
+        * { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+        h1, h2, h3 { font-family: 'Archivo', sans-serif; letter-spacing: -0.02em; }
+      `}</style>
+
       <aside
-        className={`${sidebarOpen ? "w-64" : "w-20"
-          } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col fixed h-full z-40`}
+        className={`${sidebarOpen ? "w-64" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-out flex flex-col fixed h-full z-40`}
+        onMouseEnter={() => setSidebarOpen(true)}
+        onMouseLeave={() => setSidebarOpen(false)}
       >
-        {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-700">
-          <div className={`flex items-center ${!sidebarOpen && "hidden"}`}>
-            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold mr-2">
-              U
+        <div
+          className={`h-16 flex items-center border-b border-gray-100 ${sidebarOpen ? "justify-start" : "justify-center"}`}
+        >
+          {sidebarOpen ? (
+            <div className="flex items-center gap-3 px-5">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-bold">U</span>
+              </div>
+              <div className="leading-tight">
+                <h1 className="text-base font-bold text-black tracking-tight">
+                  UniPilot
+                </h1>
+                <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                  System
+                </p>
+              </div>
             </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-400 font-display">
-              UniPilot
-            </span>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            {sidebarOpen ? (
-              <X className="w-5 h-5 text-gray-500" />
-            ) : (
-              <Menu className="w-5 h-5 text-gray-500" />
-            )}
-          </button>
+          ) : (
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm font-bold">U</span>
+            </div>
+          )}
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {filteredNavigation.map((item) => (
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2">
+          {filteredNavigation.map((item, index) => (
             <Link
               key={item.name}
               to={item.href}
-              className={`flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group ${isActive(item.href)
-                  ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
+              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${
+                isActive(item.href)
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+              style={{ animationDelay: `${index * 25}ms` }}
             >
-              <item.icon
-                className={`w-5 h-5 flex-shrink-0 ${isActive(item.href)
-                    ? "text-primary-600 dark:text-primary-400"
-                    : "group-hover:text-primary-500"
-                  }`}
+              <div
+                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${
+                  isActive(item.href) ? "w-0" : "w-0"
+                }`}
               />
-              <span
-                className={`ml-3 font-medium ${!sidebarOpen && "hidden"} transition-opacity`}
-              >
-                {item.name}
-              </span>
-              {isActive(item.href) && sidebarOpen && (
-                <ChevronRight className="ml-auto w-4 h-4" />
+              <item.icon
+                className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${
+                  isActive(item.href)
+                    ? "text-white"
+                    : "text-gray-600 group-hover:text-blue-600"
+                }`}
+              />
+              {sidebarOpen && (
+                <span
+                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${
+                    isActive(item.href)
+                      ? "font-semibold text-white"
+                      : "text-gray-700"
+                  }`}
+                >
+                  {item.name}
+                </span>
               )}
             </Link>
           ))}
         </nav>
 
-        {/* Sidebar Footer (User Info) */}
-        <div className="p-4 border-t border-gray-100 dark:border-gray-700">
-          <Link to="/profile" className="flex items-center overflow-hidden">
-            <img
-              src={
-                user?.profile_picture
-                  ? user.profile_picture.startsWith("http")
-                    ? user.profile_picture
-                    : `${user.profile_picture}?token=${localStorage.getItem(
-                      "accessToken",
-                    )}`
-                  : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
-              }
-              alt="Profile"
-              className="w-10 h-10 rounded-full ring-4 ring-gray-50 dark:ring-gray-700 object-cover"
-            />
-            <div
-              className={`ml-3 overflow-hidden ${!sidebarOpen && "hidden"} cursor-pointer hover:text-primary-600`}
+        <div
+          className={`p-4 border-t border-gray-100 ${!sidebarOpen && "px-2"}`}
+        >
+          <div className="flex items-center gap-3">
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 flex-1 min-w-0"
             >
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                {user?.first_name} {user?.last_name}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 capitalize truncate">
-                {user?.role}
-              </p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className={`ml-auto p-2 rounded-lg text-gray-500 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 transition-all ${!sidebarOpen && "hidden"}`}
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </Link>
+              <div className="relative flex-shrink-0">
+                <img
+                  src={
+                    user?.profile_picture
+                      ? user.profile_picture.startsWith("http")
+                        ? user.profile_picture
+                        : `${user.profile_picture}?token=${localStorage.getItem("accessToken")}`
+                      : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=3b82f6&color=fff&size=128`
+                  }
+                  alt="Profile"
+                  className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-100"
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+              </div>
+              {sidebarOpen && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-black truncate">
+                    {user?.first_name} {user?.last_name}
+                  </p>
+                  <p className="text-[10px] text-gray-500 capitalize truncate">
+                    {user?.role?.replace(/_/g, " ")}
+                  </p>
+                </div>
+              )}
+            </Link>
+            {sidebarOpen && (
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-red-50 rounded transition-colors group"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-600 transition-colors" />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-20"}`}
+        className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-64" : "ml-16"}`}
       >
-        {/* Header */}
-        {/* <header className="h-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 sticky top-0 z-30">
-          <div className="relative w-96 hidden md:block">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+          <div className="px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-1 h-4 bg-blue-600 rounded-full" />
+                    <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest">
+                      Current Module
+                    </span>
+                  </div>
+                  <h1 className="text-3xl font-bold text-black tracking-tight">
+                    {filteredNavigation.find((item) => isActive(item.href))
+                      ?.name || "Dashboard"}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-black">
+                    {user?.first_name} {user?.last_name}
+                  </p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {user?.role?.replace(/_/g, " ")}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">
+                    {user?.first_name?.[0]}
+                    {user?.last_name?.[0]}
+                  </span>
+                </div>
+              </div>
             </div>
-            <input
-              type="text"
-              className="bg-gray-100 dark:bg-gray-700 border-none rounded-full py-2 pl-10 pr-4 block w-full text-sm focus:ring-2 focus:ring-primary-500 transition-all"
-              placeholder="Search..."
-            />
           </div>
+        </header>
 
-          <div className="flex items-center space-x-4">
-            <button className="relative p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-error-500 rounded-full border-2 border-white dark:border-gray-800"></span>
-            </button>
-            <div className="h-8 w-px bg-gray-200 dark:border-gray-700 mx-2"></div>
-            <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2 hidden sm:block">
-                {user?.first_name}
-              </span>
-              <img
-                src={
-                  user?.profile_picture ||
-                  `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff`
-                }
-                alt="Profile"
-                className="w-8 h-8 rounded-full ring-2 ring-primary-500/20"
-              />
-            </div>
-          </div>
-        </header> */}
-
-        {/* Content Body */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
           <Outlet />
         </main>
       </div>
