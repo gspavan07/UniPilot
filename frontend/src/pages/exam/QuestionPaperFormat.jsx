@@ -87,8 +87,14 @@ const QuestionPaperFormat = ({ currentCycle }) => {
         }
     }, [selectedCourse, selectedProgram]);
 
+    const isLabSelected = useMemo(() => {
+        const course = courses.find(c => c.id === selectedCourse);
+        return course?.course_type === 'lab';
+    }, [selectedCourse, courses]);
+
     const handleAddQuestion = () => {
-        const nextQNo = `Q${questions.length + 1}`;
+        const prefix = isLabSelected ? 'E' : 'Q';
+        const nextQNo = `${prefix}${questions.length + 1}`;
         setQuestions([
             ...questions,
             { q_no: nextQNo, marks: "", co_id: "" },
@@ -103,8 +109,9 @@ const QuestionPaperFormat = ({ currentCycle }) => {
 
     const handleRemoveQuestion = (index) => {
         const updated = questions.filter((_, i) => i !== index);
-        // Re-number questions to keep sequence Q1, Q2, etc. logic consistent
-        const reordered = updated.map((q, i) => ({ ...q, q_no: `Q${i + 1}` }));
+        // Re-number questions logic
+        const prefix = isLabSelected ? 'E' : 'Q';
+        const reordered = updated.map((q, i) => ({ ...q, q_no: `${prefix}${i + 1}` }));
         setQuestions(reordered);
     };
 
@@ -121,7 +128,7 @@ const QuestionPaperFormat = ({ currentCycle }) => {
         // Validate
         const invalid = questions.find(q => !q.marks || !q.co_id);
         if (invalid) {
-            setError("Please ensure all questions have marks and a selected CO.");
+            setError(`Please ensure all ${isLabSelected ? 'experiments' : 'questions'} have marks and a selected CO.`);
             return;
         }
 
@@ -188,15 +195,50 @@ const QuestionPaperFormat = ({ currentCycle }) => {
 
         const validCourseIds = currentRegulation.courses_list[selectedProgram]?.[currentCycle.semester] || [];
 
-        return courses.filter(c => validCourseIds.includes(c.id));
+        return courses.filter(c => {
+            const isValidId = validCourseIds.includes(c.id);
+            if (!isValidId) return false;
+
+            // Logic to filter by type based on cycle
+            const cycleType = currentCycle.cycle_type;
+            const isLabCycle = cycleType === "internal_lab" || cycleType === "external_lab";
+            const isTheoryCycle = cycleType?.startsWith("mid_term") || cycleType === "semester_end_external" || cycleType === "end_semester";
+
+            if (isLabCycle) return c.course_type === "lab";
+            if (isTheoryCycle) return c.course_type === "theory";
+
+            return true;
+        });
     }, [selectedProgram, currentRegulation, currentCycle, courses]);
 
     // List templates from the current cycle's paper_format
     const displayedTemplates = useMemo(() => {
         if (!currentCycle?.paper_format) return [];
 
-        // Formats are stored as { course_id: { questions, total_marks } }
-        return Object.entries(currentCycle.paper_format).map(([courseId, format]) => {
+        const paperFormat = currentCycle.paper_format;
+        const allTemplates = [];
+
+        // Handle new nested structure
+        if (paperFormat.theory || paperFormat.lab) {
+            if (paperFormat.theory) {
+                Object.entries(paperFormat.theory).forEach(([id, f]) =>
+                    allTemplates.push({ course_id: id, type: 'theory', ...f }));
+            }
+            if (paperFormat.lab) {
+                Object.entries(paperFormat.lab).forEach(([id, f]) =>
+                    allTemplates.push({ course_id: id, type: 'lab', ...f }));
+            }
+        } else {
+            // Handle old flat structure
+            Object.entries(paperFormat).forEach(([id, f]) => {
+                if (id !== 'theory' && id !== 'lab') {
+                    allTemplates.push({ course_id: id, ...f });
+                }
+            });
+        }
+
+        return allTemplates.map((format) => {
+            const courseId = format.course_id;
             const course = courses.find(c => c.id === courseId);
 
             // Resolve program from regulation course list for the current semester
@@ -278,9 +320,11 @@ const QuestionPaperFormat = ({ currentCycle }) => {
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-bottom-4">
                         <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Questions Structure</h3>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                    {isLabSelected ? "Experiments Structure" : "Questions Structure"}
+                                </h3>
                                 <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                                    <span>Total Questions: <strong>{questions.length}</strong></span>
+                                    <span>Total {isLabSelected ? "Experiments" : "Questions"}: <strong>{questions.length}</strong></span>
                                     <span>Total Marks: <strong className="text-primary-600 text-base">{totalMarks}</strong></span>
                                 </div>
                             </div>
@@ -290,7 +334,7 @@ const QuestionPaperFormat = ({ currentCycle }) => {
                                     className="btn btn-outline flex items-center"
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Add Question
+                                    Add {isLabSelected ? "Experiment" : "Question"}
                                 </button>
                                 <button
                                     onClick={handleSave}
@@ -312,10 +356,10 @@ const QuestionPaperFormat = ({ currentCycle }) => {
                                 {questions.length === 0 ? (
                                     <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
                                         <FileText className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                                        <p className="text-gray-500 mb-4">No questions defined for this paper yet.</p>
+                                        <p className="text-gray-500 mb-4">No {isLabSelected ? 'experiments' : 'questions'} defined for this {isLabSelected ? 'lab' : 'paper'} yet.</p>
                                         <button onClick={handleAddQuestion} className="btn btn-sm btn-primary">
                                             <Plus className="w-4 h-4 mr-2" />
-                                            Add First Question
+                                            Add First {isLabSelected ? "Experiment" : "Question"}
                                         </button>
                                     </div>
                                 ) : (
@@ -323,7 +367,7 @@ const QuestionPaperFormat = ({ currentCycle }) => {
                                         <table className="w-full text-sm text-left">
                                             <thead className="bg-gray-50 dark:bg-gray-900 text-xs uppercase text-gray-500 font-semibold border-b dark:border-gray-700">
                                                 <tr>
-                                                    <th className="px-6 py-4 w-24">Q No</th>
+                                                    <th className="px-6 py-4 w-24">{isLabSelected ? "Exp No" : "Q No"}</th>
                                                     <th className="px-6 py-4 w-32">Marks</th>
                                                     <th className="px-6 py-4">Course Outcome (CO)</th>
                                                     <th className="px-6 py-4 w-20 text-center">Action</th>
@@ -371,7 +415,7 @@ const QuestionPaperFormat = ({ currentCycle }) => {
                                                             <button
                                                                 onClick={() => handleRemoveQuestion(idx)}
                                                                 className="p-2 text-gray-400 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                                title="Remove Question"
+                                                                title={`Remove ${isLabSelected ? 'Experiment' : 'Question'}`}
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
                                                             </button>

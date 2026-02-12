@@ -52,6 +52,7 @@ const ExamSchedule = sequelize.define(
     tableName: "exam_schedules",
     timestamps: true,
     underscored: true,
+    paranoid: true,
   }
 );
 
