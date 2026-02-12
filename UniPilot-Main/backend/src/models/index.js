@@ -19,13 +19,7 @@ const Graduation = require("./Graduation");
 const Attendance = require("./Attendance");
 const LeaveRequest = require("./LeaveRequest");
 const Holiday = require("./Holiday");
-const ExamCycle = require("./ExamCycle");
-const ExamSchedule = require("./ExamSchedule");
-const ExamMark = require("./ExamMark");
-const ExamReverification = require("./ExamReverification");
-const ExamScript = require("./ExamScript");
-const HallTicket = require("./HallTicket");
-const ExamRegistration = require("./ExamRegistration");
+
 const FeeCategory = require("./FeeCategory");
 const FeeStructure = require("./FeeStructure");
 const FeePayment = require("./FeePayment");
@@ -38,7 +32,7 @@ const TimetableSlot = require("./TimetableSlot");
 const FeeSemesterConfig = require("./FeeSemesterConfig");
 const StudentDocument = require("./StudentDocument");
 const SectionIncharge = require("./SectionIncharge");
-const ExamFeePayment = require("./ExamFeePayment");
+
 const AcademicFeePayment = require("./AcademicFeePayment");
 const StudentChargePayment = require("./StudentChargePayment");
 const AdmissionConfig = require("./AdmissionConfig");
@@ -115,13 +109,7 @@ const models = {
   Attendance,
   LeaveRequest,
   Holiday,
-  ExamCycle,
-  ExamSchedule,
-  ExamMark,
-  ExamReverification,
-  ExamScript,
-  HallTicket,
-  ExamRegistration,
+
   FeeCategory,
   FeeStructure,
   FeePayment,
@@ -146,7 +134,7 @@ const models = {
   Room,
   SemesterResult,
   SectionIncharge,
-  ExamFeePayment,
+
   AcademicFeePayment,
   StudentChargePayment,
   // Transport Management Models
@@ -407,131 +395,11 @@ User.hasMany(LeaveRequest, { as: "leave_requests", foreignKey: "student_id" });
 LeaveRequest.belongsTo(User, { as: "reviewer", foreignKey: "reviewed_by" });
 LeaveRequest.belongsTo(User, { as: "approver", foreignKey: "approver_id" });
 
-// Examination Associations
-ExamCycle.hasMany(ExamSchedule, {
-  as: "schedules",
-  foreignKey: "exam_cycle_id",
-});
-ExamSchedule.belongsTo(ExamCycle, { as: "cycle", foreignKey: "exam_cycle_id" });
-ExamCycle.belongsTo(Regulation, {
-  as: "regulation",
-  foreignKey: "regulation_id",
-});
-Regulation.hasMany(ExamCycle, {
-  as: "exam_cycles",
-  foreignKey: "regulation_id",
-});
 
-ExamSchedule.belongsTo(Course, { as: "course", foreignKey: "course_id" });
-Course.hasMany(ExamSchedule, { as: "exam_schedules", foreignKey: "course_id" });
 
-ExamMark.belongsTo(ExamSchedule, {
-  as: "schedule",
-  foreignKey: "exam_schedule_id",
-});
-ExamSchedule.hasMany(ExamMark, { as: "marks", foreignKey: "exam_schedule_id" });
 
-ExamMark.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(ExamMark, { as: "exam_marks", foreignKey: "student_id" });
 
-HallTicket.belongsTo(ExamCycle, { as: "cycle", foreignKey: "exam_cycle_id" });
-HallTicket.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(HallTicket, { as: "hall_tickets", foreignKey: "student_id" });
 
-ExamRegistration.belongsTo(ExamCycle, {
-  as: "cycle",
-  foreignKey: "exam_cycle_id",
-});
-ExamCycle.hasMany(ExamRegistration, {
-  as: "registrations",
-  foreignKey: "exam_cycle_id",
-});
-ExamRegistration.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(ExamRegistration, {
-  as: "exam_registrations",
-  foreignKey: "student_id",
-});
-
-// Exam Reverification Associations
-ExamReverification.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(ExamReverification, {
-  as: "exam_reverifications",
-  foreignKey: "student_id",
-});
-
-ExamReverification.belongsTo(ExamSchedule, {
-  as: "schedule",
-  foreignKey: "exam_schedule_id",
-});
-ExamSchedule.hasMany(ExamReverification, {
-  as: "reverifications",
-  foreignKey: "exam_schedule_id",
-});
-
-ExamReverification.belongsTo(ExamMark, {
-  as: "exam_mark",
-  foreignKey: "exam_mark_id",
-});
-ExamMark.hasOne(ExamReverification, {
-  as: "reverification",
-  foreignKey: "exam_mark_id",
-});
-
-ExamReverification.belongsTo(StudentFeeCharge, {
-  as: "fee_charge",
-  foreignKey: "fee_charge_id",
-});
-StudentFeeCharge.hasMany(ExamReverification, {
-  as: "reverifications",
-  foreignKey: "fee_charge_id",
-});
-
-ExamReverification.belongsTo(User, {
-  as: "reviewer",
-  foreignKey: "reviewed_by",
-});
-
-ExamReverification.belongsTo(ExamFeePayment, {
-  as: "exam_fee_payment",
-  foreignKey: "exam_fee_payment_id",
-});
-ExamFeePayment.hasMany(ExamReverification, {
-  as: "reverifications",
-  foreignKey: "exam_fee_payment_id",
-});
-
-// Exam Fee Payment Associations
-ExamFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(ExamFeePayment, { as: "exam_payments", foreignKey: "student_id" });
-ExamFeePayment.belongsTo(ExamCycle, {
-  as: "cycle",
-  foreignKey: "exam_cycle_id",
-});
-ExamCycle.hasMany(ExamFeePayment, {
-  as: "exam_payments",
-  foreignKey: "exam_cycle_id",
-});
-
-// Exam Script Associations
-ExamScript.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(ExamScript, {
-  as: "exam_scripts",
-  foreignKey: "student_id",
-});
-
-ExamScript.belongsTo(ExamSchedule, {
-  as: "schedule",
-  foreignKey: "exam_schedule_id",
-});
-ExamSchedule.hasMany(ExamScript, {
-  as: "scripts",
-  foreignKey: "exam_schedule_id",
-});
-
-ExamScript.belongsTo(User, {
-  as: "uploader",
-  foreignKey: "uploaded_by",
-});
 
 // Semester Result Associations
 SemesterResult.belongsTo(User, { as: "student", foreignKey: "student_id" });
@@ -540,14 +408,7 @@ User.hasMany(SemesterResult, {
   foreignKey: "student_id",
 });
 
-SemesterResult.belongsTo(ExamCycle, {
-  as: "cycle",
-  foreignKey: "exam_cycle_id",
-});
-ExamCycle.hasMany(SemesterResult, {
-  as: "semester_results",
-  foreignKey: "exam_cycle_id",
-});
+
 
 // Fee Management Associations
 FeeStructure.belongsTo(FeeCategory, {
@@ -619,14 +480,7 @@ StudentChargePayment.belongsTo(FeePayment, {
   foreignKey: "fee_payment_id",
 });
 
-FeePayment.hasOne(ExamFeePayment, {
-  as: "exam_payment",
-  foreignKey: "fee_payment_id",
-});
-ExamFeePayment.belongsTo(FeePayment, {
-  as: "payment",
-  foreignKey: "fee_payment_id",
-});
+
 
 // 2. AcademicFeePayment Associations
 AcademicFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });

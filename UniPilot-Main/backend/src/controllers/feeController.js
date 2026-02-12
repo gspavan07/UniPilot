@@ -5,10 +5,8 @@ const {
   FeeWaiver,
   FeeSemesterConfig,
   StudentFeeCharge,
-  ExamFeePayment,
   AcademicFeePayment,
   StudentChargePayment,
-  ExamCycle,
   User,
   Program,
   Department,
@@ -743,13 +741,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
       where: { student_id: studentId },
       include: [{ model: FeeCategory, as: "category" }],
     }),
-    ExamFeePayment.findAll({
-      where: { student_id: studentId },
-      include: [
-        { model: ExamCycle, as: "cycle" },
-        { model: FeePayment, as: "payment" }, // Get Parent Transaction
-      ],
-    }),
+
     AcademicFeePayment.findAll({
       where: { student_id: studentId },
       include: [{ model: FeePayment, as: "payment" }], // Get Parent Transaction
@@ -766,7 +758,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
     semesterConfigs,
     waivers,
     individualCharges,
-    examPayments,
+
     academicPayments,
     chargePaymentsData,
   ] = results;
@@ -962,55 +954,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
     semesterWise[sem].totals.excess += excess;
   });
 
-  // Process Exam Fees (from centralized ExamFeePayment table)
-  examPayments.forEach((p) => {
-    const payable = parseFloat(p.amount);
-    // Use parent payment status if available, else legacy status
-    const status = p.payment ? p.payment.status : p.status;
-    const isPaid = status === "completed";
-    const paid = isPaid ? payable : 0;
-    const due = isPaid ? 0 : payable;
 
-    const sem = p.cycle?.semester || 1;
-    if (!semesterWise[sem]) {
-      semesterWise[sem] = {
-        fees: [],
-        totals: { payable: 0, paid: 0, due: 0, waiver: 0, excess: 0 },
-        fine: { amount: 0, paid: 0, due: 0, isOverdue: false, deadline: null },
-      };
-    }
-
-    semesterWise[sem].fees.push({
-      id: p.id,
-      is_exam_fee: true,
-      category:
-        p.category
-          .split("_")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ") + " Fee",
-      payable,
-      paid,
-      due,
-      status: status,
-      transaction_id: p.payment?.transaction_id || p.transaction_id,
-      payment_date: p.payment?.payment_date || p.payment_date,
-      remarks: p.payment?.remarks || p.remarks,
-      receipts: isPaid
-        ? [
-            {
-              number: p.payment?.transaction_id || p.transaction_id,
-              date: p.payment?.payment_date || p.payment_date,
-              amount: paid,
-              method: p.payment?.payment_method || p.payment_method,
-            },
-          ]
-        : [],
-    });
-
-    semesterWise[sem].totals.payable += payable;
-    semesterWise[sem].totals.paid += paid;
-    semesterWise[sem].totals.due += due;
-  });
 
   Object.keys(semesterWise).forEach((sem) => {
     const data = semesterWise[sem];
@@ -1310,11 +1254,7 @@ exports.getTransactions = async (req, res) => {
             },
           ],
         },
-        {
-          model: ExamFeePayment,
-          as: "exam_payment",
-          include: [{ model: ExamCycle, as: "cycle" }],
-        },
+
       ],
       order: [["payment_date", "DESC"]],
       limit: parseInt(limit),
@@ -2104,8 +2044,8 @@ exports.exportDefaulters = async (req, res) => {
           maxOverdueDays,
           student.phone || "",
           student.parent_details?.father_mobile ||
-            student.parent_details?.mother_mobile ||
-            "",
+          student.parent_details?.mother_mobile ||
+          "",
         ].join(",");
         csvContent += row + "\n";
       }
@@ -2273,11 +2213,7 @@ exports.getDailyCollection = async (req, res) => {
             },
           ],
         },
-        {
-          model: ExamFeePayment,
-          as: "exam_payment",
-          include: [{ model: ExamCycle, as: "cycle" }],
-        },
+
       ],
       order: [["payment_date", "ASC"]],
     });

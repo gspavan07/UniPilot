@@ -73,23 +73,7 @@ const MainLayout = () => {
       ],
       roles: ["super_admin", "principal", "hr_admin", "hr_staff"],
     },
-    {
-      name: "Exams Management",
-      href: "/exam-management",
-      icon: Award,
-      permission: [
-        "exams:manage",
-        "exams:results:entry",
-        "exams:results:publish",
-      ],
-      roles: [
-        "super_admin",
-        "principal",
-        "exam_admin",
-        "exam_staff",
-        "faculty",
-      ],
-    },
+
     {
       name: "Students",
       href: "/students",
@@ -165,18 +149,7 @@ const MainLayout = () => {
       roles: ["student", "faculty", "hod", "principal", "super_admin"],
     },
 
-    {
-      name: "Examination Hub",
-      href: "/my-exams",
-      icon: Award,
-      roles: ["student"],
-    },
-    {
-      name: "My Results",
-      href: "/results",
-      icon: FileText,
-      roles: ["student"],
-    },
+
     {
       name: "Fee Management",
       href: "/fees",
@@ -302,9 +275,8 @@ const MainLayout = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 flex">
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col fixed h-full z-40`}
+        className={`${sidebarOpen ? "w-64" : "w-20"
+          } bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col fixed h-full z-40`}
       >
         {/* Sidebar Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-700">
@@ -334,18 +306,16 @@ const MainLayout = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                isActive(item.href)
+              className={`flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group ${isActive(item.href)
                   ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
+                }`}
             >
               <item.icon
-                className={`w-5 h-5 flex-shrink-0 ${
-                  isActive(item.href)
+                className={`w-5 h-5 flex-shrink-0 ${isActive(item.href)
                     ? "text-primary-600 dark:text-primary-400"
                     : "group-hover:text-primary-500"
-                }`}
+                  }`}
               />
               <span
                 className={`ml-3 font-medium ${!sidebarOpen && "hidden"} transition-opacity`}
@@ -368,8 +338,8 @@ const MainLayout = () => {
                   ? user.profile_picture.startsWith("http")
                     ? user.profile_picture
                     : `${user.profile_picture}?token=${localStorage.getItem(
-                        "accessToken",
-                      )}`
+                      "accessToken",
+                    )}`
                   : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
               }
               alt="Profile"

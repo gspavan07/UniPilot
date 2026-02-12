@@ -171,13 +171,7 @@ const RegulationList = () => {
                   <BookOpen className="w-4 h-4" />
                   Courses
                 </button>
-                <button
-                  onClick={() => navigate(`/regulations/${reg.id}/exams`)}
-                  className="py-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-sm bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-all flex items-center justify-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  Exams
-                </button>
+
               </div>
             </div>
           </div>

@@ -250,7 +250,7 @@ const AcademicCalendar = ({ target = "staff" }) => {
             >
               Manage{" "}
               {isStudent
-                ? "student breaks, semester exams, and cultural events."
+                ? "student breaks, academic sessions, and cultural events."
                 : "institutional holidays, staff breaks, and training sessions."}
             </p>
           </div>
@@ -329,13 +329,12 @@ const AcademicCalendar = ({ target = "staff" }) => {
               return (
                 <div
                   key={idx}
-                  className={`min-h-[100px] rounded-3xl p-3 border transition-all flex flex-col gap-2 ${
-                    !day
+                  className={`min-h-[100px] rounded-3xl p-3 border transition-all flex flex-col gap-2 ${!day
                       ? "bg-gray-50/30 border-transparent dark:bg-gray-900/10"
                       : isToday(day)
                         ? `${isStudent ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800" : "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800"} ring-2 ${isStudent ? "ring-indigo-500/20" : "ring-emerald-500/20"} shadow-lg ${isStudent ? "shadow-indigo-500/5" : "shadow-emerald-500/5"}`
                         : `bg-white border-gray-50 dark:bg-gray-800 dark:border-gray-700 ${isStudent ? "hover:border-indigo-200 dark:hover:border-indigo-800" : "hover:border-emerald-200 dark:hover:border-emerald-800"} hover:shadow-md`
-                  }`}
+                    }`}
                 >
                   <span
                     className={`text-sm font-black ${isToday(day) ? (isStudent ? "text-indigo-600" : "text-emerald-600") : "text-gray-400"}`}
@@ -578,11 +577,10 @@ const AcademicCalendar = ({ target = "staff" }) => {
                             key={type}
                             type="button"
                             onClick={() => setFormData({ ...formData, type })}
-                            className={`flex-1 py-4 rounded-2xl text-xs font-black transition-all ${
-                              formData.type === type
+                            className={`flex-1 py-4 rounded-2xl text-xs font-black transition-all ${formData.type === type
                                 ? `${isStudent ? "bg-indigo-600" : "bg-emerald-600"} text-white shadow-lg ${isStudent ? "shadow-indigo-500/20" : "shadow-emerald-500/20"}`
                                 : "bg-gray-50 dark:bg-gray-900 text-gray-400 hover:bg-gray-100"
-                            }`}
+                              }`}
                           >
                             {type}
                           </button>

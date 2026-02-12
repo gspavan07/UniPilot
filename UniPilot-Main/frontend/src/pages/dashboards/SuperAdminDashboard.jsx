@@ -138,13 +138,7 @@ const SuperAdminDashboard = () => {
       bg: "bg-emerald-100",
       path: "/fees",
     },
-    {
-      name: "Exams Portal",
-      icon: FileText,
-      color: "text-amber-600",
-      bg: "bg-amber-100",
-      path: "/exams/schedules",
-    },
+
     {
       name: "Faculty Mgmt",
       icon: Users,
@@ -567,13 +561,12 @@ const SuperAdminDashboard = () => {
                 stats.alerts.map((alert) => (
                   <div
                     key={alert.id}
-                    className={`p-5 rounded-3xl border-l-4 transition-all hover:translate-x-1 ${
-                      alert.type === "high"
+                    className={`p-5 rounded-3xl border-l-4 transition-all hover:translate-x-1 ${alert.type === "high"
                         ? "bg-rose-50 border-rose-500 text-rose-700"
                         : alert.type === "medium"
                           ? "bg-amber-50 border-amber-500 text-amber-700"
                           : "bg-blue-50 border-blue-500 text-blue-700"
-                    }`}
+                      }`}
                   >
                     <p className="text-sm font-bold leading-tight">
                       {alert.message}
