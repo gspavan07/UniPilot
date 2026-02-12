@@ -305,12 +305,7 @@ const RegulationViewer = () => {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button
-              onClick={() => navigate(`/regulations/${regulationId}/exams`)}
-              className="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all border border-transparent"
-            >
-              Configure Exams
-            </button>
+
             {selectedProgramId && (
               <button
                 onClick={() => navigate(`/regulations/${regulationId}/co-po-mapping?program_id=${selectedProgramId}`)}

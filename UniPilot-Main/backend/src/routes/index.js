@@ -9,7 +9,6 @@ const proctorRoutes = require("./proctor");
 const promotionRoutes = require("./promotion");
 const hrRoutes = require("./hr"); // New HR Routes
 const attendanceRoutes = require("./attendance");
-const examRoutes = require("./exam");
 const feeRoutes = require("./fee");
 const libraryRoutes = require("./library");
 const timetableRoutes = require("./timetable");
@@ -27,7 +26,6 @@ const placementRoutes = require("./placement"); // Placement Module
 const programOutcomeRoutes = require("./programOutcome"); // OBE: Program Outcomes
 const courseOutcomeRoutes = require("./courseOutcome"); // OBE: Course Outcomes
 const coPoMapRoutes = require("./coPoMap"); // OBE: CO-PO Mapping
-const questionPaperTemplateRoutes = require("./questionPaperTemplate"); // Question Paper Templates
 
 
 const router = express.Router();
@@ -54,7 +52,6 @@ router.use("/proctor", proctorRoutes);
 router.use("/promotion", promotionRoutes);
 router.use("/hr", hrRoutes);
 router.use("/attendance", attendanceRoutes);
-router.use("/exam", examRoutes);
 router.use("/fees", feeRoutes);
 router.use("/library", libraryRoutes);
 router.use("/timetable", timetableRoutes);
@@ -74,7 +71,6 @@ router.use("/placement", placementRoutes);
 router.use("/program-outcomes", programOutcomeRoutes);
 router.use("/course-outcomes", courseOutcomeRoutes);
 router.use("/co-po-maps", coPoMapRoutes);
-router.use("/question-paper-templates", questionPaperTemplateRoutes);
 
 module.exports = router;
 

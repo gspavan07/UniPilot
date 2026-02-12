@@ -15,11 +15,7 @@ import { Link } from "react-router-dom";
 import { fetchMyFeeStatus } from "../../store/slices/feeSlice";
 import { fetchTimetable } from "../../store/slices/timetableSlice";
 import { fetchMyAttendance } from "../../store/slices/attendanceSlice";
-import {
-  fetchMyResults,
-  fetchExamCycles,
-  fetchMyExamSchedules,
-} from "../../store/slices/examSlice";
+
 
 const StudentDashboard = () => {
   const dispatch = useDispatch();
@@ -29,19 +25,14 @@ const StudentDashboard = () => {
   const { summary: attendanceSummary } = useSelector(
     (state) => state.attendance,
   );
-  const { myResults, cycles, schedules, gpa } = useSelector(
-    (state) => state.exam,
-  );
+
 
   useEffect(() => {
     // 1. Fetch Fees
     dispatch(fetchMyFeeStatus());
     // 2. Fetch Attendance
     dispatch(fetchMyAttendance());
-    // 3. Fetch Results & Exam Cycles & Schedules
-    dispatch(fetchMyResults());
-    dispatch(fetchExamCycles());
-    dispatch(fetchMyExamSchedules());
+
   }, [dispatch]);
 
   // Calculate Real Stats
@@ -54,14 +45,7 @@ const StudentDashboard = () => {
       ?.filter((s) => s.day_of_week === today)
       .sort((a, b) => a.start_time.localeCompare(b.start_time)) || [];
 
-  // Filter Upcoming Exams (Today or Future) and Sort by Proximity
-  const todayDate = new Date().toISOString().split("T")[0];
-  const upcomingSchedules = schedules
-    ? [...schedules]
-        .filter((s) => s.exam_date >= todayDate)
-        .sort((a, b) => a.exam_date.localeCompare(b.exam_date))
-        .slice(0, 3)
-    : [];
+
 
   const stats = [
     {
@@ -77,13 +61,7 @@ const StudentDashboard = () => {
           ? "bg-orange-100 dark:bg-orange-900/30"
           : "bg-emerald-100 dark:bg-emerald-900/30",
     },
-    {
-      label: "Overall CGPA",
-      value: gpa?.overall || "0.00",
-      icon: Award,
-      color: "text-purple-500",
-      bg: "bg-purple-100 dark:bg-purple-900/30",
-    },
+
     {
       label: "Pending Fees",
       value: `₹${totalDue.toLocaleString()}`,
@@ -189,55 +167,15 @@ const StudentDashboard = () => {
 
         {/* Quick Actions / Notices */}
         <div className="space-y-6">
-          {/* Dynamic Upcoming Exam Card */}
+          {/* Stats Cards */}
           <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/30">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">Upcoming Exams</h3>
-              <Link
-                to="/my-exams"
-                className="text-[10px] font-black uppercase text-white/60 hover:text-white transition-colors"
-              >
-                View All
-              </Link>
+              <h3 className="font-bold text-lg">Academic Notices</h3>
             </div>
-
-            <div className="space-y-3">
-              {upcomingSchedules.length > 0 ? (
-                upcomingSchedules.map((s, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/5"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="max-w-[70%]">
-                        <h4 className="font-bold text-sm truncate">
-                          {s.course?.name}
-                        </h4>
-                        <p className="text-[10px] text-indigo-200 uppercase font-black">
-                          {s.cycle?.cycle_type?.replace("_", " ")}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-black">
-                          {new Date(s.exam_date).toLocaleDateString("en-US", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </p>
-                        <p className="text-[10px] text-white/60">
-                          {s.start_time.substring(0, 5)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 bg-white/5 rounded-xl border border-dashed border-white/10">
-                  <p className="text-sm text-indigo-100/50">
-                    No upcoming exams
-                  </p>
-                </div>
-              )}
+            <div className="text-center py-4 bg-white/5 rounded-xl border border-dashed border-white/10">
+              <p className="text-sm text-indigo-100/50">
+                No new notices
+              </p>
             </div>
           </div>
 

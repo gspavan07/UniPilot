@@ -23,14 +23,6 @@ import AdmissionSettings from "./pages/settings/AdmissionSettings";
 import PromotionManager from "./pages/promotion/PromotionManager";
 import AttendanceTracker from "./pages/attendance/AttendanceTracker";
 import LeaveManager from "./pages/attendance/LeaveManager";
-import ExamSchedules from "./pages/exam/ExamSchedules";
-import MarksEntry from "./pages/exam/MarksEntry";
-import PublishMarks from "./pages/exam/PublishMarks";
-import StudentResults from "./pages/exam/StudentResults";
-import MyExams from "./pages/student/Exams";
-import ExamHallTickets from "./pages/exam/ExamHallTickets";
-import MyHallTicket from "./pages/exam/MyHallTicket";
-import MarkEntry from "./pages/exam/MarkEntry";
 import FeeManagement from "./pages/fee/FeeManagement";
 import MyFees from "./pages/fee/MyFees";
 import LibraryDashboard from "./pages/library/LibraryDashboard";
@@ -73,14 +65,11 @@ import BlockList from "./pages/infrastructure/BlockList";
 import BlockDetails from "./pages/infrastructure/BlockDetails";
 import RegulationList from "./pages/academics/RegulationList";
 import RegulationViewer from "./pages/academics/RegulationViewer";
-import RegulationManager from "./pages/admin/RegulationManager";
+
 import SectionManager from "./pages/academics/SectionManager";
 import AcademicsManagement from "./pages/academics/AcademicsManagement";
 import CoPoMapping from "./pages/academics/CoPoMapping";
 import HRManagement from "./pages/hr/HRManagement";
-import ExamManagement from "./pages/exam/ExamManagement";
-import ReverificationManagement from "./pages/exam/ReverificationManagement";
-import ScriptManagement from "./pages/exam/ScriptManagement";
 import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
 import PlacementDashboard from "./pages/placement/PlacementDashboard";
 import StudentPlacementDashboard from "./pages/placement/StudentPlacementDashboard";
@@ -140,10 +129,6 @@ function App() {
             element={<RegulationViewer />}
           />
           <Route
-            path="/regulations/:id/exams"
-            element={<RegulationManager />}
-          />
-          <Route
             path="/regulations/:id/co-po-mapping"
             element={<CoPoMapping />}
           />
@@ -167,27 +152,13 @@ function App() {
           <Route path="/lifecycle" element={<PromotionManager />} />
           <Route path="/attendance" element={<AttendanceTracker />} />
           <Route path="/leave" element={<LeaveManager />} />
-          <Route path="/exams/schedules" element={<ExamSchedules />} />
-          <Route path="/exam-management" element={<ExamManagement />} />
-          <Route path="/exams/marks-entry" element={<MarksEntry />} />
-          <Route path="/exams/publish" element={<PublishMarks />} />
-          <Route path="/my-exams" element={<MyExams />} />
-          <Route path="/my-exams/hall-ticket" element={<MyHallTicket />} />
-          <Route path="/marks-entry/:scheduleId" element={<MarkEntry />} />
+          <Route path="/attendance" element={<AttendanceTracker />} />
+          <Route path="/leave" element={<LeaveManager />} />
           <Route path="/my-students" element={<MySections />} />
           <Route
             path="/my-students/view/:programId/:batchYear/:section"
             element={<SectionStudentList />}
           />
-          <Route path="/results" element={<StudentResults />} />
-
-          {/* Reverification and Script Management */}
-          <Route
-            path="/exams/reverification"
-            element={<ReverificationManagement />}
-          />
-          <Route path="/exams/scripts" element={<ScriptManagement />} />
-
           <Route path="/fees" element={<FeeManagement />} />
           <Route path="/my-fees" element={<MyFees />} />
           <Route path="/my-courses" element={<MyCourses />} />

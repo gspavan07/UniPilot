@@ -8,7 +8,6 @@ import roleReducer from "./slices/roleSlice";
 import proctorReducer from "./slices/proctorSlice";
 import promotionReducer from "./slices/promotionSlice";
 import attendanceReducer from "./slices/attendanceSlice";
-import examReducer from "./slices/examSlice";
 import feeReducer from "./slices/feeSlice";
 import libraryReducer from "./slices/librarySlice";
 import timetableReducer from "./slices/timetableSlice";
@@ -18,8 +17,6 @@ import regulationReducer from "./slices/regulationSlice";
 import transportReducer from "./slices/transportSlice";
 import hostelReducer from "./slices/hostelSlice";
 import dashboardReducer from "./slices/dashboardSlice";
-import reverificationReducer from "../redux/slices/reverificationSlice";
-import studentReverificationReducer from "../redux/slices/studentReverificationSlice";
 import placementReducer from "./slices/placementSlice";
 import coPoMapReducer from "./slices/coPoMapSlice";
 
@@ -35,7 +32,6 @@ export const store = configureStore({
     proctor: proctorReducer,
     promotion: promotionReducer,
     attendance: attendanceReducer,
-    exam: examReducer,
     fee: feeReducer,
     library: libraryReducer,
     timetable: timetableReducer,
@@ -45,8 +41,6 @@ export const store = configureStore({
     transport: transportReducer,
     hostel: hostelReducer,
     dashboard: dashboardReducer,
-    reverification: reverificationReducer,
-    studentReverification: studentReverificationReducer,
     placement: placementReducer,
     coPoMap: coPoMapReducer,
   },

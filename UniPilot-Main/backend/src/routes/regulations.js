@@ -5,8 +5,6 @@ const {
   createRegulation,
   updateRegulation,
   deleteRegulation,
-  updateExamStructure,
-  getExamStructure,
 } = require("../controllers/regulationController");
 const { authenticate, authorize } = require("../middleware/auth");
 
@@ -36,13 +34,6 @@ router.delete(
   deleteRegulation,
 );
 
-// Exam Structure Configuration
-router.get("/:id/exam-structure", authenticate, getExamStructure);
-router.put(
-  "/:id/exam-structure",
-  authenticate,
-  authorize("admin", "super_admin", "academics_admin"),
-  updateExamStructure,
-);
+
 
 module.exports = router;
