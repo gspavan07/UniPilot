@@ -38,6 +38,7 @@ import { fetchDepartments } from "../../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../../store/slices/programSlice";
 import { fetchRegulations } from "../../../store/slices/regulationSlice";
 import api from "../../../utils/api";
+import { toast } from "react-hot-toast";
 
 const studentSchema = yup.object().shape({
   ...baseUserSchema,
@@ -491,11 +492,10 @@ const StudentForm = ({
       ? name.split(".").reduce((obj, key) => obj && obj[key], errors)
       : errors[name];
 
-    return `input transition-all duration-200 ${
-      hasError
-        ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
-        : "focus:border-primary-500 focus:ring-primary-500/20"
-    }`;
+    return `input transition-all duration-200 ${hasError
+      ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
+      : "focus:border-primary-500 focus:ring-primary-500/20"
+      }`;
   };
 
   const isFieldVisible = (section, field) => {
@@ -1179,7 +1179,7 @@ const StudentForm = ({
                 {/* Custom Fields Section */}
                 {admissionConfig?.field_config?.custom &&
                   Object.keys(admissionConfig.field_config.custom).length >
-                    0 && (
+                  0 && (
                     <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
                       <div className="flex items-center space-x-2 pb-2">
                         <PlusCircle className="w-4 h-4 text-indigo-500" />
@@ -1247,11 +1247,10 @@ const StudentForm = ({
                       key={t}
                       type="button"
                       onClick={() => reset({ ...watch(), guardian_type: t })}
-                      className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
-                        guardianType === t
-                          ? "bg-white dark:bg-gray-700 shadow-sm text-primary-600"
-                          : "text-gray-500"
-                      }`}
+                      className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${guardianType === t
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-primary-600"
+                        : "text-gray-500"
+                        }`}
                     >
                       {t}
                     </button>
@@ -1260,117 +1259,116 @@ const StudentForm = ({
 
                 {(guardianType === "Both Parents" ||
                   guardianType === "Single Parent") && (
-                  <div className="space-y-4">
-                    {guardianType === "Single Parent" && (
-                      <div className="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg w-max mb-4">
-                        {["Father", "Mother"].map((type) => (
-                          <button
-                            type="button"
-                            key={type}
-                            onClick={() =>
-                              reset({ ...watch(), single_parent_type: type })
-                            }
-                            className={`px-4 py-1.5 text-[10px] font-bold rounded-md transition-all ${
-                              (singleParentType || "Father") === type
+                    <div className="space-y-4">
+                      {guardianType === "Single Parent" && (
+                        <div className="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg w-max mb-4">
+                          {["Father", "Mother"].map((type) => (
+                            <button
+                              type="button"
+                              key={type}
+                              onClick={() =>
+                                reset({ ...watch(), single_parent_type: type })
+                              }
+                              className={`px-4 py-1.5 text-[10px] font-bold rounded-md transition-all ${(singleParentType || "Father") === type
                                 ? "bg-white text-primary-600 shadow-sm"
                                 : "text-gray-500"
-                            }`}
-                          >
-                            {type} Only
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {(guardianType === "Both Parents" ||
-                      (guardianType === "Single Parent" &&
-                        (singleParentType || "Father") === "Father")) && (
-                      <div className="p-4 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <label className="label text-[10px] text-primary-500 font-black uppercase mb-4 block">
-                          Father's Details
-                        </label>
-                        <div className="space-y-3">
-                          <input
-                            {...register("father_name")}
-                            className={getInputClass("father_name")}
-                            placeholder="Father's Full Name"
-                          />
-                          {errors.father_name && (
-                            <p className="text-[10px] text-error-500 mt-1">
-                              {errors.father_name.message}
-                            </p>
-                          )}
-                          <div className="grid grid-cols-2 gap-3">
-                            <input
-                              {...register("father_job")}
-                              className={`${getInputClass("father_job")} text-xs`}
-                              placeholder="Occupation"
-                            />
-                            <input
-                              {...register("father_income")}
-                              className={`${getInputClass("father_income")} text-xs`}
-                              placeholder="Annual Income"
-                            />
-                            <input
-                              {...register("father_email")}
-                              className={`${getInputClass("father_email")} text-xs col-span-2`}
-                              placeholder="Email Address"
-                            />
-                            <input
-                              {...register("father_mobile")}
-                              className={`${getInputClass("father_mobile")} text-xs col-span-2`}
-                              placeholder="Mobile Number"
-                            />
-                          </div>
+                                }`}
+                            >
+                              {type} Only
+                            </button>
+                          ))}
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {(guardianType === "Both Parents" ||
-                      (guardianType === "Single Parent" &&
-                        (singleParentType || "Father") === "Mother")) && (
-                      <div className="p-4 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <label className="label text-[10px] text-secondary-500 font-black uppercase mb-4 block">
-                          Mother's Details
-                        </label>
-                        <div className="space-y-3">
-                          <input
-                            {...register("mother_name")}
-                            className={getInputClass("mother_name")}
-                            placeholder="Mother's Full Name"
-                          />
-                          {errors.mother_name && (
-                            <p className="text-[10px] text-error-500 mt-1">
-                              {errors.mother_name.message}
-                            </p>
-                          )}
-                          <div className="grid grid-cols-2 gap-3">
-                            <input
-                              {...register("mother_job")}
-                              className={`${getInputClass("mother_job")} text-xs`}
-                              placeholder="Occupation"
-                            />
-                            <input
-                              {...register("mother_income")}
-                              className={`${getInputClass("mother_income")} text-xs`}
-                              placeholder="Annual Income"
-                            />
-                            <input
-                              {...register("mother_email")}
-                              className={`${getInputClass("mother_email")} text-xs col-span-2`}
-                              placeholder="Email Address"
-                            />
-                            <input
-                              {...register("mother_mobile")}
-                              className={`${getInputClass("mother_mobile")} text-xs col-span-2`}
-                              placeholder="Mobile Number"
-                            />
+                      {(guardianType === "Both Parents" ||
+                        (guardianType === "Single Parent" &&
+                          (singleParentType || "Father") === "Father")) && (
+                          <div className="p-4 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <label className="label text-[10px] text-primary-500 font-black uppercase mb-4 block">
+                              Father's Details
+                            </label>
+                            <div className="space-y-3">
+                              <input
+                                {...register("father_name")}
+                                className={getInputClass("father_name")}
+                                placeholder="Father's Full Name"
+                              />
+                              {errors.father_name && (
+                                <p className="text-[10px] text-error-500 mt-1">
+                                  {errors.father_name.message}
+                                </p>
+                              )}
+                              <div className="grid grid-cols-2 gap-3">
+                                <input
+                                  {...register("father_job")}
+                                  className={`${getInputClass("father_job")} text-xs`}
+                                  placeholder="Occupation"
+                                />
+                                <input
+                                  {...register("father_income")}
+                                  className={`${getInputClass("father_income")} text-xs`}
+                                  placeholder="Annual Income"
+                                />
+                                <input
+                                  {...register("father_email")}
+                                  className={`${getInputClass("father_email")} text-xs col-span-2`}
+                                  placeholder="Email Address"
+                                />
+                                <input
+                                  {...register("father_mobile")}
+                                  className={`${getInputClass("father_mobile")} text-xs col-span-2`}
+                                  placeholder="Mobile Number"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                        )}
+
+                      {(guardianType === "Both Parents" ||
+                        (guardianType === "Single Parent" &&
+                          (singleParentType || "Father") === "Mother")) && (
+                          <div className="p-4 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <label className="label text-[10px] text-secondary-500 font-black uppercase mb-4 block">
+                              Mother's Details
+                            </label>
+                            <div className="space-y-3">
+                              <input
+                                {...register("mother_name")}
+                                className={getInputClass("mother_name")}
+                                placeholder="Mother's Full Name"
+                              />
+                              {errors.mother_name && (
+                                <p className="text-[10px] text-error-500 mt-1">
+                                  {errors.mother_name.message}
+                                </p>
+                              )}
+                              <div className="grid grid-cols-2 gap-3">
+                                <input
+                                  {...register("mother_job")}
+                                  className={`${getInputClass("mother_job")} text-xs`}
+                                  placeholder="Occupation"
+                                />
+                                <input
+                                  {...register("mother_income")}
+                                  className={`${getInputClass("mother_income")} text-xs`}
+                                  placeholder="Annual Income"
+                                />
+                                <input
+                                  {...register("mother_email")}
+                                  className={`${getInputClass("mother_email")} text-xs col-span-2`}
+                                  placeholder="Email Address"
+                                />
+                                <input
+                                  {...register("mother_mobile")}
+                                  className={`${getInputClass("mother_mobile")} text-xs col-span-2`}
+                                  placeholder="Mobile Number"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
 
                 {guardianType === "Guardian" && (
                   <div className="p-6 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 shadow-sm">
@@ -1581,18 +1579,18 @@ const StudentForm = ({
                     admissionConfig?.required_documents ||
                     (watch("admission_type") === "management"
                       ? [
-                          "Photo ID",
-                          "10th Marksheet",
-                          "12th Marksheet",
-                          "Seat Purchase Receipt",
-                        ]
+                        "Photo ID",
+                        "10th Marksheet",
+                        "12th Marksheet",
+                        "Seat Purchase Receipt",
+                      ]
                       : [
-                          "Photo ID",
-                          "10th Marksheet",
-                          "12th Marksheet",
-                          "Entrance Rank Card",
-                          "Allotment Order",
-                        ])
+                        "Photo ID",
+                        "10th Marksheet",
+                        "12th Marksheet",
+                        "Entrance Rank Card",
+                        "Allotment Order",
+                      ])
                   ).map((doc) => {
                     const existingDoc = existingDocuments.find(
                       (d) => d.type === doc,
@@ -1606,13 +1604,12 @@ const StudentForm = ({
                       >
                         <div className="flex items-center space-x-3">
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                              isNewUploaded
-                                ? "bg-emerald-100 text-emerald-600"
-                                : existingDoc
-                                  ? "bg-blue-100 text-blue-600"
-                                  : "bg-gray-50 dark:bg-gray-700 text-gray-400"
-                            }`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isNewUploaded
+                              ? "bg-emerald-100 text-emerald-600"
+                              : existingDoc
+                                ? "bg-blue-100 text-blue-600"
+                                : "bg-gray-50 dark:bg-gray-700 text-gray-400"
+                              }`}
                           >
                             <FileText className="w-5 h-5" />
                           </div>
@@ -1638,11 +1635,10 @@ const StudentForm = ({
                                     <ExternalLink className="w-3 h-3 ml-1" />
                                   </a>
                                   <span
-                                    className={`text-[9px] px-1.5 py-0.5 rounded ${
-                                      existingDoc.status === "approved"
-                                        ? "bg-emerald-100 text-emerald-700"
-                                        : "bg-amber-100 text-amber-700"
-                                    }`}
+                                    className={`text-[9px] px-1.5 py-0.5 rounded ${existingDoc.status === "approved"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-amber-100 text-amber-700"
+                                      }`}
                                   >
                                     {existingDoc.status}
                                   </span>
@@ -1659,9 +1655,18 @@ const StudentForm = ({
                           <input
                             type="file"
                             className="hidden"
+                            accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => {
                               const file = e.target.files[0];
                               if (file) {
+                                const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+                                const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png'];
+                                const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                                if (!allowedTypes.includes(file.type) && !allowedExts.includes(fileExt)) {
+                                  toast.error(`Invalid file type. Only PDF, JPG, JPEG, PNG files are allowed.`);
+                                  e.target.value = '';
+                                  return;
+                                }
                                 setSelectedFiles({
                                   ...selectedFiles,
                                   [doc]: file,

@@ -47,7 +47,7 @@ const MainLayout = () => {
     },
     {
       name: "Admissions",
-      href: "/admission-management",
+      href: "/admission",
       icon: ClipboardCheck,
       permission: ["admissions:view", "admissions:manage"],
       roles: ["super_admin", "principal", "admission_admin", "admission_staff"],
@@ -412,7 +412,7 @@ const MainLayout = () => {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-64" : "ml-16"}`}
       >
-        <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+        {/* <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
           <div className="px-8 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
@@ -447,9 +447,9 @@ const MainLayout = () => {
               </div>
             </div>
           </div>
-        </header>
+        </header> */}
 
-        <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
+        <main className="flex-1  overflow-y-auto bg-gray-50">
           <Outlet />
         </main>
       </div>
