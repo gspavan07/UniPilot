@@ -41,7 +41,7 @@ export const baseDefaultValues = {
   email: "",
   password: "",
   phone: "",
-  gender: "Other",
+  gender: "",
   date_of_birth: "",
   department_id: "",
   is_active: true,

@@ -206,14 +206,7 @@ const SuperAdminDashboard = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center bg-white dark:bg-gray-800 p-1 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <button className="px-4 py-2 text-sm font-bold bg-primary-500 text-white rounded-xl shadow-lg shadow-primary-500/20">
-              Kakinada Main
-            </button>
-            <button className="px-4 py-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary-500 transition-all">
-              Vizag Branch
-            </button>
-          </div>
+          
 
           <button
             onClick={handleRefresh}
@@ -224,30 +217,7 @@ const SuperAdminDashboard = () => {
         </div>
       </div>
 
-      {/* AI Insights Bar - Dynamic */}
-      <div className="bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 rounded-[2rem] p-6 text-white shadow-xl shadow-primary-600/20 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-        <div className="relative flex flex-col md:flex-row items-center gap-6">
-          <div className="p-4 bg-white/20 backdrop-blur-md rounded-2xl">
-            <Cpu className="w-8 h-8 text-white animate-pulse" />
-          </div>
-          <div className="flex-1">
-            <h4 className="text-xl font-bold flex items-center gap-2">
-              AI Predictive Intelligence
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono uppercase">
-                Live Data
-              </span>
-            </h4>
-            <p className="text-primary-100 text-sm mt-1 max-w-2xl leading-relaxed">
-              {stats?.ai_insight ||
-                "Analyzing latest transaction and attendance patterns. Optimization suggestions incoming."}
-            </p>
-          </div>
-          <button className="px-6 py-3 bg-white text-primary-600 font-bold rounded-xl text-sm hover:bg-primary-50 transition-all shadow-lg flex items-center gap-2">
-            Detailed Analysis <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
@@ -279,352 +249,310 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Analytics Main Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        {/* Main Analytics: Revenue & Performance */}
-        <div className="xl:col-span-8 space-y-8">
-          {/* Revenue Trend Area Chart */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden relative">
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 dark:text-white">
-                  Revenue Intelligence
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                  Monthly collection inflows
-                </p>
-              </div>
-            </div>
-            <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats?.analytics?.revenue_trend || []}>
-                  <defs>
-                    <linearGradient
-                      id="colorRevenue"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fontWeight: 600, fill: "#94a3b8" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fontWeight: 600, fill: "#94a3b8" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#fff",
-                      borderRadius: "16px",
-                      border: "none",
-                      boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#3b82f6"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Quick Actions & System Health */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Functional Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6 tracking-tight">
-                Rapid Access Modules
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {/* Revenue Trend Area Chart - Full Width */}
+        <div className="lg:col-span-2 xl:col-span-3 bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div>
+              <h3 className="text-2xl font-black text-gray-900 dark:text-white">
+                Revenue Intelligence
               </h3>
-              <div className="grid grid-cols-4 gap-4">
-                {quickActions.map((action, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => navigate(action.path)}
-                    className="flex flex-col items-center gap-2 group transition-all"
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                Monthly collection inflows
+              </p>
+            </div>
+          </div>
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats?.analytics?.revenue_trend || []}>
+                <defs>
+                  <linearGradient
+                    id="colorRevenue"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
                   >
-                    <div
-                      className={`w-14 h-14 rounded-2xl ${action.bg} flex items-center justify-center ${action.color} group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 shadow-sm`}
-                    >
-                      <action.icon className="w-6 h-6" />
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 text-center">
-                      {action.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* System Health Component */}
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-black text-gray-900 dark:text-white">
-                  Server Infrastructure
-                </h3>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold uppercase">
-                  <Activity className="w-3 h-3" /> Live
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
-                  <div className="flex items-center gap-3">
-                    <Cpu className="w-5 h-5 text-indigo-500" />
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                      CPU Load (1m)
-                    </span>
-                  </div>
-                  <span className="text-xs font-black text-indigo-600">
-                    {stats?.health?.cpu_load || "0.00"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
-                  <div className="flex items-center gap-3">
-                    <Database className="w-5 h-5 text-blue-500" />
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                      Memory Utilization
-                    </span>
-                  </div>
-                  <span className="text-xs font-black text-primary-600">
-                    {stats?.health?.db_storage || "0%"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                      Security Access
-                    </span>
-                  </div>
-                  <span className="text-xs font-black text-emerald-500 uppercase">
-                    Secure
-                  </span>
-                </div>
-              </div>
-            </div>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f1f5f9"
+                />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fontWeight: 600, fill: "#94a3b8" }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fontWeight: 600, fill: "#94a3b8" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    borderRadius: "16px",
+                    border: "none",
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#3b82f6"
+                  strokeWidth={4}
+                  fillOpacity={1}
+                  fill="url(#colorRevenue)"
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
+        </div>
 
-          {/* Enrollment Section */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 h-[450px]">
-            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6">
-              Academic Program Enrollment Mix
+        {/* Functional Quick Actions */}
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6 tracking-tight">
+            Rapid Access Modules
+          </h3>
+          <div className="grid grid-cols-4 gap-4">
+            {quickActions.map((action, idx) => (
+              <button
+                key={idx}
+                onClick={() => navigate(action.path)}
+                className="flex flex-col items-center gap-2 group transition-all"
+              >
+                <div
+                  className={`w-14 h-14 rounded-2xl ${action.bg} flex items-center justify-center ${action.color} group-hover:bg-primary-600 group-hover:text-white transition-all duration-300 shadow-sm`}
+                >
+                  <action.icon className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 text-center">
+                  {action.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* System Health Component */}
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-gray-900 dark:text-white">
+              Server Infrastructure
             </h3>
-            <div className="flex flex-col md:flex-row items-center justify-around h-full pb-12">
-              <div className="w-full md:w-1/2 h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats?.analytics?.enrollment_by_program || []}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={80}
-                      outerRadius={120}
-                      paddingAngle={5}
-                      dataKey="student_count"
-                      nameKey="program_name"
-                    >
-                      {(stats?.analytics?.enrollment_by_program || []).map(
-                        (entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                            cornerRadius={10}
-                          />
-                        ),
-                      )}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                {stats?.analytics?.enrollment_by_program?.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-lg shadow-sm"
-                      style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                    ></div>
-                    <span className="text-sm font-bold text-gray-600 dark:text-gray-400">
-                      {item.program_name}:{" "}
-                      <span className="text-gray-900 dark:text-white">
-                        {item.student_count}
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold uppercase">
+              <Activity className="w-3 h-3" /> Live
             </div>
           </div>
-
-          {/* Attendance Vitals - Separated Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 h-[400px]">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-black text-gray-900 dark:text-white">
-                  Student Attendance
-                </h3>
-                <div className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                  Today
-                </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
+              <div className="flex items-center gap-3">
+                <Cpu className="w-5 h-5 text-indigo-500" />
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                  CPU Load (1m)
+                </span>
               </div>
-              <ResponsiveContainer width="100%" height="80%">
-                <BarChart data={stats?.analytics?.attendance_today || []}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="status"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fontWeight: 700 }}
-                  />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "#f8fafc" }} />
-                  <Bar
-                    dataKey="count"
-                    fill="#3b82f6"
-                    radius={[10, 10, 0, 0]}
-                    barSize={50}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <span className="text-xs font-black text-indigo-600">
+                {stats?.health?.cpu_load || "0.00"}
+              </span>
             </div>
-
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 h-[400px]">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-black text-gray-900 dark:text-white">
-                  Staff Attendance
-                </h3>
-                <div className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                  Today
-                </div>
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
+              <div className="flex items-center gap-3">
+                <Database className="w-5 h-5 text-blue-500" />
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                  Memory Utilization
+                </span>
               </div>
-              <ResponsiveContainer width="100%" height="80%">
-                <BarChart data={stats?.analytics?.staff_attendance_today || []}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="status"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fontWeight: 700 }}
-                  />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "#f8fafc" }} />
-                  <Bar
-                    dataKey="count"
-                    fill="#10b981"
-                    radius={[10, 10, 0, 0]}
-                    barSize={50}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <span className="text-xs font-black text-primary-600">
+                {stats?.health?.db_storage || "0%"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                  Security Access
+                </span>
+              </div>
+              <span className="text-xs font-black text-emerald-500 uppercase">
+                Secure
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Sidebar: Dynamic Alerts & Activity Feed */}
-        <div className="xl:col-span-4 space-y-8">
-          {/* Critical Radar Alerts */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white">
-                Smart Radar
-              </h3>
-              <AlertTriangle className="w-6 h-6 text-rose-500 animate-pulse" />
-            </div>
-            <div className="space-y-4">
-              {stats?.alerts?.length > 0 ? (
-                stats.alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className={`p-5 rounded-3xl border-l-4 transition-all hover:translate-x-1 ${alert.type === "high"
-                        ? "bg-rose-50 border-rose-500 text-rose-700"
-                        : alert.type === "medium"
-                          ? "bg-amber-50 border-amber-500 text-amber-700"
-                          : "bg-blue-50 border-blue-500 text-blue-700"
-                      }`}
+        {/* Enrollment Section */}
+        <div className="lg:col-span-2 xl:col-span-1 bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6">
+            Academic Program Enrollment Mix
+          </h3>
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <div className="w-full h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats?.analytics?.enrollment_by_program || []}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={80}
+                    outerRadius={120}
+                    paddingAngle={5}
+                    dataKey="student_count"
+                    nameKey="program_name"
                   >
-                    <p className="text-sm font-bold leading-tight">
-                      {alert.message}
-                    </p>
-                    <span className="text-[10px] font-black opacity-60 mt-2 block uppercase">
-                      {alert.time}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="p-8 text-center text-gray-400 bg-gray-50 dark:bg-gray-900/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                  No critical alerts detected today.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Live Activity Stream */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-8">
-              Activity Feed
-            </h3>
-            <div className="space-y-8 relative before:absolute before:left-6 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-gray-700">
-              {stats?.recent_activity?.map((activity, idx) => (
-                <div key={idx} className="flex gap-6 relative">
-                  <div className="relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center ring-4 ring-white dark:ring-gray-800 text-primary-600 font-bold overflow-hidden shadow-sm">
-                      {activity.actor?.profile_picture ? (
-                        <img
-                          src={activity.actor.profile_picture}
-                          alt=""
-                          className="w-full h-full object-cover"
+                    {(stats?.analytics?.enrollment_by_program || []).map(
+                      (entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                          cornerRadius={10}
                         />
-                      ) : (
-                        <span>
-                          {activity.actor?.first_name?.[0]}
-                          {activity.actor?.last_name?.[0]}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                      {activity.actor?.first_name}{" "}
-                      <span className="font-medium text-gray-500 dark:text-gray-400">
-                        {activity.action}
-                      </span>
-                    </p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mt-1 flex items-center gap-2">
-                      <Clock className="w-3 h-3" />{" "}
-                      {formatDistanceToNow(new Date(activity.created_at), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
+                      ),
+                    )}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 w-full">
+              {stats?.analytics?.enrollment_by_program?.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <div
+                    className="w-4 h-4 rounded-lg shadow-sm"
+                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                  ></div>
+                  <span className="text-sm font-bold text-gray-600 dark:text-gray-400">
+                    {item.program_name}:{" "}
+                    <span className="text-gray-900 dark:text-white">
+                      {item.student_count}
+                    </span>
+                  </span>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Student Attendance */}
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-gray-900 dark:text-white">
+              Student Attendance
+            </h3>
+            <div className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              Today
+            </div>
+          </div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats?.analytics?.attendance_today || []}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f1f5f9"
+                />
+                <XAxis
+                  dataKey="status"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fontWeight: 700 }}
+                />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: "#f8fafc" }} />
+                <Bar
+                  dataKey="count"
+                  fill="#3b82f6"
+                  radius={[10, 10, 0, 0]}
+                  barSize={50}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Staff Attendance */}
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-gray-900 dark:text-white">
+              Staff Attendance
+            </h3>
+            <div className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              Today
+            </div>
+          </div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats?.analytics?.staff_attendance_today || []}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f1f5f9"
+                />
+                <XAxis
+                  dataKey="status"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fontWeight: 700 }}
+                />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: "#f8fafc" }} />
+                <Bar
+                  dataKey="count"
+                  fill="#10b981"
+                  radius={[10, 10, 0, 0]}
+                  barSize={50}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Live Activity Stream - Full Width */}
+        <div className="lg:col-span-2 xl:col-span-3 bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-8">
+            Activity Feed
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {stats?.recent_activity?.map((activity, idx) => (
+              <div key={idx} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-900/50 transition-all">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-bold overflow-hidden shadow-sm">
+                    {activity.actor?.profile_picture ? (
+                      <img
+                        src={activity.actor.profile_picture}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm">
+                        {activity.actor?.first_name?.[0]}
+                        {activity.actor?.last_name?.[0]}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">
+                    {activity.actor?.first_name}
+                  </p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                    {activity.action}
+                  </p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mt-1.5 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatDistanceToNow(new Date(activity.created_at), {
+                      addSuffix: true,
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

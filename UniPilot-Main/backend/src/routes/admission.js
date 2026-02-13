@@ -22,6 +22,9 @@ const {
   previewBulkIds,
   commitBulkIds,
 } = require("../controllers/admissionIdController");
+const {
+  getAdmissionAnalytics,
+} = require("../controllers/admissionAnalyticsController");
 
 // Correction: I added the function to admissionController.js (file viewed above).
 // But 'previewBulkIds' is in 'admissionIdController'.
@@ -37,6 +40,9 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Analytics endpoint
+router.get("/analytics", checkPermission("admissions:view"), getAdmissionAnalytics);
 
 // Permission-based routes
 router.get("/stats", checkPermission("admissions:view"), getAdmissionStats);

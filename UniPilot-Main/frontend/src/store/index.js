@@ -19,6 +19,7 @@ import hostelReducer from "./slices/hostelSlice";
 import dashboardReducer from "./slices/dashboardSlice";
 import placementReducer from "./slices/placementSlice";
 import coPoMapReducer from "./slices/coPoMapSlice";
+import admissionReducer from "./slices/admissionSlice";
 
 
 export const store = configureStore({
@@ -43,6 +44,7 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     placement: placementReducer,
     coPoMap: coPoMapReducer,
+    admission: admissionReducer,
   },
 });
 

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Save,
   Plus,
   Settings,
   Shield,
   Trash2,
+  ArrowLeft,
   AlertCircle,
   CheckCircle2,
   Calendar,
@@ -22,6 +24,7 @@ const AdmissionSettings = () => {
   const [editingConfig, setEditingConfig] = useState(null);
   const [activeTab, setActiveTab] = useState("general");
   const [programs, setPrograms] = useState([]);
+  const navigate = useNavigate();
 
   const fetchConfigs = async () => {
     try {
@@ -58,7 +61,7 @@ const AdmissionSettings = () => {
   };
 
   const handleDelete = async (id, e) => {
-    e.stopPropagation(); // Prevent opening edit modal
+    e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this configuration?")) {
       try {
         await api.delete(`/admission/configs/${id}`);
@@ -87,380 +90,373 @@ const AdmissionSettings = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">
-            Admission Settings
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Configure automatic ID generation and batch settings
-          </p>
-        </div>
-        <button
-          onClick={createNew}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all font-bold text-sm shadow-lg shadow-primary-200 dark:shadow-none"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Batch Config</span>
-        </button>
-      </div>
+    <div className="min-h-screen bg-white pb-24">
+      <div className=" mx-auto px-8 pt-8">
+        <div className="flex flex-col gap-4 border-b border-gray-200 dark:border-gray-700">
+          {/* Back button and title row */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/admission")}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              title="Back to Admission Management"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            </button>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-black dark:text-white">
+                Admission Settings
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 pb-5">
+                Configure batch parameters and ID generation rules
+              </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {configs.map((config) => (
-          <div
-            key={config.id}
-            className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all">
-              <Settings className="w-20 h-20" />
             </div>
-
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl text-indigo-600 dark:text-indigo-400">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <span
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                  config.is_active
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {config.is_active ? "Active" : "Inactive"}
-              </span>
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Batch Year {config.batch_year}
-            </h3>
-
-            <div className="space-y-3">
-              <div className="flex items-center text-sm">
-                <Globe className="w-4 h-4 text-gray-400 mr-2" />
-                <span className="text-gray-500">Univ Code:</span>
-                <span className="ml-auto font-bold text-gray-900 dark:text-gray-200">
-                  {config.university_code}
-                </span>
-              </div>
-              <div className="flex items-center text-sm">
-                <Hash className="w-4 h-4 text-gray-400 mr-2" />
-                <span className="text-gray-500">ID Format:</span>
-                <span className="ml-auto font-mono text-xs bg-gray-50 dark:bg-gray-900 p-1 px-2 rounded border border-gray-100 dark:border-gray-700">
-                  {config.id_format}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-gray-50 dark:border-gray-700 flex space-x-2">
-              <button
-                onClick={() => setEditingConfig(config)}
-                className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-bold text-xs"
-              >
-                Edit Config
-              </button>
-              <button
-                onClick={(e) => handleDelete(config.id, e)}
-                className="px-3 py-2 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 rounded-xl hover:bg-error-100 dark:hover:bg-error-900/40 transition-all"
-                title="Delete Config"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              onClick={createNew}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all font-bold text-sm shadow-lg shadow-primary-200 dark:shadow-none"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Batch Config</span>
+            </button>
           </div>
-        ))}
+
+        </div>
+
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 mt-5 gap-8">
+          {configs.map((config, idx) => (
+            <div
+              key={config.id}
+              className="border max-w-72 border-gray-200 bg-white hover:border-blue-300 transition-all rounded-xl group"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400 tracking-wider">BATCH</div>
+                      <div className="text-lg font-light text-black">{config.batch_year}</div>
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 text-[10px] tracking-widest font-medium ${config.is_active
+                      ? "bg-blue-50 text-blue-700"
+                      : "bg-gray-100 text-gray-500"
+                    }`}>
+                    {config.is_active ? "ACTIVE" : "INACTIVE"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-4 space-y-4">
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-500 tracking-wide">University Code</span>
+                  </div>
+                  <span className="text-sm font-medium text-black">{config.university_code}</span>
+                </div>
+
+                <div className="py-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Hash className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-500 tracking-wide">ID Format</span>
+                  </div>
+                  <div className="font-mono text-xs text-black bg-gray-50 px-3 py-2 border border-gray-200">
+                    {config.id_format}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-100 flex gap-2">
+                <button
+                  onClick={() => setEditingConfig(config)}
+                  className="flex-1 py-2 text-xs font-medium text-black border border-gray-200 hover:border-blue-600 hover:text-blue-600 transition-colors"
+                >
+                  Edit Configuration
+                </button>
+                <button
+                  onClick={(e) => handleDelete(config.id, e)}
+                  className="px-3 py-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {editingConfig && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-[2rem] w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-              {editingConfig.id ? "Edit Config" : "New Batch Config"}
-            </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="border-b border-gray-200 p-8">
+              <h2 className="text-3xl font-light text-black tracking-tight">
+                {editingConfig.id ? "Edit Configuration" : "New Batch Configuration"}
+              </h2>
+            </div>
 
-            {/* Modal Tabs */}
-            <div className="flex border-b border-gray-100 dark:border-gray-700 mb-6 -mx-8 px-8 overflow-x-auto no-scrollbar">
+            <div className="border-b border-gray-200 flex">
               {[
                 { id: "general", label: "General", icon: Settings },
-                { id: "seats", label: "Seats", icon: Users2 },
+                { id: "seats", label: "Seat Matrix", icon: Users2 },
                 { id: "docs", label: "Documents", icon: ListChecks },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 px-4 border-b-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-primary-600 text-primary-600"
-                      : "border-transparent text-gray-400 hover:text-gray-600"
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-4 text-xs tracking-widest font-medium transition-colors border-b-2 ${activeTab === tab.id
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-400 hover:text-black"
+                    }`}
                 >
-                  <tab.icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
                 </button>
               ))}
             </div>
 
-            <form
-              onSubmit={handleSave}
-              className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar"
-            >
-              {activeTab === "general" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
-                      Batch Year
-                    </label>
-                    <input
-                      type="number"
-                      value={editingConfig.batch_year}
-                      onChange={(e) =>
-                        setEditingConfig({
-                          ...editingConfig,
-                          batch_year: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
-                      University Code
-                    </label>
-                    <input
-                      type="text"
-                      value={editingConfig.university_code}
-                      onChange={(e) =>
-                        setEditingConfig({
-                          ...editingConfig,
-                          university_code: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
-                      ID Generation Format
-                    </label>
-                    <input
-                      type="text"
-                      value={editingConfig.id_format}
-                      onChange={(e) =>
-                        setEditingConfig({
-                          ...editingConfig,
-                          id_format: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
-                      placeholder="{YY}{UNIV}{BRANCH}{SEQ}"
-                      required
-                    />
-                    <p className="text-[10px] text-gray-400 mt-2 px-1">
-                      Placeholders:{" "}
-                      <span className="text-primary-500 font-bold">
-                        {"{YY}"}
-                      </span>
-                      ,{" "}
-                      <span className="text-primary-500 font-bold">
-                        {"{UNIV}"}
-                      </span>
-                      ,{" "}
-                      <span className="text-primary-500 font-bold">
-                        {"{BRANCH}"}
-                      </span>
-                      ,{" "}
-                      <span className="text-primary-500 font-bold">
-                        {"{SEQ}"}
-                      </span>
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
-                      Temp ID Generation Format
-                    </label>
-                    <input
-                      type="text"
-                      value={editingConfig.temp_id_format || ""}
-                      onChange={(e) =>
-                        setEditingConfig({
-                          ...editingConfig,
-                          temp_id_format: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
-                      placeholder="T{YY}{SEQ}"
-                    />
-                    <p className="text-[10px] text-gray-400 mt-2 px-1">
-                      Same placeholders supported. Used for initial temporary
-                      IDs.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
-                      Lateral ID Generation Format
-                    </label>
-                    <input
-                      type="text"
-                      value={editingConfig.lateral_id_format || ""}
-                      onChange={(e) =>
-                        setEditingConfig({
-                          ...editingConfig,
-                          lateral_id_format: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-mono text-sm"
-                      placeholder="L{YY}{UNIV}{BRANCH}{SEQ}"
-                    />
-                    <p className="text-[10px] text-gray-400 mt-2 px-1">
-                      Same placeholders supported. Used for Lateral Entry
-                      students.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={editingConfig.is_active}
-                      onChange={(e) =>
-                        setEditingConfig({
-                          ...editingConfig,
-                          is_active: e.target.checked,
-                        })
-                      }
-                      className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                      Default for new registrations
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "seats" && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl mb-4">
-                    <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest leading-relaxed">
-                      Define the maximum intake capacity for each branch/program
-                      in this batch.
-                    </p>
-                  </div>
-                  {programs.map((program) => (
-                    <div
-                      key={program.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl"
-                    >
-                      <div>
-                        <p className="text-xs font-bold text-gray-900 dark:text-white">
-                          {program.code}
-                        </p>
-                        <p className="text-[10px] text-gray-500">
-                          {program.name}
-                        </p>
-                      </div>
+            <form onSubmit={handleSave} className="flex-1 overflow-y-auto">
+              <div className="p-8">
+                {activeTab === "general" && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-xs tracking-wider text-gray-500 mb-2">
+                        Batch Year
+                      </label>
                       <input
                         type="number"
-                        placeholder="Seats"
-                        value={editingConfig.seat_matrix?.[program.id] || ""}
+                        value={editingConfig.batch_year}
                         onChange={(e) =>
                           setEditingConfig({
                             ...editingConfig,
-                            seat_matrix: {
-                              ...editingConfig.seat_matrix,
-                              [program.id]: e.target.value,
-                            },
+                            batch_year: e.target.value,
                           })
                         }
-                        className="w-20 px-3 py-2 bg-white dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-primary-500 font-bold text-xs"
+                        className="w-full px-4 py-3 border border-gray-200 text-black focus:outline-none focus:border-blue-600 transition-colors"
+                        required
                       />
                     </div>
-                  ))}
-                </div>
-              )}
 
-              {activeTab === "docs" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                      Required Documents
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const doc = prompt("Enter document name:");
-                        if (doc) {
+                    <div>
+                      <label className="block text-xs tracking-wider text-gray-500 mb-2">
+                        University Code
+                      </label>
+                      <input
+                        type="text"
+                        value={editingConfig.university_code}
+                        onChange={(e) =>
                           setEditingConfig({
                             ...editingConfig,
-                            required_documents: [
-                              ...(editingConfig.required_documents || []),
-                              doc,
-                            ],
-                          });
+                            university_code: e.target.value,
+                          })
                         }
-                      }}
-                      className="text-[10px] font-bold text-primary-600 hover:text-primary-700 flex items-center"
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> Add Doc
-                    </button>
+                        className="w-full px-4 py-3 border border-gray-200 text-black focus:outline-none focus:border-blue-600 transition-colors"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs tracking-wider text-gray-500 mb-2">
+                        ID Generation Format
+                      </label>
+                      <input
+                        type="text"
+                        value={editingConfig.id_format}
+                        onChange={(e) =>
+                          setEditingConfig({
+                            ...editingConfig,
+                            id_format: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 border border-gray-200 font-mono text-sm text-black focus:outline-none focus:border-blue-600 transition-colors"
+                        placeholder="{YY}{UNIV}{BRANCH}{SEQ}"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Available placeholders: <span className="text-blue-600 font-mono">{"{YY}"}</span>, <span className="text-blue-600 font-mono">{"{UNIV}"}</span>, <span className="text-blue-600 font-mono">{"{BRANCH}"}</span>, <span className="text-blue-600 font-mono">{"{SEQ}"}</span>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs tracking-wider text-gray-500 mb-2">
+                        Temporary ID Format
+                      </label>
+                      <input
+                        type="text"
+                        value={editingConfig.temp_id_format || ""}
+                        onChange={(e) =>
+                          setEditingConfig({
+                            ...editingConfig,
+                            temp_id_format: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 border border-gray-200 font-mono text-sm text-black focus:outline-none focus:border-blue-600 transition-colors"
+                        placeholder="T{YY}{SEQ}"
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Used for initial temporary student IDs
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs tracking-wider text-gray-500 mb-2">
+                        Lateral Entry ID Format
+                      </label>
+                      <input
+                        type="text"
+                        value={editingConfig.lateral_id_format || ""}
+                        onChange={(e) =>
+                          setEditingConfig({
+                            ...editingConfig,
+                            lateral_id_format: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 border border-gray-200 font-mono text-sm text-black focus:outline-none focus:border-blue-600 transition-colors"
+                        placeholder="L{YY}{UNIV}{BRANCH}{SEQ}"
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Used for lateral entry students
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-4">
+                      <input
+                        type="checkbox"
+                        checked={editingConfig.is_active}
+                        onChange={(e) =>
+                          setEditingConfig({
+                            ...editingConfig,
+                            is_active: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-600"
+                      />
+                      <span className="text-sm text-black">
+                        Set as default for new registrations
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {(editingConfig.required_documents || []).map(
-                      (doc, index) => (
+                )}
+
+                {activeTab === "seats" && (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-100 p-4 mb-6">
+                      <p className="text-xs text-blue-700 leading-relaxed">
+                        Define the maximum intake capacity for each program in this batch year.
+                      </p>
+                    </div>
+                    {programs.map((program) => (
+                      <div
+                        key={program.id}
+                        className="flex items-center justify-between py-4 border-b border-gray-100"
+                      >
+                        <div>
+                          <div className="text-sm font-medium text-black">{program.code}</div>
+                          <div className="text-xs text-gray-500 mt-1">{program.name}</div>
+                        </div>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={editingConfig.seat_matrix?.[program.id] || ""}
+                          onChange={(e) =>
+                            setEditingConfig({
+                              ...editingConfig,
+                              seat_matrix: {
+                                ...editingConfig.seat_matrix,
+                                [program.id]: e.target.value,
+                              },
+                            })
+                          }
+                          className="w-24 px-3 py-2 border border-gray-200 text-center text-sm text-black focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === "docs" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs tracking-wider text-gray-500">
+                        Required Documents
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const doc = prompt("Enter document name:");
+                          if (doc) {
+                            setEditingConfig({
+                              ...editingConfig,
+                              required_documents: [
+                                ...(editingConfig.required_documents || []),
+                                doc,
+                              ],
+                            });
+                          }
+                        }}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add Document
+                      </button>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-100 px-3 py-2 mb-4 flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <p className="text-[11px] text-blue-700">
+                        Accepted file types: <span className="font-semibold">PDF, JPG, JPEG, PNG</span> only
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {(editingConfig.required_documents || []).map((doc, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl group"
+                          className="flex items-center justify-between py-3 px-4 border border-gray-200 hover:border-gray-300 group"
                         >
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            {doc}
-                          </span>
+                          <span className="text-sm text-black">{doc}</span>
                           <button
                             type="button"
                             onClick={() => {
-                              const newDocs = [
-                                ...editingConfig.required_documents,
-                              ];
+                              const newDocs = [...editingConfig.required_documents];
                               newDocs.splice(index, 1);
                               setEditingConfig({
                                 ...editingConfig,
                                 required_documents: newDocs,
                               });
                             }}
-                            className="p-1.5 text-gray-400 hover:text-error-500 opacity-0 group-hover:opacity-100 transition-all"
+                            className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                      ),
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className="flex space-x-3 mt-8 pt-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
+              <div className="border-t border-gray-200 p-6 flex gap-3 bg-gray-50">
                 <button
                   type="button"
                   onClick={() => setEditingConfig(null)}
-                  className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-bold text-sm"
+                  className="flex-1 px-6 py-3 border border-gray-300 text-black text-sm font-medium hover:bg-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-all font-bold text-sm shadow-lg shadow-primary-200 dark:shadow-none disabled:opacity-50"
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? "Saving..." : "Save Config"}
+                  {saving ? "Saving..." : "Save Configuration"}
                 </button>
               </div>
             </form>

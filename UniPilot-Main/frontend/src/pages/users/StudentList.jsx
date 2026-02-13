@@ -623,13 +623,13 @@ const StudentList = () => {
                                 >
                                   <FileText className="w-4 h-4" />
                                 </button>
-                                <button
+                                {/* <button
                                   onClick={() => handleDownloadLetter(user.id)}
                                   className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
                                   title="Download Admission Letter"
                                 >
                                   <FileDown className="w-4 h-4" />
-                                </button>
+                                </button> */}
                               </>
                             )}
                             <button
@@ -638,7 +638,7 @@ const StudentList = () => {
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button
+                            {/* <button
                               onClick={() => handleStatusChange(user)}
                               className={`p-1.5 rounded-lg transition-colors ${
                                 user.is_active
@@ -652,7 +652,7 @@ const StudentList = () => {
                               ) : (
                                 <UserCheck className="w-4 h-4" />
                               )}
-                            </button>
+                            </button> */}
                             <button
                               onClick={() => handleDeleteUser(user.id)}
                               className="p-1.5 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg text-error-600 transition-colors"

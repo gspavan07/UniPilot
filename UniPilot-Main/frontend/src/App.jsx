@@ -45,8 +45,7 @@ import MySections from "./pages/users/MySections";
 import SectionStudentList from "./pages/users/SectionStudentList";
 
 // Admission
-import AdmissionDashboard from "./pages/dashboards/AdmissionVerifications";
-import AdmissionAnalytics from "./pages/dashboards/AdmissionAnalytics";
+import AdmissionVerifications from "./pages/dashboards/AdmissionVerifications";
 import AdmissionManagement from "./pages/dashboards/AdmissionManagement";
 import AdmissionSettings from "./pages/settings/AdmissionSettings";
 
@@ -191,7 +190,7 @@ function App() {
             element={<AdmissionVerifications />}
           />
           <Route
-            path="/admission-management"
+            path="/admission"
             element={<AdmissionManagement />}
           />
           <Route path="/admission/settings" element={<AdmissionSettings />} />
