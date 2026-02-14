@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -15,6 +15,8 @@ import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
 import { fetchRegulations } from "../../store/slices/regulationSlice";
 import { fetchRoles } from "../../store/slices/roleSlice";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 const studentSchema = yup.object().shape({
   ...baseUserSchema,
@@ -49,13 +51,21 @@ const studentSchema = yup.object().shape({
   nationality: yup.string().required("Nationality is required"),
   father_name: yup.string().optional(),
   father_job: yup.string().optional(),
-  father_income: yup.string().optional(),
-  father_email: yup.string().email("Invalid email").optional().nullable(),
+  father_income: yup.string().when(["guardian_type", "single_parent_type"], {
+    is: (gt, spt) => gt === "Both Parents" || (gt === "Single Parent" && spt === "Father"),
+    then: (schema) => schema.required("Father Income is required").matches(/^\d+$/, "Income must be a number"),
+    otherwise: (schema) => schema.optional(),
+  }),
+  father_email: yup.string().email("Invalid email").optional().nullable().transform((v) => (v === "" ? null : v)),
   father_mobile: yup.string().optional(),
   mother_name: yup.string().optional(),
   mother_job: yup.string().optional(),
-  mother_income: yup.string().optional(),
-  mother_email: yup.string().email("Invalid email").optional().nullable(),
+  mother_income: yup.string().when(["guardian_type", "single_parent_type"], {
+    is: (gt, spt) => gt === "Both Parents" || (gt === "Single Parent" && spt === "Mother"),
+    then: (schema) => schema.required("Mother Income is required").matches(/^\d+$/, "Income must be a number"),
+    otherwise: (schema) => schema.optional(),
+  }),
+  mother_email: yup.string().email("Invalid email").optional().nullable().transform((v) => (v === "" ? null : v)),
   mother_mobile: yup.string().optional(),
   guardian_name: yup.string().optional(),
   guardian_job: yup.string().optional(),
@@ -98,6 +108,7 @@ const StudentRegistration = () => {
   const [selectedFiles, setSelectedFiles] = useState({});
   const [studentRoleId, setStudentRoleId] = useState(null);
   const [nextIds, setNextIds] = useState({ admission_number: "" });
+  const [hasReachedReview, setHasReachedReview] = useState(false);
 
   useEffect(() => {
     dispatch(fetchDepartments());
@@ -195,16 +206,34 @@ const StudentRegistration = () => {
     } else if (currentStep === 2) {
       fieldsToValidate = ["first_name", "last_name", "email", "gender", "date_of_birth", "phone", "religion", "nationality"];
     } else if (currentStep === 3) {
-      if (guardianType === "Both Parents") fieldsToValidate = ["father_name", "mother_name"];
-      else if (guardianType === "Single Parent") {
+      if (guardianType === "Both Parents") {
+        fieldsToValidate = [
+          "father_name", "father_mobile", "father_email", "father_income",
+          "mother_name", "mother_mobile", "mother_email", "mother_income"
+        ];
+      } else if (guardianType === "Single Parent") {
         const subtype = getValues("single_parent_type") || "Father";
-        fieldsToValidate = [subtype === "Father" ? "father_name" : "mother_name"];
-      } else fieldsToValidate = ["guardian_name"];
+        if (subtype === "Father") {
+          fieldsToValidate = ["father_name", "father_mobile", "father_email", "father_income"];
+        } else {
+          fieldsToValidate = ["mother_name", "mother_mobile", "mother_email", "mother_income"];
+        }
+      } else {
+        fieldsToValidate = ["guardian_name", "guardian_mobile", "guardian_email"];
+      }
     } else if (currentStep === 4) {
       fieldsToValidate = ["previous_academics"];
     }
     const isValid = fieldsToValidate.length > 0 ? await trigger(fieldsToValidate) : true;
-    if (isValid) setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+    if (isValid) {
+      setCurrentStep((prev) => {
+        const nextStep = Math.min(prev + 1, steps.length);
+        if (nextStep === steps.length) {
+          setHasReachedReview(true);
+        }
+        return nextStep;
+      });
+    }
   };
 
   const onSubmit = async (data) => {
@@ -284,7 +313,16 @@ const StudentRegistration = () => {
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
                 return (
-                  <div key={step.id} className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all ${isActive ? "bg-blue-50 border-l-4 border-blue-600" : isCompleted ? "bg-white" : "bg-white opacity-50"}`}>
+                  <div
+                    key={step.id}
+                    onClick={() => {
+                      // Allow navigation if previously visited, moving forward sequentially, or if reached review before
+                      if (step.id < currentStep || hasReachedReview || currentStep === steps.length) {
+                        setCurrentStep(step.id);
+                      }
+                    }}
+                    className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all ${step.id < currentStep || hasReachedReview || currentStep === steps.length ? 'cursor-pointer hover:bg-gray-50' : ''} ${isActive ? "bg-blue-50 border-l-4 border-blue-600" : isCompleted ? "bg-white" : "bg-white opacity-50"}`}
+                  >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isActive ? "bg-blue-600 text-white" : isCompleted ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>
                       {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
                     </div>
@@ -314,7 +352,7 @@ const StudentRegistration = () => {
               </div>
             ) : (
               <div className="p-6 flex-1">
-                <form onSubmit={(e) => { console.log("📤 Form onSubmit event triggered"); console.log(" Form errors:", errors); console.log("📝 Form values:", getValues()); handleSubmit(onSubmit)(e); }} className="space-y-8">
+                <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
                   {error && (
                     <div className="p-4 rounded-lg bg-red-50 text-red-700 border border-red-200 flex items-center gap-3">
                       <AlertCircle className="w-5 h-5 shrink-0" />
@@ -420,7 +458,35 @@ const StudentRegistration = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div><label className={labelClass}>Email<span className="text-error-500">*</span></label><input {...register("email")} placeholder="Enter Email" className={inputClass("email")} /></div>
-                        <div><label className={labelClass}>Mobile<span className="text-error-500">*</span></label><input {...register("phone")} placeholder="Enter Mobile" className={inputClass("phone")} /></div>
+                        <div>
+                          <label className={labelClass}>
+                            Mobile<span className="text-error-500">*</span>
+                          </label>
+                          <Controller
+                            name="phone"
+                            control={control}
+                            rules={{
+                              required: "Mobile number is required",
+                              validate: (value) => value?.length > 10 || "Invalid phone number"
+                            }}
+                            render={({ field: { onChange, value } }) => (
+                              <PhoneInput
+                                country={'in'}
+                                value={value}
+                                onChange={onChange}
+                                placeholder="Enter Mobile"
+                                inputClass={inputClass("phone")}
+                                containerStyle={{ width: '100%' }}
+                                inputStyle={{ width: '100%', height: '42px' }}
+                                enableSearch={true}
+                                disableSearchIcon={true}
+                              />
+                            )}
+                          />
+                          {errors.phone && (
+                            <p className="text-error-500 text-sm mt-1">{errors.phone.message}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -519,18 +585,88 @@ const StudentRegistration = () => {
                           <h4 className="font-semibold text-black text-base mt-4">Father Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label className={labelClass}>Father Name</label><input placeholder="Enter Father Name" {...register("father_name")} className={inputClass("father_name")} /></div>
-                            <div><label className={labelClass}>Father Mobile</label><input placeholder="Enter Father Mobile" {...register("father_mobile")} className={inputClass("father_mobile")} /></div>
-                            <div><label className={labelClass}>Father Email</label><input type="email" placeholder="Enter Father Email" {...register("father_email")} className={inputClass("father_email")} /></div>
+                            <div>
+                              <label className={labelClass}>
+                                Father Mobile
+                              </label>
+                              <Controller
+                                name="father_mobile"
+                                control={control}
+                                rules={{
+                                  validate: (value) => !value || value.length > 8 || "Invalid phone number"
+                                }}
+                                render={({ field: { onChange, value } }) => (
+                                  <PhoneInput
+                                    country={'in'}
+                                    value={value}
+                                    onChange={onChange}
+                                    placeholder="Enter Father Mobile"
+                                    inputClass={inputClass("father_mobile")}
+                                    containerStyle={{ width: '100%' }}
+                                    inputStyle={{ width: '100%', height: '42px' }}
+                                    enableSearch={true}
+                                    disableSearchIcon={true}
+                                  />
+                                )}
+                              />
+                              {errors.father_mobile && (
+                                <p className="text-error-500 text-sm mt-1">{errors.father_mobile.message}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={labelClass}>Father Email</label>
+                              <input type="email" placeholder="Enter Father Email" {...register("father_email")} className={inputClass("father_email")} />
+                              {errors.father_email && <p className="text-error-500 text-sm mt-1">{errors.father_email.message}</p>}
+                            </div>
                             <div><label className={labelClass}>Father Occupation</label><input placeholder="Enter Father Occupation" {...register("father_job")} className={inputClass("father_job")} /></div>
-                            <div><label className={labelClass}>Father Annual Income</label><input placeholder="Enter Father Annual Income" {...register("father_income")} className={inputClass("father_income")} /></div>
+                            <div>
+                              <label className={labelClass}>Father Annual Income</label>
+                              <input placeholder="Enter Father Annual Income" {...register("father_income")} className={inputClass("father_income")} />
+                              {errors.father_income && <p className="text-error-500 text-sm mt-1">{errors.father_income.message}</p>}
+                            </div>
                           </div>
                           <h4 className="font-semibold text-black text-base mt-8">Mother Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label className={labelClass}>Mother Name</label><input placeholder="Enter Mother Name" {...register("mother_name")} className={inputClass("mother_name")} /></div>
-                            <div><label className={labelClass}>Mother Mobile</label><input placeholder="Enter Mother Mobile" {...register("mother_mobile")} className={inputClass("mother_mobile")} /></div>
-                            <div><label className={labelClass}>Mother Email</label><input type="email" placeholder="Enter Mother Email" {...register("mother_email")} className={inputClass("mother_email")} /></div>
+                            <div>
+                              <label className={labelClass}>
+                                Mother Mobile
+                              </label>
+                              <Controller
+                                name="mother_mobile"
+                                control={control}
+                                rules={{
+                                  validate: (value) => !value || value.length > 8 || "Invalid phone number"
+                                }}
+                                render={({ field: { onChange, value } }) => (
+                                  <PhoneInput
+                                    country={'in'}
+                                    value={value}
+                                    onChange={onChange}
+                                    placeholder="Enter Mother Mobile"
+                                    inputClass={inputClass("mother_mobile")}
+                                    containerStyle={{ width: '100%' }}
+                                    inputStyle={{ width: '100%', height: '42px' }}
+                                    enableSearch={true}
+                                    disableSearchIcon={true}
+                                  />
+                                )}
+                              />
+                              {errors.mother_mobile && (
+                                <p className="text-error-500 text-sm mt-1">{errors.mother_mobile.message}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={labelClass}>Mother Email</label>
+                              <input type="email" placeholder="Enter Mother Email" {...register("mother_email")} className={inputClass("mother_email")} />
+                              {errors.mother_email && <p className="text-error-500 text-sm mt-1">{errors.mother_email.message}</p>}
+                            </div>
                             <div><label className={labelClass}>Mother Occupation</label><input placeholder="Enter Mother Occupation" {...register("mother_job")} className={inputClass("mother_job")} /></div>
-                            <div><label className={labelClass}>Mother Annual Income</label><input placeholder="Enter Mother Annual Income" {...register("mother_income")} className={inputClass("mother_income")} /></div>
+                            <div>
+                              <label className={labelClass}>Mother Annual Income</label>
+                              <input placeholder="Enter Mother Annual Income" {...register("mother_income")} className={inputClass("mother_income")} />
+                              {errors.mother_income && <p className="text-error-500 text-sm mt-1">{errors.mother_income.message}</p>}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -540,10 +676,45 @@ const StudentRegistration = () => {
                           <h4 className="font-semibold text-black text-base">Father Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label className={labelClass}>Father Name</label><input {...register("father_name")} className={inputClass("father_name")} /></div>
-                            <div><label className={labelClass}>Father Mobile</label><input {...register("father_mobile")} className={inputClass("father_mobile")} /></div>
-                            <div><label className={labelClass}>Father Email</label><input type="email" {...register("father_email")} className={inputClass("father_email")} placeholder="father@example.com" /></div>
+                            <div>
+                              <label className={labelClass}>
+                                Father Mobile
+                              </label>
+                              <Controller
+                                name="father_mobile"
+                                control={control}
+                                rules={{
+                                  validate: (value) => !value || value.length > 8 || "Invalid phone number"
+                                }}
+                                render={({ field: { onChange, value } }) => (
+                                  <PhoneInput
+                                    country={'in'}
+                                    value={value}
+                                    onChange={onChange}
+                                    placeholder="Enter Father Mobile"
+                                    inputClass={inputClass("father_mobile")}
+                                    containerStyle={{ width: '100%' }}
+                                    inputStyle={{ width: '100%', height: '42px' }}
+                                    enableSearch={true}
+                                    disableSearchIcon={true}
+                                  />
+                                )}
+                              />
+                              {errors.father_mobile && (
+                                <p className="text-error-500 text-sm mt-1">{errors.father_mobile.message}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={labelClass}>Father Email</label>
+                              <input type="email" {...register("father_email")} className={inputClass("father_email")} placeholder="father@example.com" />
+                              {errors.father_email && <p className="text-error-500 text-sm mt-1">{errors.father_email.message}</p>}
+                            </div>
                             <div><label className={labelClass}>Father Occupation</label><input {...register("father_job")} className={inputClass("father_job")} /></div>
-                            <div><label className={labelClass}>Father Annual Income</label><input {...register("father_income")} className={inputClass("father_income")} /></div>
+                            <div>
+                              <label className={labelClass}>Father Annual Income</label>
+                              <input {...register("father_income")} className={inputClass("father_income")} />
+                              {errors.father_income && <p className="text-error-500 text-sm mt-1">{errors.father_income.message}</p>}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -553,10 +724,45 @@ const StudentRegistration = () => {
                           <h4 className="font-semibold text-black text-base">Mother Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label className={labelClass}>Mother Name</label><input {...register("mother_name")} className={inputClass("mother_name")} /></div>
-                            <div><label className={labelClass}>Mother Mobile</label><input {...register("mother_mobile")} className={inputClass("mother_mobile")} /></div>
-                            <div><label className={labelClass}>Mother Email</label><input type="email" {...register("mother_email")} className={inputClass("mother_email")} placeholder="mother@example.com" /></div>
+                            <div>
+                              <label className={labelClass}>
+                                Mother Mobile
+                              </label>
+                              <Controller
+                                name="mother_mobile"
+                                control={control}
+                                rules={{
+                                  validate: (value) => !value || value.length > 8 || "Invalid phone number"
+                                }}
+                                render={({ field: { onChange, value } }) => (
+                                  <PhoneInput
+                                    country={'in'}
+                                    value={value}
+                                    onChange={onChange}
+                                    placeholder="Enter Mother Mobile"
+                                    inputClass={inputClass("mother_mobile")}
+                                    containerStyle={{ width: '100%' }}
+                                    inputStyle={{ width: '100%', height: '42px' }}
+                                    enableSearch={true}
+                                    disableSearchIcon={true}
+                                  />
+                                )}
+                              />
+                              {errors.mother_mobile && (
+                                <p className="text-error-500 text-sm mt-1">{errors.mother_mobile.message}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className={labelClass}>Mother Email</label>
+                              <input type="email" {...register("mother_email")} className={inputClass("mother_email")} placeholder="mother@example.com" />
+                              {errors.mother_email && <p className="text-error-500 text-sm mt-1">{errors.mother_email.message}</p>}
+                            </div>
                             <div><label className={labelClass}>Mother Occupation</label><input {...register("mother_job")} className={inputClass("mother_job")} /></div>
-                            <div><label className={labelClass}>Mother Annual Income</label><input {...register("mother_income")} className={inputClass("mother_income")} /></div>
+                            <div>
+                              <label className={labelClass}>Mother Annual Income</label>
+                              <input {...register("mother_income")} className={inputClass("mother_income")} />
+                              {errors.mother_income && <p className="text-error-500 text-sm mt-1">{errors.mother_income.message}</p>}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -835,7 +1041,7 @@ const StudentRegistration = () => {
                         Next Step <ChevronRight className="w-4 h-4" />
                       </button>
                     ) : (
-                      <button type="submit" disabled={loading} className="px-8 py-3 rounded-lg bg-emerald-600 font-medium text-white hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-emerald-200">
+                      <button type="button" onClick={handleSubmit(onSubmit)} disabled={loading} className="px-8 py-3 rounded-lg bg-emerald-600 font-medium text-white hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-emerald-200">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                         Confirm Registration
                       </button>

@@ -522,7 +522,13 @@ const StudentList = () => {
                   {users.map((user) => (
                     <tr
                       key={user.id}
-                      className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors"
+                      onClick={() =>
+                        setDetailModal({
+                          isOpen: true,
+                          student: user,
+                        })
+                      }
+                      className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-5">
                         <div className="flex items-center">
@@ -586,7 +592,10 @@ const StudentList = () => {
                         )}
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 translate-x-0 md:translate-x-2 md:group-hover:translate-x-0">
+                        <div
+                          className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 translate-x-0 md:translate-x-2 md:group-hover:translate-x-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {(canManageUser(user) ||
                             currentUser?.role === "super_admin") && (
                               <>

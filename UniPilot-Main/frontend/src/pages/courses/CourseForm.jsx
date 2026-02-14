@@ -228,7 +228,8 @@ const CourseForm = ({
     if (step1Fields.some((f) => errors[f])) {
       setStep(1);
       setError("Please fix errors in the Course Identity step.");
-    } else if (step2Fields.some((f) => errors[f])) {
+      setError("Please fix errors in the Course Identity step.");
+    } else if (errors.syllabus_data) {
       setStep(2);
       setError("Please fix errors in the Structure step.");
     } else {
@@ -458,20 +459,18 @@ const CourseForm = ({
                   className="relative z-10 flex flex-col items-center gap-2"
                 >
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ring-4 ring-white dark:ring-gray-900 ${
-                      isActive
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ring-4 ring-white dark:ring-gray-900 ${isActive
                         ? "bg-blue-600 text-white"
                         : "bg-gray-200 dark:bg-gray-700 text-gray-400"
-                    }`}
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
                   <span
-                    className={`text-xs font-medium transition-colors ${
-                      isCurrent
+                    className={`text-xs font-medium transition-colors ${isCurrent
                         ? "text-blue-600 dark:text-blue-400"
                         : "text-gray-400"
-                    }`}
+                      }`}
                   >
                     {s.label}
                   </span>
