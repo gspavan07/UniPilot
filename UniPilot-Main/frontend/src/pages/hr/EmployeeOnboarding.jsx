@@ -96,6 +96,7 @@ const steps = [
   { id: 4, title: "History", icon: GraduationCap, desc: "Qualifications" },
   { id: 5, title: "Payroll", icon: Wallet, desc: "Bank Accounts" },
   { id: 6, title: "Docs", icon: Upload, desc: "Uploads" },
+  { id: 7, title: "Review", icon: CheckCircle2, desc: "Final Check" },
 ];
 
 const EmployeeOnboarding = () => {
@@ -109,6 +110,7 @@ const EmployeeOnboarding = () => {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState({});
+  const [hasReachedReview, setHasReachedReview] = useState(false);
 
   // Filter roles to exclude students for this wizard
   const staffRoles = roles.filter((r) => r.slug !== "student");
@@ -138,6 +140,18 @@ const EmployeeOnboarding = () => {
       password: "Welcome@123", // Default initial password
     },
   });
+
+  // Auto-generate Employee ID
+  useEffect(() => {
+    if (currentStep === 2) {
+      const currentId = watch("employee_id");
+      if (!currentId) {
+        const year = new Date().getFullYear();
+        const randomNum = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+        setValue("employee_id", `EMP-${year}-${randomNum}`);
+      }
+    }
+  }, [currentStep, setValue, watch]);
 
   const {
     fields: academicFields,
@@ -177,7 +191,10 @@ const EmployeeOnboarding = () => {
     // Step 3, 4, 5 often have optional fields but we trigger validation to show errors if any constraints exist
 
     const isValid = await trigger(fieldsToValidate);
-    if (isValid) setCurrentStep(step + 1);
+    if (isValid) {
+      if (step === 6) setHasReachedReview(true);
+      setCurrentStep(step + 1);
+    }
   };
 
   const onSubmit = async (data) => {
@@ -225,10 +242,9 @@ const EmployeeOnboarding = () => {
   // Helper for input styles
   const inputClass = (name) => `
     w-full bg-white dark:bg-gray-800 border rounded-xl px-4 py-3 text-sm font-medium transition-all outline-none
-    ${
-      errors[name]
-        ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 text-red-900 dark:text-red-100"
-        : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-gray-900 dark:text-white hover:border-gray-300 dark:hover:border-gray-600"
+    ${errors[name]
+      ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 text-red-900 dark:text-red-100"
+      : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-gray-900 dark:text-white hover:border-gray-300 dark:hover:border-gray-600"
     }
   `;
 
@@ -279,7 +295,7 @@ const EmployeeOnboarding = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Stepper Sidebar */}
           <div className="hidden lg:block w-72 shrink-0">
@@ -291,18 +307,22 @@ const EmployeeOnboarding = () => {
                   return (
                     <div
                       key={step.id}
-                      className={`flex items-center gap-4 group ${isActive ? "opacity-100" : "opacity-50"}`}
+                      onClick={() => {
+                        if (step.id < currentStep || hasReachedReview) {
+                          setCurrentStep(step.id);
+                        }
+                      }}
+                      className={`flex items-center gap-4 group ${step.id < currentStep || hasReachedReview ? "cursor-pointer" : "cursor-not-allowed"} ${isActive ? "opacity-100" : "opacity-50"}`}
                     >
                       <div
                         className={`
                                         w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
-                                        ${
-                                          isActive
-                                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-110"
-                                            : isCompleted
-                                              ? "bg-emerald-500 text-white shadow-md"
-                                              : "bg-gray-100 dark:bg-gray-700 text-gray-400"
-                                        }
+                                        ${isActive
+                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-110"
+                            : isCompleted
+                              ? "bg-emerald-500 text-white shadow-md"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-400"
+                          }
                                     `}
                       >
                         {isCompleted ? (
@@ -555,12 +575,11 @@ const EmployeeOnboarding = () => {
                             key={role.id}
                             className={`
                                                     relative p-4 rounded-2xl border-2 cursor-pointer transition-all hover:scale-[1.02]
-                                                    ${
-                                                      watch("role_id") ===
-                                                      role.id
-                                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10 shadow-lg ring-1 ring-indigo-500"
-                                                        : "border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 hover:border-indigo-200"
-                                                    }
+                                                    ${watch("role_id") ===
+                                role.id
+                                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10 shadow-lg ring-1 ring-indigo-500"
+                                : "border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 hover:border-indigo-200"
+                              }
                                                 `}
                           >
                             <div className="flex items-center gap-3">
@@ -645,11 +664,17 @@ const EmployeeOnboarding = () => {
                         <label className={labelClass}>
                           Employee ID<span className="text-red-500">*</span>
                         </label>
-                        <input
-                          {...register("employee_id")}
-                          className={inputClass("employee_id")}
-                          placeholder="e.g. EMP-2026-001"
-                        />
+                        <div className="relative">
+                          <input
+                            {...register("employee_id")}
+                            className={`${inputClass("employee_id")} bg-gray-100 cursor-not-allowed`}
+                            readOnly
+                            placeholder="Auto-generated ID"
+                          />
+                          <div className="absolute right-3 top-3 text-xs text-gray-500 font-mono">
+                            Auto-generated
+                          </div>
+                        </div>
                         {errors.employee_id && (
                           <p className="text-xs text-red-500 mt-1">
                             {errors.employee_id.message}
@@ -1025,8 +1050,8 @@ const EmployeeOnboarding = () => {
                             <p className="text-[10px] text-gray-400 mt-1 mb-4">
                               {selectedFiles[doc.id]
                                 ? (selectedFiles[doc.id].size / 1024).toFixed(
-                                    1,
-                                  ) + " KB"
+                                  1,
+                                ) + " KB"
                                 : "No file selected"}
                             </p>
                             <label className="cursor-pointer">
