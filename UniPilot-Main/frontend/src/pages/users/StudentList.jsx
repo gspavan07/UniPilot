@@ -310,433 +310,408 @@ const StudentList = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-display">
-            Student Directory
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Manage enrollment details, academic status, and records for
-            students.
-          </p>
-        </div>
-        {(canCreate ||
-          (currentUser?.role_data?.slug || "").includes("admission") ||
-          currentUser?.role === "super_admin" ||
-          hasPermission("students:manage")) && (
-          <div className="flex gap-3">
-            {((currentUser?.role_data?.slug || "").includes("admission") ||
-              currentUser?.role === "super_admin") && (
-              <button
-                onClick={handleExport}
-                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
-              >
-                <Download className="w-4 h-4 mr-2 text-primary-500" />
-                Export Admissions
-              </button>
-            )}
-            {((currentUser?.role_data?.slug || "").includes("admission") ||
-              currentUser?.role === "super_admin") && (
-              <button
-                onClick={() => setIsBulkNotifOpen(true)}
-                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
-              >
-                <Mail className="w-4 h-4 mr-2 text-primary-500" />
-                Bulk Message
-              </button>
-            )}
+    <div className="min-h-screen bg-white text-gray-950 font-sans selection:bg-blue-100 selection:text-blue-900 pb-20">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 py-10">
 
-            {hasPermission("admissions:manage") && (
-              <button
-                onClick={() => setIsBulkPhotoOpen(true)}
-                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
-              >
-                <Upload className="w-4 h-4 mr-2 text-primary-500" />
-                Bulk Photos
-              </button>
-            )}
-            {hasPermission("admissions:generate_ids") && (
-              <button
-                onClick={() => setIsGenerateIdOpen(true)}
-                className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
-              >
-                <Wand2 className="w-4 h-4 mr-2 text-primary-500" />
-                Generate IDs
-              </button>
-            )}
-            {canCreate && (
-              <>
-                <button
-                  onClick={() => setIsImportOpen(true)}
-                  className="btn btn-secondary flex items-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-500 transition-all hover:shadow-md"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Bulk Import
-                </button>
-                <button
-                  onClick={openAddForm}
-                  className="btn btn-primary flex items-center shadow-lg shadow-primary-500/20"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Register Student
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Stats Quick Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {userStats
-          ?.filter((stat) => stat.role === "student")
-          .map((stat) => (
-            <div
-              key={stat.role}
-              className="card p-4 border border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-            >
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Total Students
-              </p>
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
-                {stat.count}
-              </h4>
+        {/* Header Section */}
+        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-8 border-b border-gray-100 pb-6">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="h-px w-6 bg-blue-600"></span>
+              <span className="text-xs font-bold tracking-widest uppercase text-blue-600">Academic Registry</span>
             </div>
-          )) || (
-          <div className="col-span-4 h-16 bg-gray-50 dark:bg-gray-800/50 animate-pulse rounded-2xl" />
-        )}
-      </div>
-
-      {/* Filters Bar */}
-      <div className="card p-2 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col md:flex-row gap-2">
-        <div className="relative flex-1 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-          <input
-            type="text"
-            placeholder="Search by name, email, ID..."
-            className="w-full bg-transparent border-none focus:ring-0 text-sm py-2 pl-10 dark:text-white"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
-        <select
-          className={`bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer ${currentUser?.role === "hod" ? "opacity-50 cursor-not-allowed" : ""}`}
-          value={deptFilter}
-          onChange={(e) => setDeptFilter(e.target.value)}
-          disabled={currentUser?.role === "hod"}
-        >
-          <option value="">All Departments</option>
-          {departments.map((dept) => (
-            <option key={dept.id} value={dept.id}>
-              {dept.code}
-            </option>
-          ))}
-        </select>
-        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
-        <select
-          className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
-          value={batchFilter}
-          onChange={(e) => setBatchFilter(e.target.value)}
-        >
-          <option value="">All Batches</option>
-          {batchYears.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 hidden md:block" />
-        <select
-          className="bg-transparent border-none focus:ring-0 text-sm py-2 px-4 dark:text-white cursor-pointer"
-          value={sectionFilter}
-          onChange={(e) => setSectionFilter(e.target.value)}
-        >
-          <option value="">All Sections</option>
-          {sections &&
-            sections.map((sec) => (
-              <option key={sec} value={sec}>
-                Section {sec}
-              </option>
-            ))}
-        </select>
-      </div>
-
-      {/* Directory Content */}
-      <div className="card overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-300">
-        {userStatus === "loading" && users.length === 0 ? (
-          <div className="py-24 flex flex-col items-center justify-center">
-            <Loader2 className="w-12 h-12 text-primary-500 animate-spin mb-4" />
-            <p className="text-gray-500 font-medium">Syncing directory...</p>
-          </div>
-        ) : userError ? (
-          <div className="py-24 text-center">
-            <p className="text-error-500 font-bold mb-2">Connection Blocked</p>
-            <p className="text-gray-500 text-sm mb-6">{userError}</p>
-            <button
-              onClick={() => dispatch(fetchUsers())}
-              className="btn btn-secondary"
-            >
-              Reload Data
-            </button>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="py-24 text-center">
-            <SearchX className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-            <p className="text-gray-900 dark:text-white font-bold mb-1">
-              No students found
-            </p>
-            <p className="text-gray-500 text-sm">
-              Try adjusting your filters or search terms.
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-black mb-2">
+              Student Directory
+            </h1>
+            <p className="text-base text-gray-500 font-light leading-relaxed">
+              Comprehensive academic records, enrollment status, and student profiles.
             </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
-                <tr>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Student Identity
-                  </th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Role
-                  </th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Affiliation
-                  </th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors group"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="relative">
-                          <img
-                            src={getProfileImageUrl(user)}
-                            className="w-10 h-10 rounded-xl object-cover shadow-sm border border-gray-100 dark:border-gray-700"
-                            alt="avatar"
-                          />
-                          <div
-                            className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${user.is_active ? "bg-success-500" : "bg-gray-400"}`}
-                          />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                            {user.first_name} {user.last_name}
-                          </p>
-                          <p className="text-xs text-gray-400 truncate w-40">
-                            {user.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="badge bg-secondary-100 text-secondary-700 dark:bg-secondary-900/30 dark:text-secondary-400">
-                          Student
-                        </span>
-                        <span className="text-[10px] font-mono text-gray-400 uppercase tracking-tighter">
-                          ID: {user.student_id || "N/A"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                          {user.department?.code || "Main Office"}
-                        </span>
-                        {user.program && (
-                          <span className="text-[10px] text-gray-400 truncate w-32">
-                            {user.program.name}
-                          </span>
-                        )}
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {user.regulation && (
-                            <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded border border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
-                              {user.regulation.name}
-                            </span>
-                          )}
-                          {user.batch_year && (
-                            <span className="text-[10px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
-                              '{user.batch_year.toString().slice(-2)}
-                            </span>
-                          )}
-                          {user.section && (
-                            <span className="text-[10px] bg-purple-50 text-purple-600 px-1 rounded border border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
-                              Sec {user.section}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${user.is_active ? "text-success-600 bg-success-50 dark:bg-success-900/10" : "text-gray-400 bg-gray-100 dark:bg-gray-700"}`}
+
+          <div className="flex flex-col items-start xl:items-end gap-4">
+            {/* Stats Strip */}
+            <div className="flex items-center gap-6 md:gap-8 pb-2">
+              {userStats
+                ?.filter((stat) => stat.role === "student")
+                .map((stat) => (
+                  <div key={stat.role} className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Enrolled</p>
+                    <p className="text-3xl font-light text-black tabular-nums">{stat.count}</p>
+                  </div>
+                )) || (
+                  <div className="h-10 w-24 bg-gray-50 animate-pulse rounded" />
+                )}
+            </div>
+
+            {/* Action Toolbar */}
+            {(canCreate ||
+              (currentUser?.role_data?.slug || "").includes("admission") ||
+              currentUser?.role === "super_admin" ||
+              hasPermission("students:manage")) && (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {((currentUser?.role_data?.slug || "").includes("admission") ||
+                    currentUser?.role === "super_admin") && (
+                      <button
+                        onClick={handleExport}
+                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
                       >
-                        {user.is_active ? "Enabled" : "Disabled"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-1 group-hover:opacity-100 transition-all duration-200">
-                        {(canManageUser(user) ||
-                          currentUser?.role === "super_admin") && (
-                          <>
-                            {((currentUser?.role_data?.slug || "").includes(
-                              "admission",
-                            ) ||
-                              currentUser?.role === "super_admin") && (
+                        <Download className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                        Export
+                      </button>
+                    )}
+                  {((currentUser?.role_data?.slug || "").includes("admission") ||
+                    currentUser?.role === "super_admin") && (
+                      <button
+                        onClick={() => setIsBulkNotifOpen(true)}
+                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                      >
+                        <Mail className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                        Message
+                      </button>
+                    )}
+
+                  {hasPermission("admissions:manage") && (
+                    <button
+                      onClick={() => setIsBulkPhotoOpen(true)}
+                      className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                    >
+                      <Upload className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                      Photos
+                    </button>
+                  )}
+
+                  {canCreate && (
+                    <>
+                      <button
+                        onClick={() => setIsImportOpen(true)}
+                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                      >
+                        <Plus className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                        Import
+                      </button>
+                      <button
+                        onClick={openAddForm}
+                        className="flex items-center px-5 py-2 text-sm font-bold text-white bg-black border border-black rounded-full hover:bg-blue-700 hover:border-blue-700 transition-all shadow-xl shadow-blue-900/10"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Student
+                      </button>
+                    </>
+                  )}
+                  {hasPermission("admissions:generate_ids") && (
+                    <button
+                      onClick={() => setIsGenerateIdOpen(true)}
+                      className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                    >
+                      <Wand2 className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                      IDs
+                    </button>
+                  )}
+                </div>
+              )}
+          </div>
+        </div>
+
+        {/* Filters & Control Bar */}
+        <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-2 mb-8 flex flex-col md:flex-row gap-2 items-center">
+          <div className="relative flex-1 w-full md:w-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search directory..."
+              className="w-full bg-white border-0 rounded-xl py-2.5 pl-11 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-100 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex w-full md:w-auto gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+            <select
+              className={`bg-white border-0 rounded-xl py-2.5 px-4 text-sm text-gray-700 focus:ring-2 focus:ring-blue-100 shadow-sm min-w-[160px] cursor-pointer ${currentUser?.role === "hod" ? "opacity-50 cursor-not-allowed" : ""}`}
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              disabled={currentUser?.role === "hod"}
+            >
+              <option value="">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.code}
+                </option>
+              ))}
+            </select>
+            <select
+              className="bg-white border-0 rounded-xl py-2.5 px-4 text-sm text-gray-700 focus:ring-2 focus:ring-blue-100 shadow-sm min-w-[140px] cursor-pointer"
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+            >
+              <option value="">All Batches</option>
+              {batchYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <select
+              className="bg-white border-0 rounded-xl py-2.5 px-4 text-sm text-gray-700 focus:ring-2 focus:ring-blue-100 shadow-sm min-w-[140px] cursor-pointer"
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+            >
+              <option value="">All Sections</option>
+              {sections &&
+                sections.map((sec) => (
+                  <option key={sec} value={sec}>
+                    Section {sec}
+                  </option>
+                ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Directory Content */}
+        <div className="bg-white rounded-none">
+          {userStatus === "loading" && users.length === 0 ? (
+            <div className="py-32 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-3xl bg-gray-50/30">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+              <p className="text-gray-900 font-medium tracking-tight">Syncing directory...</p>
+            </div>
+          ) : userError ? (
+            <div className="py-32 text-center border border-dashed border-red-100 rounded-3xl bg-red-50/10">
+              <p className="text-black font-bold mb-2">Connection Blocked</p>
+              <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">{userError}</p>
+              <button
+                onClick={() => dispatch(fetchUsers())}
+                className="px-6 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-all"
+              >
+                Retry Connection
+              </button>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="py-32 text-center border border-dashed border-gray-200 rounded-3xl bg-gray-50/30">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <SearchX className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-black font-bold text-lg mb-2">
+                No students found
+              </p>
+              <p className="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed">
+                We couldn't find any records matching your current filters. Try stripping back the search terms.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-black">
+                    <th className="px-6 py-6 text-[10px] font-bold uppercase tracking-widest text-black/60 w-[35%]">
+                      Identity
+                    </th>
+                    <th className="px-6 py-6 text-[10px] font-bold uppercase tracking-widest text-black/60">
+                      ID & Details
+                    </th>
+                    <th className="px-6 py-6 text-[10px] font-bold uppercase tracking-widest text-black/60">
+                      Academic
+                    </th>
+                    <th className="px-6 py-6 text-[10px] font-bold uppercase tracking-widest text-black/60">
+                      Status
+                    </th>
+                    <th className="px-6 py-6 text-[10px] font-bold uppercase tracking-widest text-black/60 text-right">
+                      Manage
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="">
+                  {users.map((user) => (
+                    <tr
+                      key={user.id}
+                      className="group border-b border-gray-100 hover:bg-blue-50/30 transition-colors"
+                    >
+                      <td className="px-6 py-5">
+                        <div className="flex items-center">
+                          <div className="relative">
+                            <img
+                              src={getProfileImageUrl(user)}
+                              className="w-12 h-12 rounded-lg object-cover bg-gray-100 ring-1 ring-gray-100 group-hover:ring-blue-200 transition-all"
+                              alt="avatar"
+                            />
+                            {user.is_active && (
+                              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white"></div>
+                            )}
+                          </div>
+                          <div className="ml-5">
+                            <p className="text-[15px] font-bold text-black group-hover:text-blue-700 transition-colors">
+                              {user.first_name} {user.last_name}
+                            </p>
+                            <p className="text-xs text-gray-500 font-mono mt-0.5">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="text-xs font-mono font-medium text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                            {user.student_id ? user.student_id : "NO ID"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {user.department?.code || "Main Office"}
+                          </span>
+                          <div className="flex flex-wrap gap-2 text-[11px] text-gray-500">
+                            {user.batch_year && (
+                              <span>Batch <span className="text-black font-medium">{user.batch_year}</span></span>
+                            )}
+                            {user.section && (
+                              <span className="before:content-['•'] before:mr-2 before:text-gray-300">Sec <span className="text-black font-medium">{user.section}</span></span>
+                            )}
+                          </div>
+
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        {user.is_active ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-100 bg-blue-50 text-blue-700">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+                            </span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Active</span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-500">
+                            <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Inactive</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 translate-x-0 md:translate-x-2 md:group-hover:translate-x-0">
+                          {(canManageUser(user) ||
+                            currentUser?.role === "super_admin") && (
                               <>
+                                {((currentUser?.role_data?.slug || "").includes(
+                                  "admission",
+                                ) ||
+                                  currentUser?.role === "super_admin") && (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          setDetailModal({
+                                            isOpen: true,
+                                            student: user,
+                                          })
+                                        }
+                                        className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                        title="View Details"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          setDocModal({
+                                            isOpen: true,
+                                            studentId: user.id,
+                                            studentName: `${user.first_name} ${user.last_name}`,
+                                          })
+                                        }
+                                        className="p-2 hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                        title="Verify Documents"
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
                                 <button
-                                  onClick={() =>
-                                    setDetailModal({
-                                      isOpen: true,
-                                      student: user,
-                                    })
-                                  }
-                                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
-                                  title="View Details"
+                                  onClick={() => openEditForm(user)}
+                                  className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() =>
-                                    setDocModal({
-                                      isOpen: true,
-                                      studentId: user.id,
-                                      studentName: `${user.first_name} ${user.last_name}`,
-                                    })
-                                  }
-                                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
-                                  title="Verify Documents"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
                                 >
-                                  <FileText className="w-4 h-4" />
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
-                                {/* <button
-                                  onClick={() => handleDownloadLetter(user.id)}
-                                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
-                                  title="Download Admission Letter"
-                                >
-                                  <FileDown className="w-4 h-4" />
-                                </button> */}
                               </>
                             )}
-                            <button
-                              onClick={() => openEditForm(user)}
-                              className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            {/* <button
-                              onClick={() => handleStatusChange(user)}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                user.is_active
-                                  ? "hover:bg-warning-50 dark:hover:bg-warning-900/30 text-warning-600"
-                                  : "hover:bg-success-50 dark:hover:bg-success-900/30 text-success-600"
-                              }`}
-                              title={user.is_active ? "Deactivate" : "Activate"}
-                            >
-                              {user.is_active ? (
-                                <UserX className="w-4 h-4" />
-                              ) : (
-                                <UserCheck className="w-4 h-4" />
-                              )}
-                            </button> */}
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="p-1.5 hover:bg-error-50 dark:hover:bg-error-900/30 rounded-lg text-error-600 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Form Components kept exactly as is */}
+        <UserForm
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={handleSave}
+          user={selectedUser}
+          departmentList={departments}
+          programList={programs}
+          roleList={roles}
+          forcedRole="student"
+        />
+
+        <EditStudentDrawer
+          isOpen={isEditDrawerOpen}
+          onClose={() => {
+            setIsEditDrawerOpen(false);
+            dispatch(fetchUsers({ role: "student", department_id: deptFilter }));
+          }}
+          user={selectedUser}
+          departmentList={departments}
+          programList={programs}
+        />
+
+        <BulkImportModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          forcedRole="student"
+          roleList={roles}
+          departmentList={departments}
+        />
+
+        <DocumentVerificationModal
+          isOpen={docModal.isOpen}
+          onClose={() => setDocModal({ ...docModal, isOpen: false })}
+          studentId={docModal.studentId}
+          studentName={docModal.studentName}
+        />
+
+        <StudentDetailModal
+          isOpen={detailModal.isOpen}
+          onClose={() => setDetailModal({ isOpen: false, student: null })}
+          student={detailModal.student}
+        />
+
+        <BulkCommunicationModal
+          isOpen={isBulkNotifOpen}
+          onClose={() => setIsBulkNotifOpen(false)}
+          userCount={users.length}
+          filters={{ role: "student", department: deptFilter }}
+        />
+
+        <GenerateIdModal
+          isOpen={isGenerateIdOpen}
+          onClose={() => setIsGenerateIdOpen(false)}
+          onSuccess={() =>
+            dispatch(fetchUsers({ role: "student", department_id: deptFilter }))
+          }
+          departmentList={departments}
+          programList={programs}
+        />
+
+        <BulkPhotoUploadModal
+          isOpen={isBulkPhotoOpen}
+          onClose={() => setIsBulkPhotoOpen(false)}
+        />
       </div>
-
-      <UserForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSave={handleSave}
-        user={selectedUser}
-        departmentList={departments}
-        programList={programs}
-        roleList={roles}
-        forcedRole="student"
-      />
-
-      <EditStudentDrawer
-        isOpen={isEditDrawerOpen}
-        onClose={() => {
-          setIsEditDrawerOpen(false);
-          dispatch(fetchUsers({ role: "student", department_id: deptFilter }));
-        }}
-        user={selectedUser}
-        departmentList={departments}
-        programList={programs}
-      />
-
-      <BulkImportModal
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        forcedRole="student"
-        roleList={roles}
-        departmentList={departments}
-      />
-      {/* Document Verification Modal */}
-      <DocumentVerificationModal
-        isOpen={docModal.isOpen}
-        onClose={() => setDocModal({ ...docModal, isOpen: false })}
-        studentId={docModal.studentId}
-        studentName={docModal.studentName}
-      />
-
-      <StudentDetailModal
-        isOpen={detailModal.isOpen}
-        onClose={() => setDetailModal({ isOpen: false, student: null })}
-        student={detailModal.student}
-      />
-
-      {/* Bulk Communication Modal */}
-      <BulkCommunicationModal
-        isOpen={isBulkNotifOpen}
-        onClose={() => setIsBulkNotifOpen(false)}
-        userCount={users.length}
-        filters={{ role: "student", department: deptFilter }}
-      />
-
-      {/* Generate ID Modal */}
-      <GenerateIdModal
-        isOpen={isGenerateIdOpen}
-        onClose={() => setIsGenerateIdOpen(false)}
-        onSuccess={() =>
-          dispatch(fetchUsers({ role: "student", department_id: deptFilter }))
-        }
-        departmentList={departments}
-        programList={programs}
-      />
-
-      <BulkPhotoUploadModal
-        isOpen={isBulkPhotoOpen}
-        onClose={() => setIsBulkPhotoOpen(false)}
-      />
     </div>
   );
 };

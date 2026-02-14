@@ -88,7 +88,7 @@ const StudentRegistration = () => {
   const { programs } = useSelector((state) => state.programs);
   const { regulations } = useSelector((state) => state.regulations);
   const { roles } = useSelector((state) => state.roles);
-  const [currentStep, setCurrentStep] = useState(6);
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [registeredStudent, setRegisteredStudent] = useState(null);

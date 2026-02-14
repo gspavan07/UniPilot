@@ -91,105 +91,66 @@ const HRManagement = () => {
     return user?.permissions?.includes(module.permission);
   });
 
-  const getColorClasses = (color) => {
-    const classes = {
-      blue: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border-blue-100 dark:border-blue-800",
-      emerald:
-        "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800",
-      indigo:
-        "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800",
-      purple:
-        "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 border-purple-100 dark:border-purple-800",
-      rose: "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 border-rose-100 dark:border-rose-800",
-      amber:
-        "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-amber-100 dark:border-amber-800",
-      cyan: "bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800",
-    };
-    return classes[color] || classes.blue;
-  };
+
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 font-display">
-          Human Resource Management
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Manage employee lifecycle, payroll, attendance, and leave
-          administration from one place.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredModules.map((module) => (
-          <button
-            key={module.id}
-            onClick={() => navigate(module.href)}
-            className="group relative flex flex-col items-start p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300 text-left"
-          >
-            <div
-              className={`p-3 rounded-xl mb-4 transition-colors ${getColorClasses(module.color)} group-hover:bg-primary-500 group-hover:text-white dark:group-hover:bg-primary-500`}
-            >
-              <module.icon className="w-6 h-6" />
-            </div>
-
-            <div className="flex-1 w-full">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {module.name}
-                </h3>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
-                {module.description}
-              </p>
-            </div>
-
-            {/* Hover Indicator */}
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-primary-500 rounded-b-2xl scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-          </button>
-        ))}
-      </div>
-
-      {/* South India / Scalability Focus Section */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3 mb-4 text-primary-600 dark:text-primary-400 font-bold">
-            <ShieldCheck className="w-6 h-6" />
-            <span>Compliance & Scale</span>
+    <div className="min-h-screen bg-white text-gray-950 font-sans selection:bg-blue-100 selection:text-blue-900 p-6 md:p-12">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-100 pb-6">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">
+              HR Management
+            </h1>
+            <p className="text-base text-gray-500 font-normal leading-relaxed max-w-2xl">
+              Centralized administration for employee lifecycles and payroll.
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Managing Regional Compliance
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
-            UniPilot is designed to handle the specific HR requirements of
-            large-scale institutions in Andhra Pradesh and across South India.
-            Ensure all employee data is verified and payroll configurations
-            follow regional regulations.
-          </p>
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
-            <span>Powered by UniPilot, Kakinada</span>
+          <div className="flex flex-col items-start md:items-end gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold tracking-wider uppercase rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+              Workforce Command
+            </div>
+            <div className="text-sm text-gray-400 text-left md:text-right">
+              Access: <span className="text-gray-900 font-medium">{user?.role || "Administrator"}</span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-4">Scalability First</h2>
-            <p className="text-indigo-100 mb-6">
-              Our system is optimized to handle thousands of staff members
-              without any performance lag. Manage your entire workforce with
-              confidence.
-            </p>
-            <div className="flex gap-4">
-              <div className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium backdrop-blur-sm">
-                10k+ Staff Ready
+        {/* Modules Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredModules.map((module) => (
+            <button
+              key={module.id}
+              onClick={() => navigate(module.href)}
+              className="group relative flex flex-col justify-between h-full min-h-[240px] p-6 bg-white border border-blue-200 hover:border-blue-500 rounded-2xl transition-all duration-300 text-left hover:shadow-xl hover:shadow-blue-900/5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 overflow-hidden"
+            >
+              {/* Top Section */}
+              <div className="flex justify-between items-start w-full mb-6">
+                <div className="relative p-3 rounded-xl bg-gray-50 group-hover:bg-blue-600 transition-colors duration-300">
+                  <module.icon
+                    strokeWidth={1.5}
+                    className="w-6 h-6 text-gray-900 group-hover:text-white transition-colors duration-300"
+                  />
+                </div>
+                <div className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                  <ChevronRight className="w-5 h-5 text-blue-600" />
+                </div>
               </div>
-              <div className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium backdrop-blur-sm">
-                Instant Processing
+
+              {/* Bottom Section */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
+                  {module.name}
+                </h3>
+                <p className="text-sm text-gray-500 font-normal leading-relaxed group-hover:text-gray-600 transition-colors">
+                  {module.description}
+                </p>
               </div>
-            </div>
-          </div>
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+
+              {/* Decorative Corner */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-gray-50 to-transparent rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+            </button>
+          ))}
         </div>
       </div>
     </div>
