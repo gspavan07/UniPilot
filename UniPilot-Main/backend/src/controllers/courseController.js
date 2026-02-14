@@ -317,10 +317,19 @@ exports.getMyCourses = async (req, res) => {
       order: [["name", "ASC"]],
     });
 
+    // 4. Attach student's program_id to each course for context-aware features (like CO-PO mapping)
+    const coursesWithContext = courses.map(course => {
+      const courseJson = course.toJSON();
+      return {
+        ...courseJson,
+        program_id: student.program_id
+      };
+    });
+
     res.status(200).json({
       success: true,
-      count: courses.length,
-      data: courses,
+      count: coursesWithContext.length,
+      data: coursesWithContext,
     });
   } catch (error) {
     logger.error("Error in getMyCourses:", error);

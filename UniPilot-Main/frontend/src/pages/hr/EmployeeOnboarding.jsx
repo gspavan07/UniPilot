@@ -264,7 +264,7 @@ const EmployeeOnboarding = () => {
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 pb-20 animate-fade-in">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-30 shadow-sm backdrop-blur-xl bg-white/80 dark:bg-gray-800/80">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
