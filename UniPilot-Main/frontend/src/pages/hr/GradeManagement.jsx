@@ -13,6 +13,7 @@ import {
   Info,
   Clock,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 import {
   fetchSalaryGrades,
@@ -142,25 +143,46 @@ const GradeManagement = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-10">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Layers className="text-primary-500" />
-            Salary Grades (Templates)
+<div className="max-w-6xl mx-auto space-y-8 pb-12 pt-6">
+  {/* Header Section */}
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex items-start gap-4">
+      {/* Enhanced Back Button */}
+      <button
+        onClick={() => window.history.back()}
+        className="mt-1 flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-primary-600 hover:border-primary-200 hover:bg-primary-50 transition-all duration-200 shadow-sm active:scale-95"
+        title="Go Back"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </button>
+
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="p-1.5 bg-primary-50 rounded-lg">
+            <Layers className="w-5 h-5 text-primary-600" />
+          </span>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+            Salary Grades
           </h1>
-          <p className="text-gray-500">
-            Define standardized university pay scales.
-          </p>
+          <span className="px-2 py-0.5 text-xs font-medium text-primary-700 bg-primary-50 border border-primary-100 rounded-full">
+            Templates
+          </span>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="btn btn-primary shadow-lg shadow-primary-500/20"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create New Grade
-        </button>
+        <p className="text-sm text-slate-500 font-medium">
+          Manage and define standardized university pay scales.
+        </p>
       </div>
+    </div>
+
+    {/* Action Button with refined shadow */}
+    <button
+      onClick={() => handleOpenModal()}
+      className="flex items-center justify-center px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold text-sm hover:bg-slate-800 transition-all shadow-md hover:shadow-lg active:scale-[0.98] group"
+    >
+      <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200" />
+      Create New Grade
+    </button>
+  </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {salaryGrades.map((grade) => (

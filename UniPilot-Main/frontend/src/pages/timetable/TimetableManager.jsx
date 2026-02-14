@@ -13,6 +13,8 @@ import {
   Filter,
   MousePointer2,
   Trash2,
+  ArrowLeft,
+  ChevronDown // Added incase, but standard select usually doesn't need it if we stick to native
 } from "lucide-react";
 import {
   findTimetable,
@@ -292,223 +294,200 @@ const TimetableManager = () => {
   const gridColsClass = `grid-cols-${gridCols}`;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10 max-w-7xl mx-auto text-gray-900 dark:text-white">
-      {/* Header & Criteria Bar */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 rounded-2xl text-indigo-600 dark:text-indigo-400">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Schedule Planner</h1>
-              <p className="text-xs text-gray-500">
-                Configure university-wide timetables
-              </p>
-            </div>
+    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900 pb-20">
+      {/* Header */}
+      <div className="max-w-[1600px] mx-auto px-6 pt-8 mb-12">
+        <button
+          onClick={() => window.history.back()}
+          className="group flex items-center text-xs font-bold text-gray-400 hover:text-black transition-colors mb-6 uppercase tracking-widest"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+          Back to Dashboard
+        </button>
+
+        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 border-b border-gray-100 pb-8">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-3 text-black">
+              Timetable<span className="text-blue-600">.</span>
+            </h1>
+            <p className="text-gray-500 font-medium max-w-lg">
+              Manage academic schedules, potential conflicts, and faculty allocations from a single centralized view.
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-grow max-w-4xl">
-            <select
-              className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
-              value={criteria.department_id}
-              disabled={user?.role === "hod"}
-              onChange={(e) =>
-                setCriteria({
-                  ...criteria,
-                  department_id: e.target.value,
-                  program_id: "",
-                })
-              }
-            >
-              <option value="">Department</option>
-              {academicDepartments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+          {/* Filter Bar */}
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="appearance-none bg-gray-50 hover:bg-gray-100 border-none px-4 py-3 pr-8 font-bold text-xs uppercase tracking-wide rounded-lg cursor-pointer min-w-[160px] focus:ring-2 focus:ring-blue-600 transition-all text-gray-700"
+                value={criteria.department_id}
+                disabled={user?.role === "hod"}
+                onChange={(e) =>
+                  setCriteria({
+                    ...criteria,
+                    department_id: e.target.value,
+                    program_id: "",
+                  })
+                }
+              >
+                <option value="">Select Dept</option>
+                {academicDepartments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
 
-            <select
-              className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
-              value={criteria.program_id}
-              onChange={(e) =>
-                setCriteria({ ...criteria, program_id: e.target.value })
-              }
-              disabled={!criteria.department_id}
-            >
-              <option value="">Program</option>
-              {filteredPrograms.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code}
-                </option>
-              ))}
-            </select>
+              <select
+                className="appearance-none bg-gray-50 hover:bg-gray-100 border-none px-4 py-3 pr-8 font-bold text-xs uppercase tracking-wide rounded-lg cursor-pointer min-w-[160px] focus:ring-2 focus:ring-blue-600 transition-all text-gray-700 disabled:opacity-50"
+                value={criteria.program_id}
+                onChange={(e) =>
+                  setCriteria({ ...criteria, program_id: e.target.value })
+                }
+                disabled={!criteria.department_id}
+              >
+                <option value="">Program</option>
+                {filteredPrograms.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code}
+                  </option>
+                ))}
+              </select>
 
-            <select
-              className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
-              value={criteria.batch_year}
-              onChange={(e) =>
-                setCriteria({ ...criteria, batch_year: e.target.value })
-              }
-            >
-              <option value="">Select Batch</option>
-              {batches.map((year) => (
-                <option key={year} value={year}>
-                  Batch {year}
-                </option>
-              ))}
-            </select>
+              <select
+                className="appearance-none bg-gray-50 hover:bg-gray-100 border-none px-4 py-3 pr-8 font-bold text-xs uppercase tracking-wide rounded-lg cursor-pointer focus:ring-2 focus:ring-blue-600 transition-all text-gray-700"
+                value={criteria.batch_year}
+                onChange={(e) =>
+                  setCriteria({ ...criteria, batch_year: e.target.value })
+                }
+              >
+                <option value="">Batch</option>
+                {batches.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
 
-            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-xl flex items-center justify-center border border-indigo-100 dark:border-indigo-800">
-              Sem {criteria.semester}
+              <div className="bg-blue-50 px-4 py-3 rounded-lg flex items-center justify-center border border-blue-100">
+                <span className="text-blue-700 font-bold text-xs uppercase tracking-wide">Sem {criteria.semester}</span>
+              </div>
+
+              <select
+                className="appearance-none bg-gray-50 hover:bg-gray-100 border-none px-4 py-3 pr-8 font-bold text-xs uppercase tracking-wide rounded-lg cursor-pointer focus:ring-2 focus:ring-blue-600 transition-all text-gray-700 disabled:opacity-50"
+                value={criteria.section}
+                onChange={(e) =>
+                  setCriteria({ ...criteria, section: e.target.value })
+                }
+                disabled={!criteria.program_id || sections.length === 0}
+              >
+                <option value="">Sec</option>
+                {sections.map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            <select
-              className="p-2.5 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
-              value={criteria.section}
-              onChange={(e) =>
-                setCriteria({ ...criteria, section: e.target.value })
-              }
-              disabled={!criteria.program_id || sections.length === 0}
-            >
-              <option value="">Section</option>
-              {sections.map((sec) => (
-                <option key={sec} value={sec}>
-                  Section {sec}
-                </option>
-              ))}
-            </select>
 
             <button
               onClick={handleSearch}
-              className="btn btn-primary flex items-center justify-center py-2.5"
+              className="bg-black text-white px-8 py-3 font-bold text-xs uppercase tracking-widest hover:bg-blue-600 transition-colors rounded-lg shadow-lg shadow-gray-200"
             >
-              <Search className="w-4 h-4 mr-2" /> Load
+              Load Grid
             </button>
           </div>
         </div>
       </div>
 
+      {/* States */}
       {status === "loading" && (
-        <div className="py-20 text-center">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Retrieving schedule data...</p>
+        <div className="py-32 text-center animate-pulse">
+          <div className="text-4xl font-black text-gray-200 mb-4">LOADING...</div>
+          <p className="text-gray-400 font-mono text-xs">Fetching configuration data</p>
         </div>
       )}
 
       {status === "failed" && !currentTimetable && (
-        <div className="bg-white dark:bg-gray-800 p-12 rounded-3xl text-center border-2 border-dashed border-gray-100 dark:border-gray-700 max-w-2xl mx-auto shadow-sm">
-          <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Plus className="w-10 h-10 text-indigo-500" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">No Schedule Found</h2>
-          <p className="text-gray-500 mb-8 px-10">
-            There is no active timetable for {criteria.academic_year}, Semester{" "}
-            {criteria.semester} (Section {criteria.section}). Would you like to
-            create one now?
+        <div className="max-w-2xl mx-auto text-center border border-dashed border-gray-300 rounded-xl p-16">
+          <h2 className="text-3xl font-black mb-4">No Timetable Found</h2>
+          <p className="text-gray-500 mb-8 max-w-md mx-auto">
+            We couldn't find an existing schedule for {criteria.academic_year} (Sem {criteria.semester}).
+            Initialize a new one to get started.
           </p>
           <button
             onClick={handleCreateNew}
-            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-indigo-500/20"
+            className="bg-blue-600 text-white px-8 py-4 font-bold text-xs uppercase tracking-widest hover:bg-black transition-colors rounded-lg"
           >
-            Create Base Timetable
+            Create New Timetable
           </button>
         </div>
       )}
 
+      {/* Main Workspace */}
       {currentTimetable && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-slide-up">
-          {/* Sidebar: Add Slot */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="font-bold mb-6 flex items-center text-lg">
-                <Plus className="w-5 h-5 mr-2 text-indigo-500" /> New Class Slot
-              </h3>
+        <div className="max-w-[1600px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12">
 
-              <form onSubmit={handleAddSlot} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Day
-                  </label>
+          {/* Sidebar - Add Slot */}
+          <div className="lg:col-span-3">
+            <div className="sticky top-8">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
+                <div className="w-8 h-8 bg-blue-600 text-white flex items-center justify-center font-bold rounded">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-black uppercase tracking-widest">Add Slot</h3>
+              </div>
+
+              <form onSubmit={handleAddSlot} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Day of Week</label>
                   <select
-                    className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                    className="w-full bg-gray-50 border-none rounded p-3 text-sm font-bold focus:ring-2 focus:ring-blue-600 transition-shadow"
                     value={slotForm.day_of_week}
-                    onChange={(e) =>
-                      setSlotForm({ ...slotForm, day_of_week: e.target.value })
-                    }
+                    onChange={(e) => setSlotForm({ ...slotForm, day_of_week: e.target.value })}
                   >
                     {days.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
+                      <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                      Start
-                    </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Start Time</label>
                     <input
                       type="time"
                       value={slotForm.start_time}
-                      onChange={(e) =>
-                        setSlotForm({ ...slotForm, start_time: e.target.value })
-                      }
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                      onChange={(e) => setSlotForm({ ...slotForm, start_time: e.target.value })}
+                      className="w-full bg-gray-50 border-none rounded p-3 text-sm font-bold focus:ring-2 focus:ring-blue-600 font-mono"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                      End
-                    </label>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">End Time</label>
                     <input
                       type="time"
                       value={slotForm.end_time}
-                      onChange={(e) =>
-                        setSlotForm({ ...slotForm, end_time: e.target.value })
-                      }
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                      onChange={(e) => setSlotForm({ ...slotForm, end_time: e.target.value })}
+                      className="w-full bg-gray-50 border-none rounded p-3 text-sm font-bold focus:ring-2 focus:ring-blue-600 font-mono"
                     />
                   </div>
                 </div>
 
-                {/* Activity Toggle */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Type
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Slot Type</label>
+                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-lg">
                     <button
                       type="button"
-                      onClick={() =>
-                        setSlotForm({
-                          ...slotForm,
-                          is_activity: false,
-                          activity_name: "",
-                        })
-                      }
-                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${!slotForm.is_activity
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-50 dark:bg-gray-900 text-gray-600"
+                      onClick={() => setSlotForm({ ...slotForm, is_activity: false, activity_name: "" })}
+                      className={`py-2 text-xs font-bold uppercase tracking-wide rounded transition-all ${!slotForm.is_activity ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
                         }`}
                     >
-                      Course
+                      Academic
                     </button>
                     <button
                       type="button"
-                      onClick={() =>
-                        setSlotForm({
-                          ...slotForm,
-                          is_activity: true,
-                          course_id: "",
-                        })
-                      }
-                      className={`p-3 rounded-2xl text-sm font-bold transition-all ${slotForm.is_activity
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-50 dark:bg-gray-900 text-gray-600"
+                      onClick={() => setSlotForm({ ...slotForm, is_activity: true, course_id: "" })}
+                      className={`py-2 text-xs font-bold uppercase tracking-wide rounded transition-all ${slotForm.is_activity ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
                         }`}
                     >
                       Activity
@@ -516,246 +495,184 @@ const TimetableManager = () => {
                   </div>
                 </div>
 
-                {/* Course or Activity Name */}
                 {!slotForm.is_activity ? (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                      Subject
-                    </label>
-                    <select
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
-                      value={slotForm.course_id}
-                      onChange={(e) =>
-                        setSlotForm({ ...slotForm, course_id: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Select Course</option>
-                      {courses.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Course</label>
+                    <div className="relative">
+                      <select
+                        className="w-full bg-gray-50 border-none rounded p-3 text-sm font-bold focus:ring-2 focus:ring-blue-600 transition-shadow truncate pr-8"
+                        value={slotForm.course_id}
+                        onChange={(e) => setSlotForm({ ...slotForm, course_id: e.target.value })}
+                        required
+                      >
+                        <option value="">Select Course...</option>
+                        {courses.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                      Activity Name
-                    </label>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Activity Name</label>
                     <input
                       type="text"
-                      placeholder="e.g., Coding Training, Sports, Assembly"
+                      placeholder="e.g. Sports, Library"
                       value={slotForm.activity_name}
-                      onChange={(e) =>
-                        setSlotForm({
-                          ...slotForm,
-                          activity_name: e.target.value,
-                        })
-                      }
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                      onChange={(e) => setSlotForm({ ...slotForm, activity_name: e.target.value })}
+                      className="w-full bg-gray-50 border-none rounded p-3 text-sm font-bold focus:ring-2 focus:ring-blue-600"
                       required
                     />
                   </div>
                 )}
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Faculty {slotForm.is_activity && "(Optional)"}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Instructor {slotForm.is_activity && <span className="text-gray-300 font-normal normal-case">(Optional)</span>}
                   </label>
                   <select
-                    className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
+                    className="w-full bg-gray-50 border-none rounded p-3 text-sm font-bold focus:ring-2 focus:ring-blue-600 transition-shadow"
                     value={slotForm.faculty_id}
-                    onChange={(e) =>
-                      setSlotForm({ ...slotForm, faculty_id: e.target.value })
-                    }
+                    onChange={(e) => setSlotForm({ ...slotForm, faculty_id: e.target.value })}
                     required={!slotForm.is_activity}
                   >
-                    <option value="">Select Instructor</option>
+                    <option value="">Select Faculty...</option>
                     {faculty.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.first_name} {f.last_name}
-                      </option>
+                      <option key={f.id} value={f.id}>{f.first_name} {f.last_name}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Block
-                  </label>
-                  <select
-                    className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
-                    value={slotForm.block_id}
-                    onChange={(e) =>
-                      setSlotForm({
-                        ...slotForm,
-                        block_id: e.target.value,
-                        room_id: "",
-                      })
-                    }
-                    required
-                  >
-                    <option value="">Select Block</option>
-                    {blocks.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                    Room
-                  </label>
-                  <select
-                    className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none text-sm"
-                    value={slotForm.room_id}
-                    onChange={(e) =>
-                      setSlotForm({ ...slotForm, room_id: e.target.value })
-                    }
-                    disabled={!slotForm.block_id}
-                    required
-                  >
-                    <option value="">Select Room</option>
-                    {rooms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.room_number} - {r.name || r.type} (Capacity:{" "}
-                        {r.capacity})
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      className="w-full bg-gray-50 border-none rounded p-3 text-xs font-bold focus:ring-2 focus:ring-blue-600 transition-shadow"
+                      value={slotForm.block_id}
+                      onChange={(e) => setSlotForm({ ...slotForm, block_id: e.target.value, room_id: "" })}
+                      required
+                    >
+                      <option value="">Block</option>
+                      {blocks.map((b) => (
+                        <option key={b.id} value={b.id}>{b.code}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="w-full bg-gray-50 border-none rounded p-3 text-xs font-bold focus:ring-2 focus:ring-blue-600 transition-shadow disabled:opacity-50"
+                      value={slotForm.room_id}
+                      onChange={(e) => setSlotForm({ ...slotForm, room_id: e.target.value })}
+                      disabled={!slotForm.block_id}
+                      required
+                    >
+                      <option value="">Room</option>
+                      {rooms.map((r) => (
+                        <option key={r.id} value={r.id}>{r.room_number}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-indigo-500/20 transition-all mt-4"
+                  className="w-full bg-blue-600 text-white font-bold text-xs uppercase tracking-widest py-4 mt-4 hover:bg-black transition-colors rounded shadow-lg shadow-blue-600/20"
                 >
-                  Authorize Slot
+                  Confirm Allocation
                 </button>
+
+                {error && (
+                  <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-600 text-xs font-medium">
+                    {error}
+                  </div>
+                )}
               </form>
             </div>
-
-            {error && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-2xl flex items-start space-x-3 text-red-600 text-xs">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <p>{error}</p>
-              </div>
-            )}
           </div>
 
-          {/* Main Content: Weekly Grid */}
-          <div className="lg:col-span-9 bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="flex justify-between items-center mb-8">
+          {/* Grid Area */}
+          <div className="lg:col-span-9">
+            <div className="flex justify-between items-end mb-8 border-b border-gray-100 pb-4">
               <div>
-                <h3 className="text-xl font-bold">Weekly Schedule Preview</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Section {currentTimetable.section} |{" "}
-                  {currentTimetable.program?.name}
+                <h2 className="text-2xl font-bold tracking-tight text-black">
+                  Master Schedule
+                </h2>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">
+                  Section {currentTimetable.section} / {currentTimetable.program?.code}
                 </p>
               </div>
-              <div className="flex items-center space-x-2 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-2xl border border-emerald-100 dark:border-emerald-900/20">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">
-                  Active System
-                </span>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Live Changes</span>
               </div>
             </div>
 
-            <div className="overflow-x-auto scrollbar-hide pb-4">
-              <div className="min-w-[900px]">
-                {/* Day Labels */}
+            <div className="overflow-x-auto pb-12">
+              <div className="min-w-[800px]">
+                {/* Header */}
                 <div
-                  className={`grid gap-4 mb-6`}
-                  style={{
-                    gridTemplateColumns: `60px repeat(${days.length}, 1fr)`,
-                  }}
+                  className="grid gap-6 mb-6 pb-2"
+                  style={{ gridTemplateColumns: `80px repeat(${days.length}, 1fr)` }}
                 >
-                  <div></div>
+                  <div className="text-right text-[10px] font-mono text-gray-300 pt-1">GMT+5.30</div>
                   {days.map((d) => (
-                    <div
-                      key={d}
-                      className="text-center uppercase tracking-[0.2em] font-black text-[10px] text-gray-400"
-                    >
-                      {d}
+                    <div key={d} className="text-xs font-black uppercase tracking-widest text-black border-b-2 border-black pb-2">
+                      {d.substring(0, 3)}
                     </div>
                   ))}
                 </div>
 
-                {/* Rows for Time Slots */}
+                {/* Rows */}
                 {times.map((time) => (
                   <div
                     key={time}
-                    className="grid gap-4 mb-4 items-stretch"
-                    style={{
-                      gridTemplateColumns: `60px repeat(${days.length}, 1fr)`,
-                    }}
+                    className="grid gap-6 mb-2 min-h-[120px]"
+                    style={{ gridTemplateColumns: `80px repeat(${days.length}, 1fr)` }}
                   >
-                    <div className="flex items-center justify-end pr-4 text-[10px] font-black text-gray-300 font-mono">
+                    <div className="text-right text-xs font-mono text-gray-400 pt-2 pr-4 border-r border-gray-100">
                       {time}
                     </div>
+
                     {days.map((day) => {
                       const slot = currentTimetable.slots?.find(
-                        (s) =>
-                          s.day_of_week === day &&
-                          s.start_time.startsWith(time.split(":")[0]),
+                        (s) => s.day_of_week === day && s.start_time.startsWith(time.split(":")[0])
                       );
 
                       return (
-                        <div
-                          key={`${day}-${time}`}
-                          className={`min-h-[140px] rounded-2xl p-4 transition-all duration-300 border-2 ${slot
-                            ? "bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/20 shadow-sm"
-                            : "bg-gray-50/30 dark:bg-gray-900/20 border-gray-50 dark:border-gray-800 border-dashed"
-                            }`}
-                        >
+                        <div key={`${day}-${time}`} className="relative group h-full">
                           {slot ? (
-                            <div className="h-full flex flex-col justify-between group relative">
+                            <div className="absolute inset-0 bg-blue-50 border-l-4 border-blue-600 p-3 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group-hover:bg-blue-600 group-hover:text-white">
                               <div>
-                                <h4 className="font-bold text-xs text-indigo-700 dark:text-indigo-400 leading-tight mb-1">
+                                <div className="flex justify-between items-start">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600/70 group-hover:text-blue-200">
+                                    {slot.room?.room_number || "TBD"}
+                                  </span>
+                                  {slot.activity_name && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>}
+                                </div>
+                                <h4 className="font-bold text-sm leading-tight mt-1 line-clamp-2">
                                   {slot.activity_name || slot.course?.name}
                                 </h4>
                                 {slot.course?.code && (
-                                  <p className="text-[10px] text-gray-500 font-medium truncate italic">
-                                    {slot.course.code}
-                                  </p>
+                                  <p className="text-[10px] opacity-60 mt-0.5 font-mono">{slot.course.code}</p>
                                 )}
-                                {slot.activity_name && (
-                                  <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
-                                    Activity
-                                  </p>
-                                )}
-                              </div>
-                              <div className="space-y-2">
-                                {slot.faculty_id && (
-                                  <div className="flex items-center text-[10px] text-gray-400">
-                                    <User className="w-3 h-3 mr-1.5 text-indigo-400" />{" "}
-                                    {slot.faculty?.name ||
-                                      slot.faculty_id.slice(0, 8)}
-                                  </div>
-                                )}
-                                <div className="flex items-center text-[10px] text-gray-400 font-bold">
-                                  <MapPin className="w-3 h-3 mr-1.5 text-indigo-400" />{" "}
-                                  {slot.room?.room_number ||
-                                    slot.room_number ||
-                                    "TBD"}
-                                </div>
                               </div>
 
-                              {/* Delete button (conditionally visible on hover) */}
-                              <button
-                                onClick={() => handleDeleteSlot(slot.id)}
-                                className="absolute top-0 -right-1 p-1 opacity-0 group-hover:opacity-100 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
-                                title="Delete Slot"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              <div className="flex justify-between items-end mt-2">
+                                <div className="text-[10px] font-medium opacity-70 truncate max-w-[80px]">
+                                  {slot.faculty?.last_name || slot.faculty?.name || "Unassigned"}
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSlot(slot.id);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/20 rounded transition-all"
+                                  title="Remove Slot"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <div className="h-full flex items-center justify-center">
-                              <MousePointer2 className="w-4 h-4 text-gray-100 dark:text-gray-800" />
-                            </div>
+                            <div className="w-full h-full border border-gray-50 bg-gray-50/30 rounded-lg hover:border-blue-200 transition-colors"></div>
                           )}
                         </div>
                       );
@@ -768,22 +685,12 @@ const TimetableManager = () => {
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty Initial State - Clean */}
       {!currentTimetable && status === "idle" && (
-        <div className="py-24 text-center card bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 max-w-2xl mx-auto shadow-sm">
-          <Calendar className="w-16 h-16 text-indigo-100 dark:text-indigo-900/30 mx-auto mb-6" />
-          <h2 className="text-xl font-bold mb-2">Ready to Design the Week?</h2>
-          <p className="text-sm text-gray-500 max-w-xs mx-auto mb-8 leading-relaxed">
-            Select a Department and Program above to begin configuring
-            section-wise schedules and faculty allocations.
-          </p>
-          <div className="flex items-center justify-center space-x-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            <CheckCircle className="w-3 h-3 text-emerald-500" />{" "}
-            <span>Conflict Detection</span>
-            <span className="w-1 h-1 bg-gray-200 rounded-full mx-2"></span>
-            <CheckCircle className="w-3 h-3 text-emerald-500" />{" "}
-            <span>Real-time Loading</span>
-          </div>
+        <div className="flex flex-col items-center justify-center py-32 text-center opacity-50">
+          <Filter className="w-12 h-12 mb-4 text-gray-300" />
+          <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest">No Selection</h2>
+          <p className="max-w-xs mt-2 text-sm text-gray-400">Please select a department and program from the toolbar to begin managing the schedule.</p>
         </div>
       )}
     </div>
