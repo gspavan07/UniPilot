@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { login, clearError } from "../../store/slices/authSlice";
-import { LogIn, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { LogIn, Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 import { getLandingPage } from "../../utils/routeUtils";
 
@@ -25,6 +25,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { status, error, user } = useSelector((state) => state.auth);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const {
     register,
@@ -124,11 +125,22 @@ const Login = () => {
                 <input
                   id="password"
                   {...register("password")}
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  className={`input pl-10 block ${errors.password ? "border-error-500 focus:ring-error-500" : ""}`}
+                  className={`input pl-10 pr-10 block ${errors.password ? "border-error-500 focus:ring-error-500" : ""}`}
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </button>
               </div>
               {errors.password && (
                 <p className="mt-1 text-xs text-error-600 font-medium">

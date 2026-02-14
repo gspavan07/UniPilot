@@ -271,22 +271,14 @@ exports.bulkUpdateMappings = async (req, res) => {
         const poIds = programOutcomes.map((po) => po.id);
 
         // Delete all existing mappings for this course-program combination
-        await CoPoMap.destroy({
-            include: [
-                {
-                    model: CourseOutcome,
-                    as: "courseOutcome",
-                    where: { course_id },
-                    attributes: [],
+        if (coIds.length > 0 && poIds.length > 0) {
+            await CoPoMap.destroy({
+                where: {
+                    course_outcome_id: { [Op.in]: coIds },
+                    program_outcome_id: { [Op.in]: poIds },
                 },
-                {
-                    model: ProgramOutcome,
-                    as: "programOutcome",
-                    where: { program_id },
-                    attributes: [],
-                },
-            ],
-        });
+            });
+        }
 
         // Prepare bulk data (only for weightage > 0)
         const bulkData = [];
@@ -298,7 +290,7 @@ exports.bulkUpdateMappings = async (req, res) => {
                         bulkData.push({
                             course_outcome_id: coId,
                             program_outcome_id: poId,
-                            weightage: parseInt(weightage),
+                            weightage: parseInt(weightage, 10),
                         });
                     }
                 });

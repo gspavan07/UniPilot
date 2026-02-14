@@ -69,7 +69,7 @@ const HRManagement = () => {
       description: "Monitor daily attendance and work hours for all staff.",
       icon: Users,
       href: "/hr/attendance",
-      permission: "hr:attendance:view",
+      // permission: "hr:attendance:view",
       color: "amber",
     },
     {
