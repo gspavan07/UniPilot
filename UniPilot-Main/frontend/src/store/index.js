@@ -14,13 +14,14 @@ import timetableReducer from "./slices/timetableSlice";
 import hrReducer from "./slices/hrSlice";
 import infrastructureReducer from "./slices/infrastructureSlice";
 import regulationReducer from "./slices/regulationSlice";
+import examConfigReducer from "./slices/examConfigSlice";
+import gradeScaleReducer from "./slices/gradeScaleSlice";
 import transportReducer from "./slices/transportSlice";
 import hostelReducer from "./slices/hostelSlice";
 import dashboardReducer from "./slices/dashboardSlice";
 import placementReducer from "./slices/placementSlice";
 import coPoMapReducer from "./slices/coPoMapSlice";
 import admissionReducer from "./slices/admissionSlice";
-
 
 export const store = configureStore({
   reducer: {
@@ -39,6 +40,8 @@ export const store = configureStore({
     hr: hrReducer,
     infrastructure: infrastructureReducer,
     regulations: regulationReducer,
+    examConfig: examConfigReducer,
+    gradeScale: gradeScaleReducer,
     transport: transportReducer,
     hostel: hostelReducer,
     dashboard: dashboardReducer,

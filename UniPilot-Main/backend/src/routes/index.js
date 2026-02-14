@@ -18,6 +18,8 @@ const holidayRoutes = require("./holidayRoutes");
 const settingRoutes = require("./settingRoutes");
 const infrastructureRoutes = require("./infrastructure"); // Infrastructure Management
 const regulationRoutes = require("./regulations");
+const examConfigRoutes = require("./exam-config.routes");
+const gradeScaleRoutes = require("./grade-scale.routes");
 const sectionInchargeRoutes = require("./sectionInchargeRoutes");
 const transportRoutes = require("./transport"); // Transport Management
 const hostelRoutes = require("./hostel"); // Hostel Management
@@ -26,7 +28,6 @@ const placementRoutes = require("./placement"); // Placement Module
 const programOutcomeRoutes = require("./programOutcome"); // OBE: Program Outcomes
 const courseOutcomeRoutes = require("./courseOutcome"); // OBE: Course Outcomes
 const coPoMapRoutes = require("./coPoMap"); // OBE: CO-PO Mapping
-
 
 const router = express.Router();
 
@@ -61,6 +62,8 @@ router.use("/holidays", holidayRoutes);
 router.use("/settings", settingRoutes);
 router.use("/infrastructure", infrastructureRoutes);
 router.use("/regulations", regulationRoutes);
+router.use("/exam-config", examConfigRoutes);
+router.use("/grade-scale", gradeScaleRoutes);
 router.use("/section-incharges", sectionInchargeRoutes);
 router.use("/transport", transportRoutes);
 router.use("/hostel", hostelRoutes);
@@ -73,4 +76,3 @@ router.use("/course-outcomes", courseOutcomeRoutes);
 router.use("/co-po-maps", coPoMapRoutes);
 
 module.exports = router;
-

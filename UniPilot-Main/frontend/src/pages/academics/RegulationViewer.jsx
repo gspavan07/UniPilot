@@ -9,7 +9,10 @@ import {
 } from "../../store/slices/courseSlice";
 import { fetchDepartments } from "../../store/slices/departmentSlice";
 import { fetchPrograms } from "../../store/slices/programSlice";
-import { fetchRegulations, updateRegulation } from "../../store/slices/regulationSlice";
+import {
+  fetchRegulations,
+  updateRegulation,
+} from "../../store/slices/regulationSlice";
 import CourseForm from "../courses/CourseForm";
 import {
   X,
@@ -86,7 +89,10 @@ const RegulationViewer = () => {
     for (const [progId, semesters] of Object.entries(regulation.courses_list)) {
       for (const [sem, courses] of Object.entries(semesters)) {
         if (Array.isArray(courses) && courses.includes(courseId)) {
-          return { semester: Number(sem), program_id: progId === "common" ? null : progId };
+          return {
+            semester: Number(sem),
+            program_id: progId === "common" ? null : progId,
+          };
         }
       }
     }
@@ -94,10 +100,16 @@ const RegulationViewer = () => {
   };
 
   // Helper to sync courses_list in Regulation model
-  const syncRegulationCourses = async (newCourseId = null, context = null, action = "add") => {
+  const syncRegulationCourses = async (
+    newCourseId = null,
+    context = null,
+    action = "add",
+  ) => {
     if (!regulation) return;
 
-    const currentList = JSON.parse(JSON.stringify(regulation.courses_list || {}));
+    const currentList = JSON.parse(
+      JSON.stringify(regulation.courses_list || {}),
+    );
     const progKey = context?.program_id || selectedProgramId || "common";
     const semKey = context?.semester || targetSemester;
 
@@ -109,8 +121,10 @@ const RegulationViewer = () => {
     // If action is delete and we are in a program context, remove from that program.
     // If action is add, we remove from this program's other semesters to ensure unique semester placement within program.
     if (newCourseId && currentList[progKey]) {
-      Object.keys(currentList[progKey]).forEach(s => {
-        currentList[progKey][s] = currentList[progKey][s].filter(id => id !== newCourseId);
+      Object.keys(currentList[progKey]).forEach((s) => {
+        currentList[progKey][s] = currentList[progKey][s].filter(
+          (id) => id !== newCourseId,
+        );
       });
     }
 
@@ -124,33 +138,37 @@ const RegulationViewer = () => {
       }
     }
 
-    await dispatch(updateRegulation({
-      id: regulationId,
-      data: { courses_list: currentList }
-    })).unwrap();
+    await dispatch(
+      updateRegulation({
+        id: regulationId,
+        data: { courses_list: currentList },
+      }),
+    ).unwrap();
   };
 
   // Derive regulation-specific courses filtered by program (including common courses)
-  const regulationCourses = (Array.isArray(allCourses) ? allCourses : []).filter(c => {
-    if (!regulation?.courses_list) return false;
+  const regulationCourses = (Array.isArray(allCourses) ? allCourses : [])
+    .filter((c) => {
+      if (!regulation?.courses_list) return false;
 
-    // Check if course ID exists in the current regulation's list for the SELECTED program
-    const context = getCourseContext(c.id, selectedProgramId);
+      // Check if course ID exists in the current regulation's list for the SELECTED program
+      const context = getCourseContext(c.id, selectedProgramId);
 
-    // If context returns nulls, it's not in this program (or regulation if no prog selected)
-    if (context.semester === null) return false;
+      // If context returns nulls, it's not in this program (or regulation if no prog selected)
+      if (context.semester === null) return false;
 
-    // If a program is selected, duplicate check: getCourseContext with arg ensures we found it IN that program
-    if (selectedProgramId && context.program_id !== selectedProgramId) {
-      // This handles the case where getCourseContext fell back to another program but we want strict
-      return false;
-    }
+      // If a program is selected, duplicate check: getCourseContext with arg ensures we found it IN that program
+      if (selectedProgramId && context.program_id !== selectedProgramId) {
+        // This handles the case where getCourseContext fell back to another program but we want strict
+        return false;
+      }
 
-    return true;
-  }).map(c => {
-    const context = getCourseContext(c.id, selectedProgramId);
-    return { ...c, ...context }; // Inject derived semester
-  });
+      return true;
+    })
+    .map((c) => {
+      const context = getCourseContext(c.id, selectedProgramId);
+      return { ...c, ...context }; // Inject derived semester
+    });
 
   const handleDelete = async (courseId) => {
     if (
@@ -164,7 +182,7 @@ const RegulationViewer = () => {
       // No need to update Course model anymore as regulation_id column is gone.
 
       dispatch(fetchRegulations()); // Refresh regulation to get new courses_list
-      // validation: maybe fetchCourses not needed if we rely on list? 
+      // validation: maybe fetchCourses not needed if we rely on list?
       // but we need to trigger re-render of regulationCourses
     }
   };
@@ -174,10 +192,10 @@ const RegulationViewer = () => {
     // Extract context from form data (passed up from CourseForm or state)
     const context = {
       program_id: formData.program_id,
-      semester: formData.semester
+      semester: formData.semester,
     };
 
-    // Clean up formData to not send regulation_id if backend doesn't support it, 
+    // Clean up formData to not send regulation_id if backend doesn't support it,
     // though existing backend ignores extra fields usually.
     // CourseForm might still send it, but we can strip it if we want flexibility.
 
@@ -210,7 +228,7 @@ const RegulationViewer = () => {
     // 2. Add to Regulation.courses_list
     const context = {
       program_id: selectedProgramId,
-      semester: targetSemester
+      semester: targetSemester,
     };
     await syncRegulationCourses(courseId, context, "add");
 
@@ -278,66 +296,63 @@ const RegulationViewer = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/30 dark:bg-gray-900/10 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb Header matching RegulationManager style */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-6 lg:p-10">
+      <div className="max-w-[1600px] mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/regulations")}
-              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors bg-gray-50 dark:bg-gray-900"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">
-                <BookOpen className="w-3 h-3" />
-                <span>Curriculum Management</span>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-3xl font-bold text-black dark:text-white">
+                  {regulation.name} Curriculum
+                </h1>
               </div>
-              <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-                {regulation.name}{" "}
-                <span className="text-gray-300 dark:text-gray-600 font-light">
-                  /
-                </span>{" "}
-                <span className="text-blue-600">Curriculum</span>
-              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Manage courses and academic structure for this regulation
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-
+          <div className="flex items-center gap-3">
             {selectedProgramId && (
               <button
-                onClick={() => navigate(`/regulations/${regulationId}/co-po-mapping?program_id=${selectedProgramId}`)}
-                className="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-teal-700 dark:text-teal-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all border border-transparent flex items-center gap-2"
+                onClick={() =>
+                  navigate(
+                    `/regulations/${regulationId}/co-po-mapping?program_id=${selectedProgramId}`,
+                  )
+                }
+                className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center gap-2"
               >
                 <Network className="w-4 h-4" />
                 CO-PO Mapping
               </button>
             )}
-            {selectedProgramId && (
-              <div className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest">
-                <Book className="w-3.5 h-3.5" />
-                {programs.find((p) => p.id === selectedProgramId)?.code}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Global Context Bar */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl mb-10 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        {/* Context Selection Bar */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-400" />
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Filter By
+              </span>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
               <select
                 value={selectedDeptId}
                 onChange={(e) => {
                   setSelectedDeptId(e.target.value);
                   setSelectedProgramId("");
                 }}
-                className="bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-xs font-black text-gray-600 dark:text-gray-400 focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[220px] py-2.5 px-4 uppercase tracking-wider"
+                className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium text-black dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Departments</option>
                 {academicDepartments.map((d) => (
@@ -346,13 +361,13 @@ const RegulationViewer = () => {
                   </option>
                 ))}
               </select>
-              <ChevronRight className="w-4 h-4 text-gray-300 hidden md:block" />
+              <ChevronRight className="w-4 h-4 text-gray-300 hidden sm:block" />
               <select
                 value={selectedProgramId}
                 onChange={(e) => setSelectedProgramId(e.target.value)}
-                className="bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-xs font-black text-gray-600 dark:text-gray-400 focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[220px] py-2.5 px-4 uppercase tracking-wider"
+                className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium text-black dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Select Specialization</option>
+                <option value="">Select Program</option>
                 {availablePrograms.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -360,139 +375,131 @@ const RegulationViewer = () => {
                 ))}
               </select>
             </div>
-          </div>
 
-          {selectedProgramId && (
-            <div className="ml-auto hidden lg:flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
-                  Total Courses
-                </p>
-                <p className="text-lg font-black text-blue-600">
-                  {regulationCourses.length}
-                </p>
+            {selectedProgramId && (
+              <div className="flex items-center gap-4 ml-auto">
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Total Courses
+                  </p>
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                    {regulationCourses.length}
+                  </p>
+                </div>
+                <div className="w-px h-10 bg-gray-200 dark:border-gray-700" />
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Grading
+                  </p>
+                  <p className="text-xl font-bold text-black dark:text-white">
+                    {regulation.grading_system}
+                  </p>
+                </div>
               </div>
-              <div className="w-px h-8 bg-gray-100 dark:bg-gray-700" />
-              <div className="text-right">
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
-                  Grading
-                </p>
-                <p className="text-lg font-black text-gray-900 dark:text-white">
-                  {regulation.grading_system}
-                </p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Main Workspace Content */}
+        {/* Main Content */}
         {!selectedProgramId ? (
-          <div className="bg-white dark:bg-gray-800 rounded-[3rem] border border-gray-100 dark:border-gray-700 shadow-sm p-20 text-center animate-in fade-in zoom-in duration-500">
-            <div className="w-32 h-32 rounded-[3.5rem] bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 mx-auto mb-10 shadow-xl shadow-blue-500/10">
-              <Settings className="w-16 h-16 animate-spin-slow" />
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-16 text-center">
+            <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto mb-6">
+              <Settings className="w-10 h-10" />
             </div>
-            <div className="max-w-xl mx-auto space-y-6">
-              <h2 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-                Curriculum Studio
+            <div className="max-w-md mx-auto">
+              <h2 className="text-2xl font-bold text-black dark:text-white mb-2">
+                Select a Program
               </h2>
-              <p className="text-lg text-gray-400 font-medium leading-relaxed">
-                Before designing the curriculum, please select a specialized
-                program. This allows you to build a focused set of courses for
-                the selected regulation.
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Please select a department and program above to view and manage
+                courses for this regulation
               </p>
-              <div className="inline-flex items-center gap-3 text-blue-600 font-black text-sm bg-blue-50 dark:bg-blue-900/20 px-8 py-4 rounded-2xl border border-blue-100 dark:border-blue-900/30 uppercase tracking-[0.2em] shadow-lg shadow-blue-500/10">
-                <Filter className="w-4 h-4" />
-                Select Context to Begin
-              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-8">
             {semesters.map((sem) => (
-              <section key={sem} className="group">
-                <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-[1.25rem] bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center font-black text-xl shadow-lg shadow-gray-500/20">
+              <section key={sem}>
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
                       {sem}
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                      <h3 className="text-lg font-semibold text-black dark:text-white">
                         Semester {sem}
                       </h3>
-                      <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                        {semesterGroups[sem]?.length || 0} Academic Engagements
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {semesterGroups[sem]?.length || 0} courses
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => openAddChoice(sem)}
-                    className="px-6 py-3 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 text-sm font-black flex items-center gap-2 transition-all shadow-xl shadow-blue-600/20 hover:-translate-y-1 active:scale-95"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
                   >
-                    <Plus className="w-4 h-4" /> Add Subject
+                    <Plus className="w-4 h-4" /> Add Course
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {semesterGroups[sem]?.length > 0 ? (
                     semesterGroups[sem].map((course) => (
                       <div
                         key={course.id}
-                        className="group/card bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-2xl hover:border-blue-200 dark:hover:border-blue-900/30 transition-all relative overflow-hidden flex flex-col min-h-[220px]"
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md transition-shadow relative group"
                       >
-                        <div className="flex justify-between items-start mb-6">
-                          <div className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/20">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded">
                             {course.code}
                           </div>
-                          <div className="flex gap-1.5 opacity-0 group-hover/card:opacity-100 transition-all translate-y-2 group-hover/card:translate-y-0 duration-300">
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => openEditForm(course)}
-                              className="p-2.5 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors bg-gray-50 dark:bg-gray-900"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDelete(course.id)}
-                              className="p-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors bg-gray-50 dark:bg-gray-900"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
 
-                        <h4 className="text-xl font-black text-gray-900 dark:text-white line-clamp-2 leading-tight mb-auto group-hover/card:text-blue-600 transition-colors">
+                        <h4 className="text-base font-semibold text-black dark:text-white line-clamp-2 leading-tight mb-4">
                           {course.name}
                         </h4>
 
-                        <div className="mt-8 pt-6 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-black text-sm text-gray-900 dark:text-white">
-                            <Award className="w-4 h-4 text-blue-500" />
-                            <span>{course.credits} Unit(s)</span>
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400">
+                            <Award className="w-3.5 h-3.5 text-blue-500" />
+                            <span>{course.credits} Credits</span>
                           </div>
-                          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-lg">
+                          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                             {course.course_type}
                           </div>
                         </div>
-
-                        {/* Visual accent blur */}
-                        <div className="absolute top-0 right-0 -mr-12 -mt-12 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl opacity-0 group-hover/card:opacity-100 transition-opacity" />
                       </div>
                     ))
                   ) : (
-                    <div className="col-span-full py-20 flex flex-col items-center justify-center border-4 border-dashed border-gray-100 dark:border-gray-800 rounded-[3rem] bg-white/30 dark:bg-gray-800/20 hover:border-blue-100 dark:hover:border-blue-900/20 transition-colors group/empty">
-                      <div className="w-20 h-20 rounded-[2rem] bg-gray-50 dark:bg-gray-900 flex items-center justify-center mb-6 group-hover/empty:scale-110 group-hover/empty:bg-blue-50 duration-300">
-                        <Plus className="w-8 h-8 text-gray-300 group-hover/empty:text-blue-600" />
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/50">
+                      <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+                        <Plus className="w-6 h-6 text-gray-400" />
                       </div>
-                      <h5 className="text-lg font-black text-gray-400 mb-2 uppercase tracking-widest">
-                        Semester Empty
+                      <h5 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                        No courses yet
                       </h5>
-                      <p className="text-sm font-medium text-gray-400 mb-6">
-                        Start building the academic path for this semester
+                      <p className="text-xs text-gray-400 mb-3">
+                        Add courses to this semester
                       </p>
                       <button
                         onClick={() => openAddChoice(sem)}
-                        className="text-xs font-black text-blue-600 hover:text-blue-700 underline underline-offset-8 uppercase tracking-[0.2em]"
+                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        Initiate Curriculum
+                        Add First Course
                       </button>
                     </div>
                   )}
@@ -512,11 +519,11 @@ const RegulationViewer = () => {
             selectedCourse
               ? selectedCourse
               : {
-                regulation_id: regulationId,
-                semester: targetSemester,
-                department_id: selectedDeptId,
-                program_id: selectedProgramId,
-              }
+                  regulation_id: regulationId,
+                  semester: targetSemester,
+                  department_id: selectedDeptId,
+                  program_id: selectedProgramId,
+                }
           }
           departmentList={departments}
           programList={programs}
@@ -526,46 +533,46 @@ const RegulationViewer = () => {
 
       {/* Choice Modal */}
       {isChoiceModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 animate-in zoom-in duration-300 border border-gray-100 dark:border-gray-700">
-            <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-2 text-center tracking-tight">
-              Expand Catalog
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-8">
+            <h3 className="text-2xl font-bold text-black dark:text-white mb-2 text-center">
+              Add Course
             </h3>
-            <p className="text-center text-gray-400 text-sm font-medium mb-10">
+            <p className="text-center text-gray-600 dark:text-gray-400 text-sm mb-8">
               Choose how you want to add this course
             </p>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-3">
               <button
                 onClick={openAddForm}
-                className="flex items-center gap-6 p-6 rounded-[2rem] border-2 border-gray-50 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group text-left"
               >
-                <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/10">
-                  <Plus className="w-8 h-8" />
+                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <Plus className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <span className="block font-black text-gray-900 dark:text-white text-lg leading-tight uppercase tracking-tight">
-                    Author New
+                  <span className="block font-semibold text-black dark:text-white text-base">
+                    Create New Course
                   </span>
-                  <span className="text-xs text-gray-500 font-medium">
-                    Design a bespoke subject entry
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Design a custom course entry
                   </span>
                 </div>
               </button>
 
               <button
                 onClick={openSelector}
-                className="flex items-center gap-6 p-6 rounded-[2rem] border-2 border-gray-50 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group text-left"
+                className="w-full flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group text-left"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 group-hover:scale-110 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all shadow-lg shadow-gray-500/5">
-                  <Book className="w-8 h-8" />
+                <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-600 dark:group-hover:bg-blue-900/30 transition-all">
+                  <Book className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <span className="block font-black text-gray-900 dark:text-white text-lg leading-tight uppercase tracking-tight">
-                    Link Existing
+                  <span className="block font-semibold text-black dark:text-white text-base">
+                    Link Existing Course
                   </span>
-                  <span className="text-xs text-gray-500 font-medium">
-                    Select from primary subject vault
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Select from course library
                   </span>
                 </div>
               </button>
@@ -573,9 +580,9 @@ const RegulationViewer = () => {
 
             <button
               onClick={() => setIsChoiceModalOpen(false)}
-              className="mt-10 w-full py-4 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-[0.2em]"
+              className="mt-6 w-full py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
             >
-              Close Window
+              Cancel
             </button>
           </div>
         </div>
@@ -583,48 +590,49 @@ const RegulationViewer = () => {
 
       {/* Selector Modal */}
       {isSelectorOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-[3rem] shadow-2xl max-w-3xl w-full flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-8 duration-500 border border-gray-100 dark:border-gray-700">
-            <div className="p-10 border-b border-gray-50 dark:border-gray-700 flex justify-between items-center bg-gray-50/30 dark:bg-gray-900/10">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full flex flex-col max-h-[85vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <div>
-                <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">
-                  <Book className="w-3 h-3" />
-                  <span>Subject Repository</span>
-                </div>
-                <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                  Universal Selection
+                <h3 className="text-2xl font-bold text-black dark:text-white">
+                  Select Course
                 </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Choose from available courses
+                </p>
               </div>
               <button
                 onClick={() => setIsSelectorOpen(false)}
-                className="p-3 rounded-2xl hover:bg-white dark:hover:bg-gray-800 hover:shadow-xl text-gray-400 transition-all"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-8 bg-white dark:bg-gray-800">
-              <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-blue-500 transition-colors flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin opacity-0 group-focus-within:opacity-0" />
-                  <Book className="w-4 h-4 absolute" />
+            <div className="p-6">
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                  <Book className="w-4 h-4 text-gray-400" />
                 </div>
                 <input
                   type="text"
-                  placeholder="Master Search Subject or Code..."
+                  placeholder="Search courses by name or code..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-14 pr-6 py-5 rounded-2xl border-none bg-gray-50 dark:bg-gray-900 focus:ring-4 focus:ring-blue-500/10 shadow-sm font-bold text-gray-900 dark:text-white"
+                  className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white"
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-2">
               {(Array.isArray(allCourses) ? allCourses : [])
                 .filter((c) => {
                   const ctx = getCourseContext(c.id, selectedProgramId);
                   // Hide if found in the current program context
-                  if (ctx.semester !== null && ctx.program_id === selectedProgramId) {
+                  if (
+                    ctx.semester !== null &&
+                    ctx.program_id === selectedProgramId
+                  ) {
                     return false;
                   }
                   return true;
@@ -638,33 +646,33 @@ const RegulationViewer = () => {
                   <button
                     key={c.id}
                     onClick={() => handleSelectExisting(c.id)}
-                    className="w-full p-6 rounded-[2rem] border border-gray-50 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-500 hover:shadow-2xl transition-all flex items-center justify-between text-left group/item"
+                    className="w-full p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all flex items-center justify-between text-left group"
                   >
-                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400 group-hover/item:text-blue-600 group-hover/item:bg-blue-50 transition-all font-black text-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-all font-semibold text-base">
                         {c.credits}
                       </div>
                       <div>
-                        <h4 className="font-black text-gray-900 dark:text-white group-hover/item:text-blue-600 transition-colors text-lg tracking-tight">
+                        <h4 className="font-semibold text-black dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-base">
                           {c.name}
                         </h4>
-                        <div className="flex items-center gap-3 mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
                           <span>{c.code}</span>
                           <span className="w-1 h-1 rounded-full bg-gray-300" />
                           <span>{c.course_type}</span>
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="w-6 h-6 text-gray-200 group-hover/item:text-blue-500 group-hover/item:translate-x-2 transition-all" />
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
                   </button>
                 ))}
               {allCourses.length === 0 && (
-                <div className="py-20 text-center">
-                  <div className="w-20 h-20 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6">
-                    <AlertCircle className="w-10 h-10 text-gray-200" />
+                <div className="py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="w-8 h-8 text-gray-300" />
                   </div>
-                  <p className="text-gray-400 font-black uppercase tracking-widest">
-                    Vault is currently empty
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">
+                    No courses available
                   </p>
                 </div>
               )}

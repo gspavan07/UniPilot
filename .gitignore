@@ -121,4 +121,5 @@ yarn-error.log
 !.yarn/versions
 
 .github/
+.agent/
 .amazonq/

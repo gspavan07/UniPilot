@@ -10,6 +10,8 @@ import {
   Trash2,
   ShieldCheck,
   UserPlus,
+  ArrowLeft,
+  BookOpen,
 } from "lucide-react";
 import {
   fetchUsers,
@@ -43,7 +45,7 @@ const SectionManager = () => {
   const [targetSection, setTargetSection] = useState("");
 
   // Faculty Incharge State
-  const [activeTab, setActiveTab] = useState("students"); // 'students' or 'incharges'
+  const [activeTab, setActiveTab] = useState("students");
   const [facultyList, setFacultyList] = useState([]);
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [inchargeSection, setInchargeSection] = useState("");
@@ -190,389 +192,416 @@ const SectionManager = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in p-6">
-      {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-purple-100 dark:bg-purple-900/40 rounded-2xl text-purple-600 dark:text-purple-400">
-            <Layout className="w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Section Management</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              Organize students into batches and assign faculty incharges
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Back Button */}
+        <button
+          onClick={() => window.history.back()}
+          className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
+        >
+          <ArrowLeft
+            className="w-5 h-5 group-hover:-translate-x-1 transition-transform"
+            strokeWidth={2.5}
+          />
+          Back
+        </button>
 
-      {/* Filters & Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-6">
-            <h3 className="font-bold mb-4 flex items-center text-sm uppercase tracking-wider text-gray-500">
-              <Filter className="w-4 h-4 mr-2" />
-              Smart Filters
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  Department
-                </label>
-                <select
-                  className={`w-full bg-gray-50 dark:bg-gray-700 border-none rounded-xl text-sm ${currentUser?.role === "hod" ? "opacity-50" : ""}`}
-                  value={deptFilter}
-                  onChange={(e) => setDeptFilter(e.target.value)}
-                  disabled={currentUser?.role === "hod"}
-                >
-                  <option value="">All Departments</option>
-                  {departments
-                    .filter((d) => d.type === "academic")
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  Program
-                </label>
-                <select
-                  className="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-xl text-sm"
-                  value={progFilter}
-                  onChange={(e) => setProgFilter(e.target.value)}
-                >
-                  <option value="">All Programs</option>
-                  {programs
-                    .filter(
-                      (p) => !deptFilter || p.department_id === deptFilter,
-                    )
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  Batch Year
-                </label>
-                <select
-                  className="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-xl text-sm"
-                  value={batchFilter}
-                  onChange={(e) => setBatchFilter(e.target.value)}
-                >
-                  <option value="">All Batches</option>
-                  {batchYears.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                <label className="block text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-2">
-                  {activeTab === "students"
-                    ? "Target Section"
-                    : "Assign Faculty Incharge"}
-                </label>
-
-                {activeTab === "students" ? (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Enter Section (e.g. A, B, C)"
-                      className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl text-sm font-bold placeholder:font-normal focus:ring-2 focus:ring-purple-500"
-                      value={targetSection}
-                      onChange={(e) => setTargetSection(e.target.value)}
-                    />
-                    <button
-                      onClick={handleApply}
-                      disabled={selectedIds.length === 0 || !targetSection}
-                      className="w-full mt-3 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
-                    >
-                      <ListChecks className="w-4 h-4" />
-                      Apply to {selectedIds.length} Students
-                    </button>
-                  </>
-                ) : (
-                  <div className="space-y-3">
-                    <select
-                      className="w-full bg-purple-50 dark:bg-purple-900/20 border-none rounded-xl text-sm"
-                      value={selectedFaculty}
-                      onChange={(e) => setSelectedFaculty(e.target.value)}
-                      disabled={loadingFaculty}
-                    >
-                      <option value="">Select Faculty</option>
-                      {facultyList.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.first_name} {f.last_name} ({f.employee_id})
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="w-full bg-purple-50 dark:bg-purple-900/20 border-none rounded-xl text-sm"
-                      value={inchargeSection}
-                      onChange={(e) => setInchargeSection(e.target.value)}
-                    >
-                      <option value="">Select Section</option>
-                      {uniqueSections.map((s) => (
-                        <option key={s} value={s}>
-                          Section {s}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      onClick={handleAssignIncharge}
-                      disabled={!selectedFaculty || !inchargeSection}
-                      className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      Assign Incharge
-                    </button>
-                  </div>
-                )}
-              </div>
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+              <Layout className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-black dark:text-white">
+                Section Management
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Organize students into sections and assign faculty incharges
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-3 space-y-4">
-          <div className="flex bg-white dark:bg-gray-800 p-1 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-fit">
-            <button
-              onClick={() => setActiveTab("students")}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "students" ? "bg-purple-600 text-white shadow-lg shadow-purple-500/20" : "text-gray-500 hover:bg-gray-50"}`}
-            >
-              <Users className="w-4 h-4" />
-              Assign Students
-            </button>
-            <button
-              onClick={() => setActiveTab("incharges")}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === "incharges" ? "bg-purple-600 text-white shadow-lg shadow-purple-500/20" : "text-gray-500 hover:bg-gray-50"}`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Faculty Incharges
-            </button>
-          </div>
-
-          {activeTab === "students" ? (
-            <>
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Search students by name, ID or email..."
-                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-purple-500 dark:text-white"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar Filters */}
+          <div className="lg:col-span-1">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 sticky top-6 space-y-5">
+              <div className="flex items-center gap-2 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <h3 className="text-sm font-semibold text-black dark:text-white uppercase tracking-wide">
+                  Filters
+                </h3>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                {status === "loading" && users.length === 0 ? (
-                  <div className="p-20 flex flex-col items-center justify-center text-gray-400">
-                    <Loader2 className="w-12 h-12 animate-spin mb-4 text-purple-500" />
-                    <p>Fetching students...</p>
-                  </div>
-                ) : users.length === 0 ? (
-                  <div className="p-20 flex flex-col items-center justify-center text-gray-400 text-center">
-                    <Users className="w-16 h-16 opacity-10 mb-4" />
-                    <p className="font-bold text-gray-500">No students found</p>
-                    <p className="text-sm">
-                      Try adjusting your filters or department selection
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-                        <tr>
-                          <th className="px-6 py-4 w-10">
-                            <input
-                              type="checkbox"
-                              className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                              checked={
-                                selectedIds.length === users.length &&
-                                users.length > 0
-                              }
-                              onChange={toggleAll}
-                            />
-                          </th>
-                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                            Student Identity
-                          </th>
-                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                            Program & Batch
-                          </th>
-                          <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                            Current Section
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {users.map((u) => (
-                          <tr
-                            key={u.id}
-                            className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group"
-                          >
-                            <td className="px-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Department
+                  </label>
+                  <select
+                    className={`w-full px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white ${currentUser?.role === "hod" ? "opacity-50 cursor-not-allowed" : ""}`}
+                    value={deptFilter}
+                    onChange={(e) => setDeptFilter(e.target.value)}
+                    disabled={currentUser?.role === "hod"}
+                  >
+                    <option value="">All Departments</option>
+                    {departments
+                      .filter((d) => d.type === "academic")
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Program
+                  </label>
+                  <select
+                    className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white"
+                    value={progFilter}
+                    onChange={(e) => setProgFilter(e.target.value)}
+                  >
+                    <option value="">All Programs</option>
+                    {programs
+                      .filter(
+                        (p) => !deptFilter || p.department_id === deptFilter,
+                      )
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Batch Year
+                  </label>
+                  <select
+                    className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white"
+                    value={batchFilter}
+                    onChange={(e) => setBatchFilter(e.target.value)}
+                  >
+                    <option value="">All Batches</option>
+                    {batchYears.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Action Section */}
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <label className="block text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-3">
+                    {activeTab === "students"
+                      ? "Target Section"
+                      : "Assign Incharge"}
+                  </label>
+
+                  {activeTab === "students" ? (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="e.g. A, B, C"
+                        className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white font-semibold placeholder:font-normal mb-3"
+                        value={targetSection}
+                        onChange={(e) => setTargetSection(e.target.value)}
+                      />
+                      <button
+                        onClick={handleApply}
+                        disabled={selectedIds.length === 0 || !targetSection}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ListChecks className="w-4 h-4" />
+                        Apply to {selectedIds.length} Students
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <select
+                        className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white"
+                        value={selectedFaculty}
+                        onChange={(e) => setSelectedFaculty(e.target.value)}
+                        disabled={loadingFaculty}
+                      >
+                        <option value="">Select Faculty</option>
+                        {facultyList.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.first_name} {f.last_name} ({f.employee_id})
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white"
+                        value={inchargeSection}
+                        onChange={(e) => setInchargeSection(e.target.value)}
+                      >
+                        <option value="">Select Section</option>
+                        {uniqueSections.map((s) => (
+                          <option key={s} value={s}>
+                            Section {s}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        onClick={handleAssignIncharge}
+                        disabled={!selectedFaculty || !inchargeSection}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Assign Incharge
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="lg:col-span-3 space-y-4">
+            {/* Tab Switcher */}
+            <div className="flex bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 w-fit">
+              <button
+                onClick={() => setActiveTab("students")}
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === "students" ? "bg-blue-600 text-white" : "text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white"}`}
+              >
+                <Users className="w-4 h-4" />
+                Assign Students
+              </button>
+              <button
+                onClick={() => setActiveTab("incharges")}
+                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === "incharges" ? "bg-blue-600 text-white" : "text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white"}`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Faculty Incharges
+              </button>
+            </div>
+
+            {activeTab === "students" ? (
+              <>
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search students by name, ID or email..."
+                    className="w-full pl-11 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                {/* Students Table */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {status === "loading" && users.length === 0 ? (
+                    <div className="p-20 flex flex-col items-center justify-center text-gray-400">
+                      <Loader2 className="w-12 h-12 animate-spin mb-4 text-blue-600 dark:text-blue-400" />
+                      <p className="font-medium">Fetching students...</p>
+                    </div>
+                  ) : users.length === 0 ? (
+                    <div className="p-20 flex flex-col items-center justify-center text-center">
+                      <Users className="w-16 h-16 text-gray-200 dark:text-gray-700 mb-4" />
+                      <p className="font-semibold text-black dark:text-white mb-1">
+                        No students found
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Try adjusting your filters or department selection
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
+                          <tr>
+                            <th className="px-6 py-4 w-10">
                               <input
                                 type="checkbox"
-                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
-                                checked={selectedIds.includes(u.id)}
-                                onChange={() => toggleSelect(u.id)}
+                                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                checked={
+                                  selectedIds.length === users.length &&
+                                  users.length > 0
+                                }
+                                onChange={toggleAll}
                               />
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center">
-                                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 font-bold border border-purple-100 dark:border-purple-800/30">
-                                  {u.first_name[0]}
-                                  {u.last_name[0]}
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                              Student
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                              Program & Batch
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                              Current Section
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {users.map((u) => (
+                            <tr
+                              key={u.id}
+                              className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                            >
+                              <td className="px-6 py-4">
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                  checked={selectedIds.includes(u.id)}
+                                  onChange={() => toggleSelect(u.id)}
+                                />
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold border border-blue-100 dark:border-blue-800/30 text-sm">
+                                    {u.first_name[0]}
+                                    {u.last_name[0]}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold text-black dark:text-white">
+                                      {u.first_name} {u.last_name}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      {u.student_id || u.admission_number}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="ml-3">
-                                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">
-                                    {u.first_name} {u.last_name}
+                              </td>
+                              <td className="px-6 py-4">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  {u.program?.code || "N/A"}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Batch {u.batch_year || "N/A"}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4">
+                                {u.section ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-medium">
+                                    Section {u.section}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-gray-400 italic">
+                                    Not Assigned
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Faculty Incharges Table */
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                          Section Info
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                          Faculty Incharge
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                          Academic Year
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {sectionIncharges
+                        .filter(
+                          (idx) =>
+                            (!progFilter || idx.program_id === progFilter) &&
+                            (!batchFilter || idx.batch_year === batchFilter),
+                        )
+                        .map((idx) => (
+                          <tr
+                            key={idx.id}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold border border-blue-100 dark:border-blue-800/30">
+                                  {idx.section}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-black dark:text-white">
+                                    Section {idx.section}
                                   </p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {u.student_id || u.admission_number}
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {idx.program?.code} | Batch {idx.batch_year}
                                   </p>
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {u.program?.code || "N/A"}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                Batch {u.batch_year || "N/A"}
-                              </p>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xs font-semibold">
+                                  {idx.faculty?.first_name?.[0]}
+                                  {idx.faculty?.last_name?.[0]}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {idx.faculty?.first_name}{" "}
+                                    {idx.faculty?.last_name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {idx.faculty?.employee_id}
+                                  </p>
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4">
-                              {u.section ? (
-                                <span className="badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                                  Section {u.section}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-gray-400 italic">
-                                  Not Assigned
-                                </span>
-                              )}
+                              <span className="text-sm text-gray-600 dark:text-gray-400">
+                                {idx.academic_year}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button
+                                onClick={() => handleRemoveIncharge(idx.id)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </td>
                           </tr>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-                    <tr>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Section Info
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Faculty Incharge
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Academic Year
-                      </th>
-                      <th className="px-6 py-4 text-right pr-10 text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {sectionIncharges
-                      .filter(
+                      {sectionIncharges.filter(
                         (idx) =>
                           (!progFilter || idx.program_id === progFilter) &&
                           (!batchFilter || idx.batch_year === batchFilter),
-                      )
-                      .map((idx) => (
-                        <tr
-                          key={idx.id}
-                          className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600 font-bold border border-purple-200">
-                                {idx.section}
-                              </div>
-                              <div className="ml-3">
-                                <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">
-                                  Section {idx.section}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {idx.program?.code} | Batch {idx.batch_year}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 text-xs font-bold">
-                                {idx.faculty?.first_name?.[0]}
-                                {idx.faculty?.last_name?.[0]}
-                              </div>
-                              <div className="ml-2">
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  {idx.faculty?.first_name}{" "}
-                                  {idx.faculty?.last_name}
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  {idx.faculty?.employee_id}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-xs font-medium text-gray-500">
-                              {idx.academic_year}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right pr-6">
-                            <button
-                              onClick={() => handleRemoveIncharge(idx.id)}
-                              className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                      ).length === 0 && (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                          >
+                            No faculty incharges assigned for this criteria
                           </td>
                         </tr>
-                      ))}
-                    {sectionIncharges.filter(
-                      (idx) =>
-                        (!progFilter || idx.program_id === progFilter) &&
-                        (!batchFilter || idx.batch_year === batchFilter),
-                    ).length === 0 && (
-                      <tr>
-                        <td
-                          colSpan="4"
-                          className="px-6 py-10 text-center text-gray-400"
-                        >
-                          No faculty incharges assigned for this criteria
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

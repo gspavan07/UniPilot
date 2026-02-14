@@ -199,21 +199,21 @@ const DepartmentForm = ({
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Slide-over */}
       <div className="absolute inset-y-0 right-0 max-w-full flex">
         <div className="relative w-screen max-w-2xl transform transition ease-in-out duration-500 sm:duration-700">
-          <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-2xl overflow-hidden">
+          <div className="h-full flex flex-col bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-start justify-between">
+            <div className="px-8 py-6 border-b-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white font-display">
+                <h2 className="text-3xl font-black text-black dark:text-white tracking-tight">
                   {department ? "Edit Department" : "New Department"}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm">
                   {department
                     ? "Update the configuration and details for this department."
                     : "Establish a new department by filling in the details below."}
@@ -221,113 +221,121 @@ const DepartmentForm = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 -mr-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-all"
+                className="p-2.5 -mr-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-all"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6" strokeWidth={2.5} />
               </button>
             </div>
 
             {/* Form Content */}
-            <div className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-black">
               <form
                 id="department-form"
                 onSubmit={handleSubmit(onSubmit)}
-                className="p-8 space-y-8"
+                className="p-8 space-y-6"
               >
                 {/* Error Banner */}
                 {error && (
-                  <div className="p-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-100 dark:border-error-800 text-error-600 dark:text-error-400 text-sm flex items-start shadow-sm">
-                    <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>{error}</span>
+                  <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-start shadow-sm">
+                    <AlertCircle
+                      className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0"
+                      strokeWidth={2.5}
+                    />
+                    <span className="font-semibold">{error}</span>
                   </div>
                 )}
 
                 {/* Section 1: Department Identity */}
-                <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400">
-                      <Building className="w-5 h-5" />
+                <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border-2 border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-100 dark:border-gray-800">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+                      <Building
+                        className="w-5 h-5 text-white"
+                        strokeWidth={2.5}
+                      />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-black text-black dark:text-white">
                       Department Identity
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                        Department Name{" "}
-                        <span className="text-error-500">*</span>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Department Name <span className="text-red-600">*</span>
                       </label>
                       <input
                         {...register("name")}
-                        className={`w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/20 outline-none transition-all ${
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
                           errors.name
-                            ? "border-error-300 focus:border-error-500"
-                            : "border-gray-200 dark:border-gray-700 focus:border-primary-500"
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                         }`}
                         placeholder="e.g. Computer Science and Engineering"
                       />
                       {errors.name && (
-                        <p className="mt-1.5 text-xs text-error-500 font-medium flex items-center">
-                          <AlertCircle className="w-3 h-3 mr-1" />
+                        <p className="mt-2 text-xs text-red-600 font-bold flex items-center">
+                          <AlertCircle
+                            className="w-3.5 h-3.5 mr-1.5"
+                            strokeWidth={2.5}
+                          />
                           {errors.name.message}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                        Code <span className="text-error-500">*</span>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Code <span className="text-red-600">*</span>
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-bold text-xs tracking-wider">
-                          <Hash className="w-4 h-4" />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <Hash className="w-4 h-4" strokeWidth={2.5} />
                         </div>
                         <input
                           {...register("code")}
-                          className={`w-full pl-9 pr-4 py-2.5 rounded-xl border bg-white dark:bg-gray-900 text-gray-900 dark:text-white uppercase font-mono text-sm focus:ring-2 focus:ring-primary-500/20 outline-none transition-all ${
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
                             errors.code
-                              ? "border-error-300 focus:border-error-500"
-                              : "border-gray-200 dark:border-gray-700 focus:border-primary-500"
+                              ? "border-red-300 focus:border-red-500"
+                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                           }`}
                           placeholder="CSE"
                         />
                       </div>
                       {errors.code && (
-                        <p className="mt-1.5 text-xs text-error-500 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold">
                           {errors.code.message}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Established Date
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                          <Calendar className="w-4 h-4" />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <Calendar className="w-4 h-4" strokeWidth={2.5} />
                         </div>
                         <input
                           {...register("established_date")}
                           type="date"
-                          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         />
                       </div>
                     </div>
 
                     {canViewAdministrative && (
                       <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                           Department Type
                         </label>
-                        <div className="grid grid-cols-2 gap-4 p-1.5 bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <div className="grid grid-cols-2 gap-3 p-2 bg-gray-100 dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700">
                           <label
-                            className={`flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all ${
+                            className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${
                               watch("type") === "academic"
-                                ? "bg-white dark:bg-gray-800 text-primary-600 shadow-sm ring-1 ring-black/5"
-                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50"
+                                ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
+                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
                             }`}
                           >
                             <input
@@ -339,10 +347,10 @@ const DepartmentForm = ({
                             Academic
                           </label>
                           <label
-                            className={`flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all ${
+                            className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${
                               watch("type") === "administrative"
-                                ? "bg-white dark:bg-gray-800 text-secondary-600 shadow-sm ring-1 ring-black/5"
-                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50"
+                                ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
+                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
                             }`}
                           >
                             <input
@@ -354,7 +362,7 @@ const DepartmentForm = ({
                             Administrative
                           </label>
                         </div>
-                        <p className="mt-2 text-xs text-gray-500">
+                        <p className="mt-2 text-xs text-gray-500 font-medium">
                           Academic departments conduct courses and exams.
                           Administrative departments handle operations.
                         </p>
@@ -362,13 +370,13 @@ const DepartmentForm = ({
                     )}
 
                     <div className="col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Description
                       </label>
                       <textarea
                         {...register("description")}
                         rows="3"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all resize-none"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none"
                         placeholder="Brief overview of the department's mission and scope..."
                       />
                     </div>
@@ -376,76 +384,79 @@ const DepartmentForm = ({
                 </section>
 
                 {/* Section 2: Contact & Location */}
-                <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-lg bg-info-50 dark:bg-info-900/20 text-info-600 dark:text-info-400">
-                      <MapPin className="w-5 h-5" />
+                <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border-2 border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-100 dark:border-gray-800">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+                      <MapPin
+                        className="w-5 h-5 text-white"
+                        strokeWidth={2.5}
+                      />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-black text-black dark:text-white">
                       Location & Contact
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Official Email
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                          <Mail className="w-4 h-4" />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <Mail className="w-4 h-4" strokeWidth={2.5} />
                         </div>
                         <input
                           {...register("email")}
                           type="email"
-                          className={`w-full pl-9 pr-4 py-2.5 rounded-xl border bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/20 outline-none transition-all ${
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
                             errors.email
-                              ? "border-error-300 focus:border-error-500"
-                              : "border-gray-200 dark:border-gray-700 focus:border-info-500"
+                              ? "border-red-300 focus:border-red-500"
+                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                           }`}
                           placeholder="head.cse@university.edu"
                         />
                       </div>
                       {errors.email && (
-                        <p className="mt-1.5 text-xs text-error-500 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold">
                           {errors.email.message}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Office Phone
                       </label>
                       <input
                         {...register("phone")}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         placeholder="+91 40 ..."
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Location / Block
                       </label>
                       <input
                         {...register("office_location")}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         placeholder="Block A, 3rd Floor"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Block
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                          <Building2 className="w-4 h-4" />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <Building2 className="w-4 h-4" strokeWidth={2.5} />
                         </div>
                         <select
                           {...register("block_id")}
-                          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         >
                           <option value="">Select Block...</option>
                           {blocks.map((block) => (
@@ -458,17 +469,17 @@ const DepartmentForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                         Room
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                          <DoorOpen className="w-4 h-4" />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <DoorOpen className="w-4 h-4" strokeWidth={2.5} />
                         </div>
                         <select
                           {...register("room_id")}
                           disabled={!watch("block_id")}
-                          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="">Select Room...</option>
                           {currentBlock?.rooms?.map((room) => (
@@ -484,24 +495,27 @@ const DepartmentForm = ({
 
                 {/* Section 3: Leadership */}
                 {watch("type") === "academic" && (
-                  <section className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 rounded-lg bg-secondary-50 dark:bg-secondary-900/20 text-secondary-600 dark:text-secondary-400">
-                        <UserIcon className="w-5 h-5" />
+                  <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border-2 border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-100 dark:border-gray-800">
+                      <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+                        <UserIcon
+                          className="w-5 h-5 text-white"
+                          strokeWidth={2.5}
+                        />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      <h3 className="text-lg font-black text-black dark:text-white">
                         Hierarchy & Leadership
                       </h3>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 gap-5">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                           Head of Department (HOD)
                         </label>
                         <select
                           {...register("hod_id")}
-                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/20 outline-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         >
                           <option value="">Select Faculty Member...</option>
                           {facultyList.map((faculty) => (
@@ -511,19 +525,19 @@ const DepartmentForm = ({
                             </option>
                           ))}
                         </select>
-                        <p className="mt-2 text-xs text-gray-500">
+                        <p className="mt-2 text-xs text-gray-500 font-medium">
                           The assigned HOD will have administrative privileges
                           for this department.
                         </p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                           Parent Department
                         </label>
                         <select
                           {...register("parent_department_id")}
-                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/20 outline-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         >
                           <option value="">None (Top Level)</option>
                           {departmentList
@@ -540,12 +554,12 @@ const DepartmentForm = ({
                 )}
 
                 {/* Status Section */}
-                <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-sm font-black text-black dark:text-white">
                       Active Status
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
                       Disable to archive this department and prevent new
                       assignments.
                     </p>
@@ -556,19 +570,19 @@ const DepartmentForm = ({
                       {...register("is_active")}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-success-500/20 dark:peer-focus:ring-success-800/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-success-500"></div>
+                    <div className="w-12 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
               </form>
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-5 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <div className="flex space-x-4">
+            <div className="px-8 py-5 border-t-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all focus:ring-2 focus:ring-gray-200"
+                  className="flex-1 px-5 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all focus:ring-4 focus:ring-gray-200/50"
                 >
                   Cancel
                 </button>
@@ -576,13 +590,16 @@ const DepartmentForm = ({
                   type="submit"
                   form="department-form"
                   disabled={loading}
-                  className="flex-1 btn btn-primary flex items-center justify-center space-x-2 shadow-lg shadow-primary-500/20 active:scale-95 transition-transform"
+                  className="flex-1 px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2
+                      className="w-5 h-5 animate-spin"
+                      strokeWidth={2.5}
+                    />
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
+                      <Save className="w-5 h-5" strokeWidth={2.5} />
                       <span>
                         {department ? "Save Changes" : "Create Department"}
                       </span>

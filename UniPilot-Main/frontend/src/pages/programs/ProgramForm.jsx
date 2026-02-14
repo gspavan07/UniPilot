@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import api from "../../utils/api";
 
-
 const schema = yup.object().shape({
   name: yup
     .string()
@@ -50,7 +49,6 @@ const ProgramForm = ({
   const [error, setError] = useState(null);
   const [programOutcomes, setProgramOutcomes] = useState([]);
 
-
   const {
     register,
     handleSubmit,
@@ -75,13 +73,17 @@ const ProgramForm = ({
     const fetchProgramOutcomes = async () => {
       if (program?.id) {
         try {
-          const response = await api.get(`/program-outcomes?program_id=${program.id}`);
+          const response = await api.get(
+            `/program-outcomes?program_id=${program.id}`,
+          );
           if (response.data.success) {
-            setProgramOutcomes(response.data.data.map(po => ({
-              id: po.id,
-              po_code: po.po_code,
-              description: po.description,
-            })));
+            setProgramOutcomes(
+              response.data.data.map((po) => ({
+                id: po.id,
+                po_code: po.po_code,
+                description: po.description,
+              })),
+            );
           }
         } catch (err) {
           console.error("Error fetching program outcomes:", err);
@@ -144,7 +146,7 @@ const ProgramForm = ({
       // Save POs if any are defined
       if (programId && programOutcomes.length > 0) {
         const validPOs = programOutcomes.filter(
-          (po) => po.po_code && po.description
+          (po) => po.po_code && po.description,
         );
 
         if (validPOs.length > 0) {
@@ -173,7 +175,6 @@ const ProgramForm = ({
     }
   };
 
-
   if (!isOpen) return null;
 
   const degreeTypes = ["diploma", "undergraduate", "postgraduate", "doctoral"];
@@ -182,21 +183,21 @@ const ProgramForm = ({
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Slide-over */}
       <div className="absolute inset-y-0 right-0 max-w-full flex">
         <div className="relative w-screen max-w-2xl transform transition ease-in-out duration-500 sm:duration-700">
-          <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-2xl rounded-l-3xl overflow-hidden">
+          <div className="h-full flex flex-col bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
+            <div className="px-8 py-6 border-b-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-start justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white font-display">
-                  {program ? "Edit Program" : "Add Program"}
+                <h2 className="text-3xl font-black text-black dark:text-white tracking-tight">
+                  {program ? "Edit Program" : "New Program"}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   {program
                     ? "Update academic program details."
                     : "Define a new academic program for a department."}
@@ -204,78 +205,121 @@ const ProgramForm = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all"
+                className="p-2.5 -mr-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-all"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6" strokeWidth={2.5} />
               </button>
             </div>
 
             {/* Form Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
-              {error && (
-                <div className="p-4 rounded-2xl bg-error-50 dark:bg-error-900/30 border border-error-500/30 text-error-700 dark:text-error-300 text-sm flex items-start">
-                  <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
+            <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-black">
               <form
                 id="program-form"
                 onSubmit={handleSubmit(onSubmit)}
-                className="space-y-6"
+                className="p-8 space-y-6"
               >
-                {/* Basic Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b border-gray-100 dark:border-gray-700">
-                    <GraduationCap className="w-4 h-4 text-primary-500" />
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                {/* Error Banner */}
+                {error && (
+                  <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-start shadow-sm">
+                    <AlertCircle
+                      className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0"
+                      strokeWidth={2.5}
+                    />
+                    <span className="font-semibold">{error}</span>
+                  </div>
+                )}
+
+                {/* Section 1: Program Definition */}
+                <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border-2 border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-100 dark:border-gray-800">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+                      <GraduationCap
+                        className="w-5 h-5 text-white"
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                    <h3 className="text-lg font-black text-black dark:text-white">
                       Program Definition
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div className="col-span-2">
-                      <label className="label">Program Name</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Program Name <span className="text-red-600">*</span>
+                      </label>
                       <input
                         {...register("name")}
-                        className={`input ${errors.name ? "border-error-500 focus:ring-error-500" : ""}`}
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
+                          errors.name
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                        }`}
                         placeholder="e.g. B.Tech in Computer Science"
                       />
                       {errors.name && (
-                        <p className="mt-1 text-xs text-error-600 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold flex items-center">
+                          <AlertCircle
+                            className="w-3.5 h-3.5 mr-1.5"
+                            strokeWidth={2.5}
+                          />
                           {errors.name.message}
                         </p>
                       )}
                     </div>
+
                     <div>
-                      <label className="label">Program Code</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Program Code <span className="text-red-600">*</span>
+                      </label>
                       <input
                         {...register("code")}
-                        className={`input ${errors.code ? "border-error-500 focus:ring-error-500" : ""}`}
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
+                          errors.code
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                        }`}
                         placeholder="e.g. BTECH-CSE"
                       />
                       {errors.code && (
-                        <p className="mt-1 text-xs text-error-600 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold">
                           {errors.code.message}
                         </p>
                       )}
                     </div>
+
                     <div>
-                      <label className="label">Degree Type</label>
-                      <select {...register("degree_type")} className="input">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Degree Type <span className="text-red-600">*</span>
+                      </label>
+                      <select
+                        {...register("degree_type")}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all capitalize"
+                      >
                         <option value="">Select Degree Type</option>
                         {degreeTypes.map((type) => (
-                          <option key={type} value={type}>
+                          <option
+                            key={type}
+                            value={type}
+                            className="capitalize"
+                          >
                             {type}
                           </option>
                         ))}
                       </select>
                     </div>
+
                     <div className="col-span-2">
-                      <label className="label">Department</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Department <span className="text-red-600">*</span>
+                      </label>
                       <select
                         {...register("department_id")}
-                        className={`input ${errors.department_id ? "border-error-500 focus:ring-error-500" : ""}`}
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
+                          errors.department_id
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                        }`}
                       >
                         <option value="">Select Department...</option>
                         {departmentList.map((dept) => (
@@ -285,107 +329,139 @@ const ProgramForm = ({
                         ))}
                       </select>
                       {errors.department_id && (
-                        <p className="mt-1 text-xs text-error-600 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold">
                           {errors.department_id.message}
                         </p>
                       )}
                     </div>
+
                     <div className="col-span-2">
-                      <label className="label">Description</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Description
+                      </label>
                       <textarea
                         {...register("description")}
                         rows="3"
-                        className="input resize-none"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none"
                         placeholder="Detailed objectives and overview of the program..."
                       />
                     </div>
                   </div>
-                </div>
+                </section>
 
-                {/* Structure Section */}
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b border-gray-100 dark:border-gray-700">
-                    <Calendar className="w-4 h-4 text-secondary-500" />
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                {/* Section 2: Curriculum Structure */}
+                <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border-2 border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-100 dark:border-gray-800">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+                      <Calendar
+                        className="w-5 h-5 text-white"
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                    <h3 className="text-lg font-black text-black dark:text-white">
                       Curriculum Structure
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div>
-                      <label className="label">Duration (Years)</label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Clock className="h-4 w-4 text-gray-400" />
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Duration (Years) <span className="text-red-600">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <Clock className="h-4 w-4" strokeWidth={2.5} />
                         </div>
                         <input
                           {...register("duration_years")}
                           type="number"
-                          className={`input pl-10 ${errors.duration_years ? "border-error-500 focus:ring-error-500" : ""}`}
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
+                            errors.duration_years
+                              ? "border-red-300 focus:border-red-500"
+                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                          }`}
                         />
                       </div>
                       {errors.duration_years && (
-                        <p className="mt-1 text-xs text-error-600 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold">
                           {errors.duration_years.message}
                         </p>
                       )}
                     </div>
+
                     <div>
-                      <label className="label">Total Semesters</label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <BarChart className="h-4 w-4 text-gray-400" />
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Total Semesters <span className="text-red-600">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                          <BarChart className="h-4 w-4" strokeWidth={2.5} />
                         </div>
                         <input
                           {...register("total_semesters")}
                           type="number"
-                          className={`input pl-10 ${errors.total_semesters ? "border-error-500 focus:ring-error-500" : ""}`}
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
+                            errors.total_semesters
+                              ? "border-red-300 focus:border-red-500"
+                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                          }`}
                         />
                       </div>
                       {errors.total_semesters && (
-                        <p className="mt-1 text-xs text-error-600 font-medium">
+                        <p className="mt-2 text-xs text-red-600 font-bold">
                           {errors.total_semesters.message}
                         </p>
                       )}
                     </div>
+
                     <div className="col-span-2">
-                      <label className="label">Admission Criteria</label>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Admission Criteria
+                      </label>
                       <textarea
                         {...register("admission_criteria")}
                         rows="3"
-                        className="input resize-none"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none"
                         placeholder="Eligibility requirements, entrance exams, etc..."
                       />
                     </div>
                   </div>
-                </div>
+                </section>
 
-                {/* Program Outcomes Section */}
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center space-x-2">
-                      <Target className="w-4 h-4 text-accent-500" />
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                        Program Outcomes (POs)
+                {/* Section 3: Program Outcomes */}
+                <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border-2 border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+                        <Target
+                          className="w-5 h-5 text-white"
+                          strokeWidth={2.5}
+                        />
+                      </div>
+                      <h3 className="text-lg font-black text-black dark:text-white">
+                        Program Outcomes
                       </h3>
                     </div>
                     <button
                       type="button"
                       onClick={addProgramOutcome}
-                      className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors text-xs font-semibold"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all text-sm font-bold"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-4 h-4" strokeWidth={2.5} />
                       <span>Add PO</span>
                     </button>
                   </div>
 
                   {programOutcomes.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                      <Target className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                      <Target
+                        className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3"
+                        strokeWidth={2}
+                      />
+                      <p className="text-sm text-gray-600 dark:text-gray-400 font-semibold">
                         No program outcomes defined yet
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                         Click "Add PO" to define learning outcomes
                       </p>
                     </div>
@@ -394,29 +470,41 @@ const ProgramForm = ({
                       {programOutcomes.map((po, index) => (
                         <div
                           key={index}
-                          className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
+                          className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-gray-100 dark:border-gray-700"
                         >
-                          <div className="flex-shrink-0 w-24">
-                            <label className="label text-xs">PO Code</label>
+                          <div className="flex-shrink-0 w-28">
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                              PO Code
+                            </label>
                             <input
                               type="text"
                               value={po.po_code}
                               onChange={(e) =>
-                                updateProgramOutcome(index, "po_code", e.target.value)
+                                updateProgramOutcome(
+                                  index,
+                                  "po_code",
+                                  e.target.value,
+                                )
                               }
-                              className="input text-sm"
+                              className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-black dark:text-white text-sm font-bold focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                               placeholder={`PO${index + 1}`}
                             />
                           </div>
                           <div className="flex-1">
-                            <label className="label text-xs">Description</label>
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                              Description
+                            </label>
                             <textarea
                               value={po.description}
                               onChange={(e) =>
-                                updateProgramOutcome(index, "description", e.target.value)
+                                updateProgramOutcome(
+                                  index,
+                                  "description",
+                                  e.target.value,
+                                )
                               }
                               rows="2"
-                              className="input resize-none text-sm"
+                              className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-black dark:text-white text-sm font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none"
                               placeholder="Describe the program outcome..."
                             />
                           </div>
@@ -424,25 +512,24 @@ const ProgramForm = ({
                             <button
                               type="button"
                               onClick={() => removeProgramOutcome(index)}
-                              className="p-2 rounded-lg text-error-600 hover:bg-error-50 dark:hover:bg-error-900/30 transition-colors"
+                              className="p-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" strokeWidth={2.5} />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </section>
 
-                {/* Status Toggle */}
-
-                <div className="pt-4 flex items-center justify-between">
+                {/* Status Section */}
+                <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                    <h3 className="text-sm font-black text-black dark:text-white">
                       Active Status
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
                       Determine if new students can enroll.
                     </p>
                   </div>
@@ -452,19 +539,19 @@ const ProgramForm = ({
                       {...register("is_active")}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                    <div className="w-12 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
               </form>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-sm">
-              <div className="flex space-x-4">
+            <div className="px-8 py-5 border-t-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all"
+                  className="flex-1 px-5 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-800 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all focus:ring-4 focus:ring-gray-200/50"
                 >
                   Cancel
                 </button>
@@ -472,14 +559,17 @@ const ProgramForm = ({
                   type="submit"
                   form="program-form"
                   disabled={loading}
-                  className="flex-1 btn btn-primary flex items-center justify-center space-x-2 shadow-lg shadow-primary-500/30"
+                  className="flex-1 px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2
+                      className="w-5 h-5 animate-spin"
+                      strokeWidth={2.5}
+                    />
                   ) : (
                     <>
-                      <Save className="w-5 h-5" />
-                      <span>{program ? "Update" : "Create"}</span>
+                      <Save className="w-5 h-5" strokeWidth={2.5} />
+                      <span>{program ? "Save Changes" : "Create Program"}</span>
                     </>
                   )}
                 </button>

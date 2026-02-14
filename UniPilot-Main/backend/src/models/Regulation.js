@@ -37,17 +37,18 @@ const Regulation = sequelize.define(
     description: {
       type: DataTypes.TEXT,
     },
-    exam_structure: {
-      type: DataTypes.JSONB,
-      defaultValue: {},
-      comment:
-        "Defines exam types, components, and calculation formulas for this regulation",
-    },
+
     courses_list: {
       type: DataTypes.JSONB,
       defaultValue: {},
       comment:
         "Mapping of courses to programs and semesters: { 'program_id': { 'Semester Number': [Course IDs] } }",
+    },
+    exam_configuration: {
+      type: DataTypes.JSONB,
+      defaultValue: { course_types: [] },
+      comment:
+        "Exam configuration for different course types with hierarchical component structure, relations, and max marks",
     },
     grade_scale: {
       type: DataTypes.JSONB,

@@ -11,11 +11,45 @@ import {
   Layout,
   Clock,
   ChevronRight,
+  ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 
 const AcademicsManagement = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+
+  // Academic Analytics Stats (Placeholders - easily mapped to store later)
+  const academicStats = [
+    {
+      name: "Total Departments",
+      value: "12",
+      change: "Institutional",
+      icon: BookOpen,
+      color: "from-blue-500 to-indigo-600",
+    },
+    {
+      name: "Current Regulation",
+      value: "R23",
+      change: "Active",
+      icon: ShieldCheck,
+      color: "from-emerald-500 to-teal-600",
+    },
+    {
+      name: "Total Courses",
+      value: "450+",
+      change: "Catalog",
+      icon: FileText,
+      color: "from-purple-500 to-violet-600",
+    },
+    {
+      name: "Available Sections",
+      value: "84",
+      change: "Live",
+      icon: Layout,
+      color: "from-amber-500 to-orange-600",
+    },
+  ];
 
   const academicModules = [
     {
@@ -26,7 +60,7 @@ const AcademicsManagement = () => {
       icon: BookOpen,
       href: "/departments",
       permission: "academics:manage",
-      color: "blue",
+      color: "from-blue-500 to-indigo-600",
     },
     {
       id: "programs",
@@ -36,7 +70,7 @@ const AcademicsManagement = () => {
       icon: GraduationCap,
       href: "/programs",
       permission: "academics:manage",
-      color: "indigo",
+      color: "from-purple-500 to-violet-600",
     },
     {
       id: "regulations",
@@ -46,7 +80,7 @@ const AcademicsManagement = () => {
       icon: Book,
       href: "/regulations",
       permission: "academics:manage",
-      color: "purple",
+      color: "from-emerald-500 to-teal-600",
     },
     {
       id: "courses",
@@ -56,7 +90,7 @@ const AcademicsManagement = () => {
       icon: FileText,
       href: "/courses",
       permission: "academics:manage",
-      color: "emerald",
+      color: "from-rose-500 to-pink-600",
     },
     {
       id: "sections",
@@ -66,7 +100,7 @@ const AcademicsManagement = () => {
       icon: Layout,
       href: "/academic/sections",
       permission: "academics:sections:manage",
-      color: "amber",
+      color: "from-amber-500 to-orange-600",
     },
     {
       id: "lifecycle",
@@ -76,7 +110,7 @@ const AcademicsManagement = () => {
       icon: RefreshCcw,
       href: "/lifecycle",
       permission: "academics:promotion:manage",
-      color: "rose",
+      color: "from-blue-600 to-cyan-600",
     },
     {
       id: "timetable",
@@ -86,7 +120,7 @@ const AcademicsManagement = () => {
       icon: Clock,
       href: "/timetable/manage",
       permission: "academics:timetable:manage",
-      color: "cyan",
+      color: "from-indigo-500 to-blue-600",
     },
     {
       id: "calendar",
@@ -95,7 +129,7 @@ const AcademicsManagement = () => {
       icon: Calendar,
       href: "/academic/calendar",
       permission: "academics:timetable:manage",
-      color: "orange",
+      color: "from-orange-500 to-red-600",
     },
   ];
 
@@ -107,107 +141,141 @@ const AcademicsManagement = () => {
     return user?.permissions?.includes(module.permission);
   });
 
-  const getColorClasses = (color) => {
-    const classes = {
-      blue: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border-blue-100 dark:border-blue-800",
-      indigo:
-        "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800",
-      purple:
-        "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 border-purple-100 dark:border-purple-800",
-      emerald:
-        "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800",
-      amber:
-        "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-amber-100 dark:border-amber-800",
-      rose: "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400 border-rose-100 dark:border-rose-800",
-      cyan: "bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800",
-      orange:
-        "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400 border-orange-100 dark:border-orange-800",
-    };
-    return classes[color] || classes.blue;
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Academic Management
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Centralized hub for managing all academic operations, programs, and
-          student lifecycle.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredModules.map((module) => (
-          <button
-            key={module.id}
-            onClick={() => navigate(module.href)}
-            className="group relative flex flex-col items-start p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300 text-left"
-          >
-            <div
-              className={`p-3 rounded-xl mb-4 transition-colors ${getColorClasses(module.color)} group-hover:bg-primary-500 group-hover:text-white dark:group-hover:bg-primary-500`}
-            >
-              <module.icon className="w-6 h-6" />
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-6 lg:p-10">
+      <div className="max-w-[1600px] mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-black dark:text-white">
+                Academic Management
+              </h1>
             </div>
-
-            <div className="flex-1 w-full">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {module.name}
-                </h3>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
-                {module.description}
-              </p>
-            </div>
-
-            {/* Hover Indicator */}
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-primary-500 rounded-b-2xl scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-          </button>
-        ))}
-      </div>
-
-      {/* Quick Overview Section */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-3xl p-8 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-4">Need Help?</h2>
-            <p className="text-primary-100 mb-6 max-w-md">
-              Managing large-scale university operations can be complex. Reach
-              out to the support team for guidance on setting up academic
-              structures.
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
+              Centralized administrative hub for orchestrating university
+              curricula, managing faculty hierarchies, and overseeing the
+              academic student lifecycle.
             </p>
-            <button className="px-6 py-2.5 bg-white text-primary-600 rounded-xl font-bold hover:bg-primary-50 transition-colors">
-              Contact Support
-            </button>
           </div>
-          {/* Decorative Elements */}
-          <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -right-10 top-10 w-40 h-40 bg-primary-400/20 rounded-full blur-2xl" />
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Pro Tip
-          </h2>
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded-xl">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed italic">
-                "We are building this for large scale universities. Ensure that
-                departments and programs are standardized across the campus
-                before mapping courses to them."
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {academicStats.map((stat, idx) => (
+            <div
+              key={idx}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div
+                  className={`p-2.5 rounded-lg bg-gradient-to-br ${stat.color}`}
+                >
+                  <stat.icon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                  {stat.change}
+                </span>
+              </div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                {stat.name}
               </p>
-              <p className="mt-2 text-sm font-semibold text-gray-500">
-                - UniPilot Team, Kakinada
-              </p>
+              <h3 className="text-2xl font-bold text-black dark:text-white">
+                {stat.value}
+              </h3>
             </div>
-          </div>
+          ))}
         </div>
+
+        {/* Modules Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {filteredModules.map((module, idx) => (
+            <button
+              key={module.id}
+              onClick={() => navigate(module.href)}
+              className="group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-transparent hover:-translate-y-1 transition-all duration-500 text-left shadow-sm hover:shadow-2xl"
+              style={{
+                animationDelay: `${idx * 50}ms`,
+                animation: "fadeInUp 0.6s ease-out forwards",
+              }}
+            >
+              {/* Vertical Accent Strip */}
+              <div
+                className={`absolute left-0 top-0 bottom-0 w-1 group-hover:w-2 bg-gradient-to-b ${module.color} transition-all duration-500`}
+              />
+
+              {/* Gradient Overlay on Hover */}
+              {/* <div
+                className={`absolute inset-0 bg-gradient-to-br ${module.color} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`}
+              /> */}
+
+              {/* Glowing Border on Hover */}
+              {/* <div
+                className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${module.color} blur-xl -z-10`}
+                style={{ transform: "scale(1.02)" }}
+              /> */}
+
+              <div className="relative p-6 pl-7">
+                {/* Icon & Title Row */}
+                <div className="flex items-start gap-4 mb-4">
+                  <div
+                    className={`relative p-3 rounded-xl bg-gradient-to-br ${module.color} shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}
+                  >
+                    <module.icon
+                      className="w-6 h-6 text-white relative z-10"
+                      strokeWidth={2}
+                    />
+                    {/* Icon Glow */}
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${module.color} blur-md opacity-50 rounded-xl`}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-black dark:text-white mb-1 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-indigo-600 transition-all duration-300">
+                      {module.name}
+                    </h3>
+                    <div
+                      className={`h-0.5 w-0 group-hover:w-full bg-gradient-to-r ${module.color} transition-all duration-500 rounded-full`}
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-6 line-clamp-2">
+                  {module.description}
+                </p>
+
+                {/* Action Footer */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors duration-300">
+                    Access Module
+                  </span>
+                  <div className="flex items-center gap-1 text-gray-300 group-hover:text-blue-500 group-hover:gap-2 transition-all duration-300">
+                    <ChevronRight className="w-4 h-4" strokeWidth={3} />
+                    <ChevronRight
+                      className="w-4 h-4 -ml-3 opacity-0 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300"
+                      strokeWidth={3}
+                    />
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <style jsx>{`
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
       </div>
     </div>
   );

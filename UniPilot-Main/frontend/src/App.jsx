@@ -28,6 +28,7 @@ import UserProfile from "./pages/profile/UserProfile";
 import AcademicsManagement from "./pages/academics/AcademicsManagement";
 import RegulationList from "./pages/academics/RegulationList";
 import RegulationViewer from "./pages/academics/RegulationViewer";
+import RegulationConfigManager from "./pages/academics/RegulationConfigManager";
 import CoPoMapping from "./pages/academics/CoPoMapping";
 import SectionManager from "./pages/academics/SectionManager";
 import CourseList from "./pages/courses/CourseList";
@@ -160,6 +161,10 @@ function App() {
             element={<RegulationViewer />}
           />
           <Route
+            path="/academics/regulations/:regulationId/configuration"
+            element={<RegulationConfigManager />}
+          />
+          <Route
             path="/regulations/:id/co-po-mapping"
             element={<CoPoMapping />}
           />
@@ -189,10 +194,7 @@ function App() {
             path="/admission/verifications"
             element={<AdmissionVerifications />}
           />
-          <Route
-            path="/admission"
-            element={<AdmissionManagement />}
-          />
+          <Route path="/admission" element={<AdmissionManagement />} />
           <Route path="/admission/settings" element={<AdmissionSettings />} />
 
           {/* HR & Staff Management */}
