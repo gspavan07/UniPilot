@@ -1,8 +1,8 @@
 # Exam Management System - Master Planning Document
 
-> **Version**: 1.1  
-> **Last Updated**: 2026-02-14 (Updated with critical requirements)  
-> **Status**: Planning Phase
+> **Version**: 2.0 - FINAL  
+> **Last Updated**: 2026-02-14 (All clarifications finalized - Ready for implementation)  
+> **Status**: ✅ Planning Complete - Ready to Build
 
 ---
 
@@ -359,6 +359,763 @@ CREATE TABLE marks_entry_windows (
 
 - Exam controller can extend deadline
 - Notification sent to faculty
+
+---
+
+## Final Clarifications
+
+> **Added**: 2026-02-14  
+> **Status**: ✅ All questions answered - Ready for implementation
+
+### 1. HOD Faculty-Section Assignment
+
+**Requirement**: HOD needs to assign which faculty teaches which course to which section.
+
+**Database Table**:
+
+```sql
+CREATE TABLE faculty_course_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  faculty_id UUID REFERENCES users(id),
+  course_id UUID REFERENCES courses(id),
+  regulation_id UUID REFERENCES regulations(id),
+  academic_year VARCHAR(10),
+  semester INTEGER,
+  section_id UUID REFERENCES sections(id),
+  assigned_by UUID REFERENCES users(id), -- HOD who assigned
+  assigned_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(faculty_id, course_id, semester, section_id, academic_year)
+);
+
+CREATE INDEX idx_faculty_assignments ON faculty_course_assignments(faculty_id, academic_year, semester);
+CREATE INDEX idx_course_assignments ON faculty_course_assignments(course_id, section_id, academic_year);
+```
+
+**UI - HOD Assignment Interface**:
+
+```jsx
+<div className="faculty-assignment-page">
+  <h2>Faculty Course Assignments - Semester 3 (2025-26)</h2>
+  
+  <div className="filters">
+    <select value={selectedDept}>
+      <option>Computer Science</option>
+      <option>Electronics</option>
+    </select>
+    <select value={selectedSemester}>
+      <option>Semester 3</option>
+      <option>Semester 4</option>
+    </select>
+  </div>
+  
+  <table className="assignment-table">
+    <thead>
+      <tr>
+        <th>Course Code</th>
+        <th>Course Name</th>
+        <th>Section</th>
+        <th>Assigned Faculty</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CS301</td>
+        <td>Data Structures</td>
+        <td>A</td>
+        <td>
+          <select>
+            <option value="">-- Select Faculty --</option>
+            <option value="faculty1">Dr. Ramesh Kumar</option>
+            <option value="faculty2">Dr. Suresh Babu</option>
+            <option value="faculty3">Prof. Lakshmi Devi</option>
+          </select>
+        </td>
+        <td>
+          <button onClick={saveAssignment}>Save</button>
+        </td>
+      </tr>
+      <tr>
+        <td>CS301</td>
+        <td>Data Structures</td>
+        <td>B</td>
+        <td>
+          <select>
+            <option value="">-- Select Faculty --</option>
+            <option>Dr. Ramesh Kumar</option>
+            <option selected>Dr. Suresh Babu</option>
+          </select>
+        </td>
+        <td>
+          <button>Save</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <div className="bulk-actions">
+    <button onClick={importFromExcel}>Import from Excel</button>
+    <button onClick={exportAssignments}>Export Assignments</button>
+    <button onClick={copyFromPrevious}>Copy from Previous Semester</button>
+  </div>
+</div>
+```
+
+**Usage in Marks Entry**:
+When faculty logs in to enter marks for internal exam:
+
+```javascript
+async function getEligibleStudents(facultyId, examSessionId) {
+  // Get sections assigned to this faculty for this course
+  const assignments = await FacultyCourseAssignment.findAll({
+    where: {
+      faculty_id: facultyId,
+      course_id: session.course_id,
+      semester: session.semester,
+      academic_year: session.academic_year
+    }
+  });
+  
+  const sectionIds = assignments.map(a => a.section_id);
+  
+  // Get only students from assigned sections
+  const registrations = await ExamRegistration.findAll({
+    where: {
+      exam_session_id: examSessionId,
+      section_id: { [Op.in]: sectionIds }
+    },
+    include: [{ model: User, as: 'student' }]
+  });
+  
+  return registrations;
+}
+```
+
+---
+
+### 2. External Exam Bundle Assignment
+
+**Clarification**: Exam cell manually assigns bundles to evaluators.
+
+**Workflow**:
+
+```
+1. Exam cell creates bundles (groups of answer scripts)
+2. Exam cell assigns each bundle to specific evaluator
+3. Evaluator sees only their assigned bundles
+4. No auto-distribution (manual control)
+```
+
+**UI - Exam Cell Bundle Assignment**:
+
+```jsx
+<div className="bundle-assignment">
+  <h2>Assign Evaluation Bundles - Semester End Exam (Data Structures)</h2>
+  
+  <div className="bundle-creation">
+    <h3>Create Bundles</h3>
+    <p>Total Scripts: 450</p>
+    <label>Scripts per bundle:</label>
+    <input type="number" value={50} />
+    <button onClick={createBundles}>Auto-Create Bundles</button>
+    <p>Will create 9 bundles of 50 scripts each</p>
+  </div>
+  
+  <div className="bundle-list">
+    <h3>Assign Bundles to Evaluators</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Bundle ID</th>
+          <th>Script Codes</th>
+          <th>Count</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Bundle 1</td>
+          <td>EX24-SEM3-00001 to 00050</td>
+          <td>50</td>
+          <td>
+            <select>
+              <option>-- Select Evaluator --</option>
+              <option>Dr. External Evaluator 1</option>
+              <option>Dr. External Evaluator 2</option>
+            </select>
+          </td>
+          <td>
+            <button>Assign</button>
+          </td>
+        </tr>
+        <tr>
+          <td>Bundle 2</td>
+          <td>EX24-SEM3-00051 to 00100</td>
+          <td>50</td>
+          <td>Dr. External Evaluator 1</td>
+          <td>✅ Assigned</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+---
+
+### 3. Lab Exam Components Structure
+
+**Clarification**: Lab exams can have sub-components too, read from `regulation.exam_configuration`.
+
+**Example Lab Exam Structure** (from regulation config):
+
+```json
+{
+  "course_types": [
+    {
+      "id": "lab-course-id",
+      "name": "Lab",
+      "structure": {
+        "name": "Lab External",
+        "relation": "Write Up + Execution + Viva",
+        "max_marks": 100,
+        "components": [
+          {
+            "name": "Write Up",
+            "relation": "",
+            "max_marks": 20,
+            "components": []
+          },
+          {
+            "name": "Execution",
+            "relation": "",
+            "max_marks": 50,
+            "components": []
+          },
+          {
+            "name": "Viva",
+            "relation": "",
+            "max_marks": 30,
+            "components": []
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+**Paper Format Configuration** (supports lab components):
+
+```json
+{
+  "component_config": {
+    "Write Up": {
+      "entry_type": "total_only",
+      "max_marks": 20
+    },
+    "Execution": {
+      "entry_type": "question_wise",
+      "questions": [
+        {
+          "question_no": "Program 1",
+          "max_marks": 25,
+          "co_mapped": ["CO1", "CO2"]
+        },
+        {
+          "question_no": "Program 2",
+          "max_marks": 25,
+          "co_mapped": ["CO3", "CO4"]
+        }
+      ]
+    },
+    "Viva": {
+      "entry_type": "total_only",
+      "max_marks": 30
+    }
+  }
+}
+```
+
+**Key Point**: System reads structure dynamically, no hardcoding for lab vs theory.
+
+---
+
+### 4. Absent Student Handling
+
+**Workflow**:
+
+1. **Mark as Absent**: Checkbox in marks entry UI
+2. **Grade**: Read from grade configuration (typically "Ab" grade)
+3. **Supplementary Eligibility**: Auto-eligible (no revaluation needed - no script exists)
+
+**UI - Marks Entry with Absent Checkbox**:
+
+```jsx
+<div className="marks-entry-row">
+  <div className="student-info">
+    <img src={student.photo} />
+    <p>{student.name}</p>
+    <p>{student.roll_number}</p>
+  </div>
+  
+  <div className="marks-section">
+    <label>
+      <input 
+        type="checkbox" 
+        checked={isAbsent}
+        onChange={handleAbsentToggle}
+      />
+      Mark as Absent
+    </label>
+    
+    {isAbsent ? (
+      <div className="absent-notice">
+        <p>⚠️ Student will be marked as Absent</p>
+        <p>Grade: <strong>Ab</strong> (from grade configuration)</p>
+        <p>Auto-eligible for supplementary exam</p>
+      </div>
+    ) : (
+      <div className="marks-inputs">
+        <label>Assignment (5 marks):</label>
+        <input type="number" max="5" step="0.5" />
+        
+        <label>Objective (10 marks):</label>
+        <input type="number" max="10" step="0.5" />
+        
+        {/* Descriptive section with question-wise entry */}
+      </div>
+    )}
+  </div>
+  
+  <button onClick={saveMarks}>Save</button>
+</div>
+```
+
+**Backend Logic**:
+
+```javascript
+async function saveMarks(data) {
+  if (data.is_absent) {
+    // Get 'Ab' grade from grade configuration
+    const gradeConfig = await GradeScale.findOne({
+      where: { regulation_id: session.regulation_id }
+    });
+    
+    const absentGrade = gradeConfig.grades.find(g => g.code === 'Ab');
+    
+    await ExamMarks.create({
+      registration_id: data.registration_id,
+      exam_session_id: data.exam_session_id,
+      is_absent: true,
+      marks_obtained: 0,
+      grade: 'Ab',
+      grade_points: 0,
+      marks_data: null, // No marks data for absent
+      status: 'absent'
+    });
+    
+    // Auto-create supplementary eligibility record
+    await SupplementaryEligibility.create({
+      student_id: data.student_id,
+      course_id: session.course_id,
+      reason: 'absent'
+    });
+  } else {
+    // Normal marks entry
+    // ...
+  }
+}
+```
+
+**Grade Configuration Example**:
+
+```json
+{
+  "grades": [
+    { "code": "O", "min": 90, "max": 100, "points": 10 },
+    { "code": "A+", "min": 80, "max": 89, "points": 9 },
+    // ...
+    { "code": "F", "min": 0, "max": 39, "points": 0 },
+    { "code": "Ab", "min": null, "max": null, "points": 0, "description": "Absent" }
+  ]
+}
+```
+
+---
+
+### 5. Multi-Section Choice Logic in Single Paper
+
+**Clarification**: Yes, supported! A single paper can have different choice logic in different sections.
+
+**Example Paper Pattern**:
+
+```json
+{
+  "paper_structure": {
+    "Section A": {
+      "entry_type": "question_wise",
+      "questions": [
+        { "question_no": 1, "max_marks": 10, "co_mapped": ["CO1"] }
+      ],
+      "choice_logic": "compulsory",
+      "component_max_marks": 10
+    },
+    "Section B": {
+      "entry_type": "question_wise",
+      "questions": [
+        { "question_no": 1, "max_marks": 15, "co_mapped": ["CO2"] },
+        { "question_no": 2, "max_marks": 15, "co_mapped": ["CO2"] },
+        { "question_no": 3, "max_marks": 15, "co_mapped": ["CO3"] }
+      ],
+      "choice_logic": "best_n_of_m",
+      "take_best": 2,
+      "from_total": 3,
+      "component_max_marks": 30
+    },
+    "Section C": {
+      "entry_type": "question_wise",
+      "questions": [
+        { "question_no": 1, "max_marks": 10, "co_mapped": ["CO3"] },
+        { "question_no": 2, "max_marks": 10, "co_mapped": ["CO4"] },
+        // ... up to 10
+        { "question_no": 10, "max_marks": 10, "co_mapped": ["CO5"] }
+      ],
+      "choice_logic": "best_n_of_m",
+      "take_best": 5,
+      "from_total": 10,
+      "component_max_marks": 50
+    },
+    "Section D": {
+      "entry_type": "grouped_choice",
+      "groups": [
+        {
+          "name": "Group A",
+          "questions": [
+            { "question_no": 1, "max_marks": 10, "co_mapped": ["CO1"] },
+            { "question_no": 2, "max_marks": 10, "co_mapped": ["CO2"] }
+          ],
+          "take_best": 1
+        },
+        {
+          "name": "Group B",
+          "questions": [
+            { "question_no": 3, "max_marks": 10, "co_mapped": ["CO3"] },
+            { "question_no": 4, "max_marks": 10, "co_mapped": ["CO4"] }
+          ],
+          "take_best": 1
+        }
+      ],
+      "component_max_marks": 20
+    }
+  }
+}
+```
+
+**Result Calculation**:
+
+```javascript
+async function calculateFinalMarks(marksData, paperFormat) {
+  let totalMarks = 0;
+  const sectionResults = {};
+  
+  for (const [section, config] of Object.entries(paperFormat)) {
+    const sectionMarks = marksData[section];
+    
+    switch (config.choice_logic) {
+      case 'compulsory':
+        sectionResults[section] = sumAllMarks(sectionMarks);
+        break;
+        
+      case 'best_n_of_m':
+        sectionResults[section] = applyBestNOfM(sectionMarks, config);
+        break;
+        
+      case 'grouped_choice':
+        sectionResults[section] = applyGroupedChoice(sectionMarks, config);
+        break;
+    }
+    
+    totalMarks += sectionResults[section].final_marks;
+  }
+  
+  return { totalMarks, sectionResults };
+}
+```
+
+---
+
+### 6. Notification System
+
+**Clarification**: In-app notifications only (no email/SMS for Phase 1).
+
+**Database Table**:
+
+```sql
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  title VARCHAR(200),
+  message TEXT,
+  type VARCHAR(50), -- 'exam_schedule', 'result', 'deadline', 'fee_due', etc.
+  related_entity_id UUID, -- ID of exam/result/etc.
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+```
+
+**Notification Events**:
+
+| Event | Trigger | Recipients |
+|-------|---------|------------|
+| Exam scheduled | Exam cell publishes schedule | All eligible students |
+| Fee payment due | 3 days before deadline | Students who haven't paid |
+| Hall ticket ready | After fee payment | Individual student |
+| Marks entry open | Entry window starts | Assigned faculty |
+| Marks entry deadline | 1 day before close | Faculty with pending marks |
+| Results published | Results approved | All students |
+| Revaluation window open | Window opens | Students with published results |
+
+**UI - Notification Bell**:
+
+```jsx
+<div className="notification-bell">
+  <button onClick={toggleNotifications}>
+    🔔
+    {unreadCount > 0 && (
+      <span className="badge">{unreadCount}</span>
+    )}
+  </button>
+  
+  {showNotifications && (
+    <div className="notification-dropdown">
+      <div className="header">
+        <h4>Notifications</h4>
+        <button onClick={markAllRead}>Mark all read</button>
+      </div>
+      <div className="notification-list">
+        {notifications.map(notif => (
+          <div 
+            key={notif.id} 
+            className={notif.is_read ? 'read' : 'unread'}
+          >
+            <h5>{notif.title}</h5>
+            <p>{notif.message}</p>
+            <span>{formatTime(notif.created_at)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+```
+
+**Trigger Function**:
+
+```javascript
+async function sendNotification(userIds, title, message, type, entityId) {
+  const notifications = userIds.map(userId => ({
+    user_id: userId,
+    title,
+    message,
+    type,
+    related_entity_id: entityId,
+    is_read: false
+  }));
+  
+  await Notification.bulkCreate(notifications);
+  
+  // Emit real-time event via WebSocket (optional)
+  io.to(userIds).emit('new_notification', { title, message });
+}
+
+// Usage example
+await sendNotification(
+  studentIds,
+  'Results Published',
+  'Semester 3 results are now available. Check your performance.',
+  'result',
+  scheduleId
+);
+```
+
+---
+
+### 7. Smart Answer Script Upload
+
+**Clarification**: Scan → System recognizes barcode → Confirm → Link → Upload
+
+**Workflow**:
+
+```
+1. Scanning staff scans answer script (PDF)
+2. Upload PDF to system
+3. System auto-detects barcode from PDF using OCR
+4. System shows confirmation dialog with detected code
+5. Staff confirms or manually corrects
+6. System links PDF to student via barcode
+7. PDF stored in local filesystem
+```
+
+**Backend Implementation**:
+
+```javascript
+const Tesseract = require('tesseract.js');
+const JsBarcode = require('jsbarcode');
+const PDFParser = require('pdf-parse');
+
+async function uploadScript(file) {
+  // Step 1: Extract first page as image
+  const pdfBuffer = await file.buffer();
+  const firstPageImage = await extractFirstPage(pdfBuffer);
+  
+  // Step 2: OCR to detect barcode
+  const { data: { text } } = await Tesseract.recognize(
+    firstPageImage,
+    'eng'
+  );
+  
+  // Step 3: Extract barcode pattern (e.g., EX24-SEM3-00142)
+  const barcodePattern = /EX\d{2}-SEM\d+-\d{5}/;
+  const detectedCode = text.match(barcodePattern)?.[0];
+  
+  // Step 4: Return detected code for confirmation
+  return {
+    detected_code: detectedCode,
+    confidence: detectedCode ? 'high' : 'none',
+    file_path: await saveTemporaryFile(pdfBuffer)
+  };
+}
+
+async function confirmAndLinkScript(tempFilePath, confirmedCode, examSessionId) {
+  // Find student by barcode
+  const scriptCode = await AnswerScriptCode.findOne({
+    where: { 
+      code: confirmedCode,
+      exam_session_id: examSessionId
+    }
+  });
+  
+  if (!scriptCode) {
+    throw new Error('Invalid barcode');
+  }
+  
+  // Move file to permanent location
+  const permanentPath = `/storage/answer_scripts/${examSessionId}/${confirmedCode}.pdf`;
+  await fs.rename(tempFilePath, permanentPath);
+  
+  // Create script record
+  await AnswerScript.create({
+    registration_id: scriptCode.registration_id,
+    exam_session_id: examSessionId,
+    script_code_id: scriptCode.id,
+    file_path: permanentPath,
+    uploaded_at: new Date()
+  });
+  
+  return { success: true };
+}
+```
+
+**UI - Smart Upload Interface**:
+
+```jsx
+<div className="smart-script-upload">
+  <h2>Upload Answer Scripts - Semester End Exam</h2>
+  
+  <div className="upload-zone">
+    <input 
+      type="file" 
+      accept="application/pdf"
+      onChange={handleFileSelect}
+    />
+    <p>Drag and drop PDF files here</p>
+  </div>
+  
+  {detectedCode && (
+    <div className="confirmation-dialog">
+      <h3>Barcode Detected</h3>
+      <p>Detected Code: <strong>{detectedCode}</strong></p>
+      <p>Student: {studentName || 'Loading...'}</p>
+      
+      {confidence === 'low' && (
+        <div className="warning">
+          ⚠️ Low confidence. Please verify manually.
+        </div>
+      )}
+      
+      <label>Confirm or correct barcode:</label>
+      <input 
+        type="text" 
+        value={confirmedCode}
+        onChange={e => setConfirmedCode(e.target.value)}
+      />
+      
+      <div className="actions">
+        <button onClick={confirmAndUpload}>Confirm & Upload</button>
+        <button onClick={cancelUpload}>Cancel</button>
+      </div>
+    </div>
+  )}
+  
+  <div className="upload-history">
+    <h3>Uploaded Scripts (45/450)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Barcode</th>
+          <th>File</th>
+          <th>Time</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {uploadedScripts.map(script => (
+          <tr key={script.id}>
+            <td>{script.code}</td>
+            <td>{script.filename}</td>
+            <td>{formatTime(script.uploaded_at)}</td>
+            <td>
+              <button onClick={() => viewScript(script)}>View</button>
+              <button onClick={() => deleteScript(script)}>Delete</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+**Dependencies**:
+
+```json
+{
+  "dependencies": {
+    "tesseract.js": "^4.0.0",
+    "pdf-parse": "^1.1.1",
+    "sharp": "^0.32.0"
+  }
+}
+```
+
+---
+
+## Summary of Final Clarifications
+
+| Feature | Decision | Impact |
+|---------|----------|--------|
+| **Faculty Assignment** | HOD assigns via UI | New table + HOD interface needed |
+| **Bundle Assignment** | Manual by exam cell | UI for creating/assigning bundles |
+| **Lab Components** | From exam_configuration | No special handling, fully dynamic |
+| **Absent Students** | Checkbox + auto-supply | Simple UI + backend logic |
+| **Multi-section Choice** | Fully supported | Complex calculation logic |
+| **Notifications** | In-app only | Simpler Phase 1 implementation |
+| **Script Upload** | Smart barcode detection | OCR integration needed |
 
 ---
 
