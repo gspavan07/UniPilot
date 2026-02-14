@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Plus,
   Search,
-  AlertCircle,
   Filter,
   Loader2,
   X,
   Download,
   Upload,
-  CheckCircle2,
   Building,
   Home,
   Users,
   Calendar,
   History,
+  ArrowLeft,
+  MoreHorizontal,
+  CreditCard,
+  Zap,
+  Droplets,
+  Wifi,
+  Wrench,
+  Trash2,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import {
   fetchRoomsForBilling,
@@ -33,6 +42,7 @@ import toast from "react-hot-toast";
 
 const HostelRoomBills = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const {
     buildings,
     roomsForBilling,
@@ -103,6 +113,7 @@ const HostelRoomBills = () => {
       billing_month: new Date().getMonth() + 1,
       billing_year: new Date().getFullYear(),
       description: "",
+      due_date: "",
     });
     setSelectedRoom(null);
     setCsvFile(null);
@@ -244,13 +255,13 @@ const HostelRoomBills = () => {
   // Get unique floors from filtered building
   const availableFloors = buildingFilter
     ? [
-        ...new Set(
-          roomsForBilling
-            .filter((r) => r.building?.id === buildingFilter)
-            .map((r) => r.floor?.id)
-            .filter(Boolean),
-        ),
-      ]
+      ...new Set(
+        roomsForBilling
+          .filter((r) => r.building?.id === buildingFilter)
+          .map((r) => r.floor?.id)
+          .filter(Boolean),
+      ),
+    ]
     : [];
 
   // Filter rooms
@@ -264,942 +275,600 @@ const HostelRoomBills = () => {
     return matchesSearch && matchesBuilding && matchesFloor;
   });
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
   const getMonthName = (month) => {
     const months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
     ];
     return months[month - 1] || "N/A";
   };
 
+  const getBillIcon = (type) => {
+    switch (type) {
+      case 'electricity': return <Zap className="w-5 h-5 text-amber-500" />;
+      case 'water': return <Droplets className="w-5 h-5 text-blue-500" />;
+      case 'internet': return <Wifi className="w-5 h-5 text-cyan-500" />;
+      case 'maintenance': return <Wrench className="w-5 h-5 text-gray-500" />;
+      default: return <CreditCard className="w-5 h-5 text-purple-500" />;
+    }
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+          <p className="text-gray-500 font-medium">Loading billing data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Room Billing Management
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Manage utility bills for all hostel rooms
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Download className="w-5 h-5" />
-            Download Template
-          </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Upload className="w-5 h-5" />
-            Import Bills
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50/30 pb-20 font-sans text-gray-900 selection:bg-blue-100">
+      <div className="max-w-[1600px] mx-auto p-6 lg:p-10 space-y-10">
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Total Rooms</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
-            {roomsForBilling.length}
-          </p>
-        </div>
-        <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-          <p className="text-sm text-blue-800">Filtered Rooms</p>
-          <p className="text-2xl font-bold text-blue-900 mt-1">
-            {filteredRooms.length}
-          </p>
-        </div>
-        <div className="bg-green-50 rounded-lg border border-green-200 p-4">
-          <p className="text-sm text-green-800">Occupied Rooms</p>
-          <p className="text-2xl font-bold text-green-900 mt-1">
-            {roomsForBilling.filter((r) => r.current_occupancy > 0).length}
-          </p>
-        </div>
-        <div className="bg-purple-50 rounded-lg border border-purple-200 p-4">
-          <p className="text-sm text-purple-800">Total Capacity</p>
-          <p className="text-2xl font-bold text-purple-900 mt-1">
-            {roomsForBilling.reduce((sum, r) => sum + r.capacity, 0)}
-          </p>
-        </div>
-      </div>
+        {/* Top Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-start gap-5">
+            <button
+              onClick={() => navigate(-1)}
+              className="mt-1.5 p-2.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm group"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-900 transition-colors" />
+            </button>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Room Billing</h1>
+              <p className="text-gray-500 font-medium text-lg">Manage utility charges and track payments.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleDownloadTemplate}
+              className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              <span>Template</span>
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 hover:shadow-blue-300 active:scale-95"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Import Bills</span>
+            </button>
+          </div>
+        </header>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "Total Rooms", value: roomsForBilling.length, icon: Home, bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100" },
+            { label: "Occupied Rooms", value: roomsForBilling.filter((r) => r.current_occupancy > 0).length, icon: Users, bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100" },
+            { label: "Filtered View", value: filteredRooms.length, icon: Filter, bg: "bg-indigo-50", text: "text-indigo-600", border: "border-indigo-100" },
+            { label: "Total Capacity", value: roomsForBilling.reduce((sum, r) => sum + r.capacity, 0), icon: Building, bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100" }
+          ].map((stat, idx) => (
+            <div key={idx} className={`bg-white p-6 rounded-2xl border ${stat.border} shadow-sm hover:shadow-md transition-all`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
+                  <p className="text-4xl font-black text-gray-900 mt-2 tracking-tight">{stat.value}</p>
+                </div>
+                <div className={`p-3 rounded-xl ${stat.bg} ${stat.text}`}>
+                  <stat.icon className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters & Search Bar */}
+        <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row gap-2 items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
             <input
               type="text"
               placeholder="Search by room number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-12 pr-4 py-3 bg-transparent border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-gray-50 transition-all text-gray-900 font-semibold placeholder:text-gray-400"
             />
           </div>
-
-          {/* Building Filter */}
-          <div className="relative">
-            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <select
-              value={buildingFilter}
-              onChange={(e) => {
-                setBuildingFilter(e.target.value);
-                setFloorFilter(""); // Reset floor when building changes
-              }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-            >
-              <option value="">All Buildings</option>
-              {buildings.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Floor Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <select
-              value={floorFilter}
-              onChange={(e) => setFloorFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-              disabled={!buildingFilter}
-            >
-              <option value="">All Floors</option>
-              {availableFloors.map((floorId) => {
-                const floor = roomsForBilling.find(
-                  (r) => r.floor?.id === floorId,
-                )?.floor;
-                return (
-                  <option key={floorId} value={floorId}>
-                    Floor {floor?.floor_number}
-                  </option>
-                );
-              })}
-            </select>
+          <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
+          <div className="flex gap-2 w-full md:w-auto p-1">
+            <div className="relative min-w-[200px]">
+              <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              <select
+                value={buildingFilter}
+                onChange={(e) => {
+                  setBuildingFilter(e.target.value);
+                  setFloorFilter("");
+                }}
+                className="w-full pl-10 pr-8 py-2.5 bg-gray-50 hover:bg-gray-100 border-none rounded-lg text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer"
+              >
+                <option value="">All Buildings</option>
+                {buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div className="relative min-w-[180px]">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              <select
+                value={floorFilter}
+                onChange={(e) => setFloorFilter(e.target.value)}
+                disabled={!buildingFilter}
+                className="w-full pl-10 pr-8 py-2.5 bg-gray-50 hover:bg-gray-100 border-none rounded-lg text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer disabled:opacity-50"
+              >
+                <option value="">All Floors</option>
+                {availableFloors.map(fid => {
+                  const floor = roomsForBilling.find(r => r.floor?.id === fid)?.floor;
+                  return <option key={fid} value={fid}>Floor {floor?.floor_number}</option>
+                })}
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Rooms Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Room
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Building
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Floor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Occupancy
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Bill
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRooms.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    <Home className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium">No rooms found</p>
-                    <p className="text-sm mt-1">
-                      {searchTerm || buildingFilter || floorFilter
-                        ? "Try adjusting your filters"
-                        : "No rooms available for billing"}
-                    </p>
-                  </td>
+        {/* Content Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100">
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Room Details</th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Occupancy</th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Last Billing</th>
+                  <th className="px-6 py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ) : (
-                filteredRooms.map((room) => (
-                  <tr key={room.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Home className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            Room {room.room_number}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {room.status}
-                          </div>
-                        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredRooms.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-32 text-center">
+                      <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Home className="w-10 h-10 text-gray-300" />
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {room.building?.name || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Floor {room.floor?.floor_number || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-900">
-                          {room.current_occupancy} / {room.capacity}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {room.last_bill_date ? (
-                        <div className="text-sm text-gray-900">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            {new Date(room.last_bill_date).toLocaleDateString()}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {room.last_bill_type}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">
-                          No bills yet
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleShowHistory(room)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                          title="View History"
-                        >
-                          <History className="w-4 h-4" />
-                          History
-                        </button>
-                        <button
-                          onClick={() => handleAddBill(room)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Add Bill
-                        </button>
-                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">No rooms found</h3>
+                      <p className="text-gray-500 mt-1">Try adjusting your filters or search terms</p>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Add Bill Modal */}
-      {showAddBillModal && selectedRoom && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Add Bill for Room {selectedRoom.room_number}
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedRoom.building?.name} - Floor{" "}
-                  {selectedRoom.floor?.floor_number}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowAddBillModal(false);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitBill} className="p-6 space-y-4">
-              {/* Bill Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bill Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.bill_type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bill_type: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="electricity">Electricity</option>
-                  <option value="water">Water</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="internet">Internet</option>
-                  <option value="cleaning">Cleaning</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              {/* Total Amount */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Total Amount (₹) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.total_amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, total_amount: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
-              </div>
-
-              {/* Billing Month & Year */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Billing Month <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.billing_month}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        billing_month: parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Billing Year <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.billing_year}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        billing_year: parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {Array.from(
-                      { length: 5 },
-                      (_, i) => new Date().getFullYear() - 1 + i,
-                    ).map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows="3"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Additional details..."
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddBillModal(false);
-                    resetForm();
-                  }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={operationStatus === "loading"}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {operationStatus === "loading" ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4" />
-                      Create Bill
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Import Bills from CSV
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Upload a CSV file with bill information
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowImportModal(false);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Billing Month & Year */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-blue-900 mb-3">
-                  Billing Details
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bill Type
-                    </label>
-                    <select
-                      value={importBillType}
-                      onChange={(e) => setImportBillType(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="electricity">Electricity</option>
-                      <option value="water">Water</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="internet">Internet</option>
-                      <option value="cleaning">Cleaning</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Month
-                    </label>
-                    <select
-                      value={importMonth}
-                      onChange={(e) => setImportMonth(parseInt(e.target.value))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="1">January</option>
-                      <option value="2">February</option>
-                      <option value="3">March</option>
-                      <option value="4">April</option>
-                      <option value="5">May</option>
-                      <option value="6">June</option>
-                      <option value="7">July</option>
-                      <option value="8">August</option>
-                      <option value="9">September</option>
-                      <option value="10">October</option>
-                      <option value="11">November</option>
-                      <option value="12">December</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year
-                    </label>
-                    <select
-                      value={importYear}
-                      onChange={(e) => setImportYear(parseInt(e.target.value))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {Array.from(
-                        { length: 5 },
-                        (_, i) => new Date().getFullYear() - 1 + i,
-                      ).map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <p className="text-xs text-blue-700 mt-2">
-                  These values will be applied to all bills in the CSV
-                </p>
-              </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select CSV File
-                </label>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Download the template first, fill in the amounts, then upload
-                  it here
-                </p>
-              </div>
-
-              {/* Preview */}
-              {parsedBills.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Preview ({parsedBills.length} bills)
-                  </h4>
-                  <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                    <ul className="space-y-2">
-                      {parsedBills.slice(0, 10).map((bill, index) => (
-                        <li key={index} className="text-sm text-gray-700">
-                          Room{" "}
-                          {roomsForBilling.find((r) => r.id === bill.room_id)
-                            ?.room_number || bill.room_id}{" "}
-                          - ₹{bill.total_amount} ({bill.bill_type})
-                        </li>
-                      ))}
-                      {parsedBills.length > 10 && (
-                        <li className="text-sm text-gray-500">
-                          ... and {parsedBills.length - 10} more
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* Errors */}
-              {importErrors.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-red-700 mb-2">
-                    Errors ({importErrors.length})
-                  </h4>
-                  <div className="bg-red-50 rounded-lg p-4 max-h-40 overflow-y-auto">
-                    <ul className="space-y-1">
-                      {importErrors.map((err, index) => (
-                        <li key={index} className="text-sm text-red-700">
-                          Row {err.row}: {err.error}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowImportModal(false);
-                    resetForm();
-                  }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleBulkImport}
-                  disabled={
-                    parsedBills.length === 0 || operationStatus === "loading"
-                  }
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {operationStatus === "loading" ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Importing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Import {parsedBills.length} Bills
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* History Modal */}
-      {showHistoryModal && selectedRoom && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Billing History: Room {selectedRoom.room_number}
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedRoom.building?.name} - Floor{" "}
-                  {selectedRoom.floor?.floor_number}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowHistoryModal(false);
-                  setSelectedRoom(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              {status === "loading" ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                </div>
-              ) : roomBills.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <History className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-lg font-medium">
-                    No billing history found
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Type
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Period
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Amount
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Status
-                        </th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {roomBills.map((bill) => (
-                        <tr key={bill.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
-                            {bill.bill_type}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {getMonthName(bill.billing_month)}{" "}
-                            {bill.billing_year}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                            ₹{bill.total_amount}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                bill.status === "distributed"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {bill.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
-                            <div className="flex items-center justify-end gap-2">
-                              {bill.status === "pending" && (
-                                <button
-                                  onClick={() => handleDistributeBill(bill.id)}
-                                  className="text-blue-600 hover:text-blue-800 font-medium"
-                                  title="Distribute to students"
-                                >
-                                  Distribute
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleEditBill(bill)}
-                                className="text-gray-600 hover:text-gray-800"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBill(bill.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                Delete
-                              </button>
+                ) : (
+                  filteredRooms.map((room) => (
+                    <tr key={room.id} className="group hover:bg-blue-50/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            {room.room_number.substring(0, 3)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-lg">Room {room.room_number}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`w-2 h-2 rounded-full ${room.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                              <span className="text-xs font-medium text-gray-500 capitalize">{room.status}</span>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-              <button
-                onClick={() => {
-                  setShowHistoryModal(false);
-                  setSelectedRoom(null);
-                }}
-                className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <Building className="w-3.5 h-3.5 text-gray-400" />
+                            {room.building?.name}
+                          </p>
+                          <p className="text-xs font-medium text-gray-500 pl-5.5">Floor {room.floor?.floor_number}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${room.current_occupancy >= room.capacity ? 'bg-red-500' : 'bg-blue-500'}`}
+                              style={{ width: `${(room.current_occupancy / room.capacity) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-bold text-gray-700">{room.current_occupancy}/{room.capacity}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {room.last_bill_date ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-900">{new Date(room.last_bill_date).toLocaleDateString()}</span>
+                            <span className="text-xs font-medium text-blue-600 uppercase tracking-wide mt-0.5">{room.last_bill_type}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">No history</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleShowHistory(room)}
+                            className="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-gray-200 rounded-xl transition-all"
+                            title="View History"
+                          >
+                            <History className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleAddBill(room)}
+                            className="px-5 py-2.5 bg-gray-900 text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-black transition-all shadow-lg shadow-gray-200 hover:shadow-gray-300 flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Bill
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
 
-      {/* Edit Bill Modal */}
-      {showEditBillModal && selectedBill && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Edit Room Bill
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Updating {selectedBill.bill_type} bill for{" "}
-                  {getMonthName(selectedBill.billing_month)}{" "}
-                  {selectedBill.billing_year}
-                </p>
+        {/* MODALS */}
+
+        {/* ADD BILL MODAL */}
+        {showAddBillModal && selectedRoom && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">New Bill</h3>
+                  <p className="text-sm text-gray-500 font-medium">{selectedRoom.building?.name} • Room {selectedRoom.room_number}</p>
+                </div>
+                <button onClick={() => { setShowAddBillModal(false); resetForm(); }} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setShowEditBillModal(false);
-                  setSelectedBill(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <form onSubmit={handleSubmitBill} className="p-8 space-y-6 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Type</label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={formData.bill_type}
+                        onChange={(e) => setFormData({ ...formData, bill_type: e.target.value })}
+                        className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
+                      >
+                        <option value="electricity">Electricity</option>
+                        <option value="water">Water</option>
+                        <option value="internet">Internet</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="cleaning">Cleaning</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <Zap className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Amount (₹)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={formData.total_amount}
+                      onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
+                      className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all placeholder:font-normal"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Month</label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={formData.billing_month}
+                        onChange={(e) => setFormData({ ...formData, billing_month: parseInt(e.target.value) })}
+                        className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Year</label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={formData.billing_year}
+                        onChange={(e) => setFormData({ ...formData, billing_year: parseInt(e.target.value) })}
+                        className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
+                      >
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Note</label>
+                  <textarea
+                    rows="3"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl font-medium text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none resize-none transition-all"
+                    placeholder="Add any details about this bill..."
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddBillModal(false); resetForm(); }}
+                    className="flex-1 py-3.5 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={operationStatus === "loading"}
+                    className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
+                  >
+                    {operationStatus === "loading" ? <Loader2 className="w-5 h-5 animate-spin" /> : "Generate Bill"}
+                  </button>
+                </div>
+              </form>
             </div>
+          </div>
+        )}
 
-            <form onSubmit={handleUpdateBill} className="p-6 space-y-4">
-              {/* Bill Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bill Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.bill_type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bill_type: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="electricity">Electricity</option>
-                  <option value="water">Water</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="internet">Internet</option>
-                  <option value="cleaning">Cleaning</option>
-                  <option value="other">Other</option>
-                </select>
+        {/* IMPORT MODAL */}
+        {showImportModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">Bulk Import</h3>
+                  <p className="text-sm text-gray-500 font-medium">Upload CSV to generate multiple bills</p>
+                </div>
+                <button onClick={() => { setShowImportModal(false); resetForm(); }} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Total Amount */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Total Amount (₹) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.total_amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, total_amount: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {selectedBill.status === "distributed" && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    Note: Changing the amount will automatically update shared
-                    charges for all occupants.
-                  </p>
+              <div className="p-8 overflow-y-auto space-y-8 bg-white">
+                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-blue-900 mb-5">
+                    <Zap className="w-4 h-4 text-blue-600" /> Global Settings
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Type</label>
+                      <select value={importBillType} onChange={(e) => setImportBillType(e.target.value)} className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                        <option value="electricity">Electricity</option>
+                        <option value="water">Water</option>
+                        <option value="internet">Internet</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2 grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Month</label>
+                        <select value={importMonth} onChange={(e) => setImportMonth(parseInt(e.target.value))} className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Year</label>
+                        <select value={importYear} onChange={(e) => setImportYear(parseInt(e.target.value))} className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-blue-400 hover:bg-blue-50/20 transition-all cursor-pointer relative group">
+                  <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <div className="inline-flex p-4 bg-gray-50 group-hover:bg-white rounded-full mb-4 transition-colors shadow-sm">
+                    <Upload className="w-8 h-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                  </div>
+                  <p className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{csvFile ? csvFile.name : "Click to Upload CSV"}</p>
+                  <p className="text-sm text-gray-400 mt-1">or drag and drop file here</p>
+                </div>
+
+                {parsedBills.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-900 flex justify-between items-center">
+                      <span>Preview Data</span>
+                      <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs font-bold">{parsedBills.length} items</span>
+                    </h4>
+                    <div className="max-h-56 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-100 sticky top-0 font-bold text-gray-600">
+                          <tr>
+                            <th className="px-4 py-3">Room ID</th>
+                            <th className="px-4 py-3">Amount</th>
+                            <th className="px-4 py-3">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200/50">
+                          {parsedBills.slice(0, 50).map((b, i) => (
+                            <tr key={i}>
+                              <td className="px-4 py-2.5 text-gray-900 font-bold">{b.room_id}</td>
+                              <td className="px-4 py-2.5 text-gray-900">₹{b.total_amount}</td>
+                              <td className="px-4 py-2.5 text-gray-500 truncate max-w-[150px]">{b.description || "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {importErrors.length > 0 && (
+                  <div className="bg-red-50 text-red-700 p-5 rounded-2xl text-sm border border-red-100">
+                    <div className="flex items-center gap-2 font-bold mb-2">
+                      <AlertCircle className="w-5 h-5" /> Validation Errors
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1 opacity-80">
+                      {importErrors.slice(0, 5).map((e, i) => <li key={i}>Row {e.row}: {e.error}</li>)}
+                      {importErrors.length > 5 && <li>...and {importErrors.length - 5} more</li>}
+                    </ul>
+                  </div>
                 )}
               </div>
-
-              {/* Billing Month & Year */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Billing Month <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.billing_month}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        billing_month: parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
-                      <option key={m} value={m}>
-                        {getMonthName(m)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Billing Year <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.billing_year}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        billing_year: parseInt(e.target.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {Array.from(
-                      { length: 5 },
-                      (_, i) => new Date().getFullYear() - 1 + i,
-                    ).map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows="3"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button onClick={() => { setShowImportModal(false); resetForm(); }} className="px-6 py-3 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
                 <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditBillModal(false);
-                    setSelectedBill(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={handleBulkImport}
+                  disabled={!parsedBills.length || operationStatus === "loading"}
+                  className="px-8 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-gray-200"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={operationStatus === "loading"}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {operationStatus === "loading" ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4" />
-                      Save Changes
-                    </>
-                  )}
+                  {operationStatus === "loading" ? "Processing..." : "Import Bills"}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* HISTORY MODAL */}
+        {showHistoryModal && selectedRoom && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">Billing History</h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">Room {selectedRoom.room_number}, {selectedRoom.building?.name}</p>
+                </div>
+                <button onClick={() => { setShowHistoryModal(false); setSelectedRoom(null); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
+                {status === "loading" ? (
+                  <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>
+                ) : roomBills.length === 0 ? (
+                  <div className="text-center py-24">
+                    <FileText className="w-16 h-16 mx-auto text-gray-200 mb-6" />
+                    <h4 className="text-xl font-bold text-gray-900">No records found</h4>
+                    <p className="text-gray-400 mt-2">This room has no billing history yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {roomBills.map((bill) => (
+                      <div key={bill.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 hover:border-blue-300 hover:shadow-md transition-all group">
+                        <div className="flex items-center gap-5 w-full sm:w-auto">
+                          <div className="p-4 bg-gray-50 rounded-xl text-gray-700 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                            {getBillIcon(bill.bill_type)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-bold text-gray-900 capitalize text-lg">{bill.bill_type} Bill</h4>
+                              {bill.status === 'distributed' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                            </div>
+                            <p className="text-sm text-gray-500 font-medium mt-0.5">{getMonthName(bill.billing_month)} {bill.billing_year}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-8 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
+                          <div className="text-right">
+                            <p className="text-2xl font-black text-gray-900">₹{bill.total_amount}</p>
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide ${bill.status === "distributed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                              {bill.status}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {bill.status === "pending" && (
+                              <button onClick={() => handleDistributeBill(bill.id)} className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-wide transition-colors" title="Distribute">
+                                Distribute
+                              </button>
+                            )}
+                            <div className="h-8 w-px bg-gray-100 mx-2"></div>
+                            <button onClick={() => handleEditBill(bill)} className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">
+                              <Wrench className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => handleDeleteBill(bill.id)} className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT BILL MODAL */}
+        {showEditBillModal && selectedBill && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-black text-gray-900">Edit Bill</h3>
+                  <p className="text-sm text-gray-500 font-medium">{selectedBill.bill_type} • {getMonthName(selectedBill.billing_month)} {selectedBill.billing_year}</p>
+                </div>
+                <button onClick={() => { setShowEditBillModal(false); setSelectedBill(null); }} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-all">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleUpdateBill} className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={formData.total_amount}
+                    onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
+                    className="w-full p-4 bg-gray-50 border border-transparent hover:bg-white hover:border-blue-200 rounded-2xl font-bold text-xl text-gray-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                  />
+                  {selectedBill.status === "distributed" && (
+                    <p className="text-xs text-amber-600 font-bold flex items-center gap-1.5 bg-amber-50 p-3 rounded-xl">
+                      <AlertCircle className="w-4 h-4" /> Updates will reflect on student fees automatically.
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Month</label>
+                    <div className="relative">
+                      <select value={formData.billing_month} onChange={(e) => setFormData({ ...formData, billing_month: parseInt(e.target.value) })} className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:border-blue-500 focus:bg-white outline-none">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Year</label>
+                    <div className="relative">
+                      <select value={formData.billing_year} onChange={(e) => setFormData({ ...formData, billing_year: parseInt(e.target.value) })} className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:border-blue-500 focus:bg-white outline-none">
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Note</label>
+                  <textarea
+                    rows="3"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl font-medium text-gray-900 focus:border-blue-500 focus:bg-white outline-none resize-none transition-all"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button type="button" onClick={() => { setShowEditBillModal(false); setSelectedBill(null); }} className="flex-1 py-3.5 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 };

@@ -84,6 +84,10 @@ const HRManagement = () => {
   ];
 
   const filteredModules = hrModules.filter((module) => {
+    // Admin Override
+    if (["super_admin", "admin", "administrator"].includes(user?.role))
+      return true;
+
     if (!module.permission) return true;
     if (Array.isArray(module.permission)) {
       return module.permission.some((p) => user?.permissions?.includes(p));
