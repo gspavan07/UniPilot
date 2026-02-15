@@ -199,7 +199,8 @@ const MainLayout = () => {
       name: "Dept. Placements",
       href: "/placement/department",
       icon: Briefcase,
-      roles: ["hod"],
+      roles: ["hod", "faculty"],
+      isPlacementCoordinator: true,
     },
     {
       name: "My Placements",
@@ -258,6 +259,14 @@ const MainLayout = () => {
       item.isHostellerOnly &&
       user?.role === "student" &&
       !user?.is_hosteller
+    ) {
+      return false;
+    }
+
+    if (
+      item.isPlacementCoordinator &&
+      user?.role === "faculty" &&
+      !user?.is_placement_coordinator
     ) {
       return false;
     }

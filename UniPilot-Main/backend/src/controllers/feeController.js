@@ -933,7 +933,13 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
 
     const sem = c.semester || 1;
     if (!semesterWise[sem]) {
-      // Ensure semester exists if it's outside 1-8
+      // Ensure- [x] Research error and identify cause <!-- id: 0 -->
+      // - [x] Create implementation plan <!-- id: 1 -->
+      // - [x] Correct aliases in `feeController.js` (Done by user) <!-- id: 2 -->
+      // - [/] Verify fix and investigate new 404 error <!-- id: 3 -->
+      //   - [ ] Check API response for transactions <!-- id: 4 -->
+      //   - [ ] Investigate 404 for `/api/fees/sections` <!-- id: 6 -->
+      //   - [ ] Manual verification in UI <!-- id: 5 -->
       semesterWise[sem] = {
         fees: [],
         totals: { payable: 0, paid: 0, due: 0, waiver: 0, excess: 0 },
@@ -1251,7 +1257,7 @@ exports.getTransactions = async (req, res) => {
         },
         {
           model: AcademicFeePayment,
-          as: "academic_payment",
+          as: "academic_fee_payments",
           include: [
             {
               model: FeeStructure,
@@ -1262,7 +1268,7 @@ exports.getTransactions = async (req, res) => {
         },
         {
           model: StudentChargePayment,
-          as: "charge_payment",
+          as: "student_charge_payments",
           include: [
             {
               model: StudentFeeCharge,
@@ -1320,8 +1326,8 @@ exports.getBatches = async (req, res) => {
     ];
 
     // Add current year to ensure it always exists for planning
-    const currentYear = new Date().getFullYear();
-    combined.push(currentYear);
+    // const currentYear = new Date().getFullYear();
+    // combined.push(currentYear);
 
     const uniqueBatches = [...new Set(combined)]
       .filter(Boolean)
@@ -1699,6 +1705,8 @@ exports.getDefaulters = async (req, res) => {
       if (!paymentMap[p.student_id]) paymentMap[p.student_id] = [];
       paymentMap[p.student_id].push(p);
     });
+
+    console.log("paymentMap", paymentMap);
 
     const waiverMap = {};
     waivers.forEach((w) => {

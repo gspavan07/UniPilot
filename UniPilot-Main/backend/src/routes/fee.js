@@ -26,7 +26,9 @@ const {
   sendReminders,
   addStudentFine,
   deleteStudentFine,
+  imposeFine,
   getDailyCollection,
+  getSections,
   createPaymentOrder,
   payMyFees,
 } = require("../controllers/feeController");
@@ -153,6 +155,8 @@ router.get(
   checkPermission("finance:fees:oversight"),
   getDefaulters,
 );
+
+router.get("/sections", checkPermission("finance:fees:oversight"), getSections);
 
 router.post("/fines", checkPermission("finance:fees:manage"), addStudentFine);
 

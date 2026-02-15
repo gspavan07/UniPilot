@@ -312,19 +312,21 @@ const StudentList = () => {
   return (
     <div className="min-h-screen bg-white text-gray-950 font-sans selection:bg-blue-100 selection:text-blue-900 pb-20">
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 py-10">
-
         {/* Header Section */}
         <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-8 border-b border-gray-100 pb-6">
           <div className="max-w-2xl">
             <div className="flex items-center gap-3 mb-3">
               <span className="h-px w-6 bg-blue-600"></span>
-              <span className="text-xs font-bold tracking-widest uppercase text-blue-600">Academic Registry</span>
+              <span className="text-xs font-bold tracking-widest uppercase text-blue-600">
+                Academic Registry
+              </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-black mb-2">
               Student Directory
             </h1>
             <p className="text-base text-gray-500 font-light leading-relaxed">
-              Comprehensive academic records, enrollment status, and student profiles.
+              Comprehensive academic records, enrollment status, and student
+              profiles.
             </p>
           </div>
 
@@ -335,12 +337,16 @@ const StudentList = () => {
                 ?.filter((stat) => stat.role === "student")
                 .map((stat) => (
                   <div key={stat.role} className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Enrolled</p>
-                    <p className="text-3xl font-light text-black tabular-nums">{stat.count}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                      Total Enrolled
+                    </p>
+                    <p className="text-3xl font-light text-black tabular-nums">
+                      {stat.count}
+                    </p>
                   </div>
                 )) || (
-                  <div className="h-10 w-24 bg-gray-50 animate-pulse rounded" />
-                )}
+                <div className="h-10 w-24 bg-gray-50 animate-pulse rounded" />
+              )}
             </div>
 
             {/* Action Toolbar */}
@@ -348,67 +354,67 @@ const StudentList = () => {
               (currentUser?.role_data?.slug || "").includes("admission") ||
               currentUser?.role === "super_admin" ||
               hasPermission("students:manage")) && (
-                <div className="flex flex-wrap justify-end gap-2">
-                  {((currentUser?.role_data?.slug || "").includes("admission") ||
-                    currentUser?.role === "super_admin") && (
-                      <button
-                        onClick={handleExport}
-                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                      >
-                        <Download className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                        Export
-                      </button>
-                    )}
-                  {((currentUser?.role_data?.slug || "").includes("admission") ||
-                    currentUser?.role === "super_admin") && (
-                      <button
-                        onClick={() => setIsBulkNotifOpen(true)}
-                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                      >
-                        <Mail className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                        Message
-                      </button>
-                    )}
+              <div className="flex flex-wrap justify-end gap-2">
+                {((currentUser?.role_data?.slug || "").includes("admission") ||
+                  currentUser?.role === "super_admin") && (
+                  <button
+                    onClick={handleExport}
+                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                  >
+                    <Download className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                    Export
+                  </button>
+                )}
+                {((currentUser?.role_data?.slug || "").includes("admission") ||
+                  currentUser?.role === "super_admin") && (
+                  <button
+                    onClick={() => setIsBulkNotifOpen(true)}
+                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                  >
+                    <Mail className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                    Message
+                  </button>
+                )}
 
-                  {hasPermission("admissions:manage") && (
+                {hasPermission("admissions:manage") && (
+                  <button
+                    onClick={() => setIsBulkPhotoOpen(true)}
+                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                  >
+                    <Upload className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                    Photos
+                  </button>
+                )}
+
+                {canCreate && (
+                  <>
                     <button
-                      onClick={() => setIsBulkPhotoOpen(true)}
+                      onClick={() => setIsImportOpen(true)}
                       className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
                     >
-                      <Upload className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                      Photos
+                      <Plus className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                      Import
                     </button>
-                  )}
-
-                  {canCreate && (
-                    <>
-                      <button
-                        onClick={() => setIsImportOpen(true)}
-                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                      >
-                        <Plus className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                        Import
-                      </button>
-                      <button
-                        onClick={openAddForm}
-                        className="flex items-center px-5 py-2 text-sm font-bold text-white bg-black border border-black rounded-full hover:bg-blue-700 hover:border-blue-700 transition-all shadow-xl shadow-blue-900/10"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Student
-                      </button>
-                    </>
-                  )}
-                  {hasPermission("admissions:generate_ids") && (
                     <button
-                      onClick={() => setIsGenerateIdOpen(true)}
-                      className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                      onClick={openAddForm}
+                      className="flex items-center px-5 py-2 text-sm font-bold text-white bg-black border border-black rounded-full hover:bg-blue-700 hover:border-blue-700 transition-all shadow-xl shadow-blue-900/10"
                     >
-                      <Wand2 className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                      IDs
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Student
                     </button>
-                  )}
-                </div>
-              )}
+                  </>
+                )}
+                {hasPermission("admissions:generate_ids") && (
+                  <button
+                    onClick={() => setIsGenerateIdOpen(true)}
+                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                  >
+                    <Wand2 className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                    IDs
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -471,12 +477,16 @@ const StudentList = () => {
           {userStatus === "loading" && users.length === 0 ? (
             <div className="py-32 flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-3xl bg-gray-50/30">
               <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-              <p className="text-gray-900 font-medium tracking-tight">Syncing directory...</p>
+              <p className="text-gray-900 font-medium tracking-tight">
+                Syncing directory...
+              </p>
             </div>
           ) : userError ? (
             <div className="py-32 text-center border border-dashed border-red-100 rounded-3xl bg-red-50/10">
               <p className="text-black font-bold mb-2">Connection Blocked</p>
-              <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">{userError}</p>
+              <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
+                {userError}
+              </p>
               <button
                 onClick={() => dispatch(fetchUsers())}
                 className="px-6 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-all"
@@ -493,7 +503,8 @@ const StudentList = () => {
                 No students found
               </p>
               <p className="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed">
-                We couldn't find any records matching your current filters. Try stripping back the search terms.
+                We couldn't find any records matching your current filters. Try
+                stripping back the search terms.
               </p>
             </div>
           ) : (
@@ -566,13 +577,22 @@ const StudentList = () => {
                           </span>
                           <div className="flex flex-wrap gap-2 text-[11px] text-gray-500">
                             {user.batch_year && (
-                              <span>Batch <span className="text-black font-medium">{user.batch_year}</span></span>
+                              <span>
+                                Batch{" "}
+                                <span className="text-black font-medium">
+                                  {user.batch_year}
+                                </span>
+                              </span>
                             )}
                             {user.section && (
-                              <span className="before:content-['•'] before:mr-2 before:text-gray-300">Sec <span className="text-black font-medium">{user.section}</span></span>
+                              <span className="before:content-['•'] before:mr-2 before:text-gray-300">
+                                Sec{" "}
+                                <span className="text-black font-medium">
+                                  {user.section}
+                                </span>
+                              </span>
                             )}
                           </div>
-
                         </div>
                       </td>
                       <td className="px-6 py-5">
@@ -582,69 +602,73 @@ const StudentList = () => {
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Active</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                              Active
+                            </span>
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-500">
                             <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Inactive</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                              Inactive
+                            </span>
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div
-                          className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 translate-x-0 md:translate-x-2 md:group-hover:translate-x-0"
+                          className="flex items-center justify-end gap-1 opacity-100 transition-all duration-200 translate-x-0 md:translate-x-2 md:group-hover:translate-x-0"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {(canManageUser(user) ||
                             currentUser?.role === "super_admin") && (
-                              <>
-                                {((currentUser?.role_data?.slug || "").includes(
-                                  "admission",
-                                ) ||
-                                  currentUser?.role === "super_admin") && (
-                                    <>
-                                      <button
-                                        onClick={() =>
-                                          setDetailModal({
-                                            isOpen: true,
-                                            student: user,
-                                          })
-                                        }
-                                        className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                        title="View Details"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          setDocModal({
-                                            isOpen: true,
-                                            studentId: user.id,
-                                            studentName: `${user.first_name} ${user.last_name}`,
-                                          })
-                                        }
-                                        className="p-2 hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                        title="Verify Documents"
-                                      >
-                                        <FileText className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  )}
-                                <button
-                                  onClick={() => openEditForm(user)}
-                                  className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
+                            <>
+                              {((currentUser?.role_data?.slug || "").includes(
+                                "admission",
+                              ) ||
+                                currentUser?.role === "super_admin") && (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      setDetailModal({
+                                        isOpen: true,
+                                        student: user,
+                                      })
+                                    }
+                                    className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                    title="View Details"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setDocModal({
+                                        isOpen: true,
+                                        studentId: user.id,
+                                        studentName: `${user.first_name} ${user.last_name}`,
+                                      })
+                                    }
+                                    className="p-2 hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                    title="Verify Documents"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => openEditForm(user)}
+                                className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -671,7 +695,9 @@ const StudentList = () => {
           isOpen={isEditDrawerOpen}
           onClose={() => {
             setIsEditDrawerOpen(false);
-            dispatch(fetchUsers({ role: "student", department_id: deptFilter }));
+            dispatch(
+              fetchUsers({ role: "student", department_id: deptFilter }),
+            );
           }}
           user={selectedUser}
           departmentList={departments}
