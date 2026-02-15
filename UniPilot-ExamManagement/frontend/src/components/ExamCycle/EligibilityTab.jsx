@@ -12,6 +12,9 @@ import {
   Settings,
   RefreshCw,
   Filter,
+  ChevronDown,
+  Download,
+  AlertCircle
 } from "lucide-react";
 
 export default function EligibilityTab({
@@ -28,7 +31,7 @@ export default function EligibilityTab({
   // Filters State
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // const [statusFilter, setStatusFilter] = useState("all"); // Unused in original, keeping state just in case or removing if unused in logic
 
   // Rule Config Modal State
   const [showConfig, setShowConfig] = useState(false);
@@ -64,6 +67,7 @@ export default function EligibilityTab({
   const fetchStudents = async () => {
     try {
       setLoading(true);
+      // Preserving original API call
       const response = await api.get(`/exam/cycles/${cycleId}/eligibilities`);
       setStudents(response.data.data);
     } catch (err) {
@@ -202,8 +206,6 @@ export default function EligibilityTab({
         (s.program?.code || s.program_id) === selectedProgram;
       const matchesSection = !selectedSection || s.section === selectedSection;
 
-      // Status Filter logic could be added here if needed
-
       return matchesSearch && matchesProgram && matchesSection;
     });
 
@@ -213,56 +215,40 @@ export default function EligibilityTab({
 
   if (loading)
     return (
-      <div className="p-10 text-center text-slate-500">
-        Loading eligibility status...
+      <div className="flex flex-col items-center justify-center py-24 space-y-4 animate-pulse">
+        <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <div className="text-gray-500 font-medium">Loading eligibility data...</div>
       </div>
     );
 
   // SYSTEM OFF VIEW
   if (!cycle.publish_eligibility && !showConfig) {
     return (
-      <div className="flex items-center justify-center py-20 px-5 bg-slate-50 rounded-[24px] border-2 border-dashed border-slate-200">
-        <div className="bg-white p-10 rounded-[24px] shadow-xl w-full max-w-[500px] text-center border border-slate-100">
-          <div className="w-[70px] h-[70px] bg-rose-50 text-rose-600 rounded-[20px] flex items-center justify-center mx-auto mb-6">
-            <ShieldAlert size={32} />
-          </div>
-          <div>
-            <h2 className="text-[24px] text-slate-900 mb-3 font-extrabold">
-              Eligibility Control Center
-            </h2>
-            <p className="text-slate-500 leading-relaxed text-[15px] mb-8">
-              The eligibility system for{" "}
-              <strong className="text-slate-700 font-bold">
-                {cycle.cycle_name || "this cycle"}
-              </strong>{" "}
-              is currently in draft mode. Rules are not enforced and student
-              data is hidden.
-            </p>
-
-            <div className="mb-6">
-              <div
-                className="bg-slate-50 border-[1.5px] border-slate-200 p-5 rounded-[16px] flex items-center justify-between cursor-pointer transition-all duration-200 hover:bg-white hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5 group"
-                onClick={() => setShowConfig(true)}
-              >
-                <div className="text-left">
-                  <span className="block text-[15px] font-bold text-slate-800 mb-0.5">
-                    Enable & Publish System
-                  </span>
-                  <p className="text-[12px] text-slate-400 m-0">
-                    Set thresholds and sync student records
-                  </p>
-                </div>
-                <div>
-                  <div className="relative inline-block w-11 h-[22px]">
-                    <span className="absolute inset-0 bg-slate-200 rounded-full after:content-[''] after:absolute after:h-4 after:w-4 after:left-[3px] after:bottom-[3px] after:bg-white after:rounded-full"></span>
-                  </div>
-                </div>
-              </div>
+      <div className="flex items-center justify-center py-20 px-4">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-lg w-full text-center overflow-hidden">
+          <div className="bg-gray-50/50 p-10 border-b border-gray-100">
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <ShieldCheck size={32} />
             </div>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
+              Eligibility System
+            </h2>
+            <p className="text-gray-500 leading-relaxed">
+              The eligibility rules for <strong className="text-gray-900">{cycle.cycle_name || "this cycle"}</strong> have not been configured yet.
+            </p>
+          </div>
 
-            <div className="flex items-center justify-center gap-2 text-slate-400 text-[12px] font-medium">
+          <div className="p-8">
+            <button
+              onClick={() => setShowConfig(true)}
+              className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95 flex items-center justify-center gap-3"
+            >
+              <Settings size={20} />
+              <span>Configure & Publish Rules</span>
+            </button>
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400 font-medium">
               <Info size={14} />
-              <span>Requires 75%/65% attendance thresholds and fee rules.</span>
+              <span>Setup attendance thresholds and fee requirements</span>
             </div>
           </div>
         </div>
@@ -271,125 +257,115 @@ export default function EligibilityTab({
   }
 
   return (
-    <div className="p-5">
+    <div className="space-y-8 animate-fadeIn font-sans text-gray-900 pb-12">
       {/* Config Modal */}
       {showConfig && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              Configure Eligibility Rules
-            </h3>
-            <p className="text-sm text-slate-500 mb-6">
-              Saving these rules will automatically trigger a recalculation.
-            </p>
-            <form onSubmit={handleUpdateConfig}>
-              <div className="mb-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 animate-scaleIn">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Eligibility Configuration
+                </h3>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                  Define the rules for student exam eligibility.
+                </p>
+              </div>
+              <div onClick={() => setShowConfig(false)} className="p-2 cursor-pointer hover:bg-gray-200 rounded-lg text-gray-500 transition-colors">
+                <ChevronDown size={20} />
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateConfig} className="p-6 space-y-6">
+              {/* Attendance Section */}
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${configData.check_attendance ? "bg-blue-600 border-blue-600" : "bg-white border-gray-300 group-hover:border-blue-400"}`}>
+                    {configData.check_attendance && <CheckCircle size={14} className="text-white" />}
+                  </div>
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                    className="hidden"
                     checked={configData.check_attendance}
-                    onChange={(e) =>
-                      setConfigData({
-                        ...configData,
-                        check_attendance: e.target.checked,
-                      })
-                    }
+                    onChange={(e) => setConfigData({ ...configData, check_attendance: e.target.checked })}
                   />
-                  <span className="text-sm font-semibold text-slate-700">
-                    Check Attendance
+                  <span className="font-bold text-gray-700 group-hover:text-blue-600 transition-colors">
+                    Enforce Attendance Rules
                   </span>
                 </label>
+
+                {configData.check_attendance && (
+                  <div className="grid grid-cols-2 gap-4 pl-8 animate-fadeIn">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Eligible Threshold (%)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                        value={configData.attendance_threshold_eligible}
+                        onChange={(e) => setConfigData({ ...configData, attendance_threshold_eligible: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Condonation Min (%)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                        value={configData.attendance_threshold_condonation}
+                        onChange={(e) => setConfigData({ ...configData, attendance_threshold_condonation: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-1.5">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Condonation Fee (₹)</label>
+                      <input
+                        type="number"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                        value={configData.condonation_fee_amount}
+                        onChange={(e) => setConfigData({ ...configData, condonation_fee_amount: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {configData.check_attendance && (
-                <div className="grid grid-cols-1 gap-4 mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">
-                      Eligible Threshold (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={configData.attendance_threshold_eligible}
-                      onChange={(e) =>
-                        setConfigData({
-                          ...configData,
-                          attendance_threshold_eligible: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">
-                      Condonation Min (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={configData.attendance_threshold_condonation}
-                      onChange={(e) =>
-                        setConfigData({
-                          ...configData,
-                          attendance_threshold_condonation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-500 uppercase">
-                      Condonation Fee (₹)
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={configData.condonation_fee_amount}
-                      onChange={(e) =>
-                        setConfigData({
-                          ...configData,
-                          condonation_fee_amount: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
+              <div className="h-px bg-gray-100"></div>
 
-              <div className="mb-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+              {/* Fee Section */}
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${configData.check_fee_clearance ? "bg-blue-600 border-blue-600" : "bg-white border-gray-300 group-hover:border-blue-400"}`}>
+                    {configData.check_fee_clearance && <CheckCircle size={14} className="text-white" />}
+                  </div>
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                    className="hidden"
                     checked={configData.check_fee_clearance}
-                    onChange={(e) =>
-                      setConfigData({
-                        ...configData,
-                        check_fee_clearance: e.target.checked,
-                      })
-                    }
+                    onChange={(e) => setConfigData({ ...configData, check_fee_clearance: e.target.checked })}
                   />
-                  <span className="text-sm font-semibold text-slate-700">
-                    Check Fee Clearance (Cumulative)
+                  <span className="font-bold text-gray-700 group-hover:text-blue-600 transition-colors">
+                    Check Fee Clearance
                   </span>
                 </label>
+                <p className="pl-8 text-xs text-gray-400 leading-relaxed">
+                  If enabled, student's total fee due balance must be zero.
+                </p>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+              <div className="flex gap-3 pt-6">
                 <button
                   type="button"
                   onClick={() => setShowConfig(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={updating}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50 transition-all"
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {updating ? "Processing..." : "Save & Sync Students"}
+                  {updating ? "Saving..." : "Save Configuration"}
                 </button>
               </div>
             </form>
@@ -397,311 +373,247 @@ export default function EligibilityTab({
         </div>
       )}
 
-      <div className="mb-8 space-y-6">
-        <div className="flex justify-between items-start">
-          <div className="flex gap-4">
-            <div className="bg-slate-50 py-3 px-5 rounded-xl border border-slate-200 min-w-[140px]">
-              <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">
-                Eligible Threshold
-              </span>
-              <span className="text-xl font-bold text-slate-800">
-                {cycle.attendance_threshold_eligible}%
-              </span>
-            </div>
-            <div className="bg-slate-50 py-3 px-5 rounded-xl border border-slate-200 min-w-[140px]">
-              <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">
-                Condonation Min
-              </span>
-              <span className="text-xl font-bold text-slate-800">
-                {cycle.attendance_threshold_condonation}%
-              </span>
-            </div>
-            <div className="bg-slate-50 py-3 px-5 rounded-xl border border-slate-200 min-w-[140px]">
-              <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">
-                Check Fees
-              </span>
-              <span className="text-xl font-bold text-slate-800">
-                {cycle.check_fee_clearance ? "Enabled" : "Disabled"}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 mr-3 pr-4 border-r-[1.5px] border-slate-200">
-              <span
-                className={`text-[11px] font-extrabold uppercase tracking-widest ${cycle.publish_eligibility ? "text-emerald-500" : "text-slate-400"
-                  }`}
-              >
-                {cycle.publish_eligibility ? "Published" : "Draft"}
-              </span>
-              <label className="relative inline-block w-11 h-[22px]">
-                <input
-                  type="checkbox"
-                  className="opacity-0 w-0 h-0 peer"
-                  checked={cycle.publish_eligibility}
-                  onChange={() => setShowConfig(true)}
-                />
-                <span className="absolute inset-0 cursor-pointer bg-slate-300 transition-all duration-400 rounded-full after:content-[''] after:absolute after:h-4 after:w-4 after:left-[3px] after:bottom-[3px] after:bg-white after:transition-all after:duration-400 after:rounded-full peer-checked:bg-emerald-500 peer-checked:after:translate-x-[22px]"></span>
-              </label>
-            </div>
-            <button
-              className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95 disabled:opacity-50"
-              onClick={handleSyncAll}
-              disabled={updating}
-            >
-              <RefreshCw
-                size={18}
-                className={updating ? "animate-spin" : ""}
-              />{" "}
-              Refresh All
-            </button>
-            <button
-              className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-700 shadow-lg shadow-slate-200 transition-all active:scale-95"
-              onClick={() => setShowConfig(true)}
-            >
-              <Settings size={18} /> Edit Rules
-            </button>
+      {/* Stats Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-colors">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover:text-blue-500 transition-colors">Eligible Cutoff</span>
+          <div className="flex items-end gap-2">
+            <span className="text-3xl font-extrabold text-gray-900">{cycle.attendance_threshold_eligible}</span>
+            <span className="text-sm font-bold text-gray-400 mb-1">%</span>
           </div>
         </div>
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between group hover:border-amber-200 transition-colors">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover:text-amber-500 transition-colors">Condonation Min</span>
+          <div className="flex items-end gap-2">
+            <span className="text-3xl font-extrabold text-gray-900">{cycle.attendance_threshold_condonation}</span>
+            <span className="text-sm font-bold text-gray-400 mb-1">%</span>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between group hover:border-green-200 transition-colors">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover:text-green-500 transition-colors">Fee Check</span>
+          <div className="flex items-center gap-2 h-full">
+            <div className={`w-3 h-3 rounded-full ${cycle.check_fee_clearance ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <span className="text-xl font-bold text-gray-900">{cycle.check_fee_clearance ? "Active" : "Disabled"}</span>
+          </div>
+        </div>
+        <div className="bg-gray-900 p-5 rounded-2xl border border-gray-900 shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gray-800 rounded-full blur-2xl -mr-10 -mt-10 opacity-50"></div>
+          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-2 ${cycle.publish_eligibility ? "bg-green-500 text-white" : "bg-amber-500 text-white"}`}>
+            {cycle.publish_eligibility ? "Published" : "Draft"}
+          </span>
+          <p className="text-xs text-gray-400 font-medium z-10">System Status</p>
+        </div>
+      </div>
 
-        <div className="flex gap-4 items-center flex-wrap pt-6 border-t border-slate-100">
-          <div className="relative flex-1 min-w-[300px]">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              size={20}
-            />
+      {/* Action Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center gap-2 w-full lg:w-auto flex-1">
+          <div className="relative flex-1 lg:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-slate-200 rounded-[12px] outline-none text-sm text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all"
-              placeholder="Search by Roll No or Name..."
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm font-semibold text-gray-800 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-gray-400"
+              placeholder="Search student..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="relative min-w-[180px]">
-            <Filter
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
+          <div className="relative w-32 md:w-40 hidden sm:block">
             <select
-              className="w-full py-2 pl-9 pr-10 bg-white border-[1.5px] border-slate-200 rounded-[12px] outline-none text-sm text-slate-800 appearance-none cursor-pointer focus:border-blue-500 transition-all"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3f%3e%3c/svg%3e")`,
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right 12px center",
-                backgroundSize: "16px",
-              }}
+              className="w-full pl-3 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm font-semibold text-gray-800 appearance-none focus:bg-white focus:border-blue-500 cursor-pointer"
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
             >
-              <option value="">All Programs</option>
+              <option value="">Programs</option>
               {programs.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
+                <option key={p} value={p}>{p}</option>
               ))}
             </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
           </div>
 
-          <div className="relative min-w-[180px]">
+          <div className="relative w-28 md:w-32 hidden sm:block">
             <select
-              className="w-full py-2 pl-4 pr-10 bg-white border-[1.5px] border-slate-200 rounded-[12px] outline-none text-sm text-slate-800 appearance-none cursor-pointer focus:border-blue-500 transition-all"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3f%3e%3c/svg%3e")`,
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right 12px center",
-                backgroundSize: "16px",
-              }}
+              className="w-full pl-3 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm font-semibold text-gray-800 appearance-none focus:bg-white focus:border-blue-500 cursor-pointer"
               value={selectedSection}
               onChange={(e) => setSelectedSection(e.target.value)}
             >
-              <option value="">All Sections</option>
+              <option value="">Sections</option>
               {sections.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          <button
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-white border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-95 disabled:opacity-50"
+            onClick={handleSyncAll}
+            disabled={updating}
+          >
+            <RefreshCw size={16} className={updating ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Recalculate</span>
+          </button>
+          <button
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-blue-200 hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95"
+            onClick={() => setShowConfig(true)}
+          >
+            <Settings size={16} />
+            <span>Settings</span>
+          </button>
         </div>
       </div>
 
-      <div>
-        <table className="w-full border-separate border-spacing-0 bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-          <thead>
-            <tr>
-              <th className="bg-slate-50 px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                Student Details
-              </th>
-              <th className="bg-slate-50 px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                Attendance %
-              </th>
-              <th className="bg-slate-50 px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                Fee Status
-              </th>
-              <th className="bg-slate-50 px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                Status
-              </th>
-              <th className="bg-slate-50 px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredStudents.length > 0 ? (
-              filteredStudents.map((student) => {
-                const el = student.student_eligibilities?.[0] || {};
-                const statuses = getDisplayStatus(el);
-
-                return (
-                  <tr
-                    key={student.id}
-                    className="hover:bg-slate-50/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 align-middle">
-                      <div>
-                        <span className="block font-bold text-slate-800 text-[15px]">
-                          {student.first_name} {student.last_name}
-                        </span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-slate-500 font-medium">
-                            {student.student_id}
-                          </span>
-                          <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold text-slate-600 uppercase">
-                            {student.program?.code || student.program_id} -{" "}
-                            {student.section}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex items-center">
-                        <span
-                          className={`text-sm font-bold ${parseFloat(el.attendance_percentage) <
-                            parseFloat(cycle.attendance_threshold_condonation)
-                            ? "text-red-500"
-                            : parseFloat(el.attendance_percentage) <
-                              parseFloat(
-                                cycle.attendance_threshold_eligible,
-                              )
-                              ? "text-amber-500"
-                              : "text-emerald-500"
-                            }`}
-                        >
-                          {el.attendance_percentage
-                            ? `${el.attendance_percentage}%`
-                            : "0.00%"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 align-middle">
-                      <div
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${el.fee_clear_permission
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                          : "bg-orange-50 text-orange-700 border-orange-100"
-                          }`}
-                      >
-                        {el.fee_clear_permission
-                          ? "Cleared"
-                          : `Due: ₹${(el.fee_balance || 0).toLocaleString()}`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex flex-col gap-1 items-start">
-                        {statuses.map((status, idx) => {
-                          const statusClasses = {
-                            eligible: "bg-green-100 text-green-800 border-green-200",
-                            "hod-block": "bg-red-100 text-red-800 border-red-200",
-                            "fee-block":
-                              "bg-orange-100 text-orange-700 border-orange-200",
-                            condonation:
-                              "bg-yellow-100 text-yellow-800 border-yellow-300",
-                            bypassed: "bg-blue-100 text-blue-700 border-blue-200",
-                            pending: "bg-slate-100 text-slate-700 border-slate-200",
-                          };
-                          return (
-                            <span
-                              key={idx}
-                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusClasses[status.type] ||
-                                "bg-slate-100 text-slate-500 border-slate-200"
-                                }`}
-                            >
-                              {status.label}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex items-center gap-2">
-                        {!el.hod_permission && (
-                          <button
-                            onClick={() =>
-                              handlePermission(student.id, "hod", true)
-                            }
-                            className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg text-[11px] font-bold hover:bg-rose-100 transition-colors active:scale-95 disabled:opacity-50"
-                            disabled={updating === student.id}
-                          >
-                            Clear HOD
-                          </button>
-                        )}
-
-                        {!el.fee_clear_permission && (
-                          <button
-                            onClick={() =>
-                              handlePermission(student.id, "fee", true)
-                            }
-                            className="px-3 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-lg text-[11px] font-bold hover:bg-orange-100 transition-colors active:scale-95 disabled:opacity-50"
-                            disabled={updating === student.id}
-                          >
-                            Clear Fee
-                          </button>
-                        )}
-
-                        {(el.hod_permission ||
-                          (el.fee_clear_permission && el.fee_balance > 0)) && (
-                            <div className="flex flex-col gap-0.5">
-                              {el.hod_permission && (
-                                <button
-                                  onClick={() =>
-                                    handlePermission(student.id, "hod", false)
-                                  }
-                                  className="text-[10px] text-slate-400 underline hover:text-blue-600 transition-colors text-left"
-                                  title="Revert HOD"
-                                >
-                                  Revert HOD
-                                </button>
-                              )}
-                              {el.fee_clear_permission && el.fee_balance > 0 && (
-                                <button
-                                  onClick={() =>
-                                    handlePermission(student.id, "fee", false)
-                                  }
-                                  className="text-[10px] text-slate-400 underline hover:text-blue-600 transition-colors text-left"
-                                  title="Revert Fee"
-                                >
-                                  Revert Fee
-                                </button>
-                              )}
-                            </div>
-                          )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td
-                  colSpan="5"
-                  className="px-6 py-12 text-center text-slate-500 italic text-sm"
-                >
-                  No students found matching your criteria.
-                </td>
+      {/* Data Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden min-h-[400px]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">Student Info</th>
+                <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">Compliance</th>
+                <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">Status</th>
+                <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-400 text-right">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => {
+                  const el = student.student_eligibilities?.[0] || {};
+                  const statuses = getDisplayStatus(el);
+                  const isFeeDue = el.fee_balance > 0;
+
+                  return (
+                    <tr key={student.id} className="group hover:bg-blue-50/20 transition-colors">
+                      <td className="py-4 px-6 align-top">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs uppercase border border-gray-200">
+                            {student.first_name?.[0]}{student.last_name?.[0]}
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900 text-sm">
+                              {student.first_name} {student.last_name}
+                            </div>
+                            <div className="text-xs text-gray-500 font-medium mt-0.5 font-mono">
+                              {student.student_id}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                                {student.program?.code || "N/A"}
+                              </span>
+                              <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
+                                Sec {student.section || "-"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 align-top">
+                        <div className="space-y-3">
+                          {/* Attendance Display */}
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Attd:</span>
+                            <span className={`text-sm font-bold ${parseFloat(el.attendance_percentage) < parseFloat(cycle.attendance_threshold_condonation) ? "text-red-500" :
+                                parseFloat(el.attendance_percentage) < parseFloat(cycle.attendance_threshold_eligible) ? "text-amber-500" :
+                                  "text-green-600"
+                              }`}>
+                              {el.attendance_percentage ? `${el.attendance_percentage}%` : "0.00%"}
+                            </span>
+                          </div>
+                          {/* Fee Display */}
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Fee:</span>
+                            <span className={`text-sm font-bold ${el.fee_clear_permission ? 'text-green-600' : 'text-red-500'}`}>
+                              {el.fee_clear_permission ? "Cleared" : `Due ₹${(el.fee_balance || 0).toLocaleString()}`}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 align-top">
+                        <div className="flex flex-wrap gap-1.5">
+                          {statuses.map((status, idx) => {
+                            const styles = {
+                              eligible: "bg-green-100 text-green-800 border-green-200",
+                              "hod-block": "bg-red-50 text-red-700 border-red-100",
+                              "fee-block": "bg-orange-50 text-orange-700 border-orange-100",
+                              condonation: "bg-amber-100 text-amber-800 border-amber-200",
+                              bypassed: "bg-blue-100 text-blue-800 border-blue-200",
+                              pending: "bg-gray-100 text-gray-500 border-gray-200"
+                            };
+                            return (
+                              <span
+                                key={idx}
+                                className={`inline-flex px-2 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${styles[status.type] || styles.pending}`}
+                              >
+                                {status.label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 align-top text-right">
+                        <div className="flex flex-col items-end gap-2">
+                          {!el.hod_permission ? (
+                            <button
+                              onClick={() => handlePermission(student.id, "hod", true)}
+                              className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-100 w-fit"
+                              disabled={updating === student.id}
+                            >
+                              Allow HOD
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePermission(student.id, "hod", false)}
+                              className="text-[10px] font-bold text-gray-400 hover:text-red-600 hover:underline transition-colors decoration-2 underline-offset-2"
+                              disabled={updating === student.id}
+                            >
+                              Revoke HOD
+                            </button>
+                          )}
+
+                          {!el.fee_clear_permission ? (
+                            <button
+                              onClick={() => handlePermission(student.id, "fee", true)}
+                              className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-100 w-fit"
+                              disabled={updating === student.id}
+                            >
+                              Waive Fee
+                            </button>
+                          ) : el.fee_balance > 0 && (
+                            <button
+                              onClick={() => handlePermission(student.id, "fee", false)}
+                              className="text-[10px] font-bold text-gray-400 hover:text-red-600 hover:underline transition-colors decoration-2 underline-offset-2"
+                              disabled={updating === student.id}
+                            >
+                              Revoke Waiver
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4" className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 text-gray-400">
+                      <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
+                        <Search size={24} />
+                      </div>
+                      <p className="font-medium text-sm">No students match your search.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
