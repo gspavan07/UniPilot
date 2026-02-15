@@ -831,10 +831,14 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
   }
 
   structures.forEach((s) => {
-    if (s.is_optional) {
-      if (s.applies_to === "hostellers" && !is_hosteller) return;
-      if (s.applies_to === "day_scholars" && !requires_transport) return;
-    }
+    // Correct filtering for Convener/Management (Applies to ALL fees)
+    if (s.applies_to === "convener" && student.admission_type !== "convener")
+      return;
+    if (
+      s.applies_to === "management" &&
+      student.admission_type !== "management"
+    )
+      return;
 
     // Use fetch from AcademicFeePayment table
     const structPayments = academicPayments.filter(
@@ -1033,6 +1037,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
       batch_year: effectiveBatchYear,
       is_hosteller,
       requires_transport,
+      admission_type: student.admission_type,
       id: student.id,
       first_name: student.first_name,
       last_name: student.last_name,
@@ -1689,6 +1694,7 @@ exports.getDefaulters = async (req, res) => {
             "section",
             "is_hosteller",
             "requires_transport",
+            "admission_type",
           ],
         }),
         FeeStructure.findAll({
@@ -1729,8 +1735,10 @@ exports.getDefaulters = async (req, res) => {
           s.batch_year === student.batch_year &&
           (semester ? s.semester === parseInt(semester) : true) &&
           (s.applies_to === "all" ||
-            (s.applies_to === "hostellers" && student.is_hosteller) ||
-            (s.applies_to === "day_scholars" && student.requires_transport)),
+            (s.applies_to === "convener" &&
+              student.admission_type === "convener") ||
+            (s.applies_to === "management" &&
+              student.admission_type === "management")),
       );
 
       if (applicableStructures.length === 0) continue;
@@ -1989,9 +1997,13 @@ exports.exportDefaulters = async (req, res) => {
           s.program_id === student.program_id &&
           s.batch_year === student.batch_year &&
           (semester ? s.semester === parseInt(semester) : true) &&
-          (s.applies_to === "all" ||
-            (s.applies_to === "hostellers" && student.is_hosteller) ||
-            (s.applies_to === "day_scholars" && student.requires_transport)),
+          javascript(
+            s.applies_to === "all" ||
+              (s.applies_to === "convener" &&
+                student.admission_type === "convener") ||
+              (s.applies_to === "management" &&
+                student.admission_type === "management"),
+          ),
       );
 
       if (applicableStructures.length === 0) continue;

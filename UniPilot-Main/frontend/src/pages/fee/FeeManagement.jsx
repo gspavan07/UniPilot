@@ -298,11 +298,11 @@ const FeeManagement = () => {
     }
   }, [dispatch, selectedBatch, selectedProgram]);
 
-  // useEffect(() => {
-  //   if (batches.length > 0 && !batches.includes(selectedBatch)) {
-  //     setSelectedBatch(batches[0]);
-  //   }
-  // }, [batches, selectedBatch]);
+  useEffect(() => {
+    if (batches.length > 0 && !batches.includes(selectedBatch)) {
+      setSelectedBatch(batches[0]);
+    }
+  }, [batches, selectedBatch]);
 
   useEffect(() => {
     if (
@@ -363,12 +363,18 @@ const FeeManagement = () => {
 
   const handleSaveStructure = async (e) => {
     e.preventDefault();
+
+    // Use existing record values if editing, otherwise use current filters
     const data = {
       ...structureForm,
-      batch_year: selectedBatch,
-      program_id: selectedProgram,
+      batch_year: editingStructure?.batch_year || selectedBatch,
+      program_id: editingStructure?.program_id || selectedProgram,
       amount: parseFloat(structureForm.amount),
     };
+    if (!data.batch_year || !data.program_id) {
+      alert("Please select a specific Batch and Program first.");
+      return;
+    }
 
     try {
       if (editingStructure) {
@@ -1300,7 +1306,7 @@ const FeeManagement = () => {
                     {/* Fees List */}
                     <div className="space-y-3">
                       {studentStatus.semesterWise[activeCounterSemester].fees
-                        .filter((f) => f.due > 0)
+                        // .filter((f) => f.due === 0)
                         .map((fee) => (
                           <div
                             key={fee.id}
@@ -1315,20 +1321,27 @@ const FeeManagement = () => {
                                 <input
                                   type="checkbox"
                                   checked={selectedCounterFees.has(fee.id)}
+                                  disabled={fee.due === 0}
                                   onChange={() =>
                                     toggleCounterFeeSelection(fee.id, fee.due)
                                   }
-                                  className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                  className={`w-5 h-4 rounded border-indigo-600 text-indigo-600 focus:ring-indigo-500 ${fee.due === 0 ? "opacity-20 cursor-not-allowed" : "cursor-pointer"}`}
                                 />
                                 <div>
                                   <div className="text-sm font-bold text-gray-900 dark:text-white">
                                     {fee.category}
                                   </div>
+
                                   <div className="text-[10px] font-black text-gray-400 uppercase">
                                     Balance Due: ₹
                                     {fee.due.toLocaleString("en-IN")}
                                   </div>
                                 </div>
+                                {fee.due === 0 && (
+                                  <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                    Paid
+                                  </span>
+                                )}
                               </div>
 
                               {selectedCounterFees.has(fee.id) && (
@@ -2926,7 +2939,10 @@ const FeeManagement = () => {
                             <span
                               className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${s.applies_to === "all" ? "bg-indigo-50 text-indigo-600" : "bg-amber-50 text-amber-600"}`}
                             >
-                              {s.applies_to}
+                              {s.applies_to === "all"
+                                ? "All Students"
+                                : s.applies_to.charAt(0).toUpperCase() +
+                                  s.applies_to.slice(1)}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-center font-bold text-gray-500">
@@ -3576,8 +3592,8 @@ const FeeManagement = () => {
                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl font-bold border-none"
                   >
                     <option value="all">All Students</option>
-                    <option value="hostellers">Hostellers</option>
-                    <option value="day_scholars">Day Scholars</option>
+                    <option value="convener">Convener</option>
+                    <option value="management">Management</option>
                   </select>
                 </div>
 
