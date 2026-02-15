@@ -5,6 +5,7 @@ import { Edit, Trash2, ArrowLeft } from "lucide-react";
 import TimetableTab from "../../components/ExamCycle/TimetableTab";
 import FeeConfigTab from "../../components/ExamCycle/FeeConfigTab";
 import EligibilityTab from "../../components/ExamCycle/EligibilityTab";
+import FacultyAssignmentTab from "../../components/ExamCycle/FacultyAssignmentTab";
 import StudentsTab from "../../components/ExamCycle/StudentsTab";
 import "./ManageCycle.css";
 
@@ -108,6 +109,12 @@ export default function ManageCycle() {
           >
             📅 Timetable
           </button>
+          <button
+            className={`tab ${activeTab === "faculty" ? "active" : ""}`}
+            onClick={() => setActiveTab("faculty")}
+          >
+            👨‍🏫 Faculty Assignment
+          </button>
           {cycle.needs_fee && (
             <button
               className={`tab ${activeTab === "fee" ? "active" : ""}`}
@@ -134,6 +141,7 @@ export default function ManageCycle() {
           {activeTab === "timetable" && (
             <TimetableTab cycleId={id} cycle={cycle} onUpdate={loadCycle} />
           )}
+          {activeTab === "faculty" && <FacultyAssignmentTab cycleId={id} />}
           {activeTab === "fee" && cycle.needs_fee && (
             <FeeConfigTab cycleId={id} cycle={cycle} />
           )}

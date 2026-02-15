@@ -54,6 +54,26 @@ const ExamTimetable = sequelize.define(
       type: DataTypes.JSONB,
       defaultValue: null,
     },
+    assigned_faculty_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "users",
+        key: "id",
+      },
+      comment: "Faculty assigned for invigilation",
+    },
+    paper_format: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      comment: "Structure of question paper with questions, marks, and CO mapping",
+    },
+    exam_status: {
+      type: DataTypes.STRING(20),
+      defaultValue: "assigned",
+      allowNull: false,
+      comment: "Status: assigned, format_submitted, approved",
+    },
     is_deleted: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

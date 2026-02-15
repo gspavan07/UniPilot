@@ -180,4 +180,32 @@ module.exports = {
   getCycleTypes,
   getCurrentSemester,
   getProgramsByDegree,
+  getAllDegrees,
 };
+
+/**
+ * Get distinct degree types from programs
+ * GET /api/exam/cycles/helpers/degrees
+ */
+async function getAllDegrees(req, res) {
+  try {
+    const degrees = await Program.findAll({
+      attributes: [
+        [
+          sequelize.fn("DISTINCT", sequelize.col("degree_type")),
+          "degree_type",
+        ],
+      ],
+      where: {
+        is_active: true,
+      },
+      raw: true,
+    });
+
+    const degreeList = degrees.map((d) => d.degree_type).filter(Boolean);
+    res.json({ success: true, data: degreeList });
+  } catch (error) {
+    logger.error("Get all degrees error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}

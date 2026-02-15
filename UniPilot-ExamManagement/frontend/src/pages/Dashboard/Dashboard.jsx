@@ -9,9 +9,18 @@ import {
   Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === "faculty") {
+      navigate("/faculty/exams", { replace: true });
+    }
+  }, [user, navigate]);
 
   const stats = [
     {
