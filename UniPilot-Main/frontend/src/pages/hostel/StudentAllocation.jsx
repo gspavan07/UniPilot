@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Search,
@@ -22,6 +23,8 @@ import {
   Edit2,
   Trash2,
   History,
+  ArrowLeft,
+  LayoutGrid,
 } from "lucide-react";
 import {
   fetchAllocations,
@@ -41,6 +44,7 @@ import toast from "react-hot-toast";
 
 const StudentAllocation = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const {
     allocations,
     buildings,
@@ -226,781 +230,547 @@ const StudentAllocation = () => {
     ) || [];
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="flex items-center space-x-4">
-          <div className="p-4 bg-primary-100 dark:bg-primary-900/40 rounded-3xl">
-            <Users className="w-8 h-8 text-primary-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white font-display tracking-tight">
-              Student Allocation
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              Assign and manage student room placements.
+    <div className="min-h-screen bg-gray-50/50 pb-12 font-sans text-gray-900">
+      <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 mr-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm group"
+              >
+                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              </button>
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <Users className="w-6 h-6" />
+              </div>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+                Student Allocation
+              </h1>
+            </div>
+            <p className="text-sm text-gray-500 font-medium pl-14">
+              Assign and manage student room placements efficiently.
             </p>
           </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md active:scale-95"
+          >
+            <UserPlus className="w-4 h-4 mr-2" /> Assign New Student
+          </button>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all shadow-xl shadow-primary-600/30 active:scale-95 group"
-        >
-          <UserPlus className="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform" />
-          Assign New Student
-        </button>
-      </div>
 
-      {/* Main List Management */}
-      <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col min-h-[600px]">
-        <div className="p-8 border-b border-gray-50 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
-          <div className="relative flex-1 min-w-[300px]">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        {/* Filters Toolbar */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col lg:flex-row items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100/50 rounded-lg border border-gray-200">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">
+              Filter List
+            </span>
+          </div>
+
+          <div className="relative flex-1 w-full lg:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name or student ID..."
-              className="w-full pl-14 pr-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-primary-500/10 transition-all"
+              placeholder="Search by student name or ID..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium placeholder:text-gray-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <button className="px-5 py-3 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold text-xs flex items-center hover:bg-gray-100 transition-all shadow-sm">
-              <Filter className="w-4 h-4 mr-2" /> Recent Allocations
-            </button>
+        </div>
+
+        {/* Main Table */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Student Details
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Room Placement
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Plan & Fees
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {status === "loading" ? (
+                  <tr>
+                    <td colSpan="5" className="py-20 text-center">
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
+                      <p className="text-gray-500 font-medium text-sm">
+                        Loading records...
+                      </p>
+                    </td>
+                  </tr>
+                ) : filteredAllocations.length > 0 ? (
+                  filteredAllocations.map((allocation) => (
+                    <tr
+                      key={allocation.id}
+                      className="group hover:bg-gray-50 transition-colors duration-150"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mr-3 border border-blue-200">
+                            {allocation.student?.first_name?.[0] || "U"}
+                            {allocation.student?.last_name?.[0] || ""}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">
+                              {allocation.student?.first_name}{" "}
+                              {allocation.student?.last_name}
+                            </p>
+                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                              ID: <span className="font-mono">{allocation.student?.student_id || "N/A"}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <Home className="w-4 h-4 text-gray-400" />
+                            Room {allocation.room?.room_number}
+                          </span>
+                          <span className="text-xs text-gray-500 font-medium pl-6">
+                            {allocation.room?.building?.name || "Unknown Block"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex w-fit px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                            {allocation.mess_fee_structure?.mess_type || "Standard"} Mess
+                          </span>
+                          <span className="text-xs text-gray-600 font-medium">
+                            {allocation.fee_structure?.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase w-fit border ${allocation.status === "active"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-gray-100 text-gray-600 border-gray-200"
+                              }`}
+                          >
+                            {allocation.status === "active" ?
+                              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> :
+                              <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                            }
+                            {allocation.status}
+                          </span>
+                          {allocation.scheduled_checkout_semester && (
+                            <span className="inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 w-fit">
+                              Checkout Sem {allocation.scheduled_checkout_semester}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          {allocation.status === "active" && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(allocation)}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleCheckout(allocation.id)}
+                                className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-100"
+                                title="Check Out"
+                              >
+                                <LogOut className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleViewHistory(allocation)}
+                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                            title="History"
+                          >
+                            <History className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(allocation.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="py-20 text-center">
+                      <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                        <Users className="w-8 h-8 text-gray-300" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900">No active allocations</h3>
+                      <p className="text-gray-500 text-sm mt-1">
+                        Use the "Assign New Student" button to get started.
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="flex-1 overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50/50 dark:bg-gray-700/30">
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  Student Details
-                </th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  Room Info
-                </th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  Mess & Fees
-                </th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  Status
-                </th>
-                <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-              {status === "loading" ? (
-                <tr>
-                  <td colSpan="5" className="py-20 text-center">
-                    <Loader2 className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
-                    <p className="text-gray-500 font-bold font-display uppercase tracking-widest text-xs">
-                      Fetching records...
-                    </p>
-                  </td>
-                </tr>
-              ) : filteredAllocations.length > 0 ? (
-                filteredAllocations.map((allocation) => (
-                  <tr
-                    key={allocation.id}
-                    className="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all duration-300"
-                  >
-                    <td className="px-8 py-6">
-                      <div className="flex items-center">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50 flex items-center justify-center mr-4 group-hover:scale-105 transition-transform">
-                          <span className="text-primary-700 dark:text-primary-300 font-bold font-display">
-                            {allocation.student?.first_name?.[0] || "U"}
-                            {allocation.student?.last_name?.[0] || "P"}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                            {allocation.student?.first_name}{" "}
-                            {allocation.student?.last_name}
-                          </p>
-                          <p className="text-[10px] font-bold text-gray-400 mt-0.5 tracking-wider">
-                            ID: {allocation.student?.student_id || "N/A"} •{" "}
-                            {allocation.academic_year || "2024-25"} (Sem{" "}
-                            {allocation.semester})
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2.5 bg-gray-100 dark:bg-gray-700 rounded-xl">
-                          <Home className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-white">
-                            Room {allocation.room?.room_number}
-                          </p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                            {allocation.room?.building?.name || "Block"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="space-y-1.5">
-                        <span className="inline-flex px-2 py-0.5 bg-success-100 text-success-700 rounded-lg text-[9px] font-black uppercase tracking-tighter">
-                          {allocation.mess_fee_structure?.mess_type || "N/A"}{" "}
-                          Mess
-                        </span>
-                        <p className="text-[11px] font-bold text-gray-500 line-clamp-1 italic">
-                          {allocation.fee_structure?.name || "Standard Plan"}
-                        </p>
-                        <p className="text-[10px] font-bold text-success-600">
-                          {allocation.mess_fee_structure?.name}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex flex-col gap-1.5">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
-                            allocation.status === "active"
-                              ? "bg-success-100 text-success-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {allocation.status === "active" ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5 mr-1" />
-                          )}
-                          {allocation.status?.replace("_", " ") || "UNKNOWN"}
-                        </span>
-                        {allocation.scheduled_checkout_semester && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter bg-warning-100 text-warning-700">
-                            <ArrowRight className="w-3 h-3 mr-1" />
-                            Exits Sem {allocation.scheduled_checkout_semester}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end space-x-3">
-                        {allocation.status === "active" && (
-                          <>
-                            <button
-                              onClick={() => handleEdit(allocation)}
-                              className="p-3 bg-primary-50 dark:bg-primary-900/30 text-primary-600 hover:bg-primary-600 hover:text-white rounded-2xl transition-all shadow-sm"
-                              title="Edit Allocation"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleCheckout(allocation.id)}
-                              className="p-3 bg-warning-50 dark:bg-warning-900/30 text-warning-600 hover:bg-warning-600 hover:text-white rounded-2xl transition-all shadow-sm"
-                              title="Check Out"
-                            >
-                              <LogOut className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleViewHistory(allocation)}
-                          className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all shadow-sm"
-                          title="View Stay History"
-                        >
-                          <History className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(allocation.id)}
-                          className="p-3 bg-error-50 dark:bg-error-900/30 text-error-600 hover:bg-error-600 hover:text-white rounded-2xl transition-all shadow-sm"
-                          title="Delete Allocation"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="py-32 text-center">
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Users className="w-10 h-10 text-gray-300" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                      No active allocations
-                    </h3>
-                    <p className="text-gray-500 max-w-xs mx-auto mt-2 text-sm italic">
-                      You haven't assigned any students to hostel rooms yet.
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Assignment Modal - Premium UI */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-zoom-in border border-white/20 my-auto">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary-600 to-indigo-600 opacity-90" />
-              <div className="relative p-10 flex items-center justify-between text-white">
-                <div className="flex items-center space-x-5">
-                  <div className="p-4 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/10">
-                    <UserPlus className="w-10 h-10" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-black font-display tracking-tight">
-                      {isEditing ? "Edit Allocation" : "Assignment Wizard"}
-                    </h2>
-                    <div className="flex items-center mt-2 space-x-3">
-                      <span className="flex items-center text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">
-                        <ShieldCheck className="w-3 h-3 mr-1" /> Multi-Step
-                        Check
-                      </span>
-                    </div>
-                  </div>
+        {/* Assignment Modal - Clean Corporate UI */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+              <div className="px-8 py-5 border-b border-gray-100 bg-white flex items-center justify-between sticky top-0 z-10">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900">
+                    {isEditing ? "Modify Allocation" : "New Student Assignment"}
+                  </h2>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-1">
+                    Multi-Step Allocation Wizard
+                  </p>
                 </div>
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
                     setIsEditing(false);
-                    setEditingId(null);
-                    setFormData({
-                      student_id: "",
-                      building_id: "",
-                      room_id: "",
-                      bed_id: "",
-                      mess_fee_structure_id: "",
-                      fee_structure_id: "",
-                      semester: "",
-                      apply_to_future: true,
-                    });
-                    setSelectedStudent(null);
-                    setStudentSearchTerm("");
                   }}
-                  className="w-14 h-14 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-[1.5rem] backdrop-blur-md transition-all active:scale-95"
+                  className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <Plus className="w-8 h-8 rotate-45" />
+                  <XCircle className="w-6 h-6" />
                 </button>
               </div>
-            </div>
 
-            <form onSubmit={handleAllocate} className="p-12">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                {/* Step 1: Student Selection */}
-                <div className="space-y-8">
-                  <div className="relative">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-black text-xs">
-                        01
-                      </div>
-                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
-                        Student Information
-                      </h4>
-                    </div>
-
-                    <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                      Search Student (Name or ID) *
-                    </label>
-                    <div className="relative">
-                      <div className="relative">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="text"
-                          className="w-full pl-14 pr-6 py-5 bg-gray-50 dark:bg-gray-700 border-none rounded-3xl focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-sm shadow-sm"
-                          placeholder="Type to search students..."
-                          value={studentSearchTerm}
-                          onChange={(e) => {
-                            setStudentSearchTerm(e.target.value);
-                            setShowStudentResults(true);
-                          }}
-                          onFocus={() => setShowStudentResults(true)}
-                        />
+              <div className="overflow-y-auto p-8 bg-gray-50/50 flex-1">
+                <form id="allocationForm" onSubmit={handleAllocate} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Student & Plans */}
+                  <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+                        <h3 className="text-sm font-bold text-gray-900 uppercase">Student Info</h3>
                       </div>
 
-                      {showStudentResults && studentSearchTerm.length >= 2 && (
-                        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto overflow-x-hidden py-4">
-                          {users.length > 0 ? (
-                            users.map((u) => (
-                              <button
-                                key={u.id}
-                                type="button"
-                                onClick={() => {
-                                  setFormData({
-                                    ...formData,
-                                    student_id: u.id,
-                                  });
-                                  setSelectedStudent(u);
-                                  setStudentSearchTerm(
-                                    `${u.first_name} ${u.last_name} (${u.student_id})`,
-                                  );
-                                  setShowStudentResults(false);
-                                }}
-                                className="w-full px-8 py-4 text-left hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors flex flex-col"
-                              >
-                                <span className="font-bold text-gray-900 dark:text-white">
-                                  {u.first_name} {u.last_name}
-                                </span>
-                                <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-                                  {u.student_id} • {u.program?.code}
-                                </span>
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-8 py-4 text-gray-500 text-sm font-bold flex items-center">
-                              <AlertCircle className="w-4 h-4 mr-2" /> No
-                              matching students...
-                            </div>
-                          )}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Search Student</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                              placeholder="Name or ID..."
+                              value={studentSearchTerm}
+                              onChange={(e) => {
+                                setStudentSearchTerm(e.target.value);
+                                setShowStudentResults(true);
+                              }}
+                              onFocus={() => setShowStudentResults(true)}
+                            />
+                            {showStudentResults && studentSearchTerm.length >= 2 && (
+                              <div className="absolute z-50 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-200 max-h-48 overflow-y-auto">
+                                {users.length > 0 ? (
+                                  users.map((u) => (
+                                    <button
+                                      key={u.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData({ ...formData, student_id: u.id });
+                                        setSelectedStudent(u);
+                                        setStudentSearchTerm(`${u.first_name} ${u.last_name}`);
+                                        setShowStudentResults(false);
+                                      }}
+                                      className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-50 last:border-0"
+                                    >
+                                      <p className="text-sm font-bold text-gray-900">{u.first_name} {u.last_name}</p>
+                                      <p className="text-xs text-gray-500">{u.student_id}</p>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="p-4 text-sm text-gray-500 text-center">No students found</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                      Mess Charge Plan
-                    </label>
-                    <select
-                      required
-                      className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-700 border-none rounded-3xl focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-sm shadow-sm"
-                      value={formData.mess_fee_structure_id}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          mess_fee_structure_id: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">Select Mess Plan</option>
-                      {messFeeStructures?.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} ({m.mess_type.toUpperCase()}) - ₹{m.amount}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                      Hostel Fee Structure
-                    </label>
-                    <select
-                      required
-                      className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-700 border-none rounded-3xl focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-sm shadow-sm"
-                      value={formData.fee_structure_id}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          fee_structure_id: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">Select Fees Plan</option>
-                      {feeStructures?.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name} - ₹{f.base_amount}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                        Join From Semester
-                      </label>
-                      <select
-                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-700 border-none rounded-3xl focus:ring-4 focus:ring-primary-500/10 transition-all font-bold text-sm shadow-sm"
-                        value={formData.semester}
-                        onChange={(e) =>
-                          setFormData({ ...formData, semester: e.target.value })
-                        }
-                      >
-                        <option value="">
-                          Current (Sem{" "}
-                          {selectedStudent?.current_semester || "1"})
-                        </option>
-                        <option
-                          value={(selectedStudent?.current_semester || 1) + 1}
-                        >
-                          Next (Sem{" "}
-                          {(selectedStudent?.current_semester || 1) + 1})
-                        </option>
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col justify-center">
-                      <label className="flex items-center space-x-3 cursor-pointer group mt-6">
-                        <div className="relative">
-                          <input
-                            type="checkbox"
-                            className="sr-only"
-                            checked={formData.apply_to_future}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                apply_to_future: e.target.checked,
-                              })
-                            }
-                          />
-                          <div
-                            className={`w-12 h-6 rounded-full transition-all ${formData.apply_to_future ? "bg-primary-600 shadow-lg shadow-primary-600/30" : "bg-gray-300 dark:bg-gray-600"}`}
-                          />
-                          <div
-                            className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${formData.apply_to_future ? "translate-x-6" : ""}`}
-                          />
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Mess Plan</label>
+                          <select
+                            required
+                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
+                            value={formData.mess_fee_structure_id}
+                            onChange={(e) => setFormData({ ...formData, mess_fee_structure_id: e.target.value })}
+                          >
+                            <option value="">Select Plan</option>
+                            {messFeeStructures?.map((m) => (
+                              <option key={m.id} value={m.id}>{m.name} - ₹{m.amount}</option>
+                            ))}
+                          </select>
                         </div>
-                        <span className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest group-hover:text-primary-600 transition-colors">
-                          Apply to future sems
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Step 2: Room Placement */}
-                <div className="space-y-8 lg:border-l lg:border-gray-50 lg:dark:border-gray-700 lg:pl-12">
-                  <div>
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-secondary-100 flex items-center justify-center text-secondary-600 font-black text-xs">
-                        02
-                      </div>
-                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
-                        Deployment Details
-                      </h4>
-                    </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Fee Structure</label>
+                          <select
+                            required
+                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
+                            value={formData.fee_structure_id}
+                            onChange={(e) => setFormData({ ...formData, fee_structure_id: e.target.value })}
+                          >
+                            <option value="">Select Structure</option>
+                            {feeStructures?.map((f) => (
+                              <option key={f.id} value={f.id}>{f.name} - ₹{f.base_amount}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                    <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                      Target Building *
-                    </label>
-                    <select
-                      required
-                      className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-700 border-none rounded-3xl focus:ring-4 focus:ring-secondary-500/10 transition-all font-bold text-sm shadow-sm"
-                      value={formData.building_id}
-                      onChange={(e) => handleBuildingChange(e.target.value)}
-                    >
-                      <option value="">Select Building</option>
-                      {buildings?.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
-                      Available Room *
-                    </label>
-                    <select
-                      required
-                      disabled={!availableRooms?.length}
-                      className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-700 border-none rounded-3xl focus:ring-4 focus:ring-secondary-500/10 transition-all font-bold text-sm shadow-sm disabled:opacity-50"
-                      value={formData.room_id}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          room_id: e.target.value,
-                          bed_id: "",
-                        })
-                      }
-                    >
-                      <option value="">Select Room</option>
-                      {availableRooms?.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          Room {r.room_number} ({r.current_occupancy}/
-                          {r.capacity})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {formData.room_id && (
-                    <div className="animate-fade-in">
-                      <label className="block text-[11px] font-black text-gray-500 uppercase tracking-widest mb-4">
-                        Choose Specific Bed
-                      </label>
-                      <div className="grid grid-cols-4 gap-4">
-                        {availableRooms
-                          ?.find((r) => r.id === formData.room_id)
-                          ?.beds?.map((bed) => (
-                            <button
-                              key={bed.id}
-                              type="button"
-                              disabled={bed.status !== "available"}
-                              onClick={() =>
-                                setFormData({ ...formData, bed_id: bed.id })
-                              }
-                              className={`flex flex-col items-center justify-center p-4 rounded-[1.5rem] transition-all border-2 relative ${
-                                bed.status !== "available"
-                                  ? "opacity-30 grayscale cursor-not-allowed"
-                                  : formData.bed_id === bed.id
-                                    ? "border-primary-500 bg-primary-50 scale-110 shadow-lg z-10"
-                                    : "border-gray-100 dark:border-gray-700 hover:border-primary-200"
-                              }`}
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Join Sem</label>
+                            <select
+                              className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
+                              value={formData.semester}
+                              onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
                             >
-                              <Bed
-                                className={`w-6 h-6 ${formData.bed_id === bed.id ? "text-primary-600" : "text-gray-400"}`}
+                              <option value="">Current ({selectedStudent?.current_semester || "1"})</option>
+                              <option value={(selectedStudent?.current_semester || 1) + 1}>Next ({(selectedStudent?.current_semester || 1) + 1})</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center h-full pt-6">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                checked={formData.apply_to_future}
+                                onChange={(e) => setFormData({ ...formData, apply_to_future: e.target.checked })}
                               />
-                              <span className="text-[9px] font-bold mt-2 uppercase">
-                                {bed.bed_number.split("-B")[1]}
-                              </span>
-                              {formData.bed_id === bed.id && (
-                                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center border-2 border-white">
-                                  <CheckCircle2 className="w-3 h-3 text-white" />
-                                </div>
-                              )}
-                            </button>
-                          ))}
+                              <span className="text-xs font-bold text-gray-600">Apply Future</span>
+                            </label>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+
+                  {/* Right Column: Room Details */}
+                  <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-full">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+                        <h3 className="text-sm font-bold text-gray-900 uppercase">Room Allocation</h3>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Building</label>
+                          <select
+                            required
+                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
+                            value={formData.building_id}
+                            onChange={(e) => handleBuildingChange(e.target.value)}
+                          >
+                            <option value="">Select Building</option>
+                            {buildings?.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Available Room</label>
+                          <select
+                            required
+                            disabled={!availableRooms?.length}
+                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:bg-gray-50"
+                            value={formData.room_id}
+                            onChange={(e) => setFormData({ ...formData, room_id: e.target.value, bed_id: "" })}
+                          >
+                            <option value="">Select Room</option>
+                            {availableRooms?.map((r) => (
+                              <option key={r.id} value={r.id}>Room {r.room_number} ({r.current_occupancy}/{r.capacity})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {formData.room_id && (
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Select Bed</label>
+                            <div className="grid grid-cols-4 gap-3">
+                              {availableRooms?.find(r => r.id === formData.room_id)?.beds?.map((bed) => (
+                                <button
+                                  key={bed.id}
+                                  type="button"
+                                  disabled={bed.status !== "available"}
+                                  onClick={() => setFormData({ ...formData, bed_id: bed.id })}
+                                  className={`p-3 rounded-lg border text-center transition-all ${formData.bed_id === bed.id
+                                      ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-200"
+                                      : bed.status !== "available"
+                                        ? "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed"
+                                        : "bg-white border-gray-200 hover:border-blue-400 text-gray-700"
+                                    }`}
+                                >
+                                  <Bed className="w-5 h-5 mx-auto mb-1" />
+                                  <span className="text-[10px] font-bold block">{bed.bed_number.split('-B')[1]}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </form>
               </div>
 
-              <div className="col-span-full flex items-center space-x-6 pt-12 mt-12 border-t border-gray-50 dark:border-gray-700">
+              <div className="px-8 py-5 border-t border-gray-100 bg-white flex items-center justify-end gap-3 sticky bottom-0 z-10">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-10 py-5 bg-white border-2 border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-[2rem] font-black uppercase tracking-widest text-[11px] hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                  className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg text-sm hover:bg-gray-50 transition-colors"
                 >
-                  Cancel Step
+                  Cancel
                 </button>
                 <button
+                  form="allocationForm"
                   type="submit"
                   disabled={operationStatus === "loading"}
-                  className="flex-1 px-10 py-5 bg-primary-600 hover:bg-primary-700 text-white rounded-[2rem] font-black uppercase tracking-widest text-[11px] flex items-center justify-center transition-all shadow-2xl shadow-primary-600/40 active:scale-95 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 transition-all flex items-center shadow-lg shadow-blue-500/30 disabled:opacity-70"
                 >
-                  {operationStatus === "loading" ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : (
-                    <>
-                      {isEditing ? "Update Allocation" : "Complete Allocation"}{" "}
-                      <UserCheck className="w-4 h-4 ml-3" />
-                    </>
-                  )}
+                  {operationStatus === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Save Changes" : "Confirm Allocation")}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Checkout Configuration Modal */}
-      {isCheckoutModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-zoom-in border border-white/20">
-            <div className="p-8 text-center">
-              <div className="w-20 h-20 bg-warning-100 dark:bg-warning-900/40 rounded-3xl flex items-center justify-center mx-auto mb-6 text-warning-600">
-                <LogOut className="w-10 h-10" />
+        {/* Checkout Modal */}
+        {isCheckoutModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+              <div className="p-6 text-center border-b border-gray-50">
+                <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-100">
+                  <LogOut className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-gray-900">Confirm Checkout</h3>
+                <p className="text-sm text-gray-500 mt-1">Select checkout type for the student</p>
               </div>
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white font-display tracking-tight mb-2">
-                Checkout Configuration
-              </h3>
-              <p className="text-sm text-gray-500 font-medium px-4">
-                Verify when the student is officially ending their hostel stay.
-              </p>
-            </div>
 
-            <div className="px-8 pb-4 space-y-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setCheckoutData({ ...checkoutData, type: "current" })
-                }
-                className={`w-full p-6 rounded-3xl border-2 transition-all text-left flex items-start space-x-4 ${
-                  checkoutData.type === "current"
-                    ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/10"
-                    : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
-                }`}
-              >
-                <div
-                  className={`p-3 rounded-2xl ${checkoutData.type === "current" ? "bg-primary-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}
+              <div className="p-6 space-y-3 bg-gray-50/50">
+                <button
+                  onClick={() => setCheckoutData({ ...checkoutData, type: "current" })}
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${checkoutData.type === "current"
+                      ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
+                      : "bg-white border-gray-200 hover:border-blue-300"
+                    }`}
                 >
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                    Immediate Checkout
-                  </p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                    Student leaves now. Deactivate all fees.
-                  </p>
-                </div>
-              </button>
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 text-sm">Immediate Checkout</p>
+                    <p className="text-xs text-gray-500">End stay and stop billing now</p>
+                  </div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setCheckoutData({ ...checkoutData, type: "next" })
-                }
-                className={`w-full p-6 rounded-3xl border-2 transition-all text-left flex items-start space-x-4 ${
-                  checkoutData.type === "next"
-                    ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/10"
-                    : "border-gray-100 dark:border-gray-700 hover:border-gray-200"
-                }`}
-              >
-                <div
-                  className={`p-3 rounded-2xl ${checkoutData.type === "next" ? "bg-primary-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}
+                <button
+                  onClick={() => setCheckoutData({ ...checkoutData, type: "next" })}
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${checkoutData.type === "next"
+                      ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
+                      : "bg-white border-gray-200 hover:border-blue-300"
+                    }`}
                 >
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                    End of Semester
-                  </p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                    Stay until sem end. Deactivate future fees.
-                  </p>
-                </div>
-              </button>
-            </div>
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <ArrowRight className="w-5 h-5" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 text-sm">End of Semester</p>
+                    <p className="text-xs text-gray-500">Schedule checkout for sem end</p>
+                  </div>
+                </button>
+              </div>
 
-            <div className="p-8 flex items-center space-x-4">
-              <button
-                type="button"
-                onClick={() => setIsCheckoutModalOpen(false)}
-                className="flex-1 py-4 bg-gray-50 dark:bg-gray-700 text-gray-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all font-display"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmCheckout}
-                className="flex-1 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary-600/30 transition-all active:scale-95 font-display"
-              >
-                Process
-              </button>
+              <div className="p-6 border-t border-gray-100 flex gap-3 bg-white">
+                <button onClick={() => setIsCheckoutModalOpen(false)} className="flex-1 py-2.5 border border-gray-300 rounded-lg font-bold text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={confirmCheckout} className="flex-1 py-2.5 bg-gray-900 text-white rounded-lg font-bold text-sm hover:bg-black shadow-lg">Process</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Stay History Modal */}
-      {isHistoryOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-zoom-in border border-white/20 my-auto">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-90" />
-              <div className="relative p-10 flex items-center justify-between text-white">
-                <div className="flex items-center space-x-5">
-                  <div className="p-4 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/10">
-                    <History className="w-10 h-10" />
+        {/* History Modal */}
+        {isHistoryOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <History className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-black font-display tracking-tight">
-                      Stay History
-                    </h2>
-                    <p className="text-sm font-bold opacity-80 mt-1 uppercase tracking-widest">
-                      {selectedHistoryAllocation?.student?.first_name}{" "}
-                      {selectedHistoryAllocation?.student?.last_name} (
-                      {selectedHistoryAllocation?.student?.student_id})
+                    <h2 className="text-lg font-black text-gray-900">Stay History</h2>
+                    <p className="text-xs font-bold text-gray-500 uppercase">
+                      {selectedHistoryAllocation?.student?.first_name} {selectedHistoryAllocation?.student?.last_name}
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsHistoryOpen(false)}
-                  className="w-14 h-14 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-[1.5rem] backdrop-blur-md transition-all active:scale-95"
-                >
-                  <Plus className="w-8 h-8 rotate-45" />
+                <button onClick={() => setIsHistoryOpen(false)} className="text-gray-400 hover:text-gray-900">
+                  <XCircle className="w-6 h-6" />
                 </button>
               </div>
-            </div>
 
-            <div className="p-12 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              <div className="space-y-6">
+              <div className="p-6 bg-gray-50 max-h-[60vh] overflow-y-auto">
                 {stayHistory?.length > 0 ? (
-                  stayHistory.map((log, idx) => (
-                    <div
-                      key={log.id}
-                      className="group p-8 bg-gray-50 dark:bg-gray-700/50 rounded-[2rem] border border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/40 transition-all"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex items-center space-x-6">
-                          <div
-                            className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xs ${
-                              log.check_out_date
-                                ? "bg-gray-100 text-gray-400"
-                                : "bg-success-100 text-success-600 animate-pulse"
-                            }`}
-                          >
-                            #{stayHistory.length - idx}
+                  <div className="space-y-4">
+                    {stayHistory.map((log, idx) => (
+                      <div key={log.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border ${!log.check_out_date ? "bg-green-50 text-green-600 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                            {stayHistory.length - idx}
                           </div>
                           <div>
-                            <div className="flex items-center space-x-3">
-                              <p className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                                Room {log.room?.room_number} • Bed{" "}
-                                {log.bed?.bed_number?.split("-B")[1]}
-                              </p>
-                              {idx === 0 && !log.check_out_date && (
-                                <span className="px-3 py-1 bg-success-600 text-white text-[9px] font-black rounded-full uppercase tracking-widest">
-                                  Current
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center mt-2 space-x-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                              <span className="flex items-center">
-                                <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                                {new Date(log.check_in_date).toLocaleDateString(
-                                  "en-IN",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )}
-                              </span>
-                              <ArrowRight className="w-3.5 h-3.5" />
-                              <span
-                                className={`flex items-center ${!log.check_out_date ? "text-success-600 italic" : ""}`}
-                              >
-                                {log.check_out_date
-                                  ? new Date(
-                                      log.check_out_date,
-                                    ).toLocaleDateString("en-IN", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "numeric",
-                                    })
-                                  : "Present"}
-                              </span>
-                            </div>
+                            <p className="text-sm font-bold text-gray-900">
+                              Room {log.room?.room_number} <span className="text-gray-400 font-normal mx-1">•</span> Sem {log.semester}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {new Date(log.check_in_date).toLocaleDateString()} — {log.check_out_date ? new Date(log.check_out_date).toLocaleDateString() : <span className="text-green-600 font-bold">Present</span>}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white dark:bg-gray-700 px-4 py-1.5 rounded-full border border-gray-100 dark:border-gray-600 shadow-sm">
-                            {log.academic_year} • Sem {log.semester}
-                          </span>
+                        <div className="text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1 rounded-md">
+                          {log.academic_year}
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 ) : (
-                  <div className="py-20 text-center">
-                    <History className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">
-                      No logs found for this student.
-                    </p>
+                  <div className="text-center py-12 text-gray-500">
+                    No history records found.
                   </div>
                 )}
               </div>
             </div>
-
-            <div className="p-12 border-t border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30">
-              <button
-                onClick={() => setIsHistoryOpen(false)}
-                className="w-full py-5 bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-600 text-gray-500 rounded-[2rem] font-black uppercase tracking-widest text-[11px] hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-              >
-                Close History View
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
     </div>
   );
 };
