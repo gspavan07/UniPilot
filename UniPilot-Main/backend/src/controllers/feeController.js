@@ -300,119 +300,130 @@ exports.collectPayment = async (req, res) => {
 
     const receiptBase = `REC-${Date.now()}-${student_id.substring(0, 4)}`;
 
-    // 3. Create Parent Record for Wallet (if any items)
+    // 3. Create Parent Records for Wallet (Split by Semester)
     if (walletItems.length > 0) {
-      const totalWalletAmount = walletItems.reduce(
-        (sum, item) => sum + item.amount,
-        0,
-      );
+      // Group items by semester
+      const walletBySem = walletItems.reduce((acc, item) => {
+        const sem = item.semester || 0;
+        if (!acc[sem]) acc[sem] = [];
+        acc[sem].push(item);
+        return acc;
+      }, {});
 
-      const walletParent = await FeePayment.create(
-        {
-          student_id,
-          amount_paid: totalWalletAmount,
-          payment_method: "WALLET",
-          transaction_id: `WAL-${Date.now()}`,
-          receipt_url: `${receiptBase}-W`,
-          payment_date: payment_date || new Date(),
-          remarks: `Paid from Wallet: ${remarks || "Fee Payment"}`,
-          status: "completed",
-        },
-        { transaction },
-      );
-      createdParentPayments.push(walletParent);
+      for (const [semester, semItems] of Object.entries(walletBySem)) {
+        const semTotal = semItems.reduce((sum, i) => sum + i.amount, 0);
 
-      // Create Children
-      for (const item of walletItems) {
-        if (item.type === "structure") {
-          await AcademicFeePayment.create(
-            {
-              fee_payment_id: walletParent.id,
-              student_id,
-              fee_structure_id: item.id,
-              amount: item.amount,
-            },
-            { transaction },
-          );
-        } else if (item.type === "charge" || item.type === "fine") {
-          // For Fines/Ad-hoc charges that might identify by ID
-          if (item.id && item.type === "charge") {
-            await StudentChargePayment.create(
+        const walletParent = await FeePayment.create(
+          {
+            student_id,
+            amount_paid: semTotal,
+            payment_method: "WALLET",
+            semester: semester === "0" ? null : parseInt(semester),
+            transaction_id: `WAL-${Date.now()}-${semester}`,
+            receipt_url: `${receiptBase}-W-${semester}`,
+            payment_date: payment_date || new Date(),
+            remarks: `Paid from Wallet: ${remarks || "Fee Payment"}`,
+            status: "completed",
+          },
+          { transaction },
+        );
+        createdParentPayments.push(walletParent);
+
+        for (const item of semItems) {
+          if (item.type === "structure") {
+            await AcademicFeePayment.create(
               {
                 fee_payment_id: walletParent.id,
+                student_id,
+                fee_structure_id: item.id,
+                amount: item.amount,
+              },
+              { transaction },
+            );
+          } else if (item.type === "charge" || item.type === "fine") {
+            if (item.id && item.type === "charge") {
+              await StudentChargePayment.create(
+                {
+                  fee_payment_id: walletParent.id,
+                  student_id,
+                  student_fee_charge_id: item.id,
+                  amount: item.amount,
+                },
+                { transaction },
+              );
+              await StudentFeeCharge.update(
+                {
+                  is_paid: true,
+                  paid_at: new Date(),
+                  payment_id: walletParent.id,
+                },
+                { where: { id: item.id }, transaction },
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Create Parent Records for External (Split by Semester)
+    if (externalItems.length > 0) {
+      // Group items by semester
+      const externalBySem = externalItems.reduce((acc, item) => {
+        const sem = item.semester || 0;
+        if (!acc[sem]) acc[sem] = [];
+        acc[sem].push(item);
+        return acc;
+      }, {});
+
+      for (const [semester, semItems] of Object.entries(externalBySem)) {
+        const semTotal = semItems.reduce((sum, i) => sum + i.amount, 0);
+
+        const externalParent = await FeePayment.create(
+          {
+            student_id,
+            amount_paid: semTotal,
+            payment_method: payment_method || "cash",
+            semester: semester === "0" ? null : parseInt(semester),
+            transaction_id: transaction_id || `TXN-${Date.now()}`,
+            receipt_url: `${receiptBase}-E-${semester}`,
+            payment_date: payment_date || new Date(),
+            remarks: remarks || "Fee Collection",
+            status: "completed",
+          },
+          { transaction },
+        );
+        createdParentPayments.push(externalParent);
+
+        for (const item of semItems) {
+          if (item.type === "structure") {
+            await AcademicFeePayment.create(
+              {
+                fee_payment_id: externalParent.id,
+                student_id,
+                fee_structure_id: item.id,
+                amount: item.amount,
+              },
+              { transaction },
+            );
+          } else if (item.id && item.type === "charge") {
+            await StudentChargePayment.create(
+              {
+                fee_payment_id: externalParent.id,
                 student_id,
                 student_fee_charge_id: item.id,
                 amount: item.amount,
               },
               { transaction },
             );
-          } else {
-            // If it's a raw fine without a charge ID (just "fine:semester"), we might not link it to a specific charge table
-            // unless we have a "StudentFeeCharge" for that fine.
-            // Current logic supports "fine" type but 'targetId' might be null.
-            // If existing system tracked fines solely by 'remarks' or 'semester' in FeePayment, we lose granularity here unless we have a child table.
-            // However, the PROMPT requirement says: "if they're academic related there should be academic fee payment record".
-            // Non-academic (fines) might just reside on the Parent or we need a generic child?
-            // As per models, we have StudentChargePayment. If it's a fine, usually there is a StudentFeeCharge created for it?
-            // If not, we might lose specific tracking.
-            // But existing code: "targetStructureId = null" for fines.
-            // So fines just sat on FeePayment with no ID.
-            // We can continue that pattern: The Parent Record holds the amount, but no child record?
-            // OR, better: The Parent Record has the TOTAL, if we don't create a child, we lose "what this amount was for" if mixed.
-            // BUT, if we have mix of Structure + Fine in one Wallet transaction:
-            // Parent = 1500 (1000 struct + 500 fine).
-            // Child = 1000 (struct).
-            // Gap = 500. We can infer it's fine/other.
-            // For now, let's strictly link what we can.
+            await StudentFeeCharge.update(
+              {
+                is_paid: true,
+                paid_at: new Date(),
+                payment_id: externalParent.id,
+              },
+              { where: { id: item.id }, transaction },
+            );
           }
-        }
-      }
-    }
-
-    // 4. Create Parent Record for External (if any items)
-    if (externalItems.length > 0) {
-      const totalExternalAmount = externalItems.reduce(
-        (sum, item) => sum + item.amount,
-        0,
-      );
-
-      const externalParent = await FeePayment.create(
-        {
-          student_id,
-          amount_paid: totalExternalAmount,
-          payment_method: payment_method || "cash",
-          transaction_id: transaction_id || `TXN-${Date.now()}`,
-          receipt_url: `${receiptBase}-E`,
-          payment_date: payment_date || new Date(),
-          remarks: remarks || "Fee Collection",
-          status: "completed",
-        },
-        { transaction },
-      );
-      createdParentPayments.push(externalParent);
-
-      // Create Children
-      for (const item of externalItems) {
-        if (item.type === "structure") {
-          await AcademicFeePayment.create(
-            {
-              fee_payment_id: externalParent.id,
-              student_id,
-              fee_structure_id: item.id,
-              amount: item.amount,
-            },
-            { transaction },
-          );
-        } else if (item.id && item.type === "charge") {
-          await StudentChargePayment.create(
-            {
-              fee_payment_id: externalParent.id,
-              student_id,
-              student_fee_charge_id: item.id,
-              amount: item.amount,
-            },
-            { transaction },
-          );
         }
       }
     }
@@ -1266,7 +1277,7 @@ exports.getTransactions = async (req, res) => {
           include: [
             {
               model: FeeStructure,
-              as: "fee_structure",
+              as: "structure",
               include: [{ model: FeeCategory, as: "category" }],
             },
           ],
@@ -1277,7 +1288,7 @@ exports.getTransactions = async (req, res) => {
           include: [
             {
               model: StudentFeeCharge,
-              as: "fee_charge",
+              as: "charge",
               include: [{ model: FeeCategory, as: "category" }],
             },
           ],
@@ -2233,7 +2244,7 @@ exports.getDailyCollection = async (req, res) => {
           include: [
             {
               model: FeeStructure,
-              as: "fee_structure",
+              as: "structure",
               include: [{ model: FeeCategory, as: "category" }],
             },
           ],
@@ -2244,7 +2255,7 @@ exports.getDailyCollection = async (req, res) => {
           include: [
             {
               model: StudentFeeCharge,
-              as: "fee_charge",
+              as: "charge",
               include: [{ model: FeeCategory, as: "category" }],
             },
           ],

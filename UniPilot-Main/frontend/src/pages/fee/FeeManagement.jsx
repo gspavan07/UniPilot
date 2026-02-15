@@ -685,59 +685,7 @@ const FeeManagement = () => {
 
       result.forEach((parent) => {
         totalPaid += parseFloat(parent.amount_paid);
-        let parentChildSum = 0;
-
-        // 1. Academic Fee Payments (Fee Structures)
-        if (parent.academic_fee_payments) {
-          parent.academic_fee_payments.forEach((child) => {
-            allItems.push({
-              ...child,
-              amount_paid: child.amount, // Map for receipt compatibility
-              payment_date: parent.payment_date,
-              transaction_id: parent.transaction_id,
-              payment_method: parent.payment_method,
-              fee_structure: child.structure, // Map included structure
-            });
-            parentChildSum += parseFloat(child.amount);
-          });
-        }
-
-        // 2. Student Charge Payments (Fines/Charges)
-        if (parent.student_charge_payments) {
-          parent.student_charge_payments.forEach((child) => {
-            allItems.push({
-              ...child,
-              amount_paid: child.amount,
-              payment_date: parent.payment_date,
-              transaction_id: parent.transaction_id,
-              payment_method: parent.payment_method,
-              fee_structure: {
-                category: child.charge?.category || { name: "Charge/Fine" },
-              }, // Synthetic structure for receipt
-            });
-            parentChildSum += parseFloat(child.amount);
-          });
-        }
-
-        // 3. Handle Unlinked/Ad-hoc amounts (e.g. Fines without IDs)
-        const gap = parseFloat(parent.amount_paid) - parentChildSum;
-        if (gap > 0.01) {
-          allItems.push({
-            id: `adhoc-${parent.id}`,
-            amount_paid: gap,
-            payment_date: parent.payment_date,
-            transaction_id: parent.transaction_id,
-            payment_method: parent.payment_method,
-            fee_structure: {
-              category: {
-                name: parent.remarks.includes("Fine")
-                  ? "Late Fine"
-                  : "Ad-hoc Payment",
-              },
-            },
-            semester: parent.semester || "N/A",
-          });
-        }
+        allItems = [...allItems, ...flattenTransactionItems(parent)];
       });
 
       setPaymentSuccess({
@@ -1012,6 +960,82 @@ const FeeManagement = () => {
     }
 
     return { category, semester };
+  };
+
+  const flattenTransactionItems = (t) => {
+    let items = [];
+    // 1. Academic Fee Payments
+    if (t.academic_fee_payments?.length > 0) {
+      t.academic_fee_payments.forEach((child) => {
+        items.push({
+          ...child,
+          amount_paid: child.amount,
+          payment_date: t.payment_date,
+          transaction_id: t.transaction_id,
+          payment_method: t.payment_method,
+          fee_structure: child.structure,
+          semester: child.structure?.semester || t.semester,
+          student: t.student || selectedStudent,
+          remarks: t.remarks,
+        });
+      });
+    }
+
+    // 2. Student Charge Payments
+    if (t.student_charge_payments?.length > 0) {
+      t.student_charge_payments.forEach((child) => {
+        items.push({
+          ...child,
+          amount_paid: child.amount,
+          payment_date: t.payment_date,
+          transaction_id: t.transaction_id,
+          payment_method: t.payment_method,
+          fee_structure: {
+            category: child.charge?.category || { name: "Charge/Fine" },
+          },
+          semester: child.charge?.semester || t.semester,
+          student: t.student || selectedStudent,
+          remarks: t.remarks,
+        });
+      });
+    }
+
+    // 3. Handle gaps/adhoc
+    const childTotal = items.reduce(
+      (sum, i) => sum + parseFloat(i.amount_paid || 0),
+      0,
+    );
+    const gap = parseFloat(t.amount_paid) - childTotal;
+    if (gap > 0.01) {
+      items.push({
+        id: `adhoc-${t.id}`,
+        amount_paid: gap,
+        payment_date: t.payment_date,
+        transaction_id: t.transaction_id,
+        payment_method: t.payment_method,
+        fee_structure: {
+          category: {
+            name: t.remarks?.includes("Fine") ? "Late Fine" : "Ad-hoc Payment",
+          },
+        },
+        semester: t.semester || "N/A",
+        student: t.student || selectedStudent,
+        remarks: t.remarks,
+      });
+    }
+
+    // Fallback if no children (single structure legacy record)
+    if (items.length === 0) {
+      items.push({
+        ...t,
+        fee_structure: t.fee_structure || {
+          category: { name: "Fee Payment" },
+        },
+        student: t.student || selectedStudent,
+      });
+    }
+
+    return items;
   };
 
   // ADMIN VIEW HELPER FUNCTIONS
@@ -2502,10 +2526,7 @@ const FeeManagement = () => {
                           <>
                             {category}
                             <div className="text-[10px] opacity-60">
-                              {String(semester).startsWith("Charge") ||
-                              String(semester).startsWith("Cycle")
-                                ? semester
-                                : `SEM ${semester}`}
+                              SEM {t?.semester || "N/A"}
                             </div>
                           </>
                         );
@@ -2531,7 +2552,10 @@ const FeeManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
-                        onClick={() => printReceipt(t)}
+                        onClick={() => {
+                          const items = flattenTransactionItems(t);
+                          printReceipt(null, items);
+                        }}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all"
                       >
                         <FileText className="w-4 h-4" />

@@ -612,7 +612,7 @@ const MyFees = () => {
                     <td className="px-6 py-4 text-right">
                       {selectedFees.has(fee.id) ? (
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                          <span className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                             ₹
                           </span>
                           <input

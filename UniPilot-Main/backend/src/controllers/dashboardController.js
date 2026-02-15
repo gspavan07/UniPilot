@@ -135,7 +135,7 @@ const getSuperAdminStats = async (req, res) => {
     const revenueTrendData = await FeePayment.findAll({
       attributes: [
         [fn("date_trunc", "month", col("payment_date")), "month"],
-        [fn("sum", col("amount_paid")), "total"],
+        [fn("sum", col("amount_paid")), "collected"],
       ],
       where: {
         ...paymentWhere,
@@ -156,69 +156,6 @@ const getSuperAdminStats = async (req, res) => {
           : [],
       group: [fn("date_trunc", "month", col("payment_date"))],
       order: [[fn("date_trunc", "month", col("payment_date")), "ASC"]],
-    });
-
-    // 2b. Collectable Revenue Trend (from StudentFeeCharge)
-    const collectableTrendData = await StudentFeeCharge.findAll({
-      attributes: [
-        [fn("date_trunc", "month", col("created_at")), "month"],
-        [fn("sum", col("amount")), "total"],
-      ],
-      where:
-        studentIds.length > 0
-          ? {
-              student_id: studentIds,
-              created_at: {
-                [Op.gte]: sixMonthsAgoTrend,
-              },
-            }
-          : {
-              created_at: {
-                [Op.gte]: sixMonthsAgoTrend,
-              },
-            },
-      group: [fn("date_trunc", "month", col("created_at"))],
-      order: [[fn("date_trunc", "month", col("created_at")), "ASC"]],
-    });
-
-    // 2c. Merge Trends
-    const mergedTrend = [];
-    const months = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      months.push(
-        d.toLocaleString("default", { month: "short", year: "numeric" }),
-      );
-    }
-    months.reverse();
-
-    months.forEach((monthName) => {
-      const collectedObj = revenueTrendData.find((t) => {
-        const d = new Date(t.get("month"));
-        return (
-          d.toLocaleString("default", {
-            month: "short",
-            year: "numeric",
-          }) === monthName
-        );
-      });
-
-      const collectableObj = collectableTrendData.find((t) => {
-        const d = new Date(t.get("month"));
-        return (
-          d.toLocaleString("default", {
-            month: "short",
-            year: "numeric",
-          }) === monthName
-        );
-      });
-
-      mergedTrend.push({
-        month: monthName,
-        collected: parseFloat(collectedObj?.get("total") || 0),
-        collectable: parseFloat(collectableObj?.get("total") || 0),
-      });
     });
 
     // 3. Student Enrollment by Program (Pie Chart) - Live data from DB
@@ -260,13 +197,12 @@ const getSuperAdminStats = async (req, res) => {
         students: totalStudents,
         faculty: totalFaculty,
         revenue: totalRevenue, // Total Collected
-        total_collectable: totalCollectableStructure,
         academic_depts: academicDepts,
         admin_depts: adminDepts,
         programs: totalPrograms,
       },
       analytics: {
-        revenue_trend: mergedTrend,
+        revenue_trend: revenueTrendData,
         enrollment_by_program: formattedEnrollment,
         batches: availableBatches.map((b) => b.batch_year),
       },

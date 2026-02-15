@@ -41,8 +41,6 @@ import {
   Cell,
 } from "recharts";
 import { fetchSuperAdminStats } from "../../store/slices/dashboardSlice";
-import { formatDistanceToNow } from "date-fns";
-
 const SuperAdminDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -52,10 +50,6 @@ const SuperAdminDashboard = () => {
 
   useEffect(() => {
     dispatch(fetchSuperAdminStats(selectedBatch));
-    const interval = setInterval(() => {
-      dispatch(fetchSuperAdminStats(selectedBatch));
-    }, 300000); // Refresh every 5 minutes
-    return () => clearInterval(interval);
   }, [dispatch, selectedBatch]);
 
   const handleRefresh = () => {
@@ -64,6 +58,23 @@ const SuperAdminDashboard = () => {
 
   const handleBatchChange = (e) => {
     setSelectedBatch(e.target.value);
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatMonth = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-IN", {
+      month: "short",
+      year: "2-digit",
+    }).format(date);
   };
 
   if (status === "loading" && !stats) {
@@ -82,7 +93,7 @@ const SuperAdminDashboard = () => {
       name: "Total Students",
       value: stats?.kpis?.students || 0,
       icon: GraduationCap,
-      change: "+12.5%",
+      // change: "+12.5%",
       changeType: "increase",
       color: "from-blue-500 to-indigo-600",
     },
@@ -90,7 +101,7 @@ const SuperAdminDashboard = () => {
       name: "Total Faculty",
       value: stats?.kpis?.faculty || 0,
       icon: Users,
-      change: "+3.2%",
+      // change: "+3.2%",
       changeType: "increase",
       color: "from-emerald-500 to-teal-600",
     },
@@ -98,23 +109,15 @@ const SuperAdminDashboard = () => {
       name: "Collected Revenue",
       value: `₹${(stats?.kpis?.revenue || 0).toLocaleString()}`,
       icon: IndianRupee,
-      change: "Received",
+      // change: "Received",
       changeType: "neutral",
       color: "from-amber-500 to-orange-600",
-    },
-    {
-      name: "Collectable Revenue",
-      value: `₹${(stats?.kpis?.total_collectable || 0).toLocaleString()}`,
-      icon: FileText,
-      change: "Target",
-      changeType: "neutral",
-      color: "from-indigo-500 to-blue-600",
     },
     {
       name: "Academic Depts",
       value: stats?.kpis?.academic_depts || 0,
       icon: Globe,
-      change: "Institutional",
+      // change: "Institutional",
       changeType: "neutral",
       color: "from-violet-500 to-purple-600",
     },
@@ -122,7 +125,7 @@ const SuperAdminDashboard = () => {
       name: "Admin Depts",
       value: stats?.kpis?.admin_depts || 0,
       icon: ShieldCheck,
-      change: "Operations",
+      // change: "Operations",
       changeType: "neutral",
       color: "from-zinc-500 to-slate-600",
     },
@@ -209,7 +212,7 @@ const SuperAdminDashboard = () => {
             <select
               value={selectedBatch}
               onChange={handleBatchChange}
-              className="bg-transparent text-sm font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer"
+              className="bg-transparent text-sm font-bold border-none outline-none cursor-pointer"
             >
               <option value="all">All Batches</option>
               {stats?.analytics?.batches?.map((b) => (
@@ -283,52 +286,7 @@ const SuperAdminDashboard = () => {
             ))}
           </div>
         </div>
-        {/* System Health Component
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-black text-gray-900 dark:text-white">
-              Server Infrastructure
-            </h3>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold uppercase">
-              <Activity className="w-3 h-3" /> Live
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
-              <div className="flex items-center gap-3">
-                <Cpu className="w-5 h-5 text-indigo-500" />
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                  CPU Load (1m)
-                </span>
-              </div>
-              <span className="text-xs font-black text-indigo-600">
-                {stats?.health?.cpu_load || "0.00"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
-              <div className="flex items-center gap-3">
-                <Database className="w-5 h-5 text-blue-500" />
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                  Memory Utilization
-                </span>
-              </div>
-              <span className="text-xs font-black text-primary-600">
-                {stats?.health?.db_storage || "0%"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border border-transparent hover:border-primary-100 transition-all">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                  Security Access
-                </span>
-              </div>
-              <span className="text-xs font-black text-emerald-500 uppercase">
-                Secure
-              </span>
-            </div>
-          </div>
-        </div> */}
+
         {/* Enrollment Section */}
         <div className="lg:col-span-2 xl:col-span-2 bg-white dark:bg-gray-800 p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6">
@@ -388,7 +346,7 @@ const SuperAdminDashboard = () => {
                 Revenue Intelligence
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                Analysis of Actual vs Targeted inflows
+                Analysis of actual revenue inflows
               </p>
             </div>
             <div className="flex items-center gap-6">
@@ -396,12 +354,6 @@ const SuperAdminDashboard = () => {
                 <div className="w-3 h-3 rounded-full bg-primary-500 shadow-lg shadow-primary-200"></div>
                 <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
                   Collected
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-violet-500 shadow-lg shadow-violet-200"></div>
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
-                  Collectable
                 </span>
               </div>
             </div>
@@ -420,16 +372,6 @@ const SuperAdminDashboard = () => {
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient
-                    id="colorCollectable"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -440,20 +382,41 @@ const SuperAdminDashboard = () => {
                   dataKey="month"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fontWeight: 600, fill: "#94a3b8" }}
+                  tick={{ fontSize: 10, fontWeight: 600, fill: "#64748b" }}
+                  tickFormatter={formatMonth}
+                  minTickGap={30}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 12, fontWeight: 600, fill: "#94a3b8" }}
+                  tick={{ fontSize: 10, fontWeight: 600, fill: "#64748b" }}
+                  tickFormatter={(value) =>
+                    `₹${value >= 1000 ? (value / 1000).toFixed(0) + "k" : value}`
+                  }
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "16px",
-                    border: "none",
-                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    backdropFilter: "blur(8px)",
+                    borderRadius: "20px",
+                    border: "1px solid #f1f5f9",
+                    boxShadow: "0 20px 25px -5px rgba(0,0,0,0.05)",
+                    padding: "12px 16px",
                   }}
+                  itemStyle={{
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    color: "#0f172a",
+                  }}
+                  labelStyle={{
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    color: "#64748b",
+                    marginBottom: "4px",
+                    textTransform: "uppercase",
+                  }}
+                  labelFormatter={formatMonth}
+                  formatter={(value) => [formatCurrency(value), "Collected"]}
                 />
                 <Area
                   type="monotone"
@@ -463,16 +426,6 @@ const SuperAdminDashboard = () => {
                   strokeWidth={4}
                   fillOpacity={1}
                   fill="url(#colorCollected)"
-                  animationDuration={1500}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="collectable"
-                  name="Collectable"
-                  stroke="#8b5cf6"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#colorCollectable)"
                   animationDuration={1500}
                 />
               </AreaChart>
