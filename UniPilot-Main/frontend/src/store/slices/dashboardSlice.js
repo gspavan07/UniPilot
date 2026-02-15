@@ -10,9 +10,11 @@ const initialState = {
 // Async thunk to fetch super admin dashboard statistics
 export const fetchSuperAdminStats = createAsyncThunk(
   "dashboard/fetchSuperAdminStats",
-  async (_, { rejectWithValue }) => {
+  async (batch = "all", { rejectWithValue }) => {
     try {
-      const response = await api.get("/dashboard/super-admin");
+      const response = await api.get(
+        `/dashboard/super-admin${batch !== "all" ? `?batch=${batch}` : ""}`,
+      );
       return response.data;
     } catch (error) {
       return rejectWithValue(
