@@ -25,6 +25,12 @@ router.delete(
   timetableController.deleteAllTimetables,
 );
 
+router.put(
+  "/:cycleId/timetables/bulk-update",
+  auditMiddleware("UPDATE", "EXAM_TIMETABLE"),
+  timetableController.bulkUpdateTimetables,
+);
+
 // Individual timetable entry routes
 router.put(
   "/timetables/:id",

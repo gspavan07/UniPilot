@@ -19,19 +19,21 @@ async function getTimetablesByCycle(req, res) {
 
     // Since program_id is now an array, we need to check if the array contains the programId
     if (programId) {
-      where[sequelize.Sequelize.Op.and] = sequelize.literal(
-        `:programId = ANY(program_id)`,
-      );
+      where.program_id = { [Op.contains]: [programId] };
     }
 
     const timetables = await ExamTimetable.findAll({
       where,
-      replacements: { programId },
       include: [
         {
           model: sequelize.models.Course,
           as: "course",
-          attributes: ["id", "name", "code"],
+          attributes: ["id", "name", "code", "department_id"],
+        },
+        {
+          model: sequelize.models.User,
+          as: "assigned_faculty",
+          attributes: ["id", "first_name", "last_name", "department_id"],
         },
       ],
       order: [
@@ -357,9 +359,12 @@ async function autoGenerateTimetable(req, res) {
     };
 
     let currentDate = new Date(start_date);
+    const gapDays = parseInt(gap) || 0;
 
     // For each course group, find the earliest date+session with no conflicts
     for (const courseGroup of courseGroups) {
+      let maxScheduledDateForGroup = new Date(0); // Track max date used for this group
+
       for (const course of courseGroup) {
         let scheduled = false;
         let attemptDate = new Date(currentDate);
@@ -418,12 +423,16 @@ async function autoGenerateTimetable(req, res) {
             attemptDate.setDate(attemptDate.getDate() + 1);
           }
         }
+
+        if (attemptDate > maxScheduledDateForGroup) {
+          maxScheduledDateForGroup = new Date(attemptDate);
+        }
       }
 
-      // Advance minimum date by gap for next course group
-      if (gap && gap > 0) {
-        currentDate.setDate(currentDate.getDate() + gap);
-      }
+      // Advance currentDate to the latest date used by the previous group + gap
+      // If gap=1, we want 1 full day between exams. So +1 (for next day) + gap.
+      currentDate = new Date(maxScheduledDateForGroup);
+      currentDate.setDate(currentDate.getDate() + gapDays + 1);
     }
     console.log(timetables);
     // Bulk create all timetables
@@ -439,6 +448,41 @@ async function autoGenerateTimetable(req, res) {
     res.json({ success: true, data: timetables, count: timetables.length });
   } catch (error) {
     logger.error("Auto-generate timetable error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Bulk Update Timetables (Faculty Assignment)
+ * PUT /api/exam/cycles/:cycleId/timetables/bulk-update
+ */
+async function bulkUpdateTimetables(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const { cycleId } = req.params;
+    const { updates } = req.body; // Array of objects: { id, assigned_faculty_id, ... }
+
+    if (!Array.isArray(updates)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Updates must be an array" });
+    }
+
+    for (const update of updates) {
+      const { id, ...data } = update;
+      if (id) {
+        await ExamTimetable.update(data, {
+          where: { id, exam_cycle_id: cycleId },
+          transaction: t,
+        });
+      }
+    }
+
+    await t.commit();
+    res.json({ success: true, message: "Timetables updated successfully" });
+  } catch (error) {
+    await t.rollback();
+    logger.error("Bulk update timetables error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 }
@@ -533,4 +577,5 @@ module.exports = {
   deleteTimetableEntry,
   deleteAllTimetables,
   autoGenerateTimetable,
+  bulkUpdateTimetables,
 };

@@ -11,6 +11,7 @@ export const deleteCycle = (id) => api.delete(`/exam/cycles/${id}`);
 // Helper APIs for form dropdowns
 export const getAllRegulations = () =>
   api.get("/exam/cycles/helpers/regulations");
+export const getAllDegrees = () => api.get("/exam/cycles/helpers/degrees");
 export const getAllBatches = () => api.get("/exam/cycles/helpers/batches");
 export const getCourseTypes = (regulationId) =>
   api.get(`/exam/cycles/helpers/course-types/${regulationId}`);
@@ -36,6 +37,16 @@ export const deleteTimetableEntry = (id) =>
   api.delete(`/exam/cycles/timetables/${id}`);
 export const deleteAllTimetables = (cycleId) =>
   api.delete(`/exam/cycles/${cycleId}/timetables/all`);
+export const bulkUpdateTimetables = (cycleId, updates) =>
+  api.put(`/exam/cycles/${cycleId}/timetables/bulk-update`, { updates });
+
+export const getFacultyList = () => api.get("/users", { params: { role: "faculty" } });
+
+// Faculty Exam APIs
+export const getAssignedExams = () => api.get("/exam/faculty/assigned-exams");
+export const updatePaperFormat = (timetableId, data) =>
+  api.put(`/exam/faculty/paper-format/${timetableId}`, data);
+
 
 // Fee Configuration APIs
 export const getFeeConfigByCycle = (cycleId) =>

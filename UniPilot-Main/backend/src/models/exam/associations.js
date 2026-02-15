@@ -40,6 +40,11 @@ ExamTimetable.belongsTo(sequelize.models.Course, {
   as: "course",
 });
 
+ExamTimetable.belongsTo(sequelize.models.User, {
+  foreignKey: "assigned_faculty_id",
+  as: "assigned_faculty",
+});
+
 // 3. ExamFeeConfiguration associations
 ExamFeeConfiguration.belongsTo(ExamCycle, {
   foreignKey: "exam_cycle_id",

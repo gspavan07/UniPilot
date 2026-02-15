@@ -22,15 +22,21 @@ export default function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const menuItems = [
-    { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/exam-cycles", icon: Calendar, label: "Exam Cycles" },
-    { path: "/hall-tickets", icon: Ticket, label: "Hall Tickets" },
-    { path: "/schedules", icon: ClipboardList, label: "Schedules" },
-    { path: "/seating", icon: Users, label: "Seating" },
-    { path: "/grades", icon: FileText, label: "Grades" },
-    { path: "/settings", icon: Settings, label: "Settings" },
-  ];
+  const menuItems =
+    user?.role === "faculty"
+      ? [
+        { path: "/faculty/exams", icon: LayoutDashboard, label: "My Exams" },
+        { path: "/profile", icon: User, label: "Profile" },
+      ]
+      : [
+        { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+        { path: "/exam-cycles", icon: Calendar, label: "Exam Cycles" },
+        { path: "/hall-tickets", icon: Ticket, label: "Hall Tickets" },
+        { path: "/schedules", icon: ClipboardList, label: "Schedules" },
+        { path: "/seating", icon: Users, label: "Seating" },
+        { path: "/grades", icon: FileText, label: "Grades" },
+        { path: "/settings", icon: Settings, label: "Settings" },
+      ];
 
   const handleLogout = async () => {
     await logout();

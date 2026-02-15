@@ -38,6 +38,7 @@ router.get("/:id/students", cycleController.getCycleStudents);
 // Helper routes for dropdown data
 router.get("/helpers/regulations", helperController.getAllRegulations);
 router.get("/helpers/batches", helperController.getAllBatches);
+router.get("/helpers/degrees", helperController.getAllDegrees);
 router.get(
   "/helpers/course-types/:regulationId",
   helperController.getCourseTypes,

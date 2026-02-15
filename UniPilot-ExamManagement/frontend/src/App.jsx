@@ -8,6 +8,8 @@ import ExamCycleList from "./pages/ExamCycles/ExamCycleList";
 import CreateCycle from "./pages/ExamCycles/CreateCycle";
 import ManageCycle from "./pages/ExamCycles/ManageCycle";
 import Profile from "./pages/Profile/Profile";
+import FacultyDashboard from "./pages/Faculty/FacultyDashboard";
+import PaperFormatEditor from "./pages/Faculty/PaperFormatEditor";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -26,6 +28,14 @@ function App() {
               </ProtectedRoute>
             }
           >
+            {/* Faculty Routes */}
+            <Route path="faculty/exams" element={<FacultyDashboard />} />
+            <Route
+              path="faculty/exam/:timetableId/format"
+              element={<PaperFormatEditor />}
+            />
+
+            {/* Admin Routes */}
             <Route index element={<Dashboard />} />
             <Route path="exam-cycles" element={<ExamCycleList />} />
             <Route path="exam-cycles/create" element={<CreateCycle />} />

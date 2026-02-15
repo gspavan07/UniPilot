@@ -10,8 +10,17 @@ import {
   getCycleTypes,
   getCurrentSemester,
   getProgramsByDegree,
+  getAllDegrees,
 } from "../../services/examCycleService";
 import "./CreateCycle.css";
+
+const DEGREE_LABELS = {
+  btech: "B.Tech",
+  mtech: "M.Tech",
+  mca: "MCA",
+  mba: "MBA",
+  diploma: "Diploma",
+};
 
 const MONTHS = [
   "Jan",
@@ -65,7 +74,7 @@ export default function CreateCycle() {
   });
 
   // Dropdown options
-  const [degrees, setDegrees] = useState(["btech", "mtech", "mba", "mca"]);
+  const [degrees, setDegrees] = useState([]);
   const [regulations, setRegulations] = useState([]);
   const [batches, setBatches] = useState([]);
   const [courseTypes, setCourseTypes] = useState([]);
@@ -84,6 +93,7 @@ export default function CreateCycle() {
   // Load initial data
   useEffect(() => {
     const init = async () => {
+      await loadDegrees();
       await loadRegulations();
       await loadBatches();
     };
@@ -176,6 +186,15 @@ export default function CreateCycle() {
     formData.cycle_type,
     formData.exam_month,
   ]);
+
+  const loadDegrees = async () => {
+    try {
+      const response = await getAllDegrees();
+      setDegrees(response.data.data || []);
+    } catch (err) {
+      console.error("Error loading degrees:", err);
+    }
+  };
 
   const loadRegulations = async () => {
     try {
@@ -309,7 +328,7 @@ export default function CreateCycle() {
     } catch (err) {
       setError(
         err.response?.data?.error ||
-          `Failed to ${isEdit ? "update" : "create"} exam cycle`,
+        `Failed to ${isEdit ? "update" : "create"} exam cycle`,
       );
     } finally {
       setLoading(false);
@@ -353,7 +372,7 @@ export default function CreateCycle() {
               <option value="">Select Degree</option>
               {degrees.map((deg) => (
                 <option key={deg} value={deg}>
-                  {deg}
+                  {DEGREE_LABELS[deg.toLowerCase()] || deg.toUpperCase()}
                 </option>
               ))}
             </select>

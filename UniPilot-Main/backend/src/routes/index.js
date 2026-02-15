@@ -37,7 +37,9 @@ const examCycleRoutes = require("./exam/examCycle.routes");
 const examHallTicketRoutes = require("./exam/hallTicket.routes");
 const examScheduleRoutes = require("./exam/examSchedule.routes");
 const examSeatingRoutes = require("./exam/seatingArrangement.routes");
+
 const examGradeRoutes = require("./exam/gradeEntry.routes");
+const facultyExamRoutes = require("./exam/facultyExam.routes");
 
 const router = express.Router();
 
@@ -89,6 +91,7 @@ router.use("/co-po-maps", coPoMapRoutes);
 router.use("/exam/cycles", examCycleRoutes);
 router.use("/exam/hall-tickets", examHallTicketRoutes);
 router.use("/exam/schedules", examScheduleRoutes);
+router.use("/exam/faculty", facultyExamRoutes);
 router.use("/exam/seating", examSeatingRoutes);
 router.use("/exam/grades", examGradeRoutes);
 
