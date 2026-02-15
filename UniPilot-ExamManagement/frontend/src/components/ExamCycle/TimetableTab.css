@@ -1,0 +1,184 @@
+.timetable-tab {
+  width: 100%;
+}
+
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filters {
+  flex: 1;
+  min-width: 200px;
+}
+
+.program-filter {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.925rem;
+  background: white;
+  min-width: 250px;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.auto-generate-form {
+  background: #f9fafb;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 2px solid #e5e7eb;
+}
+
+.auto-generate-form h3 {
+  margin: 0 0 1.5rem 0;
+  color: #1a202c;
+}
+
+.form-note {
+  background: #dbeafe;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+}
+
+.form-note p {
+  margin: 0.5rem 0;
+  font-size: 0.925rem;
+  color: #1e40af;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #6b7280;
+}
+
+.timetable-table {
+  overflow-x: auto;
+}
+
+.timetable-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.timetable-table th {
+  background: #f3f4f6;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.timetable-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.course-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.course-code {
+  font-size: 0.825rem;
+  color: #6b7280;
+}
+
+.session-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.session-badge.morning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.session-badge.afternoon {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.session-badge.full_day {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon-danger {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-icon-danger:hover {
+  background: #fee2e2;
+}
+
+.table-footer {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.btn-danger {
+  padding: 0.75rem 1.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+  transform: translateY(-2px);
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}

@@ -332,7 +332,9 @@ exports.getStudentSemesters = async (req, res) => {
       raw: true,
     });
 
-    const semesterList = semesters.map((s) => s.current_semester).filter(Boolean);
+    const semesterList = semesters
+      .map((s) => s.current_semester)
+      .filter(Boolean);
 
     res.status(200).json({
       success: true,
@@ -441,6 +443,7 @@ exports.getUser = async (req, res) => {
 // @route   POST /api/users
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
+  console.log(req.body);
   try {
     const {
       email,
@@ -595,7 +598,7 @@ exports.createUser = async (req, res) => {
         if (!student_id) {
           userData.student_id = await generateStudentId({
             batchYear,
-            programId: program_id,
+            deptId: department_id,
             isTemporary:
               req.body.is_temporary_id === "true" ||
               req.body.is_temporary_id === true,

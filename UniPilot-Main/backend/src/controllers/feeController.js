@@ -526,20 +526,7 @@ exports.payMyFees = async (req, res) => {
       );
 
       // 3. Create Global Fee Payment Record
-      const feePayment = await FeePayment.create(
-        {
-          student_id,
-          amount_paid: totalAmount,
-          payment_date: new Date(),
-          transaction_id: razorpay_payment_id,
-          payment_method: "razorpay", // Could be card/netbanking etc from webhook, simplified here
-          receipt_url: receipt_url,
-          status: "completed",
-          remarks: `Online Payment (Order: ${razorpay_order_id})`,
-        },
-        { transaction },
-      );
-      createdPayments.push(feePayment); // Add the master payment to createdPayments
+      // Add the master payment to createdPayments
 
       // 4. Create Detailed Payment Records
       // Process each payment in the payments array
@@ -552,6 +539,22 @@ exports.payMyFees = async (req, res) => {
         ) {
           // Academic fee payment (linked to fee structure)
           if (payment.structure_id) {
+            const feePayment = await FeePayment.create(
+              {
+                student_id,
+                amount_paid: totalAmount,
+                payment_date: new Date(),
+                fee_structure_id: payment.structure_id,
+                transaction_id: razorpay_payment_id,
+                semester: payment.semester,
+                payment_method: "razorpay", // Could be card/netbanking etc from webhook, simplified here
+                receipt_url: receipt_url,
+                status: "completed",
+                remarks: `Online Payment (Order: ${razorpay_order_id})`,
+              },
+              { transaction },
+            );
+            createdPayments.push(feePayment);
             await AcademicFeePayment.create(
               {
                 fee_payment_id: feePayment.id,
@@ -574,6 +577,22 @@ exports.payMyFees = async (req, res) => {
               transaction,
             });
             if (charge) {
+              const feePayment = await FeePayment.create(
+                {
+                  student_id,
+                  amount_paid: totalAmount,
+                  payment_date: new Date(),
+                  fee_charge_id: chargeId,
+                  transaction_id: razorpay_payment_id,
+                  semester: payment.semester,
+                  payment_method: "razorpay", // Could be card/netbanking etc from webhook, simplified here
+                  receipt_url: receipt_url,
+                  status: "completed",
+                  remarks: `Online Payment (Order: ${razorpay_order_id})`,
+                },
+                { transaction },
+              );
+              createdPayments.push(feePayment);
               await StudentChargePayment.create(
                 {
                   fee_payment_id: feePayment.id,
@@ -688,11 +707,11 @@ exports.payMyFees = async (req, res) => {
             { model: Program, as: "program", attributes: ["name"] },
           ],
         },
-        {
-          model: FeeStructure,
-          as: "fee_structure",
-          include: [{ model: FeeCategory, as: "category" }],
-        },
+        // {
+        //   model: FeeStructure,
+        //   as: "fee_structure",
+        //   include: [{ model: FeeCategory, as: "category" }],
+        // },
       ],
     });
     return res.status(201).json({ success: true, data: hydratedPayments });
@@ -953,8 +972,6 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
     semesterWise[sem].totals.due += due;
     semesterWise[sem].totals.excess += excess;
   });
-
-
 
   Object.keys(semesterWise).forEach((sem) => {
     const data = semesterWise[sem];
@@ -1254,7 +1271,6 @@ exports.getTransactions = async (req, res) => {
             },
           ],
         },
-
       ],
       order: [["payment_date", "DESC"]],
       limit: parseInt(limit),
@@ -2044,8 +2060,8 @@ exports.exportDefaulters = async (req, res) => {
           maxOverdueDays,
           student.phone || "",
           student.parent_details?.father_mobile ||
-          student.parent_details?.mother_mobile ||
-          "",
+            student.parent_details?.mother_mobile ||
+            "",
         ].join(",");
         csvContent += row + "\n";
       }
@@ -2213,7 +2229,6 @@ exports.getDailyCollection = async (req, res) => {
             },
           ],
         },
-
       ],
       order: [["payment_date", "ASC"]],
     });

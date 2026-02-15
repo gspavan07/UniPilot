@@ -32,11 +32,7 @@ export const printReceipt = (transaction, items = []) => {
     ? `${student.first_name} ${student.last_name}`
     : student?.name || "Unknown";
 
-  const studentId =
-    student?.admission_number ||
-    student?.student_id ||
-    student?.registration_no ||
-    "N/A";
+  const studentId = student?.student_id || "N/A";
   const department = student?.department?.name || "N/A";
   const program = student?.program?.name || "N/A";
 

@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import api from "../../utils/api";
 import { useDispatch, useSelector } from "react-redux";
 import {
   BookOpen,
@@ -16,7 +17,6 @@ import { fetchMyFeeStatus } from "../../store/slices/feeSlice";
 import { fetchTimetable } from "../../store/slices/timetableSlice";
 import { fetchMyAttendance } from "../../store/slices/attendanceSlice";
 
-
 const StudentDashboard = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -26,14 +26,24 @@ const StudentDashboard = () => {
     (state) => state.attendance,
   );
 
-
   useEffect(() => {
     // 1. Fetch Fees
     dispatch(fetchMyFeeStatus());
     // 2. Fetch Attendance
     dispatch(fetchMyAttendance());
-
+    // 3. Fetch Exam Notices
+    fetchExams();
   }, [dispatch]);
+
+  const [exams, setExams] = useState([]);
+  const fetchExams = async () => {
+    try {
+      const response = await api.get("/exam/cycles/my/exams");
+      setExams(response.data.data);
+    } catch (err) {
+      console.error("Failed to fetch exam notices:", err);
+    }
+  };
 
   // Calculate Real Stats
   const totalDue = myStatus?.grandTotals?.due || 0;
@@ -44,8 +54,6 @@ const StudentDashboard = () => {
     currentTimetable?.slots
       ?.filter((s) => s.day_of_week === today)
       .sort((a, b) => a.start_time.localeCompare(b.start_time)) || [];
-
-
 
   const stats = [
     {
@@ -172,10 +180,34 @@ const StudentDashboard = () => {
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg">Academic Notices</h3>
             </div>
-            <div className="text-center py-4 bg-white/5 rounded-xl border border-dashed border-white/10">
-              <p className="text-sm text-indigo-100/50">
-                No new notices
-              </p>
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+              {exams.length > 0 ? (
+                exams.map((cycle) => (
+                  <Link
+                    key={cycle.id}
+                    to="/my-exams"
+                    className="block p-3 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-colors group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-amber-400 rounded-lg text-amber-900 group-hover:scale-110 transition-transform">
+                        <Award className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white uppercase tracking-wider">
+                          Exam Notice
+                        </p>
+                        <p className="text-sm font-medium text-indigo-50/90 line-clamp-2">
+                          {cycle.cycle_name.replace(/_/g, " ")} is scheduled
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="text-center py-6 bg-white/5 rounded-xl border border-dashed border-white/10">
+                  <p className="text-sm text-indigo-100/50">No new notices</p>
+                </div>
+              )}
             </div>
           </div>
 

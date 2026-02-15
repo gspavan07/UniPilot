@@ -29,6 +29,16 @@ const programOutcomeRoutes = require("./programOutcome"); // OBE: Program Outcom
 const courseOutcomeRoutes = require("./courseOutcome"); // OBE: Course Outcomes
 const coPoMapRoutes = require("./coPoMap"); // OBE: CO-PO Mapping
 
+// Exam Management Routes
+// IMPORTANT: Import associations first to set up model relationships
+require("../models/exam/associations");
+
+const examCycleRoutes = require("./exam/examCycle.routes");
+const examHallTicketRoutes = require("./exam/hallTicket.routes");
+const examScheduleRoutes = require("./exam/examSchedule.routes");
+const examSeatingRoutes = require("./exam/seatingArrangement.routes");
+const examGradeRoutes = require("./exam/gradeEntry.routes");
+
 const router = express.Router();
 
 // API version
@@ -74,5 +84,12 @@ router.use("/placement", placementRoutes);
 router.use("/program-outcomes", programOutcomeRoutes);
 router.use("/course-outcomes", courseOutcomeRoutes);
 router.use("/co-po-maps", coPoMapRoutes);
+
+// Exam Management routes
+router.use("/exam/cycles", examCycleRoutes);
+router.use("/exam/hall-tickets", examHallTicketRoutes);
+router.use("/exam/schedules", examScheduleRoutes);
+router.use("/exam/seating", examSeatingRoutes);
+router.use("/exam/grades", examGradeRoutes);
 
 module.exports = router;

@@ -120,6 +120,9 @@ import MyLibrary from "./pages/library/MyLibrary";
 import TimetableManager from "./pages/timetable/TimetableManager";
 import MyTimetable from "./pages/timetable/MyTimetable";
 
+// Exams
+import ExaminationsHub from "./pages/exams/ExaminationsHub";
+
 function App() {
   const dispatch = useDispatch();
   const { user, accessToken } = useSelector((state) => state.auth);
@@ -229,6 +232,9 @@ function App() {
           {/* Timetable */}
           <Route path="/timetable/manage" element={<TimetableManager />} />
           <Route path="/timetable/my" element={<MyTimetable />} />
+
+          {/* Exams */}
+          <Route path="/my-exams" element={<ExaminationsHub />} />
 
           {/* Transport Management */}
           <Route path="/transport" element={<TransportDashboard />} />
