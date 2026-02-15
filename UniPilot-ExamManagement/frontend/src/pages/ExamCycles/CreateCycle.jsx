@@ -12,7 +12,6 @@ import {
   getProgramsByDegree,
   getAllDegrees,
 } from "../../services/examCycleService";
-import "./CreateCycle.css";
 
 const DEGREE_LABELS = {
   btech: "B.Tech",
@@ -336,35 +335,49 @@ export default function CreateCycle() {
   };
 
   if (fetching)
-    return <div className="loading-page">Loading cycle data...</div>;
+    return <div className="text-center text-lg font-semibold text-indigo-600 py-10">Loading cycle data...</div>;
 
   return (
-    <div className="create-cycle-page">
-      <div className="page-header">
-        <h1>{isEdit ? "Edit Exam Cycle" : "Create New Exam Cycle"}</h1>
+    <div className="max-w-[1200px] mx-auto p-8 animate-fadeIn">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-[2rem] text-slate-900 font-bold m-0">
+          {isEdit ? "Edit Exam Cycle" : "Create New Exam Cycle"}
+        </h1>
         <button
           onClick={() => navigate("/exam-cycles")}
-          className="btn-secondary"
+          className="bg-white border-2 border-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold text-base cursor-pointer transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
         >
           Back to Cycles
         </button>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="bg-red-100 text-red-800 p-4 rounded-lg mb-6 border-l-4 border-red-600">
+          {error}
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="cycle-form">
-        <div className="cycle-name-preview">
-          <label>Generated Cycle Name:</label>
-          <div className="cycle-name">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded-xl shadow-lg"
+      >
+        <div className="bg-gradient-to-br from-indigo-500 to-purple-700 text-white p-6 rounded-lg mb-8">
+          <label className="block text-sm mb-2 opacity-90 uppercase tracking-wider font-semibold">
+            Generated Cycle Name:
+          </label>
+          <div className="text-xl font-bold font-mono tracking-tight">
             {cycleName || "(Fill the form to generate name)"}
           </div>
         </div>
 
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Degree *</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Degree *
+            </label>
             <select
               name="degree"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
               value={formData.degree}
               onChange={handleInputChange}
               required
@@ -378,10 +391,13 @@ export default function CreateCycle() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Regulation *</label>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Regulation *
+            </label>
             <select
               name="regulation_id"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
               value={formData.regulation_id}
               onChange={handleRegulationChange}
               required
@@ -395,10 +411,13 @@ export default function CreateCycle() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Exam Month *</label>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Exam Month *
+            </label>
             <select
               name="exam_month"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
               value={formData.exam_month}
               onChange={handleInputChange}
               required
@@ -412,10 +431,13 @@ export default function CreateCycle() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Course Type *</label>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Course Type *
+            </label>
             <select
               name="course_type"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 disabled:bg-slate-100 disabled:cursor-not-allowed"
               value={formData.course_type}
               onChange={handleCourseTypeChange}
               required
@@ -430,10 +452,13 @@ export default function CreateCycle() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Cycle Type *</label>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Cycle Type *
+            </label>
             <select
               name="cycle_type"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 disabled:bg-slate-100 disabled:cursor-not-allowed"
               value={formData.cycle_type}
               onChange={handleInputChange}
               required
@@ -448,10 +473,13 @@ export default function CreateCycle() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Batch *</label>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Batch *
+            </label>
             <select
               name="batch"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
               value={formData.batch}
               onChange={handleInputChange}
               required
@@ -465,11 +493,14 @@ export default function CreateCycle() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Semester</label>
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold text-slate-700 text-sm">
+              Semester
+            </label>
             <input
               type="number"
               name="semester"
+              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 disabled:bg-slate-100"
               value={formData.semester}
               readOnly={!isEdit}
               onChange={handleInputChange}
@@ -477,23 +508,29 @@ export default function CreateCycle() {
             />
           </div>
 
-          <div className="form-group checkbox-group">
-            <label>
+          <div className="flex flex-row items-center">
+            <label className="flex items-center gap-3 cursor-pointer mb-0">
               <input
                 type="checkbox"
                 name="needs_fee"
+                className="w-5 h-5 cursor-pointer accent-indigo-600"
                 checked={formData.needs_fee}
                 onChange={handleInputChange}
               />
-              <span>Students need to pay fee for this exam</span>
+              <span className="text-sm font-semibold text-slate-700">
+                Students need to pay fee for this exam
+              </span>
             </label>
           </div>
 
           {isEdit && (
-            <div className="form-group">
-              <label>Status</label>
+            <div className="flex flex-col gap-2">
+              <label className="font-semibold text-slate-700 text-sm">
+                Status
+              </label>
               <select
                 name="status"
+                className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
                 value={formData.status}
                 onChange={handleInputChange}
                 required
@@ -507,15 +544,19 @@ export default function CreateCycle() {
           )}
         </div>
 
-        <div className="form-actions">
+        <div className="flex justify-end gap-4 pt-6 border-t-2 border-slate-200">
           <button
             type="button"
             onClick={() => navigate("/exam-cycles")}
-            className="btn-secondary"
+            className="bg-white border-2 border-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold text-base cursor-pointer transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
           >
             Cancel
           </button>
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <button
+            type="submit"
+            className="bg-gradient-to-br from-indigo-500 to-purple-700 text-white px-6 py-3 rounded-lg font-semibold text-base cursor-pointer transition-all border-none hover:-translate-y-0.5 hover:shadow-xl active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={loading}
+          >
             {loading
               ? isEdit
                 ? "Updating..."

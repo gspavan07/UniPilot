@@ -5,7 +5,6 @@ import {
     bulkUpdateTimetables,
 } from "../../services/examCycleService";
 import { Loader2, Save, UserCheck, AlertCircle } from "lucide-react";
-import "./TimetableTab.css"; // Reuse existing styles for now
 
 export default function FacultyAssignmentTab({ cycleId }) {
     const [timetables, setTimetables] = useState([]);
@@ -117,19 +116,18 @@ export default function FacultyAssignmentTab({ cycleId }) {
     }
 
     return (
-        <div className="faculty-assignment-tab">
-            <div className="tab-header" style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="w-full animate-fadeIn">
+            <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                 <div>
-                    <h3>Faculty Assignment</h3>
-                    <p className="text-sm text-gray-500">
+                    <h2 className="text-xl font-bold text-slate-800">Faculty Assignment</h2>
+                    <p className="text-sm text-slate-500">
                         Assign faculty invigilators to scheduled exams based on department.
                     </p>
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="btn-primary"
-                    style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-sky-600 text-white rounded-lg font-semibold hover:bg-sky-700 transition-all active:scale-95 shadow-lg shadow-sky-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                     Save Assignments
@@ -137,33 +135,33 @@ export default function FacultyAssignmentTab({ cycleId }) {
             </div>
 
             {error && (
-                <div className="error-message" style={{ padding: "10px", background: "#fee2e2", color: "#ef4444", borderRadius: "4px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="flex items-center gap-2 p-4 bg-rose-50 text-rose-600 rounded-lg mb-6 border border-rose-100">
                     <AlertCircle size={16} /> {error}
                 </div>
             )}
 
             {success && (
-                <div className="success-message" style={{ padding: "10px", background: "#dcfce7", color: "#16a34a", borderRadius: "4px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="flex items-center gap-2 p-4 bg-emerald-50 text-emerald-600 rounded-lg mb-6 border border-emerald-100">
                     <UserCheck size={16} /> {success}
                 </div>
             )}
 
             {timetables.length === 0 ? (
-                <div className="empty-state">
-                    <div className="empty-icon">📅</div>
-                    <h3>No Exams Scheduled</h3>
-                    <p>Schedule exams in the Timetable tab first.</p>
+                <div className="text-center py-16 px-8">
+                    <div className="text-[4rem] mb-4">📅</div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">No Exams Scheduled</h3>
+                    <p className="text-slate-500">Schedule exams in the Timetable tab first.</p>
                 </div>
             ) : (
-                <div className="timetable-table">
-                    <table>
+                <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200">
+                    <table className="w-full border-collapse">
                         <thead>
                             <tr>
-                                <th>Date & Time</th>
-                                <th>Course</th>
-                                <th>Department</th>
-                                <th>Assigned Faculty</th>
-                                <th>Status</th>
+                                <th className="p-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Date & Time</th>
+                                <th className="p-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Course</th>
+                                <th className="p-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Department</th>
+                                <th className="p-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Assigned Faculty</th>
+                                <th className="p-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -173,35 +171,29 @@ export default function FacultyAssignmentTab({ cycleId }) {
                                 const isAssigned = !!assignments[tt.id];
 
                                 return (
-                                    <tr key={tt.id}>
-                                        <td>
-                                            <div>{new Date(tt.exam_date).toLocaleDateString()}</div>
-                                            <div className="text-sm text-gray-500">
+                                    <tr key={tt.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="p-4 border-b border-slate-100">
+                                            <div className="font-semibold text-slate-700">{new Date(tt.exam_date).toLocaleDateString()}</div>
+                                            <div className="text-xs text-slate-500 mt-1">
                                                 {tt.start_time} - {tt.end_time} ({tt.session})
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="font-medium">{tt.course?.name}</div>
-                                            <div className="text-xs text-gray-500">
-                                                {tt.course?.code}
+                                        <td className="p-4 border-b border-slate-100">
+                                            <div className="font-bold text-slate-900">{tt.course?.name}</div>
+                                            <div className="text-xs text-slate-400 font-mono mt-1">
+                                                {tt.course?.course_code || tt.course?.code}
                                             </div>
                                         </td>
-                                        <td>
-                                            {/* We don't have department name readily available in course object unless populated deeply, 
-                          but we can try to guess or just show ID for debug if needed. 
-                          Actually faculty filtering works on ID, so maybe just show nothing or "Dept ID: ..." 
-                          If course has department name populated, use it. */
-                                                tt.course?.department_id ? "Matching Dept" : "Unknown Dept"
-                                            }
+                                        <td className="p-4 border-b border-slate-100 text-slate-600 text-sm">
+                                            {tt.course?.department_id ? "Matching Dept" : "Unknown Dept"}
                                         </td>
-                                        <td>
+                                        <td className="p-4 border-b border-slate-100">
                                             <select
                                                 value={assignments[tt.id] || ""}
                                                 onChange={(e) =>
                                                     handleAssignmentChange(tt.id, e.target.value)
                                                 }
-                                                className="form-select"
-                                                style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ddd" }}
+                                                className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all"
                                             >
                                                 <option value="">-- Select Faculty --</option>
                                                 {availableFaculty.map((f) => (
@@ -211,41 +203,21 @@ export default function FacultyAssignmentTab({ cycleId }) {
                                                 ))}
                                             </select>
                                             {availableFaculty.length === 0 && (
-                                                <div className="text-xs text-red-500 mt-1">
-                                                    No faculty found for this department
+                                                <div className="text-[10px] text-rose-500 mt-1 flex items-center gap-1 font-medium">
+                                                    <AlertCircle size={10} /> No faculty found for dept
                                                 </div>
                                             )}
                                         </td>
-                                        <td>
+                                        <td className="p-4 border-b border-slate-100">
                                             <span
-                                                className={`status-badge ${!isAssigned
-                                                        ? "pending"
-                                                        : tt.exam_status === "format_submitted"
-                                                            ? "submitted"
-                                                            : tt.exam_status === "approved"
-                                                                ? "approved"
-                                                                : "assigned"
+                                                className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${!isAssigned
+                                                    ? "bg-rose-100 text-rose-700 border border-rose-200"
+                                                    : tt.exam_status === "format_submitted"
+                                                        ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                                        : tt.exam_status === "approved"
+                                                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                                                            : "bg-amber-100 text-amber-700 border border-amber-200"
                                                     }`}
-                                                style={{
-                                                    padding: "4px 12px",
-                                                    borderRadius: "12px",
-                                                    fontSize: "12px",
-                                                    fontWeight: "500",
-                                                    backgroundColor: !isAssigned
-                                                        ? "#fee2e2" // Red for pending
-                                                        : tt.exam_status === "format_submitted"
-                                                            ? "#e0e7ff" // Indigo for submitted
-                                                            : tt.exam_status === "approved"
-                                                                ? "#dcfce7" // Green for approved
-                                                                : "#fef3c7", // Yellow for assigned
-                                                    color: !isAssigned
-                                                        ? "#991b1b"
-                                                        : tt.exam_status === "format_submitted"
-                                                            ? "#3730a3"
-                                                            : tt.exam_status === "approved"
-                                                                ? "#166534"
-                                                                : "#92400e",
-                                                }}
                                             >
                                                 {!isAssigned
                                                     ? "Pending Faculty"
