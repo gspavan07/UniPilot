@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAllCycles, deleteCycle } from "../../services/examCycleService";
-import { Edit, Trash2, Calendar, Layout, Info } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Calendar,
+  Layout,
+  Info,
+  ChevronDown,
+  Filter,
+  Plus,
+  Search,
+  MoreHorizontal
+} from "lucide-react";
 
 export default function ExamCycleList() {
   const navigate = useNavigate();
@@ -38,7 +49,7 @@ export default function ExamCycleList() {
     e.stopPropagation();
     if (
       window.confirm(
-        `Are you sure you want to delete the exam cycle "${name}"? This will also delete all associated timetables and configurations.`,
+        `Are you sure you want to delete the exam cycle "${name}"? This will also delete all associated timetables and configurations.`
       )
     ) {
       try {
@@ -50,172 +61,246 @@ export default function ExamCycleList() {
     }
   };
 
-  const getStatusClasses = (status) => {
-    const classes = {
-      scheduling: "bg-amber-500 shadow-amber-100",
-      scheduled: "bg-blue-500 shadow-blue-100",
-      active: "bg-emerald-500 shadow-emerald-100",
-      completed: "bg-slate-500 shadow-slate-100",
+  const getStatusBadgeStyles = (status) => {
+    const styles = {
+      scheduling: "bg-amber-100 text-amber-800 border-amber-200",
+      scheduled: "bg-blue-100 text-blue-800 border-blue-200",
+      active: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      completed: "bg-gray-100 text-gray-800 border-gray-200",
     };
-    return classes[status] || "bg-slate-500 shadow-slate-100";
+    return styles[status] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
+
+  const getStatusLabel = (status) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto p-8 animate-fadeIn">
-      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-        <h1 className="text-[2rem] text-slate-900 font-bold m-0 flex-1">
-          Exam Cycles
-        </h1>
-        <button
-          onClick={() => navigate("/exam-cycles/create")}
-          className="bg-gradient-to-br from-indigo-500 to-purple-700 text-white px-6 py-3 rounded-lg font-bold cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95 shadow-lg shadow-indigo-100 flex items-center gap-2"
-        >
-          <Calendar size={18} />
-          <span>Create New Cycle</span>
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-12 px-6 sm:px-10 font-sans text-gray-900">
+      <div className="max-w-7xl mx-auto space-y-8">
 
-      {/* Filters */}
-      <div className="flex gap-4 mb-8 flex-wrap">
-        <select
-          value={filters.degree}
-          onChange={(e) => setFilters({ ...filters, degree: e.target.value })}
-          className="p-3 border-2 border-slate-200 rounded-lg text-[0.925rem] bg-white cursor-pointer min-w-[180px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-700 shadow-sm"
-        >
-          <option value="">All Degrees</option>
-          <option value="B.Tech">B.Tech</option>
-          <option value="M.Tech">M.Tech</option>
-          <option value="MBA">MBA</option>
-          <option value="MCA">MCA</option>
-        </select>
-
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="p-3 border-2 border-slate-200 rounded-lg text-[0.925rem] bg-white cursor-pointer min-w-[180px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-700 shadow-sm"
-        >
-          <option value="">All Status</option>
-          <option value="scheduling">Scheduling</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-        </select>
-      </div>
-
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-lg mb-8 flex items-center gap-3">
-          <Info size={18} />
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-20 text-slate-400 font-medium flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin"></div>
-          Loading exam cycles...
-        </div>
-      ) : cycles.length === 0 ? (
-        <div className="text-center py-20 px-8 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-2xl mx-auto flex flex-col items-center">
-          <div className="text-[5rem] mb-6 leading-none">📅</div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-2">
-            No Exam Cycles Found
-          </h3>
-          <p className="text-slate-500 mb-8 max-w-sm">
-            You haven't created any exam cycles yet. Create your first cycle to
-            start managing examinations.
-          </p>
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-950">
+              Exam Cycles
+            </h1>
+            <p className="text-sm text-gray-500 font-medium">
+              Manage examination schedules, regulatory compliance, and academic timelines.
+            </p>
+          </div>
           <button
             onClick={() => navigate("/exam-cycles/create")}
-            className="bg-gradient-to-br from-indigo-500 to-purple-700 text-white px-8 py-3 rounded-xl font-bold transition-all hover:shadow-xl hover:-translate-y-0.5 active:scale-95"
+            className="group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95"
           >
-            Create Your First Cycle
+            <Plus size={18} className="stroke-3" />
+            <span>New Cycle</span>
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-          {cycles.map((cycle) => (
-            <div
-              key={cycle.id}
-              className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 relative overflow-hidden"
+
+        {/* Filters & Controls */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+          <div className="flex items-center gap-3 text-gray-400 px-2">
+            <Filter size={18} />
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Filter View</span>
+          </div>
+
+          <div className="relative group flex-1 md:flex-none">
+            <select
+              value={filters.degree}
+              onChange={(e) => setFilters({ ...filters, degree: e.target.value })}
+              className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold py-2.5 pl-4 pr-10 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer hover:bg-gray-100"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-50">
-                <h3 className="text-lg font-bold text-slate-900 m-0 flex-1 break-words leading-tight mr-4">
-                  {cycle.cycle_name}
-                </h3>
-                <span
-                  className={`px-3 py-1.5 rounded-full text-white text-[10px] font-bold uppercase tracking-widest whitespace-nowrap shadow-lg shadow-current/20 ${getStatusClasses(
-                    cycle.status,
-                  )}`}
-                >
-                  {cycle.status}
-                </span>
-              </div>
+              <option value="">All Degrees</option>
+              <option value="B.Tech">B.Tech</option>
+              <option value="M.Tech">M.Tech</option>
+              <option value="MBA">MBA</option>
+              <option value="MCA">MCA</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-gray-600" size={16} />
+          </div>
 
-              <div className="space-y-3 mb-8">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-semibold text-slate-400">Degree</span>
-                  <span className="font-bold text-slate-700 bg-slate-50 px-2 py-1 rounded">
-                    {cycle.degree}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-semibold text-slate-400">Batch</span>
-                  <span className="font-bold text-slate-700">
-                    {cycle.batch}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-semibold text-slate-400">Semester</span>
-                  <span className="font-bold text-slate-700">
-                    {cycle.semester}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-semibold text-slate-400">Type</span>
-                  <span className="font-bold text-slate-700">
-                    {cycle.cycle_type} - {cycle.course_type}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-semibold text-slate-400">
-                    Timetables
-                  </span>
-                  <span className="font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md text-xs">
-                    {cycle.timetables?.length || 0} exams scheduled
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-4 border-t border-slate-50 flex gap-3 items-center">
-                <button
-                  onClick={() => navigate(`/exam-cycles/${cycle.id}/manage`)}
-                  className="flex-1 py-3 bg-gradient-to-br from-indigo-500 to-purple-700 text-white rounded-xl font-bold cursor-pointer transition-all text-sm hover:-translate-y-0.5 hover:shadow-xl active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <Layout size={16} />
-                  <span>Manage Cycle</span>
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => navigate(`/exam-cycles/${cycle.id}/edit`)}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 cursor-pointer transition-all hover:-translate-y-1 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50"
-                    title="Edit Cycle"
-                  >
-                    <Edit size={18} />
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(e, cycle.id, cycle.cycle_name)}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 cursor-pointer transition-all hover:-translate-y-1 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
-                    title="Delete Cycle"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+          <div className="relative group flex-1 md:flex-none">
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold py-2.5 pl-4 pr-10 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer hover:bg-gray-100"
+            >
+              <option value="">All Statuses</option>
+              <option value="scheduling">Scheduling</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-gray-600" size={16} />
+          </div>
         </div>
-      )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700 animate-fadeIn">
+            <Info size={20} />
+            <span className="font-semibold">{error}</span>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="py-20 flex flex-col items-center justify-center space-y-4 opacity-75">
+            <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <p className="text-gray-500 font-medium text-sm">Synchronizing data...</p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && cycles.length === 0 && (
+          <div className="bg-white border border-gray-200 border-dashed rounded-3xl p-16 flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+              <Calendar size={32} className="text-gray-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No Cycles Found</h3>
+            <p className="text-gray-500 max-w-sm mb-8 leading-relaxed">
+              We couldn't find any exam cycles matching your filters. Try adjusting them or create a new one.
+            </p>
+            <button
+              onClick={() => navigate("/exam-cycles/create")}
+              className="text-blue-600 font-bold hover:text-blue-700 hover:underline underline-offset-4"
+            >
+              Create New Cycle &rarr;
+            </button>
+          </div>
+        )}
+
+        {/* Main Data Table */}
+        {!loading && cycles.length > 0 && (
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100">
+                    <th className="py-5 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+                      Cycle Name
+                    </th>
+                    <th className="py-5 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+                      Context
+                    </th>
+                    <th className="py-5 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+                      Details
+                    </th>
+                    <th className="py-5 px-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+                      Status
+                    </th>
+                    <th className="py-5 px-6 text-xs font-bold uppercase tracking-wider text-gray-400 text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {cycles.map((cycle) => (
+                    <tr
+                      key={cycle.id}
+                      className="group hover:bg-gray-50 transition-colors duration-200 cursor-default"
+                    >
+                      {/* Name Column */}
+                      <td className="py-5 px-6 align-top">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-900 text-sm leading-snug">
+                            {cycle.cycle_name}
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1 font-mono">
+                            ID: {cycle.id.slice(0, 8)}...
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Context Column */}
+                      <td className="py-5 px-6 align-top">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
+                              {cycle.degree}
+                            </span>
+                            <span className="text-xs text-gray-500">&bull;</span>
+                            <span className="text-sm font-medium text-gray-700">
+                              {cycle.batch}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            Sem {cycle.semester}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Details Column */}
+                      <td className="py-5 px-6 align-top">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
+                            <span className="text-sm text-gray-700 font-medium">
+                              {cycle.cycle_type}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 pl-3.5">
+                            {cycle.course_type}
+                          </div>
+                          {cycle.timetables?.length > 0 && (
+                            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md mt-1 ml-3.5">
+                              <Calendar size={10} />
+                              {cycle.timetables.length} Timetables
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="py-5 px-6 align-top">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadgeStyles(cycle.status)}`}
+                        >
+                          {getStatusLabel(cycle.status)}
+                        </span>
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="py-5 px-6 text-right align-top">
+                        <div className="flex items-center justify-end gap-2 opacity-100 transition-opacity">
+
+                          <button
+                            onClick={() => navigate(`/exam-cycles/${cycle.id}/manage`)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-transform active:scale-95 shadow-sm"
+                            title="Manage Cycle"
+                          >
+                            <Layout size={14} />
+                            <span>Manage</span>
+                          </button>
+
+                          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+
+                          <button
+                            onClick={() => navigate(`/exam-cycles/${cycle.id}/edit`)}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit size={16} />
+                          </button>
+
+                          <button
+                            onClick={(e) => handleDelete(e, cycle.id, cycle.cycle_name)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

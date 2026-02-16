@@ -183,11 +183,10 @@ const EmployeeForm = ({
       ? name.split(".").reduce((obj, key) => obj && obj[key], errors)
       : errors[name];
 
-    return `input transition-all duration-200 ${
-      hasError
+    return `input transition-all duration-200 ${hasError
         ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
         : "focus:border-primary-500 focus:ring-primary-500/20"
-    }`;
+      }`;
   };
 
   const RequiredLabel = ({ children }) => (
@@ -231,11 +230,10 @@ const EmployeeForm = ({
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeTab === tab
+              className={`pb-3 px-4 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab
                   ? "border-b-2 border-primary-500 text-primary-600"
                   : "text-gray-400"
-              }`}
+                }`}
             >
               {tab === "personal"
                 ? "Identity"
@@ -254,7 +252,7 @@ const EmployeeForm = ({
         >
           {error && (
             <div className="p-4 rounded-2xl bg-error-50 dark:bg-error-900/30 border border-error-500/30 text-error-700 dark:text-error-300 text-sm flex items-start animate-shake">
-              <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 mr-3 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}

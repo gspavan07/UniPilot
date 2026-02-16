@@ -275,7 +275,7 @@ const PayrollDashboard = () => {
         {/* Notifications */}
         {showSuccess && (
           <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 px-6 py-4 rounded-2xl shadow-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-600">
               <CheckCircle className="w-5 h-5" />
             </div>
             <div>
@@ -287,7 +287,7 @@ const PayrollDashboard = () => {
 
         {operationStatus === "failed" && (
           <div className="bg-red-50 border border-red-100 text-red-800 px-6 py-4 rounded-2xl shadow-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 text-red-600">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0 text-red-600">
               <AlertCircle className="w-5 h-5" />
             </div>
             <div>

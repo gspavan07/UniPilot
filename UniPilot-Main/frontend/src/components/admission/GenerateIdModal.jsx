@@ -106,7 +106,7 @@ const GenerateIdModal = ({
           {step === 1 && (
             <div className="space-y-6">
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-2xl p-4 flex items-start">
-                <ShieldAlert className="w-5 h-5 text-amber-600 mr-3 mt-0.5 flex-shrink-0" />
+                <ShieldAlert className="w-5 h-5 text-amber-600 mr-3 mt-0.5 shrink-0" />
                 <div className="text-sm text-amber-800 dark:text-amber-200">
                   <p className="font-bold mb-1">Important Note</p>
                   <p>

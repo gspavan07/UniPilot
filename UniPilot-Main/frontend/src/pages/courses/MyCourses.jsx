@@ -257,7 +257,7 @@ const MyCourses = () => {
                           <ul className="space-y-2">
                             {unit.topics.map((topic, tIdx) => (
                               <li key={tIdx} className="text-sm text-gray-600 dark:text-gray-400 flex items-start">
-                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 mr-2.5 flex-shrink-0"></span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 mr-2.5 shrink-0"></span>
                                 <span className="leading-relaxed">{topic}</span>
                               </li>
                             ))}
@@ -287,7 +287,7 @@ const MyCourses = () => {
                   <div className="grid grid-cols-1 gap-4">
                     {courseOutcomes.map((co, idx) => (
                       <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 border border-emerald-100 dark:border-emerald-900/20">
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm text-emerald-600 font-bold text-sm">
                             {co.co_code || `CO${idx + 1}`}
                           </div>

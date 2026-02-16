@@ -292,8 +292,8 @@ const MainLayout = () => {
           className={`h-16 flex items-center border-b border-gray-100 ${sidebarOpen ? "justify-start" : "justify-center"}`}
         >
           {sidebarOpen ? (
-            <div className="flex items-center justify-between gap-3 px-5">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-3 px-5">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center shrink-0">
                 <span className="text-white text-sm font-bold">U</span>
               </div>
               <div className="leading-tight">
@@ -306,7 +306,7 @@ const MainLayout = () => {
               </div>
             </div>
           ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center shrink-0">
               <span className="text-white text-sm font-bold">U</span>
             </div>
           )}
@@ -317,32 +317,28 @@ const MainLayout = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${
-                isActive(item.href)
+              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${isActive(item.href)
                   ? "bg-blue-600 text-white"
                   : "text-gray-700 hover:bg-gray-100"
-              }`}
+                }`}
               style={{ animationDelay: `${index * 25}ms` }}
             >
               <div
-                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${
-                  isActive(item.href) ? "w-0" : "w-0"
-                }`}
+                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${isActive(item.href) ? "w-0" : "w-0"
+                  }`}
               />
               <item.icon
-                className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${
-                  isActive(item.href)
+                className={`w-[18px] h-[18px] shrink-0 transition-colors ${isActive(item.href)
                     ? "text-white"
                     : "text-gray-600 group-hover:text-blue-600"
-                }`}
+                  }`}
               />
               {sidebarOpen && (
                 <span
-                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${
-                    isActive(item.href)
+                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${isActive(item.href)
                       ? "font-semibold text-white"
                       : "text-gray-700"
-                  }`}
+                    }`}
                 >
                   {item.name}
                 </span>
@@ -359,7 +355,7 @@ const MainLayout = () => {
               to="/profile"
               className="flex items-center gap-3 flex-1 min-w-0"
             >
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 <img
                   src={
                     user?.profile_picture

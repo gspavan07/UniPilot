@@ -392,7 +392,7 @@ const HostelFines = () => {
                     <tr key={fine.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mr-3 border border-blue-200">
+                          <div className="shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mr-3 border border-blue-200">
                             {fine.student?.first_name?.[0] || "U"}
                             {fine.student?.last_name?.[0] || ""}
                           </div>

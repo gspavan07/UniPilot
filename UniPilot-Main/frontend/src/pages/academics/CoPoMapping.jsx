@@ -250,7 +250,7 @@ const CoPoMapping = () => {
                     {/* Info Box */}
                     {selectedProgram && selectedCourse && (
                         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 flex items-start space-x-3">
-                            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                             <div className="text-sm text-blue-800 dark:text-blue-300">
                                 <p className="font-semibold mb-1">Weightage Legend:</p>
                                 <div className="flex flex-wrap gap-3">
@@ -287,7 +287,7 @@ const CoPoMapping = () => {
                 {/* Error Display */}
                 {error && (
                     <div className="mb-6 p-4 bg-error-50 dark:bg-error-900/30 border border-error-500/30 rounded-2xl flex items-start space-x-3">
-                        <AlertCircle className="w-5 h-5 text-error-600 dark:text-error-400 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-error-600 dark:text-error-400 shrink-0 mt-0.5" />
                         <p className="text-sm text-error-700 dark:text-error-300">{error}</p>
                     </div>
                 )}
@@ -295,7 +295,7 @@ const CoPoMapping = () => {
                 {/* Success Message */}
                 {saveSuccess && (
                     <div className="mb-6 p-4 bg-success-50 dark:bg-success-900/30 border border-success-500/30 rounded-2xl flex items-start space-x-3">
-                        <CheckCircle className="w-5 h-5 text-success-600 dark:text-success-400 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-success-600 dark:text-success-400 shrink-0 mt-0.5" />
                         <p className="text-sm text-success-700 dark:text-success-300">
                             Mappings saved successfully!
                         </p>

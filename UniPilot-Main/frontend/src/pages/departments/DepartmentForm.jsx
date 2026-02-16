@@ -238,7 +238,7 @@ const DepartmentForm = ({
                 {error && (
                   <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-start shadow-sm">
                     <AlertCircle
-                      className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0"
+                      className="w-5 h-5 mr-3 mt-0.5 shrink-0"
                       strokeWidth={2.5}
                     />
                     <span className="font-semibold">{error}</span>
@@ -266,11 +266,10 @@ const DepartmentForm = ({
                       </label>
                       <input
                         {...register("name")}
-                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                          errors.name
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.name
                             ? "border-red-300 focus:border-red-500"
                             : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                        }`}
+                          }`}
                         placeholder="e.g. Computer Science and Engineering"
                       />
                       {errors.name && (
@@ -294,11 +293,10 @@ const DepartmentForm = ({
                         </div>
                         <input
                           {...register("code")}
-                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                            errors.code
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.code
                               ? "border-red-300 focus:border-red-500"
                               : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                          }`}
+                            }`}
                           placeholder="CSE"
                         />
                       </div>
@@ -332,11 +330,10 @@ const DepartmentForm = ({
                         </label>
                         <div className="grid grid-cols-2 gap-3 p-2 bg-gray-100 dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700">
                           <label
-                            className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${
-                              watch("type") === "academic"
+                            className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${watch("type") === "academic"
                                 ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
                                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
-                            }`}
+                              }`}
                           >
                             <input
                               type="radio"
@@ -347,11 +344,10 @@ const DepartmentForm = ({
                             Academic
                           </label>
                           <label
-                            className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${
-                              watch("type") === "administrative"
+                            className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${watch("type") === "administrative"
                                 ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
                                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
-                            }`}
+                              }`}
                           >
                             <input
                               type="radio"
@@ -409,11 +405,10 @@ const DepartmentForm = ({
                         <input
                           {...register("email")}
                           type="email"
-                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                            errors.email
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.email
                               ? "border-red-300 focus:border-red-500"
                               : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                          }`}
+                            }`}
                           placeholder="head.cse@university.edu"
                         />
                       </div>

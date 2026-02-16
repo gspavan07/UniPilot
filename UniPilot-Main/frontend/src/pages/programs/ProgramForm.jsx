@@ -222,7 +222,7 @@ const ProgramForm = ({
                 {error && (
                   <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-start shadow-sm">
                     <AlertCircle
-                      className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0"
+                      className="w-5 h-5 mr-3 mt-0.5 shrink-0"
                       strokeWidth={2.5}
                     />
                     <span className="font-semibold">{error}</span>
@@ -250,11 +250,10 @@ const ProgramForm = ({
                       </label>
                       <input
                         {...register("name")}
-                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                          errors.name
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.name
                             ? "border-red-300 focus:border-red-500"
                             : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                        }`}
+                          }`}
                         placeholder="e.g. B.Tech in Computer Science"
                       />
                       {errors.name && (
@@ -274,11 +273,10 @@ const ProgramForm = ({
                       </label>
                       <input
                         {...register("code")}
-                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                          errors.code
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.code
                             ? "border-red-300 focus:border-red-500"
                             : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                        }`}
+                          }`}
                         placeholder="e.g. BTECH-CSE"
                       />
                       {errors.code && (
@@ -315,11 +313,10 @@ const ProgramForm = ({
                       </label>
                       <select
                         {...register("department_id")}
-                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                          errors.department_id
+                        className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.department_id
                             ? "border-red-300 focus:border-red-500"
                             : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                        }`}
+                          }`}
                       >
                         <option value="">Select Department...</option>
                         {departmentList.map((dept) => (
@@ -375,11 +372,10 @@ const ProgramForm = ({
                         <input
                           {...register("duration_years")}
                           type="number"
-                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                            errors.duration_years
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.duration_years
                               ? "border-red-300 focus:border-red-500"
                               : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                          }`}
+                            }`}
                         />
                       </div>
                       {errors.duration_years && (
@@ -400,11 +396,10 @@ const ProgramForm = ({
                         <input
                           {...register("total_semesters")}
                           type="number"
-                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${
-                            errors.total_semesters
+                          className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.total_semesters
                               ? "border-red-300 focus:border-red-500"
                               : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
-                          }`}
+                            }`}
                         />
                       </div>
                       {errors.total_semesters && (
@@ -472,7 +467,7 @@ const ProgramForm = ({
                           key={index}
                           className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-gray-100 dark:border-gray-700"
                         >
-                          <div className="flex-shrink-0 w-28">
+                          <div className="shrink-0 w-28">
                             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
                               PO Code
                             </label>
@@ -508,7 +503,7 @@ const ProgramForm = ({
                               placeholder="Describe the program outcome..."
                             />
                           </div>
-                          <div className="flex-shrink-0 flex items-end">
+                          <div className="shrink-0 flex items-end">
                             <button
                               type="button"
                               onClick={() => removeProgramOutcome(index)}

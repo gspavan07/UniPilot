@@ -93,13 +93,12 @@ const DriveDetail = () => {
                   {drive.drive_name}
                 </h1>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    drive.status === "scheduled"
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${drive.status === "scheduled"
                       ? "bg-blue-100 text-blue-700"
                       : drive.status === "ongoing"
                         ? "bg-amber-100 text-amber-700"
                         : "bg-green-100 text-green-700"
-                  }`}
+                    }`}
                 >
                   {drive.status}
                 </span>
@@ -147,11 +146,10 @@ const DriveDetail = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-8 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === tab.id
+            className={`px-8 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
                 ? "border-indigo-600 text-indigo-600 active-tab"
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
+              }`}
           >
             {tab.name}
           </button>
@@ -376,7 +374,7 @@ const DriveDetail = () => {
                       key={round.id}
                       className="flex gap-6 items-start p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 relative last:pb-6"
                     >
-                      <div className="flex-shrink-0 w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center font-bold text-indigo-600 shadow-sm border border-indigo-50">
+                      <div className="shrink-0 w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center font-bold text-indigo-600 shadow-sm border border-indigo-50">
                         {round.round_number}
                       </div>
                       <div className="flex-1">

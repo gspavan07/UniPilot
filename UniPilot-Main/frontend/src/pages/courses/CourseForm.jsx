@@ -129,7 +129,7 @@ const SyllabusBuilder = ({ value = [], onChange }) => {
         >
           {/* Unit Header */}
           <div className="flex items-start gap-3 mb-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-semibold text-sm">
+            <div className="shrink-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-semibold text-sm">
               {unit.unit}
             </div>
             <div className="flex-1">
@@ -159,7 +159,7 @@ const SyllabusBuilder = ({ value = [], onChange }) => {
             </label>
             {unit.topics.map((topic, tIdx) => (
               <div key={tIdx} className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
                 <input
                   placeholder="Enter topic..."
                   value={topic}
@@ -491,7 +491,7 @@ const CourseForm = ({
           >
             {error && (
               <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 shrink-0" />
                 <p>{error}</p>
               </div>
             )}

@@ -11,6 +11,7 @@ import Profile from "./pages/Profile/Profile";
 import FacultyDashboard from "./pages/Faculty/FacultyDashboard";
 import PaperFormatEditor from "./pages/Faculty/PaperFormatEditor";
 import NotFound from "./pages/NotFound";
+import Grades from "./pages/Grades/Grades";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="exam-cycles/:id/edit" element={<CreateCycle />} />
             <Route path="exam-cycles/:id/manage" element={<ManageCycle />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="grades" element={<Grades />} />
             {/* Add more routes here */}
           </Route>
 

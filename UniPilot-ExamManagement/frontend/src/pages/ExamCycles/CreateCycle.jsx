@@ -13,13 +13,7 @@ import {
   getAllDegrees,
 } from "../../services/examCycleService";
 
-const DEGREE_LABELS = {
-  btech: "B.Tech",
-  mtech: "M.Tech",
-  mca: "MCA",
-  mba: "MBA",
-  diploma: "Diploma",
-};
+import { DEGREE_LABELS } from "../../utils/degreeLabels";
 
 const MONTHS = [
   "Jan",
@@ -112,10 +106,12 @@ export default function CreateCycle() {
       const response = await getCycleById(id);
       const data = response.data.data;
 
-      setFormData({
+      const selectedReg = regulations.find((r) => r.id === data.regulation_id);
+
+      const formUpdate = {
         degree: data.degree,
         regulation_id: data.regulation_id,
-        regulation_code: data.regulation_code,
+        regulation_code: data.regulation_code || selectedReg?.name || "",
         exam_month: data.exam_month,
         course_type: data.course_type,
         cycle_type: data.cycle_type,
@@ -123,11 +119,12 @@ export default function CreateCycle() {
         semester: data.semester,
         needs_fee: data.needs_fee,
         status: data.status,
-      });
-      setCycleName(data.cycle_name);
+      };
+
+      setFormData(formUpdate);
+      setCycleName(calculateCycleName(formUpdate));
 
       // Trigger regulation dependencies
-      const selectedReg = regulations.find((r) => r.id === data.regulation_id);
       if (selectedReg) {
         setSelectedRegulation(selectedReg);
         const ctList = selectedReg.exam_configuration.course_types.map(
@@ -159,6 +156,7 @@ export default function CreateCycle() {
       setFetching(false);
     }
   };
+
 
   // Load semester when batch is selected (only for new cycles)
   useEffect(() => {
@@ -284,13 +282,7 @@ export default function CreateCycle() {
   };
 
   const generateCycleName = () => {
-    const { degree, regulation_code, semester, cycle_type, exam_month } =
-      formData;
-    const romanSemester = toRoman(semester);
-    const year = new Date().getFullYear();
-
-    const name = `${degree}_${regulation_code}_${romanSemester}_${cycle_type}_Examination_${exam_month}-${year}`;
-    setCycleName(name);
+    setCycleName(calculateCycleName(formData));
   };
 
   const handleInputChange = (e) => {
@@ -311,13 +303,40 @@ export default function CreateCycle() {
     }
   };
 
+  const calculateCycleName = (data) => {
+    const { degree, regulation_code, semester, cycle_type, exam_month } = data;
+    if (
+      !degree ||
+      !regulation_code ||
+      !semester ||
+      !cycle_type ||
+      !exam_month
+    )
+      return "";
+
+    const romanSemester = toRoman(semester);
+    const year = new Date().getFullYear();
+    const degreeLabel = DEGREE_LABELS[degree.toLowerCase()];
+
+    if (!degreeLabel) return ""; // Guard against invalid degree
+
+    return `${degreeLabel}_${regulation_code}_${romanSemester}_${cycle_type}_Examination_${exam_month}-${year}`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const payload = { ...formData, cycle_name: cycleName };
+      // Ensure cycle name is generated from the latest form data
+      const finalCycleName = calculateCycleName(formData);
+      if (!finalCycleName) {
+        throw new Error("Could not generate cycle name. Please check all fields.");
+      }
+
+      const payload = { ...formData, cycle_name: finalCycleName };
+
       if (isEdit) {
         await updateCycle(id, payload);
       } else {
@@ -327,6 +346,7 @@ export default function CreateCycle() {
     } catch (err) {
       setError(
         err.response?.data?.error ||
+        err.message ||
         `Failed to ${isEdit ? "update" : "create"} exam cycle`,
       );
     } finally {
@@ -335,238 +355,300 @@ export default function CreateCycle() {
   };
 
   if (fetching)
-    return <div className="text-center text-lg font-semibold text-indigo-600 py-10">Loading cycle data...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-900 font-medium text-lg animate-pulse">
+            Retrieving cycle configuration...
+          </p>
+        </div>
+      </div>
+    );
 
   return (
-    <div className="max-w-[1200px] mx-auto p-8 animate-fadeIn">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-[2rem] text-slate-900 font-bold m-0">
-          {isEdit ? "Edit Exam Cycle" : "Create New Exam Cycle"}
-        </h1>
-        <button
-          onClick={() => navigate("/exam-cycles")}
-          className="bg-white border-2 border-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold text-base cursor-pointer transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
-        >
-          Back to Cycles
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-100 text-red-800 p-4 rounded-lg mb-6 border-l-4 border-red-600">
-          {error}
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-xl shadow-lg"
-      >
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-700 text-white p-6 rounded-lg mb-8">
-          <label className="block text-sm mb-2 opacity-90 uppercase tracking-wider font-semibold">
-            Generated Cycle Name:
-          </label>
-          <div className="text-xl font-bold font-mono tracking-tight">
-            {cycleName || "(Fill the form to generate name)"}
+    <div className="min-h-screen bg-gray-50 py-16 px-4 sm:px-6 lg:px-8 font-sans text-gray-900">
+      <div className="max-w-6xl mx-auto space-y-10">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-gray-200 pb-8">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-950">
+              {isEdit ? "Edit Exam Cycle" : "Create New Exam Cycle"}
+            </h1>
+            <p className="text-lg text-gray-600 max-w-3xl leading-relaxed">
+              Define the examination parameters below. This configuration drives
+              scheduling, hall tickets, and result processing.
+            </p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Degree *
-            </label>
-            <select
-              name="degree"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
-              value={formData.degree}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Select Degree</option>
-              {degrees.map((deg) => (
-                <option key={deg} value={deg}>
-                  {DEGREE_LABELS[deg.toLowerCase()] || deg.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Regulation *
-            </label>
-            <select
-              name="regulation_id"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
-              value={formData.regulation_id}
-              onChange={handleRegulationChange}
-              required
-            >
-              <option value="">Select Regulation</option>
-              {regulations.map((reg) => (
-                <option key={reg.id} value={reg.id}>
-                  {reg.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Exam Month *
-            </label>
-            <select
-              name="exam_month"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
-              value={formData.exam_month}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Select Month</option>
-              {MONTHS.map((month) => (
-                <option key={month} value={month}>
-                  {month}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Course Type *
-            </label>
-            <select
-              name="course_type"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 disabled:bg-slate-100 disabled:cursor-not-allowed"
-              value={formData.course_type}
-              onChange={handleCourseTypeChange}
-              required
-              disabled={!formData.regulation_id}
-            >
-              <option value="">Select Course Type</option>
-              {courseTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Cycle Type *
-            </label>
-            <select
-              name="cycle_type"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 disabled:bg-slate-100 disabled:cursor-not-allowed"
-              value={formData.cycle_type}
-              onChange={handleInputChange}
-              required
-              disabled={!formData.course_type}
-            >
-              <option value="">Select Cycle Type</option>
-              {cycleTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Batch *
-            </label>
-            <select
-              name="batch"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
-              value={formData.batch}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Select Batch</option>
-              {batches.map((batch) => (
-                <option key={batch} value={batch}>
-                  {batch}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold text-slate-700 text-sm">
-              Semester
-            </label>
-            <input
-              type="number"
-              name="semester"
-              className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 disabled:bg-slate-100"
-              value={formData.semester}
-              readOnly={!isEdit}
-              onChange={handleInputChange}
-              placeholder="Auto-filled from batch"
-            />
-          </div>
-
-          <div className="flex flex-row items-center">
-            <label className="flex items-center gap-3 cursor-pointer mb-0">
-              <input
-                type="checkbox"
-                name="needs_fee"
-                className="w-5 h-5 cursor-pointer accent-indigo-600"
-                checked={formData.needs_fee}
-                onChange={handleInputChange}
-              />
-              <span className="text-sm font-semibold text-slate-700">
-                Students need to pay fee for this exam
-              </span>
-            </label>
-          </div>
-
-          {isEdit && (
-            <div className="flex flex-col gap-2">
-              <label className="font-semibold text-slate-700 text-sm">
-                Status
-              </label>
-              <select
-                name="status"
-                className="p-3 border-2 border-slate-200 rounded-lg text-base transition-all outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
-                value={formData.status}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="scheduling">Scheduling</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-4 pt-6 border-t-2 border-slate-200">
           <button
-            type="button"
             onClick={() => navigate("/exam-cycles")}
-            className="bg-white border-2 border-slate-200 text-slate-700 px-6 py-3 rounded-lg font-semibold text-base cursor-pointer transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
           >
             Cancel
           </button>
-          <button
-            type="submit"
-            className="bg-gradient-to-br from-indigo-500 to-purple-700 text-white px-6 py-3 rounded-lg font-semibold text-base cursor-pointer transition-all border-none hover:-translate-y-0.5 hover:shadow-xl active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            {loading
-              ? isEdit
-                ? "Updating..."
-                : "Creating..."
-              : isEdit
-                ? "Update Exam Cycle"
-                : "Create Exam Cycle"}
-          </button>
         </div>
-      </form>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="rounded-xl bg-red-50 border border-red-200 p-5 flex items-start gap-4 animate-fadeIn">
+            <div className="text-red-600 font-bold text-xl">!</div>
+            <div className="text-red-800 font-medium">{error}</div>
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-10"
+        >
+          {/* Main Form Fields */}
+          <div className="lg:col-span-8 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-gray-100 p-8 md:p-10 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+              {/* Degree */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Degree Qualification <span className="text-blue-600">*</span>
+                </label>
+                <select
+                  name="degree"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 px-4 text-gray-900 font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                  value={formData.degree}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Degree...</option>
+                  {degrees.map((deg) => (
+                    <option key={deg} value={deg}>
+                      {DEGREE_LABELS[deg.toLowerCase()] || deg.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Regulation */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Regulation Schema <span className="text-blue-600">*</span>
+                </label>
+                <select
+                  name="regulation_id"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 px-4 text-gray-900 font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                  value={formData.regulation_id}
+                  onChange={handleRegulationChange}
+                  required
+                >
+                  <option value="">Select Regulation...</option>
+                  {regulations.map((reg) => (
+                    <option key={reg.id} value={reg.id}>
+                      {reg.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Exam Month */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Target Month <span className="text-blue-600">*</span>
+                </label>
+                <select
+                  name="exam_month"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 px-4 text-gray-900 font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                  value={formData.exam_month}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Month...</option>
+                  {MONTHS.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Course Type */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Course Category <span className="text-blue-600">*</span>
+                </label>
+                <select
+                  name="course_type"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 px-4 text-gray-900 font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={formData.course_type}
+                  onChange={handleCourseTypeChange}
+                  required
+                  disabled={!formData.regulation_id}
+                >
+                  <option value="">Select Type...</option>
+                  {courseTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cycle Type */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Examination Type <span className="text-blue-600">*</span>
+                </label>
+                <select
+                  name="cycle_type"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 px-4 text-gray-900 font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={formData.cycle_type}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!formData.course_type}
+                >
+                  <option value="">Select Exam Type...</option>
+                  {cycleTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Batch */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Student Batch <span className="text-blue-600">*</span>
+                </label>
+                <select
+                  name="batch"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 px-4 text-gray-900 font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                  value={formData.batch}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Batch...</option>
+                  {batches.map((batch) => (
+                    <option key={batch} value={batch}>
+                      {batch}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Semester - Auto filled */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Active Semester
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    name="semester"
+                    className="block w-full rounded-xl border-gray-200 bg-gray-100 py-3.5 px-4 text-gray-500 font-bold outline-none cursor-not-allowed"
+                    value={formData.semester}
+                    readOnly={!isEdit}
+                    onChange={handleInputChange}
+                    placeholder="Auto-calculating..."
+                  />
+                  {!isEdit && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span className="text-xs text-gray-400 font-medium">
+                        AUTO
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Fee Section - Distinct Block */}
+            <div className="pt-6 mt-6 border-t border-gray-100">
+              <label className="relative flex items-start gap-4 p-5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-blue-50/30 hover:border-blue-200 cursor-pointer transition-all group">
+                <div className="flex items-center h-6">
+                  <input
+                    type="checkbox"
+                    name="needs_fee"
+                    className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600 transition duration-150 ease-in-out"
+                    checked={formData.needs_fee}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <span className="block font-bold text-gray-900">
+                    Enable Examination Fee Collection
+                  </span>
+                  <span className="block text-sm text-gray-500 mt-1 group-hover:text-gray-600">
+                    If enabled, students will be required to clear fee dues
+                    before they can access their hall tickets.
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Sidebar Info & Action */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Generated ID Card */}
+            <div className="bg-blue-600 rounded-3xl p-8 text-white shadow-xl shadow-blue-600/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-blue-500 rounded-full opacity-50 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+
+              <h3 className="relative text-blue-100 text-xs font-bold uppercase tracking-widest mb-6 border-b border-blue-500/30 pb-2">
+                Cycle Identifier
+              </h3>
+
+              <div className="relative font-mono text-2xl font-bold wrap-break-word leading-snug min-h-16">
+                {cycleName ? (
+                  cycleName
+                ) : (
+                  <span className="text-blue-300/60 text-lg font-normal italic">
+                    Complete the form to generate ID...
+                  </span>
+                )}
+              </div>
+
+              <p className="relative mt-6 text-xs text-blue-100/80 leading-relaxed max-w-[90%]">
+                System generated unique ID based on Degree, Regulation, Semester,
+                Type and Month.
+              </p>
+            </div>
+
+            {/* Status Field (Conditional) */}
+            {isEdit && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                  Current Status
+                </label>
+                <select
+                  name="status"
+                  className="block w-full rounded-xl border-gray-200 bg-gray-50 py-3 px-4 text-gray-900 font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="scheduling">Scheduling Phase</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="active">Active (Ongoing)</option>
+                  <option value="completed">Archived / Completed</option>
+                </select>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-5 px-6 rounded-2xl bg-gray-900 hover:bg-black text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 active:scale-95 flex justify-center items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none mt-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Processing...</span>
+                </>
+              ) : isEdit ? (
+                "Update Configuration"
+              ) : (
+                "Initialize Cycle"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

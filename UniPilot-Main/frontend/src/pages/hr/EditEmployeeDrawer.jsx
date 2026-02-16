@@ -250,10 +250,9 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`
                     relative group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                    ${
-                      isActive
-                        ? "text-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:text-primary-400 ring-1 ring-primary-500/10"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+                    ${isActive
+                      ? "text-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:text-primary-400 ring-1 ring-primary-500/10"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
                     }
                   `}
                 >
@@ -279,7 +278,7 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
           >
             {error && (
               <div className="p-4 rounded-xl bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 text-error-700 dark:text-error-300 text-sm flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                 <p>{error}</p>
               </div>
             )}
@@ -584,11 +583,10 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
                       </label>
                       <input
                         {...register("employee_id")}
-                        className={`form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-mono ${
-                          errors.employee_id
+                        className={`form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-mono ${errors.employee_id
                             ? "border-error-500 focus:border-error-500 focus:ring-error-500/10"
                             : ""
-                        }`}
+                          }`}
                       />
                       {errors.employee_id && (
                         <p className="mt-1 text-xs text-error-500">
@@ -618,11 +616,10 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
                       <input
                         {...register("designation")}
                         placeholder="e.g. Senior Lecturer, Lab Technician"
-                        className={`form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                          errors.designation
+                        className={`form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white ${errors.designation
                             ? "border-error-500 focus:border-error-500 focus:ring-error-500/10"
                             : ""
-                        }`}
+                          }`}
                       />
                       {errors.designation && (
                         <p className="mt-1 text-xs text-error-500">
@@ -771,7 +768,7 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
                         <p className="text-[10px] text-gray-400 mt-1 mb-3">
                           {selectedFiles[doc.id]
                             ? (selectedFiles[doc.id].size / 1024).toFixed(1) +
-                              " KB"
+                            " KB"
                             : "No file selected"}
                         </p>
                         <label className="cursor-pointer">

@@ -239,7 +239,7 @@ const HostelDashboard = () => {
         {hasAlerts && (
           <div className="bg-white rounded-xl p-6 border-l-4 border-l-blue-600 border-y border-r border-gray-200 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center">
             <div className="flex items-center gap-4 flex-1">
-              <div className="p-3 bg-blue-50 rounded-full flex-shrink-0">
+              <div className="p-3 bg-blue-50 rounded-full shrink-0">
                 <Bell className="w-6 h-6 text-blue-600" />
               </div>
               <div className="space-y-1">
