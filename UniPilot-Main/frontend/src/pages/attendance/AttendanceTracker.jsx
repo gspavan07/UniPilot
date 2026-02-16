@@ -193,59 +193,48 @@ const AttendanceTracker = () => {
 
   const StatCard = ({ label, value, icon: Icon, color, isAlert }) => (
     <div
-      className={`group p-5 rounded-2xl border ${isAlert
-          ? "border-blue-600 bg-blue-50/50"
-          : "border-gray-200 hover:border-gray-300"
-        } transition-all duration-300 flex flex-col justify-between`}
+      className={`p-8 rounded-[2rem] border transition-all duration-500 shadow-md shadow-black/[0.02] ${isAlert
+        ? "border-red-200 bg-red-50/30"
+        : "border-gray-100 bg-white hover:shadow-xl hover:-translate-y-1"}`}
     >
-      <div className="flex items-start justify-between mb-4">
-        <Icon
-          className={`w-4 h-4 ${isAlert
-              ? "text-blue-600"
-              : "text-gray-400 group-hover:text-blue-500"
-            } transition-colors`}
-        />
-        {isAlert && (
-          <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-        )}
-      </div>
-      <div className="space-y-1">
-        <p className="text-3xl font-bold tracking-tight text-gray-900">
-          {value}
-        </p>
-        <p className="text-sm font-medium text-gray-500">{label}</p>
-      </div>
+      <Icon
+        className={`w-6 h-6 mb-6 ${isAlert ? "text-red-500" : "text-blue-600"}`}
+      />
+      <p className="text-4xl font-black text-black mb-1">
+        {value}
+      </p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+        {label}
+      </p>
     </div>
   );
 
   const StudentView = () => (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* Filtering Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
-        <div className="flex space-x-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-gray-100">
+        {/* Tabs */}
+        <div className="flex gap-8">
           {["overview", "coursewise"].map((t) => (
             <button
               key={t}
               onClick={() => setStudentTab(t)}
-              className={`pb-2 text-sm font-bold tracking-wide transition-all border-b-2 ${studentTab === t
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-                }`}
+              className={`pb-4 text-sm font-black uppercase tracking-widest transition-all ${studentTab === t ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-300 hover:text-gray-500"}`}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center space-x-3">
-          <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-            Sem
-          </label>
-          <div className="relative">
+        <div className="relative group">
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-300 shadow-sm">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Semester
+            </label>
             <select
               value={selectedSemester}
               onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
-              className="appearance-none pl-4 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+              className="appearance-none bg-transparent font-black text-blue-600 border-none outline-none pr-6 cursor-pointer text-sm"
             >
               {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                 <option key={sem} value={sem}>
@@ -259,180 +248,143 @@ const AttendanceTracker = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <StatCard
           label="Total Classes"
           value={summary?.total || 0}
           icon={Calendar}
-          color="text-gray-900"
         />
         <StatCard
-          label="Attended"
+          label="Classes Attended"
           value={summary?.present || 0}
           icon={UserCheck}
-          color="text-green-600"
         />
         <StatCard
-          label="Attendance %"
+          label="Attendance Rate"
           value={`${summary?.percentage || 0}%`}
           icon={TrendingUp}
           isAlert={(summary?.percentage || 0) < 75}
-          color={
-            (summary?.percentage || 0) < 75 ? "text-red-500" : "text-blue-600"
-          }
         />
       </div>
 
       {studentTab === "overview" ? (
-        <div className="mt-8">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6">
-            Recent History
-          </h3>
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-left tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-left tracking-wider">
-                      Course
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-center tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-right tracking-wider">
-                      Faculty
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {records?.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="group hover:bg-gray-50/50 transition-colors"
+        <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50/50 border-b border-gray-100">
+              <tr>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                  Session Date
+                </th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                  Course Module
+                </th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
+                  Status
+                </th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">
+                  Faculty
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {records?.map((record) => (
+                <tr
+                  key={record.id}
+                  className="hover:bg-gray-50/30 transition-colors"
+                >
+                  <td className="px-8 py-5 text-sm font-bold text-gray-900">
+                    {new Date(record.date).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </td>
+                  <td className="px-8 py-5 text-sm font-black text-black">
+                    {record.course?.name || "Academic Session"}
+                  </td>
+                  <td className="px-8 py-5 text-center">
+                    <span
+                      className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${record.status === "present" ? "bg-green-50 text-green-600" : record.status === "absent" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}
                     >
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {new Date(record.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {record.course?.name || "General Activity"}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${record.status === "present"
-                              ? "bg-green-50 text-green-600 border border-green-100"
-                              : record.status === "absent"
-                                ? "bg-red-50 text-red-600 border border-red-100"
-                                : "bg-amber-50 text-amber-600 border border-amber-100"
-                            }`}
-                        >
-                          {record.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 text-right">
-                        {record.instructor
-                          ? `${record.instructor.first_name} ${record.instructor.last_name}`
-                          : "System"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                      {record.status}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-sm font-medium text-gray-500 text-right">
+                    {record.instructor
+                      ? `${record.instructor.first_name} ${record.instructor.last_name}`
+                      : "System"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
-        <div className="mt-8">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6">
-            Module Performance
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courseWise?.map((course) => (
-              <div
-                key={course.course_id}
-                className="group bg-white p-6 rounded-2xl border border-gray-200 hover:border-blue-200 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5 relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gray-50 rounded-bl-full -mr-4 -mt-4 transition-colors group-hover:bg-blue-50" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {courseWise?.map((course) => (
+            <div
+              key={course.course_id}
+              className="p-8 rounded-[2.5rem] bg-white border border-gray-300 shadow-md shadow-black/[0.02] hover:shadow-2xl transition-all duration-500 group relative overflow-hidden"
+            >
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-50 rounded-full blur-2xl group-hover:bg-blue-100 transition-colors"></div>
 
-                <div className="relative mb-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full bg-white">
-                      {course.course_code}
-                    </span>
-                    <span
-                      className={`text-2xl font-black ${parseFloat(course.percentage) < 75
-                          ? "text-red-500"
-                          : "text-blue-600"
-                        }`}
-                    >
-                      {course.percentage}%
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-lg text-gray-900 leading-tight pr-8">
-                    {course.course_name}
-                  </h4>
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-blue-100">
+                  {course.course_code}
+                </span>
+                <span
+                  className={`text-2xl font-black ${parseFloat(course.percentage) < 75 ? "text-red-500" : "text-blue-600"}`}
+                >
+                  {course.percentage}%
+                </span>
+              </div>
+              <h4 className="text-xl font-black text-black mb-8 leading-tight group-hover:text-blue-600 transition-colors relative z-10 line-clamp-2">
+                {course.course_name}
+              </h4>
+
+              <div className="h-2 bg-gray-50 rounded-full overflow-hidden mb-8 relative z-10">
+                <div
+                  className={`h-full rounded-full transition-all duration-1000 ${parseFloat(course.percentage) < 75 ? "bg-red-500" : "bg-blue-600"}`}
+                  style={{ width: `${course.percentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between border-t border-gray-50 pt-6 relative z-10">
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-gray-300 uppercase mb-1">
+                    Total
+                  </p>
+                  <p className="font-black text-black">{course.total}</p>
                 </div>
-
-                <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mb-6">
-                  <div
-                    className={`h-full rounded-full transition-all duration-1000 ${parseFloat(course.percentage) < 75
-                        ? "bg-red-500"
-                        : "bg-blue-600"
-                      }`}
-                    style={{ width: `${course.percentage}%` }}
-                  />
+                <div className="text-center border-l border-gray-50 pl-4">
+                  <p className="text-[9px] font-black  uppercase mb-1 text-green-600">
+                    Present
+                  </p>
+                  <p className="font-black text-green-600">
+                    {course.present}
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-100">
-                  <div className="text-center border-r border-gray-100 last:border-0">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">
-                      Total
-                    </p>
-                    <p className="font-bold text-gray-900 text-sm">
-                      {course.total}
-                    </p>
-                  </div>
-                  <div className="text-center border-r border-gray-100 last:border-0">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">
-                      Present
-                    </p>
-                    <p className="font-bold text-green-600 text-sm">
-                      {course.present}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">
-                      Absent
-                    </p>
-                    <p className="font-bold text-red-500 text-sm">
-                      {course.absent}
-                    </p>
-                  </div>
+                <div className="text-center border-l border-gray-50 pl-4">
+                  <p className="text-[9px] font-black uppercase mb-1 text-red-500">
+                    Absent
+                  </p>
+                  <p className="font-black text-red-500">{course.absent}</p>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 
   const FacultyView = () => (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* Faculty Tabs & Global Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-gray-100 pb-6">
-        <div className="flex space-x-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-gray-100">
+        <div className="flex space-x-8">
           <button
             onClick={() => setFacultyTab("schedule")}
-            className={`pb-2 text-sm font-bold tracking-wide transition-all border-b-2 ${facultyTab === "schedule"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
+            className={`pb-4 text-sm font-black uppercase tracking-widest transition-all ${facultyTab === "schedule" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-300 hover:text-gray-500"}`}
           >
             Today's Schedule
           </button>
@@ -440,12 +392,9 @@ const AttendanceTracker = () => {
             ["admin", "super_admin"].includes(user?.role)) && (
               <button
                 onClick={() => setFacultyTab("analytics")}
-                className={`pb-2 text-sm font-bold tracking-wide transition-all border-b-2 ${facultyTab === "analytics"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-400 hover:text-gray-600"
-                  }`}
+                className={`pb-4 text-sm font-black uppercase tracking-widest transition-all ${facultyTab === "analytics" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-300 hover:text-gray-500"}`}
               >
-                Overview & Analytics
+                Analytics
               </button>
             )}
         </div>
@@ -456,9 +405,10 @@ const AttendanceTracker = () => {
           !activeSession && (
             <div className="flex flex-wrap items-center gap-3">
               {["admin", "super_admin"].includes(user?.role) && (
-                <div className="relative">
+                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-300 shadow-sm">
+                  <Filter className="w-3 h-3 text-gray-400" />
                   <select
-                    className="appearance-none pl-3 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="appearance-none bg-transparent font-black text-xs text-gray-600 border-none outline-none cursor-pointer uppercase tracking-wider"
                     value={oversightFilters.department_id}
                     onChange={(e) =>
                       setOversightFilters({
@@ -468,20 +418,20 @@ const AttendanceTracker = () => {
                       })
                     }
                   >
-                    <option value="">All Departments</option>
+                    <option value="">All Depts</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                 </div>
               )}
 
-              <div className="relative">
+              <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-300 shadow-sm">
+                <Layout className="w-3 h-3 text-gray-400" />
                 <select
-                  className="appearance-none pl-3 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  className="appearance-none bg-transparent font-black text-xs text-gray-600 border-none outline-none cursor-pointer uppercase tracking-wider"
                   value={oversightFilters.semester}
                   onChange={(e) =>
                     setOversightFilters({
@@ -498,13 +448,13 @@ const AttendanceTracker = () => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
               </div>
 
               {oversightFilters.department_id && oversightFilters.semester && (
-                <div className="relative animate-in fade-in slide-in-from-left-2 duration-300">
+                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-300 shadow-sm animate-in fade-in slide-in-from-left-2">
+                  <Users className="w-3 h-3 text-gray-400" />
                   <select
-                    className="appearance-none pl-3 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="appearance-none bg-transparent font-black text-xs text-gray-600 border-none outline-none cursor-pointer uppercase tracking-wider"
                     value={oversightFilters.section}
                     onChange={(e) =>
                       setOversightFilters({
@@ -513,14 +463,13 @@ const AttendanceTracker = () => {
                       })
                     }
                   >
-                    <option value="">All Sections</option>
+                    <option value="">All Secs</option>
                     {sections.map((s) => (
                       <option key={s} value={s}>
                         Sec {s}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                 </div>
               )}
             </div>
@@ -529,49 +478,52 @@ const AttendanceTracker = () => {
 
       {facultyTab === "schedule" ? (
         activeSession ? (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-lg shadow-blue-500/5">
-            <div className="p-6 bg-gray-900 text-white flex justify-between items-center sm:flex-row flex-col gap-4">
-              <div>
+          <div className="bg-white rounded-[2.5rem] border border-gray-200 overflow-hidden shadow-xl shadow-blue-900/5">
+            <div className="p-10 bg-gray-900 text-white flex justify-between items-center sm:flex-row flex-col gap-8 relative overflow-hidden">
+              {/* Pattern */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+              <div className="relative z-10">
                 <button
                   onClick={() => setActiveSession(null)}
-                  className="text-gray-400 hover:text-white mb-2 text-sm flex items-center font-medium transition-colors"
+                  className="text-gray-400 hover:text-white mb-4 text-[10px] uppercase font-black tracking-widest flex items-center transition-colors"
                 >
-                  <RotateCcw className="w-3 h-3 mr-1.5" /> Back to Schedule
+                  <RotateCcw className="w-3 h-3 mr-2" /> Back to Schedule
                 </button>
-                <h2 className="text-2xl font-bold tracking-tight">
+                <h2 className="text-3xl font-black tracking-tight mb-2">
                   {activeSession.course_name}
                 </h2>
-                <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
-                  <span className="bg-gray-800 px-2 py-0.5 rounded text-white font-mono text-xs">
+                <div className="flex items-center gap-4 mt-2">
+                  <span className="bg-white/10 px-3 py-1 rounded-lg text-white font-mono text-xs font-bold border border-white/10">
                     {activeSession.start_time} - {activeSession.end_time}
                   </span>
-                  <span>Session ID: {activeSession.id}</span>
+                  <span className="text-gray-400 font-bold text-xs">ID: {activeSession.id}</span>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-4 relative z-10">
                 <button
                   onClick={markAllPresent}
-                  className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold transition-all text-sm border border-gray-700"
+                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black uppercase tracking-widest text-[10px] border border-white/10 transition-all"
                 >
                   Mark All Present
                 </button>
                 <button
                   onClick={handleMarkSubmit}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all text-sm flex items-center gap-2"
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
                 >
-                  Save & Submit <ArrowRight className="w-4 h-4" />
+                  Save & Submit <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
             </div>
 
-            <div className="p-0 overflow-x-auto">
+            <div className="p-2 overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100 text-left">
+                <thead className="bg-gray-50/50 border-b border-gray-100 text-left">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                       Student Details
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">
                       Mark Status
                     </th>
                   </tr>
@@ -582,23 +534,23 @@ const AttendanceTracker = () => {
                       key={student.id}
                       className="hover:bg-gray-50/50 transition-colors"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm mr-4 border border-blue-100">
+                          <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm mr-4 border border-blue-100">
                             {student.first_name[0]}
                             {student.last_name[0]}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">
+                            <p className="font-bold text-gray-900 text-sm">
                               {student.first_name} {student.last_name}
                             </p>
-                            <p className="text-xs font-mono text-gray-400">
+                            <p className="text-[10px] font-mono text-gray-400 uppercase">
                               {student.student_id}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <div className="flex justify-end gap-2">
                           {["present", "absent", "late"].map((s) => (
                             <button
@@ -609,13 +561,13 @@ const AttendanceTracker = () => {
                                   [student.id]: s,
                                 })
                               }
-                              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${markingData[student.id] === s
-                                  ? s === "present"
-                                    ? "bg-green-600 text-white border-green-600 shadow-md shadow-green-500/20"
-                                    : s === "absent"
-                                      ? "bg-red-600 text-white border-red-600 shadow-md shadow-red-500/20"
-                                      : "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20"
-                                  : "bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600"
+                              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border ${markingData[student.id] === s
+                                ? s === "present"
+                                  ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-500/20 scale-105"
+                                  : s === "absent"
+                                    ? "bg-red-600 text-white border-red-600 shadow-lg shadow-red-500/20 scale-105"
+                                    : "bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20 scale-105"
+                                : "bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600"
                                 }`}
                             >
                               {s}
@@ -630,70 +582,66 @@ const AttendanceTracker = () => {
             </div>
           </div>
         ) : (
-          <div className="border-l border-gray-200 ml-3 md:ml-0 md:border-none space-y-0 relative">
+          <div className="space-y-6">
             {todayClasses?.length > 0 ? (
               todayClasses.map((session, idx) => (
                 <div
                   key={session.id}
-                  className="group relative pl-8 md:pl-0 md:flex md:gap-8 pb-12 last:pb-0"
+                  className="group relative md:flex md:gap-10 pb-12 last:pb-0 cursor-pointer"
                   onClick={() => !session.is_marked && startMarking(session)}
                 >
-                  {/* Timeline logic */}
-                  <div className="absolute left-[-5px] top-1 h-2.5 w-2.5 rounded-full bg-white border-2 border-blue-600 md:hidden z-10"></div>
+                  {/* Timeline */}
+                  <div className="hidden md:flex flex-col items-center mr-4">
+                    <div className={`w-4 h-4 rounded-full border-4 ${session.is_marked ? 'border-green-500 bg-white' : 'border-blue-600 bg-white'} relative z-10 box-content`}></div>
+                    <div className="w-0.5 bg-gray-100 h-full -mt-2 group-last:hidden"></div>
+                  </div>
 
-                  <div className="md:w-32 flex-shrink-0 pt-1">
-                    <span className="block text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  <div className="md:w-32 flex-shrink-0 pt-1 mb-4 md:mb-0">
+                    <span className="block text-2xl font-black text-gray-900 group-hover:text-blue-600 transition-colors">
                       {session.start_time.slice(0, 5)}
                     </span>
-                    <span className="text-sm text-gray-400 font-medium">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-0.5 rounded">
                       {parseInt(session.start_time.slice(0, 2)) >= 12
                         ? "PM"
                         : "AM"}
                     </span>
                   </div>
 
-                  <div className="hidden md:block w-px bg-gray-200 relative group-hover:bg-blue-200 transition-colors">
-                    <div
-                      className={`absolute top-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full transition-colors ${session.is_marked ? "bg-green-500" : "bg-black"
-                        } ${!session.is_marked && "group-hover:bg-blue-600"}`}
-                    ></div>
-                  </div>
-
                   <div
-                    className={`flex-1 bg-white p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${session.is_marked
-                        ? "border-green-100 bg-green-50/10 opacity-70 hover:opacity-100"
-                        : "border-gray-200 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-1"
+                    className={`flex-1 p-8 rounded-[2rem] border transition-all duration-300 ${session.is_marked
+                      ? "border-green-100 bg-green-50/20 opacity-90"
+                      : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1"
                       }`}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-xl font-black text-black leading-tight">
                         {session.course_name}
                       </h3>
                       {session.is_marked ? (
-                        <span className="flex items-center text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-1 rounded-full border border-green-100">
-                          <CheckCircle className="w-3 h-3 mr-1" /> Marked
+                        <span className="flex items-center text-[10px] font-black text-green-700 uppercase tracking-widest bg-white px-3 py-1.5 rounded-full border border-green-200 shadow-sm">
+                          <CheckCircle className="w-3 h-3 mr-1.5" /> Marked
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-full border border-blue-100">
+                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
                           Pending
                         </span>
                       )}
                     </div>
 
-                    <div className="text-sm text-gray-500 mb-4 flex items-center gap-3">
-                      <span className="font-mono bg-gray-100 px-1.5 rounded text-gray-600 text-xs">
+                    <div className="flex items-center gap-4 mb-8">
+                      <span className="font-mono bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg text-gray-500 text-xs font-bold">
                         {session.course_code || "N/A"}
                       </span>
                       {["admin", "super_admin", "hod"].includes(user?.role) && (
-                        <span className="font-medium text-gray-900">
-                          <Users className="w-3 h-3 inline mr-1 text-gray-400" />
+                        <span className="font-bold text-xs text-gray-500 flex items-center">
+                          <Users className="w-3 h-3 inline mr-1.5 text-gray-400" />
                           {session.faculty_name}
                         </span>
                       )}
                     </div>
 
                     {!session.is_marked ? (
-                      <button className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-colors shadow-lg shadow-gray-200">
+                      <button className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
                         Mark Attendance
                       </button>
                     ) : (
@@ -704,7 +652,7 @@ const AttendanceTracker = () => {
                             e.stopPropagation();
                             startMarking(session);
                           }}
-                          className="w-full py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:border-blue-200 hover:text-blue-600 transition-colors"
+                          className="w-full py-4 bg-white border-2 border-gray-100 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:border-blue-200 hover:text-blue-600 transition-all"
                         >
                           Review / Edit
                         </button>
@@ -714,55 +662,62 @@ const AttendanceTracker = () => {
                 </div>
               ))
             ) : (
-              <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-8 h-8 text-gray-300" />
+              <div className="py-24 text-center border-2 border-dashed border-gray-100 rounded-[3rem] bg-gray-50/20">
+                <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-50">
+                  <Calendar className="w-8 h-8 text-gray-200" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-xl font-black text-gray-900 tracking-tight">
                   No Classes Today
                 </h3>
-                <p className="text-gray-400 text-sm max-w-xs mx-auto mt-1">
-                  You don't have any scheduled sessions for today. Enjoy your
-                  time!
+                <p className="text-gray-400 text-sm font-bold mt-2">
+                  No scheduled sessions found for {new Date().toLocaleDateString("en-US", { weekday: "long" })}.
                 </p>
               </div>
             )}
           </div>
         )
       ) : (
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Data Overview
-              </h3>
-              <p className="text-sm text-gray-500">
-                Monitoring {stats.total_students} students across departments
-              </p>
+        <div className="space-y-8">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-200 shadow-lg shadow-black/[0.02] flex flex-col md:flex-row justify-between md:items-center gap-6">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-[1.5rem] bg-blue-50 flex items-center justify-center text-blue-600">
+                <BarChart3 className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-black tracking-tight leading-none">
+                  Overview
+                </h3>
+                <p className="text-sm font-bold text-gray-400 mt-1">
+                  Monitoring {stats.total_students} students
+                </p>
+              </div>
             </div>
-            <div className="bg-red-50 text-red-600 px-4 py-2 rounded-xl border border-red-100 flex items-center">
-              <AlertCircle className="w-5 h-5 mr-2" />
-              <span className="font-bold text-sm">
-                {stats.at_risk_count} At Risk
-              </span>
-            </div>
+            {stats.at_risk_count > 0 && (
+              <div className="bg-red-50 text-red-600 pl-4 pr-6 py-3 rounded-2xl border border-red-100 flex items-center self-start md:self-auto">
+                <AlertCircle className="w-5 h-5 mr-3" />
+                <div>
+                  <p className="font-black text-lg leading-none">{stats.at_risk_count}</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider opacity-70">Students At Risk</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-[2.5rem] border border-gray-200 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-gray-50/50 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                       Student
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-center">
-                      Batch / Sec
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
+                      Batch info
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-center">
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
                       Health
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">
                       Actions
                     </th>
                   </tr>
@@ -771,14 +726,14 @@ const AttendanceTracker = () => {
                   {stats.students?.map((student) => (
                     <tr
                       key={student.id}
-                      className="group hover:bg-gray-50/50 transition-colors"
+                      className="group hover:bg-blue-50/20 transition-colors"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <div className="flex items-center">
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3 text-xs ${student.is_low
-                                ? "bg-red-50 text-red-600 border border-red-100"
-                                : "bg-blue-50 text-blue-600 border border-blue-100"
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-black mr-4 text-xs ${student.is_low
+                              ? "bg-red-50 text-red-600 border border-red-100"
+                              : "bg-blue-50 text-blue-600 border border-blue-100"
                               }`}
                           >
                             {student.name
@@ -790,44 +745,39 @@ const AttendanceTracker = () => {
                             <p className="font-bold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
                               {student.name}
                             </p>
-                            <p className="text-[10px] text-gray-400 font-mono uppercase">
+                            <p className="text-[10px] text-gray-400 font-mono uppercase tracking-tight">
                               {student.student_id}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <p className="text-sm font-medium text-gray-900">
-                          {student.batch_year}
-                        </p>
-                        <p className="text-[10px] text-gray-400 uppercase font-bold">
-                          {student.section}
-                        </p>
+                      <td className="px-8 py-5 text-center">
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide">
+                          Batch {student.batch_year} • {student.section}
+                        </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <div className="flex items-end gap-1">
-                            <span
-                              className={`text-sm font-black ${student.is_low
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                                }`}
-                            >
-                              {student.percentage}%
-                            </span>
-                          </div>
-                          <div className="w-20 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                      <td className="px-8 py-5">
+                        <div className="flex flex-col items-center justify-center gap-1.5">
+                          <span
+                            className={`text-sm font-black ${student.is_low
+                              ? "text-red-600"
+                              : "text-green-600"
+                              }`}
+                          >
+                            {student.percentage}%
+                          </span>
+                          <div className="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${student.is_low ? "bg-red-500" : "bg-green-500"
+                              className={`h-full rounded-full transition-all duration-1000 ${student.is_low ? "bg-red-500" : "bg-green-500"
                                 }`}
                               style={{ width: `${student.percentage}%` }}
                             />
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                          <MoreVertical className="w-5 h-5" />
+                      <td className="px-8 py-5 text-right">
+                        <button className="text-gray-300 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 rounded-lg">
+                          <MoreVertical className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -842,33 +792,40 @@ const AttendanceTracker = () => {
   );
 
   return (
-    <div className="min-h-fit bg-white text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900 pb-24">
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-12">
-        {/* Header Section: Minimal & Bold */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-6 mb-10">
-          <div className="space-y-2">
-            <span className="text-sm font-semibold tracking-widest text-blue-600 uppercase">
-              {user?.role === "student" ? "Academic Portal" : "Faculty Console"}
-            </span>
-            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-gray-900">
-              Attendance Tracker
-            </h1>
-            <p className="text-gray-500 text-lg max-w-2xl">
-              {user?.role === "student"
-                ? "Track your daily attendance and course-wise performance."
-                : "Manage class sessions, mark attendance, and monitor student records."}
-            </p>
-          </div>
-          <div className="mt-6 md:mt-0 text-left md:text-right hidden md:block">
-            <p className="text-5xl font-light text-gray-200 leading-none select-none">
-              {new Date().getDate()}
-            </p>
-            <p className="text-sm font-medium text-gray-400 uppercase tracking-widest mt-2">
-              {new Date().toLocaleDateString("en-US", {
-                month: "long",
-                weekday: "long",
-              })}
-            </p>
+    <div className="min-h-screen bg-white text-black font-sans selection:bg-blue-100 selection:text-blue-900 pb-20">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-16 pt-12">
+        {/* Header Section */}
+        <header className="mb-12">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 bg-gray-50/50 p-8 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
+
+            {/* Decorative Elements */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl"></div>
+
+            <div className="space-y-2 relative z-10">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em]">
+                {user?.role === "student" ? "Academic Portal" : "Faculty Console"}
+              </span>
+              <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight leading-none">
+                Attendance <span className="text-blue-600">Tracker.</span>
+              </h1>
+              <p className="text-gray-500 text-sm font-medium">
+                {user?.role === "student"
+                  ? "Track your daily attendance and maintain academic compliance."
+                  : "Manage class sessions, mark attendance, and monitor performance."}
+              </p>
+            </div>
+
+            <div className="relative z-10 flex flex-col items-end">
+              <p className="text-6xl font-black text-gray-200 leading-none select-none tracking-tighter">
+                {new Date().getDate()}
+              </p>
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mt-1 bg-white px-2 py-1 rounded-lg border border-blue-50">
+                {new Date().toLocaleDateString("en-US", {
+                  month: "long",
+                  weekday: "long",
+                })}
+              </p>
+            </div>
           </div>
         </header>
 
@@ -876,9 +833,9 @@ const AttendanceTracker = () => {
           todayClasses.length === 0 &&
           records.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32">
-            <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+            <div className="w-12 h-12 border-4 border-gray-100 border-t-blue-600 rounded-full animate-spin mb-4" />
             <p className="text-gray-400 font-bold animate-pulse uppercase tracking-widest text-xs">
-              Loading Data...
+              Loading Records...
             </p>
           </div>
         ) : user?.role === "student" ? (
