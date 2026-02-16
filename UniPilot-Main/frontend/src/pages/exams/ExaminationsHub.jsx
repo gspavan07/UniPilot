@@ -26,6 +26,13 @@ const ExaminationsHub = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [expandedCycles, setExpandedCycles] = useState([]);
+
+  const toggleCycle = (id) => {
+    setExpandedCycles((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
 
   useEffect(() => {
     fetchData();
@@ -195,329 +202,541 @@ const ExaminationsHub = () => {
   const cyclesNeedingFee = exams.filter((c) => c.needs_fee);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-blue-50 selection:text-blue-900 pb-20">
+    <div className="min-h-screen bg-white text-black font-sans selection:bg-blue-100 selection:text-blue-900 pb-20 overflow-x-hidden">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-16 pt-12">
+        {/* Modern Header / Hero Section */}
+        <header className="mb-12">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 bg-gray-50/50 p-8 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl"></div>
 
-      {/* Top Navigation Bar */}
-      <header className="border-b border-gray-100 bg-white sticky top-0 z-10 backdrop-blur-md bg-white/90">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
-              <Award className="w-5 h-5" />
+            <div className="space-y-2 relative z-10">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em]">
+                Exams & Finance
+              </span>
+              <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight leading-none">
+                Examinations <span className="text-blue-600">Hub.</span>
+              </h1>
+              <p className="text-gray-500 text-sm font-medium">
+                Access your schedules, manage registrations, and track
+                examination fees.
+              </p>
             </div>
-            <span className="text-lg font-bold tracking-tight text-gray-900">Examinations Hub</span>
-          </div>
 
-          <nav className="flex space-x-1 bg-gray-50/80 p-1 rounded-xl border border-gray-100">
-            {/* Styled Tabs */}
-            {['schedule', 'payments'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`
-                    px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2
-                    ${activeTab === tab
-                    ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5"
-                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"}
-                  `}
-              >
-                {tab === 'schedule' ? <Calendar className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
-                {tab === 'schedule' ? 'Schedule' : 'Payments'}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-10 animate-fade-in-up">
-
-        {/* Dynamic Header */}
-        <div className="mb-10 text-center md:text-left">
-          <h1 className="text-4xl font-light text-gray-900 mb-3 tracking-tight">
-            {activeTab === 'schedule' ? 'Examination Schedule' : 'Fee Status & History'}
-          </h1>
-          <p className="text-gray-500 font-normal flex items-center justify-center md:justify-start gap-2 text-lg">
-            {activeTab === 'schedule'
-              ? `Upcoming sessions for ${new Date().getFullYear()} Academic Year`
-              : 'manage your recurring examination fees'}
-          </p>
-        </div>
-
-        {/* Content Area */}
-        {activeTab === "schedule" ? (
-          <div className="space-y-16">
-            {exams.length > 0 ? exams.map((exam) => {
-              const eligibility = exam.student_eligibilities?.[0];
-              const needsFee = exam.needs_fee;
-              const paymentStatus = exam.student_payments?.[0]?.status;
-              const isEligible = eligibility?.hod_permission && eligibility?.fee_clear_permission;
-
-              return (
-                <section key={exam.id} className="group relative">
-                  <div className="absolute -left-10 top-0 bottom-0 w-px bg-gray-100 hidden xl:block"></div>
-
-                  {/* Exam Cycle Header */}
-                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 pb-6 border-b border-gray-100">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
-                          {exam.semester} Semester
-                        </span>
-                        {needsFee && (
-                          <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded ${paymentStatus === "completed" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"
-                            }`}>
-                            {paymentStatus === "completed" ? (
-                              <><CheckCircle className="w-3.5 h-3.5" /> Registered</>
-                            ) : (
-                              <><AlertCircle className="w-3.5 h-3.5" /> Fee Pending</>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <h2 className="text-2xl font-semibold text-gray-900">
-                        {exam.cycle_name.replace(/_/g, " ")}
-                      </h2>
-                    </div>
-                    {needsFee && paymentStatus !== "completed" && (
-                      <button
-                        onClick={() => setActiveTab("payments")}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-full transition-all shadow-lg shadow-blue-200 hover:shadow-blue-300 transform hover:-translate-y-0.5"
-                      >
-                        Pay Registration Fee
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+            {/* Premium Tab Navigation */}
+            <div className="relative z-10 w-full lg:w-auto">
+              <nav className="flex bg-white/80 backdrop-blur-md p-1.5 rounded-2xl border border-gray-200 shadow-md shadow-black/[0.02]">
+                {["schedule", "payments"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`
+                      px-8 py-3.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center gap-3
+                      ${
+                        activeTab === tab
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                          : "text-gray-400 hover:text-black hover:bg-gray-50"
+                      }
+                    `}
+                  >
+                    {tab === "schedule" ? (
+                      <Calendar className="w-4 h-4" />
+                    ) : (
+                      <CreditCard className="w-4 h-4" />
                     )}
-                  </div>
-
-                  {/* Issues Alert */}
-                  {eligibility && !isEligible && (
-                    <div className="mb-8 p-6 bg-gray-50/50 border border-gray-200 rounded-2xl flex gap-5 items-start">
-                      <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
-                        <AlertTriangle className="w-5 h-5 text-gray-700" />
-                      </div>
-                      <div>
-                        <h4 className="text-base font-bold text-gray-900 mb-2">Action Required</h4>
-                        <ul className="space-y-2">
-                          {!eligibility.hod_permission && (
-                            <li className="text-sm text-gray-600 flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                              Department HOD approval is pending
-                            </li>
-                          )}
-                          {!eligibility.fee_clear_permission && (
-                            <li className="text-sm text-gray-600 flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                              Tuition fee clearance pending (Outstanding: ₹{(eligibility.fee_balance || 0).toLocaleString()})
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Timetable Grid */}
-                  {exam.timetables?.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                      {exam.timetables
-                        .sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date))
-                        .map((timetable) => (
-                          <div key={timetable.id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-200 hover:ring-4 hover:ring-blue-50 hover:shadow-xl transition-all duration-300 group/card relative overflow-hidden">
-                            <div className="flex justify-between items-start mb-5">
-                              <div className="text-center bg-gray-50 rounded-xl p-3 min-w-[4rem] border border-gray-100">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                  {new Date(timetable.exam_date).toLocaleDateString("en-US", { month: "short" })}
-                                </div>
-                                <div className="text-2xl font-black text-gray-900 leading-none mt-1">
-                                  {new Date(timetable.exam_date).toLocaleDateString("en-US", { day: "numeric" })}
-                                </div>
-                              </div>
-                              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${timetable.session === 'morning' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                {timetable.session}
-                              </span>
-                            </div>
-
-                            <div className="mb-6">
-                              <h3 className="font-bold text-lg text-gray-900 mb-1 leading-snug line-clamp-2" title={timetable.course.name}>{timetable.course.name}</h3>
-                              <p className="text-xs font-mono text-gray-400">{timetable.course.code}</p>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 pt-4 border-t border-gray-100">
-                              <Clock className="w-4 h-4 text-blue-600" />
-                              {timetable.start_time.slice(0, 5)} - {timetable.end_time.slice(0, 5)}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-24 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                      <p className="text-gray-400 font-medium">Timetable Pending Publication</p>
-                    </div>
-                  )}
-                </section>
-              );
-            }) : (
-              <div className="text-center py-32 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-6">
-                  <Calendar className="w-10 h-10 text-gray-300" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">No Examinations Scheduled</h3>
-                <p className="text-gray-500 mt-2">Check back later for updates to your exam cycle.</p>
-              </div>
-            )}
+                    {tab === "schedule" ? "Schedule" : "Payments"}
+                  </button>
+                ))}
+              </nav>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 items-start">
-            {/* Left Column: Active Payments */}
-            <div className="xl:col-span-8 space-y-10">
-              <div className="flex items-center gap-4">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Due Payments</h2>
-                <div className="h-px bg-gray-100 flex-1"></div>
-              </div>
+        </header>
 
-              {cyclesNeedingFee.length > 0 ? (
-                cyclesNeedingFee.map((cycle) => {
-                  const isPaid = cycle.student_payments?.length > 0;
-                  const eligibility = cycle.student_eligibilities?.[0];
-                  const totalAmount = calculateTotalFee(cycle, eligibility);
-                  const today = new Date().toISOString().split("T")[0];
-                  const isLate = today > cycle.fee_configuration.regular_end_date;
-                  const isBlocked = eligibility && (!eligibility.hod_permission || !eligibility.fee_clear_permission);
+        <main className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {activeTab === "schedule" ? (
+            <div className="space-y-16">
+              {exams.length > 0 ? (
+                exams.map((exam) => {
+                  const eligibility = exam.student_eligibilities?.[0];
+                  const needsFee = exam.needs_fee;
+                  const paymentStatus = exam.student_payments?.[0]?.status;
+                  const isEligible =
+                    eligibility?.hod_permission &&
+                    eligibility?.fee_clear_permission;
+                  const isExpanded = expandedCycles.includes(exam.id);
 
                   return (
-                    <div key={cycle.id} className="bg-white rounded-2xl shadow-xl shadow-gray-200/40 border border-gray-100 overflow-hidden relative transition-transform hover:-translate-y-1 duration-300">
-                      {/* Status Strip */}
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${isPaid ? 'bg-blue-400' : isBlocked ? 'bg-gray-300' : 'bg-blue-600'}`}></div>
-
-                      <div className="p-8 pl-10">
-                        <div className="flex flex-col sm:flex-row justify-between items-start mb-8 gap-6">
-                          <div>
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                              {cycle.cycle_name.replace(/_/g, " ")}
-                            </h3>
-                            <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-blue-600" />
-                              Registration closes {new Date(cycle.fee_configuration.final_registration_date).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-left sm:text-right bg-gray-50 p-4 rounded-xl border border-gray-100 min-w-[140px]">
-                            <div className="text-3xl font-black text-gray-900 tracking-tight">₹{totalAmount.toLocaleString()}</div>
-                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total Fee</div>
-                          </div>
-                        </div>
-
-                        {/* Fee Decomposition */}
-                        <div className="border-t border-b border-gray-100 py-6 mb-8 space-y-3">
-                          <div className="flex justify-between text-sm items-center">
-                            <span className="text-gray-600 font-medium">Standard Exam Fee</span>
-                            <span className="font-bold text-gray-900">₹{parseFloat(cycle.fee_configuration.base_fee).toLocaleString()}</span>
-                          </div>
-                          {isLate && (
-                            <div className="flex justify-between text-sm items-center">
-                              <span className="text-gray-600 font-medium flex items-center gap-2"><AlertCircle className="w-4 h-4 text-gray-400" /> Late Registration Fine</span>
-                              <span className="font-bold text-gray-900">+ ₹{parseFloat(cycle.fee_configuration.slabs.find(s => today >= s.start_date && today <= s.end_date)?.fine_amount || 0).toLocaleString()}</span>
-                            </div>
-                          )}
-                          {eligibility?.has_condonation && (
-                            <div className="flex justify-between text-sm items-center">
-                              <span className="text-gray-600 font-medium flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-gray-400" /> Condonation Fee</span>
-                              <span className="font-bold text-gray-900">+ ₹{parseFloat(cycle.condonation_fee_amount || 0).toLocaleString()}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Blockers */}
-                        {isBlocked && !isPaid && (
-                          <div className="mb-8 flex gap-4 items-start p-5 bg-gray-50 rounded-xl border border-gray-200">
-                            <XCircle className="w-5 h-5 text-gray-900 shrink-0 mt-0.5" />
-                            <div className="space-y-1">
-                              <p className="text-sm font-black text-gray-900 uppercase tracking-wide">Registration Blocked</p>
-                              <div className="text-sm text-gray-600 space-y-1 pt-1">
-                                {!eligibility.hod_permission && <p>• Attendance below threshold ({cycle.attendance_threshold_condonation}%). HOD Approval required.</p>}
-                                {!eligibility.fee_clear_permission && <p>• Outstanding tuition fees pending.</p>}
+                    <section key={exam.id} className="relative">
+                      {/* Exam Cycle Hero Block */}
+                      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-10 pb-10 border-b border-gray-100">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                            <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-100 text-gray-500 border border-gray-200">
+                              {exam.semester} Semester
+                            </span>
+                            {needsFee && (
+                              <div
+                                className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm ${
+                                  paymentStatus === "completed"
+                                    ? "bg-blue-50 text-blue-600 border border-blue-100"
+                                    : "bg-red-50 text-red-600 border border-red-100 animate-pulse"
+                                }`}
+                              >
+                                {paymentStatus === "completed" ? (
+                                  <>
+                                    <CheckCircle className="w-4 h-4" />{" "}
+                                    Registered
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="w-4 h-4" />{" "}
+                                    Registration Pending
+                                  </>
+                                )}
                               </div>
+                            )}
+                          </div>
+                          <h2 className="text-3xl font-black text-black leading-tight">
+                            {exam.cycle_name.replace(/_/g, " ")}
+                          </h2>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4">
+                          {needsFee && paymentStatus !== "completed" && (
+                            <button
+                              onClick={() => setActiveTab("payments")}
+                              className="group flex items-center gap-3 px-8 py-4 bg-black text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-black/10 hover:shadow-2xl hover:-translate-y-1"
+                            >
+                              Pay Registration Fee
+                              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => toggleCycle(exam.id)}
+                            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 border ${
+                              isExpanded
+                                ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20"
+                                : "bg-white text-gray-400 border-gray-200 hover:border-blue-600 hover:text-blue-600 hover:shadow-md"
+                            }`}
+                          >
+                            <ChevronRight
+                              className={`w-5 h-5 transition-transform duration-500 ${
+                                isExpanded ? "rotate-90" : ""
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Collapsible Content Section */}
+                      <div
+                        className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                          isExpanded
+                            ? "max-h-[2000px] opacity-100 mb-16"
+                            : "max-h-0 opacity-0"
+                        }`}
+                      >
+                        {/* Eligibility / Issues Section */}
+                        {eligibility && !isEligible && (
+                          <div className="mb-12 p-8 bg-gray-50 rounded-[2.5rem] border border-gray-300 shadow-md shadow-black/[0.02] flex gap-8 items-start relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-gray-100 rounded-bl-[4rem]"></div>
+                            <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 shadow-xl shadow-black/[0.05] flex items-center justify-center shrink-0 relative z-10">
+                              <AlertTriangle className="w-8 h-8 text-black" />
+                            </div>
+                            <div className="relative z-10">
+                              <h4 className="text-xl font-black text-black mb-4">
+                                Academic Clearance Required
+                              </h4>
+                              <ul className="space-y-4">
+                                {!eligibility.hod_permission && (
+                                  <li className="text-sm text-gray-600 font-bold flex items-center gap-4">
+                                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                    Departmental HOD approval is pending review
+                                  </li>
+                                )}
+                                {!eligibility.fee_clear_permission && (
+                                  <li className="text-sm text-gray-600 font-bold flex items-center gap-4">
+                                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                                    Cumulative tuition fee clearance required (₹
+                                    {(
+                                      eligibility.fee_balance || 0
+                                    ).toLocaleString()}
+                                    )
+                                  </li>
+                                )}
+                              </ul>
                             </div>
                           </div>
                         )}
 
-                        {/* Action */}
-                        <div className="flex justify-between items-center">
-                          <div className="text-xs text-gray-400 font-medium">
-                            Transaction secured by Razorpay
-                          </div>
+                        {/* Timetable Grid */}
+                        {exam.timetables?.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                            {exam.timetables
+                              .sort(
+                                (a, b) =>
+                                  new Date(a.exam_date) - new Date(b.exam_date),
+                              )
+                              .map((timetable) => (
+                                <div
+                                  key={timetable.id}
+                                  className="group relative bg-white border border-gray-300 p-8 rounded-[2.5rem] shadow-md shadow-black/[0.02] transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:border-blue-300 overflow-hidden"
+                                >
+                                  {/* Background Accent */}
+                                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-50/50 rounded-full group-hover:bg-blue-600/5 transition-all duration-700 blur-3xl"></div>
 
-                          {isPaid ? (
-                            <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-blue-50 text-blue-700 font-bold text-sm">
-                              <CheckCircle className="w-4 h-4" /> Paid & Verified
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handlePayFee(cycle.id)}
-                              disabled={paying === cycle.id || isBlocked}
-                              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-200 hover:shadow-blue-300 transform active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
-                            >
-                              {paying === cycle.id ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Proceed to Payment'}
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                                  <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-8">
+                                      <div className="bg-gray-50 group-hover:bg-blue-50 rounded-2xl p-4 min-w-[4.5rem] transition-colors shadow-sm">
+                                        <div className="text-[10px] font-black text-gray-400 group-hover:text-blue-600 uppercase tracking-widest text-center">
+                                          {new Date(
+                                            timetable.exam_date,
+                                          ).toLocaleDateString("en-US", {
+                                            month: "short",
+                                          })}
+                                        </div>
+                                        <div className="text-3xl font-black text-black group-hover:text-blue-600 leading-none mt-1 text-center">
+                                          {new Date(
+                                            timetable.exam_date,
+                                          ).toLocaleDateString("en-US", {
+                                            day: "numeric",
+                                          })}
+                                        </div>
+                                      </div>
+                                      <span
+                                        className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                                          timetable.session === "morning"
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-black text-white"
+                                        }`}
+                                      >
+                                        {timetable.session}
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-2 mb-8 min-h-[4.5rem]">
+                                      <h3 className="font-black text-lg text-black leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">
+                                        {timetable.course.name}
+                                      </h3>
+                                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        {timetable.course.code}
+                                      </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 text-xs font-black text-gray-500 pt-6 border-t border-gray-100 group-hover:text-black transition-colors">
+                                      <Clock className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                                      {timetable.start_time.slice(0, 5)} -{" "}
+                                      {timetable.end_time.slice(0, 5)}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <div className="py-24 bg-gray-50/50 rounded-[3rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                            <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-black/[0.02] mb-6">
+                              <FileText className="w-8 h-8 text-gray-200" />
+                            </div>
+                            <h3 className="text-xl font-black text-black">
+                              Timeline Pending
+                            </h3>
+                            <p className="text-gray-400 font-medium max-w-sm px-6 mt-2">
+                              The official examination timetable for this cycle
+                              is currently under preparation and will be
+                              published shortly.
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )
+                    </section>
+                  );
                 })
               ) : (
-                <div className="p-16 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-gray-50/30">
-                  <CheckCircle className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                  <p className="text-gray-400 font-medium">No pending payments needed.</p>
+                <div className="py-40 flex flex-col items-center justify-center bg-gray-50/30 border-2 border-dashed border-gray-100 rounded-[3rem]">
+                  <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-black/[0.02] mb-8 group transition-transform hover:rotate-6">
+                    <Award className="w-10 h-10 text-gray-200 group-hover:text-blue-600 transition-colors" />
+                  </div>
+                  <h3 className="text-2xl font-black text-black mb-3">
+                    No Active Cycles
+                  </h3>
+                  <p className="text-gray-400 font-medium text-center max-w-sm px-6">
+                    Your current semester has no examinations scheduled yet.
+                    Keep tracking this space for academic updates.
+                  </p>
                 </div>
               )}
             </div>
-
-            {/* Right Column: History */}
-            <div className="xl:col-span-4">
-              <div className="sticky top-28 space-y-6">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">History</h2>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-16 items-start">
+              {/* Left Column: Active Billing Blocks */}
+              <div className="xl:col-span-8 space-y-10">
+                <div className="flex items-center gap-6">
+                  <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-300">
+                    Pending Dues
+                  </h2>
                   <div className="h-px bg-gray-100 flex-1"></div>
                 </div>
 
-                <div className="space-y-4">
-                  {paymentHistory.length > 0 ? paymentHistory.map((payment) => (
-                    <div key={payment.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-gray-50 group-hover:bg-blue-500 transition-colors"></div>
+                {cyclesNeedingFee.length > 0 ? (
+                  cyclesNeedingFee.map((cycle) => {
+                    const isPaid = cycle.student_payments?.length > 0;
+                    const eligibility = cycle.student_eligibilities?.[0];
+                    const totalAmount = calculateTotalFee(cycle, eligibility);
+                    const today = new Date().toISOString().split("T")[0];
+                    const isLate =
+                      today > cycle.fee_configuration.regular_end_date;
+                    const isBlocked =
+                      eligibility &&
+                      (!eligibility.hod_permission ||
+                        !eligibility.fee_clear_permission);
 
-                      <div className="pl-2">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{new Date(payment.payment_date).toLocaleDateString()}</span>
-                          <span className="text-sm font-bold text-gray-900">₹{parseFloat(payment.amount_paid).toLocaleString()}</span>
+                    return (
+                      <div
+                        key={cycle.id}
+                        className="group relative bg-white rounded-[3rem] shadow-xl shadow-black/[0.03] border border-gray-300 overflow-hidden transition-all duration-500 hover:shadow-2xl"
+                      >
+                        {/* Status Strip */}
+                        <div
+                          className={`absolute left-0 top-0 bottom-0 w-3 transition-colors ${
+                            isPaid
+                              ? "bg-blue-600"
+                              : isBlocked
+                                ? "bg-gray-200"
+                                : "bg-black animate-pulse"
+                          }`}
+                        ></div>
+
+                        <div className="p-10 pl-14">
+                          <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-8">
+                            <div className="space-y-4">
+                              <h3 className="text-3xl font-black text-black tracking-tight leading-none">
+                                {cycle.cycle_name.replace(/_/g, " ")}
+                              </h3>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-lg">
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                  <span className="text-xs font-bold text-gray-500">
+                                    Closes{" "}
+                                    {new Date(
+                                      cycle.fee_configuration
+                                        .final_registration_date,
+                                    ).toLocaleDateString("en-GB", {
+                                      day: "2-digit",
+                                      month: "short",
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="bg-gray-100/60 p-6 rounded-[2rem] border border-gray-200 min-w-[200px] text-center">
+                              <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">
+                                Total Outstanding
+                              </div>
+                              <div className="text-4xl font-black text-black tracking-tighter">
+                                ₹{totalAmount.toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Order Details Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 pt-10 border-t border-gray-100 mb-10">
+                            <div className="flex justify-between items-center group/item">
+                              <span className="text-sm font-bold text-gray-400 group-hover/item:text-black transition-colors">
+                                Exam Base Fee
+                              </span>
+                              <span className="text-sm font-black text-black">
+                                ₹
+                                {parseFloat(
+                                  cycle.fee_configuration.base_fee,
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                            {isLate && (
+                              <div className="flex justify-between items-center group/item">
+                                <span className="text-sm font-bold text-red-400 flex items-center gap-2">
+                                  <AlertCircle className="w-4 h-4" /> Late Fine
+                                </span>
+                                <span className="text-sm font-black text-red-600">
+                                  + ₹
+                                  {parseFloat(
+                                    cycle.fee_configuration.slabs.find(
+                                      (s) =>
+                                        today >= s.start_date &&
+                                        today <= s.end_date,
+                                    )?.fine_amount || 0,
+                                  ).toLocaleString()}
+                                </span>
+                              </div>
+                            )}
+                            {eligibility?.has_condonation && (
+                              <div className="flex justify-between items-center group/item">
+                                <span className="text-sm font-bold text-blue-400 flex items-center gap-2">
+                                  <AlertTriangle className="w-4 h-4" />{" "}
+                                  Condonation
+                                </span>
+                                <span className="text-sm font-black text-blue-600">
+                                  + ₹
+                                  {parseFloat(
+                                    cycle.condonation_fee_amount || 0,
+                                  ).toLocaleString()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Blockers / Warnings */}
+                          {isBlocked && !isPaid && (
+                            <div className="mb-10 p-6 bg-red-50/50 rounded-2xl border border-red-100 flex gap-4 items-start">
+                              <XCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <p className="text-sm font-black text-red-600 uppercase tracking-wide">
+                                  Account On Hold
+                                </p>
+                                <div className="text-xs font-bold text-red-600/70 space-y-1 pt-1 opacity-80">
+                                  {!eligibility.hod_permission && (
+                                    <p>
+                                      • Administrative Review Pending:
+                                      Attendance criteria (
+                                      {cycle.attendance_threshold_condonation}%)
+                                      not met.
+                                    </p>
+                                  )}
+                                  {!eligibility.fee_clear_permission && (
+                                    <p>
+                                      • Finance Warning: Outstanding academic
+                                      tuition fees detected.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Footer Action */}
+                          <div className="flex flex-col sm:flex-row justify-between items-center gap-8 pt-8 border-t border-gray-50">
+                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] italic">
+                              Payment Gateway: Encrypted & Secure
+                            </p>
+
+                            {isPaid ? (
+                              <div className="flex items-center gap-3 px-8 py-4 bg-blue-50 text-blue-600 font-black uppercase tracking-widest text-xs rounded-2xl">
+                                <CheckCircle className="w-5 h-5 shadow-lg shadow-blue-500/10" />{" "}
+                                Authorized & Registered
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handlePayFee(cycle.id)}
+                                disabled={paying === cycle.id || isBlocked}
+                                className="w-full sm:w-auto overflow-hidden group/btn relative flex items-center justify-center px-12 py-5 bg-black text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-2xl shadow-black/20 hover:shadow-blue-600/30 hover:-translate-y-1 active:scale-95 disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed disabled:shadow-none"
+                              >
+                                <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+                                <span className="relative z-10 flex items-center gap-3">
+                                  {paying === cycle.id ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  ) : (
+                                    "Express Checkout"
+                                  )}
+                                  <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                                </span>
+                              </button>
+                            )}
+                          </div>
                         </div>
-
-                        <div className="mb-4">
-                          <p className="text-sm font-medium text-gray-800 line-clamp-2">
-                            {payment.exam_cycle?.cycle_name?.replace(/_/g, " ")}
-                          </p>
-                        </div>
-
-                        {payment.payment_status === "success" && (
-                          <button
-                            onClick={() => handlePrintReceipt(payment)}
-                            className="w-full py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Download Receipt
-                          </button>
-                        )}
                       </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-32 bg-gray-50/50 rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
+                    <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-black/[0.02] mb-6">
+                      <CheckCircle className="w-8 h-8 text-gray-200" />
                     </div>
-                  )) : (
-                    <div className="text-center py-10 text-gray-400 text-sm">
-                      No transaction history available
-                    </div>
-                  )}
+                    <h3 className="text-xl font-black text-black">
+                      All Cleared
+                    </h3>
+                    <p className="text-gray-400 font-medium max-w-sm px-6 mt-2">
+                      No outstanding examination fees were found for your
+                      student profile at this time.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: High-End Transaction Log */}
+              <div className="xl:col-span-4">
+                <div className="sticky top-32 space-y-10">
+                  <div className="flex items-center gap-6">
+                    <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-300">
+                      Transaction History
+                    </h2>
+                    <div className="h-px bg-gray-100 flex-1"></div>
+                  </div>
+
+                  <div className="space-y-6">
+                    {paymentHistory.length > 0 ? (
+                      paymentHistory.map((payment) => (
+                        <div
+                          key={payment.id}
+                          className="group relative bg-white border border-gray-300 p-6 rounded-[2rem] shadow-md shadow-black/[0.02] transition-all hover:shadow-xl hover:border-blue-200"
+                        >
+                          <div className="absolute left-0 top-6 bottom-6 w-1 bg-gray-50 group-hover:bg-blue-600 transition-all rounded-r-lg"></div>
+
+                          <div className="space-y-5">
+                            <div className="flex justify-between items-start">
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                {new Date(
+                                  payment.payment_date,
+                                ).toLocaleDateString("en-GB", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                              <span className="text-lg font-black text-black">
+                                ₹
+                                {parseFloat(
+                                  payment.amount_paid,
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1">
+                              <h4 className="text-sm font-black text-black line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">
+                                {payment.exam_cycle?.cycle_name?.replace(
+                                  /_/g,
+                                  " ",
+                                )}
+                              </h4>
+                              <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest italic">
+                                {payment.transaction?.payment_method ||
+                                  "DIGITAL PAYMENT"}
+                              </p>
+                            </div>
+
+                            {payment.payment_status === "success" && (
+                              <button
+                                onClick={() => handlePrintReceipt(payment)}
+                                className="w-full py-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all shadow-sm active:scale-95"
+                              >
+                                <Download className="w-4 h-4" /> Download
+                                Receipt
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-10 bg-gray-50/50 rounded-[2rem] border border-gray-100 text-center">
+                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                          No Records Found
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
     </div>
   );
 };

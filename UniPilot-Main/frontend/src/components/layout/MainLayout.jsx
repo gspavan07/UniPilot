@@ -137,7 +137,13 @@ const MainLayout = () => {
       href: "/attendance",
       icon: ClipboardCheck,
       permission: ["academics:attendance:view", "academics:attendance:manage"], // Students view, Faculty manage
-      roles: ["student", "faculty", "hod", "principal"],
+      roles: ["faculty", "hod", "principal"],
+    },
+    {
+      name: "My Attendance",
+      href: "/my-attendance",
+      icon: ClipboardCheck,
+      roles: ["student"],
     },
 
     {
