@@ -115,15 +115,6 @@ const TransportDashboard = () => {
               Overview of university logistics and fleet operations
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-            <span className="text-sm font-bold text-gray-700">
-              Live Status: Operational
-            </span>
-          </div>
         </div>
 
         {/* Stats Grid */}
@@ -152,14 +143,14 @@ const TransportDashboard = () => {
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Main Modules Grid */}
-          <div className="xl:col-span-2 space-y-6">
+          <div className="xl:col-span-3 space-y-6">
             <div className="flex items-center gap-2 px-1">
               <Bus className="w-5 h-5 text-gray-400" />
               <h2 className="text-xl font-bold text-gray-900">
                 Operational Modules
               </h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {modules.map((mod, idx) => (
                 <Link
                   key={idx}
@@ -182,84 +173,6 @@ const TransportDashboard = () => {
                   <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                 </Link>
               ))}
-            </div>
-          </div>
-
-          {/* Side Panel: Actions & Alerts */}
-          <div className="space-y-8">
-            {/* Quick Actions */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <PlusCircle className="w-5 h-5 text-blue-600" />
-                Quick Actions
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { label: "Assign Student Route", icon: UserPlus },
-                  { label: "Log Daily Trip", icon: FileText },
-                  { label: "Request Maintenance", icon: AlertTriangle },
-                ].map((action, i) => (
-                  <button
-                    key={i}
-                    className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 rounded-lg border border-transparent hover:border-blue-100 transition-all group font-semibold text-sm"
-                  >
-                    {action.label}
-                    <action.icon className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Critical Alerts */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2 px-1">
-                <ShieldAlert className="w-5 h-5 text-red-500" />
-                System Alerts
-              </h3>
-              <div className="space-y-4">
-                <div className="bg-white p-5 rounded-xl border border-gray-200 border-l-4 border-l-amber-400 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex gap-4 items-start">
-                    <div className="p-2 bg-amber-50 rounded-lg shrink-0">
-                      <AlertTriangle className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">
-                        Vehicle Fitness Due
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                        Bus{" "}
-                        <span className="font-mono text-gray-700">
-                          AP 12 X 4567
-                        </span>{" "}
-                        expires in{" "}
-                        <span className="font-bold text-amber-600">
-                          12 days
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-gray-200 border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex gap-4 items-start">
-                    <div className="p-2 bg-red-50 rounded-lg shrink-0">
-                      <Users className="w-5 h-5 text-red-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">
-                        License Renewal
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                        Driver{" "}
-                        <span className="font-semibold text-gray-700">
-                          Rameshwar Rao
-                        </span>{" "}
-                        expires in{" "}
-                        <span className="font-bold text-red-600">5 days</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

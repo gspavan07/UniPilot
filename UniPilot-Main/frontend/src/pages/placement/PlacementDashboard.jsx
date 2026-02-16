@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Briefcase,
   TrendingUp,
+  ArrowRight,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
@@ -20,9 +21,7 @@ import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
 const PlacementDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { drives, companies } = useSelector(
-    (state) => state.placement,
-  );
+  const { drives, companies } = useSelector((state) => state.placement);
 
   useEffect(() => {
     dispatch(fetchDrives());
@@ -34,28 +33,31 @@ const PlacementDashboard = () => {
       name: "Active Companies",
       value: companies.length,
       icon: Building2,
+      link: "/placement/companies",
     },
     {
       name: "Upcoming Drives",
       value: drives.filter((d) => d.status === "scheduled").length,
       icon: CalendarDays,
+      link: "/placement/drives",
     },
     {
       name: "Students Placed",
       value: "128",
       icon: Trophy,
+      link: "/placement/reports",
     },
     {
       name: "Total Offers",
       value: "145",
       icon: Users,
+      link: "/placement/reports",
     },
   ];
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 selection:bg-blue-100">
       <div className="max-w-[1400px] mx-auto px-6 py-10">
-
         {/* Header Navigation */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-16">
           <div className="flex items-start gap-6">
@@ -64,7 +66,8 @@ const PlacementDashboard = () => {
                 Placement Overview
               </h1>
               <p className="text-lg text-gray-500 max-w-2xl">
-                Monitor recruitment drives, manage company relations, and track student success metrics.
+                Monitor recruitment drives, manage company relations, and track
+                student success metrics.
               </p>
             </div>
           </div>
@@ -78,30 +81,43 @@ const PlacementDashboard = () => {
         </header>
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {stats.map((stat, idx) => (
-            <div
+            <Link
               key={stat.name}
-              className="group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-white hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 cursor-default"
+              to={stat.link}
+              className="group relative p-8 rounded-[2.5rem] bg-white border border-blue-300 hover:border-blue-200 shadow-[0_2px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_60px_rgba(59,130,246,0.08)] transition-all duration-500 ease-out overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-4">
-                <span className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-blue-50 transition-colors text-blue-600">
+              <div className="absolute top-0 right-0 p-8 opacity-[0.2] group-hover:opacity-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
+                <stat.icon className="w-20 h-20 text-blue-600" />
+              </div>
+
+              <div className="relative z-10">
+                <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all duration-500 mb-6">
                   <stat.icon className="w-6 h-6" />
-                </span>
-                {idx === 1 && (
-                  <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-                )}
+                </div>
+
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">
+                  {stat.name}
+                </p>
+
+                <div className="flex items-baseline gap-3">
+                  <span className="text-5xl font-black text-black tracking-tighter group-hover:text-blue-600 transition-colors duration-500">
+                    {stat.value}
+                  </span>
+                  {idx === 1 && (
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 animate-pulse mb-4"></span>
+                  )}
+                </div>
+                <div className="absolute right-0 -bottom-4 w-10 h-10 rounded-full bg-gray-50 border border-blue-200 flex items-center justify-center group-hover:bg-blue-600 transition-all duration-500">
+                  <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-white group-hover:-rotate-45 transition-colors" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-4xl font-black text-black tracking-tight">{stat.value}</p>
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{stat.name}</p>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-
           {/* Main Content Area */}
           <div className="lg:col-span-8 space-y-10">
             <div className="flex items-end justify-between border-b border-gray-100 pb-4">
@@ -125,8 +141,12 @@ const PlacementDashboard = () => {
               {drives.length === 0 ? (
                 <div className="py-24 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
                   <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-900 font-bold text-lg">No Drives Scheduled</p>
-                  <p className="text-gray-500">New opportunities will appear here.</p>
+                  <p className="text-gray-900 font-bold text-lg">
+                    No Drives Scheduled
+                  </p>
+                  <p className="text-gray-500">
+                    New opportunities will appear here.
+                  </p>
                 </div>
               ) : (
                 drives.slice(0, 5).map((drive) => (
@@ -144,7 +164,10 @@ const PlacementDashboard = () => {
                               className="w-full h-full object-cover rounded-2xl"
                             />
                           ) : (
-                            <span>{drive.job_posting?.company?.name?.charAt(0) || "C"}</span>
+                            <span>
+                              {drive.job_posting?.company?.name?.charAt(0) ||
+                                "C"}
+                            </span>
                           )}
                         </div>
                         {drive.status === "scheduled" && (
@@ -164,23 +187,30 @@ const PlacementDashboard = () => {
                             {drive.job_posting?.company?.name}
                           </span>
                           <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-600">
-                            {new Date(drive.drive_date).toLocaleDateString(undefined, {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
+                            {new Date(drive.drive_date).toLocaleDateString(
+                              undefined,
+                              {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-4 sm:mt-0 flex items-center gap-4 sm:pl-6 sm:border-l border-gray-100">
-                      <span className={`
+                      <span
+                        className={`
                         px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
-                        ${drive.status === "scheduled"
-                          ? "bg-black text-white"
-                          : "bg-gray-100 text-gray-500"}
-                      `}>
+                        ${
+                          drive.status === "scheduled"
+                            ? "bg-black text-white"
+                            : "bg-gray-100 text-gray-500"
+                        }
+                      `}
+                      >
                         {drive.status}
                       </span>
                       <Link
@@ -198,26 +228,44 @@ const PlacementDashboard = () => {
 
           {/* Quick Actions Sidebar */}
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-gray-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
+            <div className=" rounded-3xl p-8 text-blue-600 relative overflow-hidden shadow-2xl">
               <div className="relative z-10">
-                <h3 className="text-xl font-bold mb-6">Quick Access</h3>
+                <h3 className="text-xl  font-bold mb-6">Quick Access</h3>
                 <div className="space-y-3">
                   {[
-                    { to: "/placement/companies", label: "Partner Companies", icon: Building2 },
-                    { to: "/placement/job-postings", label: "Job Board", icon: Briefcase },
-                    { to: "/placement/reports", label: "Analytics Hub", icon: TrendingUp },
-                    { to: "/placement/coordinators", label: "Manage Coordinators", icon: ShieldCheck },
+                    {
+                      to: "/placement/companies",
+                      label: "Partner Companies",
+                      icon: Building2,
+                    },
+                    {
+                      to: "/placement/job-postings",
+                      label: "Job Board",
+                      icon: Briefcase,
+                    },
+                    {
+                      to: "/placement/reports",
+                      label: "Analytics Hub",
+                      icon: TrendingUp,
+                    },
+                    {
+                      to: "/placement/coordinators",
+                      label: "Manage Coordinators",
+                      icon: ShieldCheck,
+                    },
                   ].map((item, i) => (
                     <Link
                       key={i}
                       to={item.to}
-                      className="flex items-center justify-between p-4 rounded-xl bg-white/10 hover:bg-white/20 hover:backdrop-blur-sm transition-all border border-white/5 hover:border-white/10 group"
+                      className="flex items-center justify-between p-4 rounded-xl bg-gray-800/5 hover:bg-white/20 hover:backdrop-blur-sm transition-all border border-white hover:border-blue-600 group"
                     >
                       <div className="flex items-center gap-3">
-                        <item.icon className="w-5 h-5 text-gray-300 group-hover:text-white" />
-                        <span className="font-semibold text-sm">{item.label}</span>
+                        <item.icon className="w-5 h-5 text-black group-hover:text-blue-600" />
+                        <span className="font-semibold text-black group-hover:text-blue-600 text-sm">
+                          {item.label}
+                        </span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="w-4 h-4 text-black group-hover:text-blue-600 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   ))}
                 </div>
@@ -227,20 +275,7 @@ const PlacementDashboard = () => {
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl -ml-12 -mb-12 pointer-events-none"></div>
             </div>
-
-            <div className="p-6 rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <h4 className="font-bold text-gray-900">Weekly Insight</h4>
-              </div>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Placement drives have increased by <span className="font-bold text-black">12%</span> compared to last month. Ensure all student profiles are updated before the next scheduled dates.
-              </p>
-            </div>
           </div>
-
         </div>
       </div>
     </div>

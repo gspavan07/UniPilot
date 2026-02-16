@@ -83,22 +83,6 @@ const TransportReports = () => {
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex -space-x-2">
-              <div className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center">
-                <Activity className="w-4 h-4 text-blue-600" />
-              </div>
-            </div>
-            <div className="text-xs">
-              <p className="font-bold text-gray-900">
-                Period: Current Semester
-              </p>
-              <p className="text-gray-400 font-medium tracking-tight">
-                Updated just now
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Analytic Cards Grid */}

@@ -108,6 +108,26 @@ const StudentAllocation = () => {
     }
   }, [formData.room_id]);
 
+  // Reset room selection if fee structure changes and type mismatch occurs
+  useEffect(() => {
+    if (formData.fee_structure_id && formData.room_id) {
+      const selectedFee = feeStructures.find(
+        (f) => f.id === formData.fee_structure_id,
+      );
+      const selectedRoom = availableRooms.find(
+        (r) => r.id === formData.room_id,
+      );
+
+      if (
+        selectedFee &&
+        selectedRoom &&
+        selectedRoom.room_type !== selectedFee.room_type
+      ) {
+        setFormData((prev) => ({ ...prev, room_id: "", bed_id: "" }));
+      }
+    }
+  }, [formData.fee_structure_id, feeStructures, availableRooms]);
+
   useEffect(() => {
     if (operationStatus === "succeeded") {
       toast.success(
@@ -229,6 +249,15 @@ const StudentAllocation = () => {
           .includes(searchTerm.toLowerCase()),
     ) || [];
 
+  const selectedFeeStructureForFilter = feeStructures.find(
+    (f) => f.id === formData.fee_structure_id,
+  );
+  const targetRoomType = selectedFeeStructureForFilter?.room_type;
+
+  const filteredAvailableRooms = availableRooms.filter(
+    (r) => !targetRoomType || r.room_type === targetRoomType,
+  );
+
   return (
     <div className="min-h-screen bg-gray-50/50 pb-12 font-sans text-gray-900">
       <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
@@ -333,7 +362,10 @@ const StudentAllocation = () => {
                               {allocation.student?.last_name}
                             </p>
                             <p className="text-xs text-gray-500 font-medium mt-0.5">
-                              ID: <span className="font-mono">{allocation.student?.student_id || "N/A"}</span>
+                              ID:{" "}
+                              <span className="font-mono">
+                                {allocation.student?.student_id || "N/A"}
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -352,7 +384,9 @@ const StudentAllocation = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <span className="inline-flex w-fit px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                            {allocation.mess_fee_structure?.mess_type || "Standard"} Mess
+                            {allocation.mess_fee_structure?.mess_type ||
+                              "Standard"}{" "}
+                            Mess
                           </span>
                           <span className="text-xs text-gray-600 font-medium">
                             {allocation.fee_structure?.name}
@@ -362,20 +396,23 @@ const StudentAllocation = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase w-fit border ${allocation.status === "active"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : "bg-gray-100 text-gray-600 border-gray-200"
-                              }`}
+                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase w-fit border ${
+                              allocation.status === "active"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-gray-100 text-gray-600 border-gray-200"
+                            }`}
                           >
-                            {allocation.status === "active" ?
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> :
+                            {allocation.status === "active" ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                            ) : (
                               <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                            }
+                            )}
                             {allocation.status}
                           </span>
                           {allocation.scheduled_checkout_semester && (
                             <span className="inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 w-fit">
-                              Checkout Sem {allocation.scheduled_checkout_semester}
+                              Checkout Sem{" "}
+                              {allocation.scheduled_checkout_semester}
                             </span>
                           )}
                         </div>
@@ -424,7 +461,9 @@ const StudentAllocation = () => {
                       <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
                         <Users className="w-8 h-8 text-gray-300" />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">No active allocations</h3>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        No active allocations
+                      </h3>
                       <p className="text-gray-500 text-sm mt-1">
                         Use the "Assign New Student" button to get started.
                       </p>
@@ -461,18 +500,28 @@ const StudentAllocation = () => {
               </div>
 
               <div className="overflow-y-auto p-8 bg-gray-50/50 flex-1">
-                <form id="allocationForm" onSubmit={handleAllocate} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <form
+                  id="allocationForm"
+                  onSubmit={handleAllocate}
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+                >
                   {/* Left Column: Student & Plans */}
                   <div className="space-y-6">
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                       <div className="flex items-center gap-3 mb-4">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
-                        <h3 className="text-sm font-bold text-gray-900 uppercase">Student Info</h3>
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                          1
+                        </span>
+                        <h3 className="text-sm font-bold text-gray-900 uppercase">
+                          Student Info
+                        </h3>
                       </div>
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Search Student</label>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                            Search Student
+                          </label>
                           <div className="relative">
                             <input
                               type="text"
@@ -485,73 +534,120 @@ const StudentAllocation = () => {
                               }}
                               onFocus={() => setShowStudentResults(true)}
                             />
-                            {showStudentResults && studentSearchTerm.length >= 2 && (
-                              <div className="absolute z-50 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-200 max-h-48 overflow-y-auto">
-                                {users.length > 0 ? (
-                                  users.map((u) => (
-                                    <button
-                                      key={u.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setFormData({ ...formData, student_id: u.id });
-                                        setSelectedStudent(u);
-                                        setStudentSearchTerm(`${u.first_name} ${u.last_name}`);
-                                        setShowStudentResults(false);
-                                      }}
-                                      className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-50 last:border-0"
-                                    >
-                                      <p className="text-sm font-bold text-gray-900">{u.first_name} {u.last_name}</p>
-                                      <p className="text-xs text-gray-500">{u.student_id}</p>
-                                    </button>
-                                  ))
-                                ) : (
-                                  <div className="p-4 text-sm text-gray-500 text-center">No students found</div>
-                                )}
-                              </div>
-                            )}
+                            {showStudentResults &&
+                              studentSearchTerm.length >= 2 && (
+                                <div className="absolute z-50 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-200 max-h-48 overflow-y-auto">
+                                  {users.length > 0 ? (
+                                    users.map((u) => (
+                                      <button
+                                        key={u.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData({
+                                            ...formData,
+                                            student_id: u.id,
+                                          });
+                                          setSelectedStudent(u);
+                                          setStudentSearchTerm(
+                                            `${u.first_name} ${u.last_name}`,
+                                          );
+                                          setShowStudentResults(false);
+                                        }}
+                                        className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-50 last:border-0"
+                                      >
+                                        <p className="text-sm font-bold text-gray-900">
+                                          {u.first_name} {u.last_name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {u.student_id}
+                                        </p>
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <div className="p-4 text-sm text-gray-500 text-center">
+                                      No students found
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Mess Plan</label>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                            Mess Plan
+                          </label>
                           <select
                             required
                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
                             value={formData.mess_fee_structure_id}
-                            onChange={(e) => setFormData({ ...formData, mess_fee_structure_id: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                mess_fee_structure_id: e.target.value,
+                              })
+                            }
                           >
                             <option value="">Select Plan</option>
                             {messFeeStructures?.map((m) => (
-                              <option key={m.id} value={m.id}>{m.name} - ₹{m.amount}</option>
+                              <option key={m.id} value={m.id}>
+                                {m.name} - ₹{m.amount}
+                              </option>
                             ))}
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Fee Structure</label>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                            Fee Structure
+                          </label>
                           <select
                             required
                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
                             value={formData.fee_structure_id}
-                            onChange={(e) => setFormData({ ...formData, fee_structure_id: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                fee_structure_id: e.target.value,
+                              })
+                            }
                           >
                             <option value="">Select Structure</option>
                             {feeStructures?.map((f) => (
-                              <option key={f.id} value={f.id}>{f.name} - ₹{f.base_amount}</option>
+                              <option key={f.id} value={f.id}>
+                                {f.name} - ₹{f.base_amount}
+                              </option>
                             ))}
                           </select>
                         </div>
 
                         <div className="flex items-center gap-4">
                           <div className="flex-1">
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Join Sem</label>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                              Join Sem
+                            </label>
                             <select
                               className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
                               value={formData.semester}
-                              onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  semester: e.target.value,
+                                })
+                              }
                             >
-                              <option value="">Current ({selectedStudent?.current_semester || "1"})</option>
-                              <option value={(selectedStudent?.current_semester || 1) + 1}>Next ({(selectedStudent?.current_semester || 1) + 1})</option>
+                              <option value="">
+                                Current (
+                                {selectedStudent?.current_semester || "1"})
+                              </option>
+                              <option
+                                value={
+                                  (selectedStudent?.current_semester || 1) + 1
+                                }
+                              >
+                                Next (
+                                {(selectedStudent?.current_semester || 1) + 1})
+                              </option>
                             </select>
                           </div>
                           <div className="flex items-center h-full pt-6">
@@ -560,9 +656,16 @@ const StudentAllocation = () => {
                                 type="checkbox"
                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 checked={formData.apply_to_future}
-                                onChange={(e) => setFormData({ ...formData, apply_to_future: e.target.checked })}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    apply_to_future: e.target.checked,
+                                  })
+                                }
                               />
-                              <span className="text-xs font-bold text-gray-600">Apply Future</span>
+                              <span className="text-xs font-bold text-gray-600">
+                                Apply Future
+                              </span>
                             </label>
                           </div>
                         </div>
@@ -574,63 +677,110 @@ const StudentAllocation = () => {
                   <div className="space-y-6">
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-full">
                       <div className="flex items-center gap-3 mb-4">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span>
-                        <h3 className="text-sm font-bold text-gray-900 uppercase">Room Allocation</h3>
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                          2
+                        </span>
+                        <h3 className="text-sm font-bold text-gray-900 uppercase">
+                          Room Allocation
+                        </h3>
                       </div>
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Building</label>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                            Building
+                          </label>
                           <select
                             required
                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all"
                             value={formData.building_id}
-                            onChange={(e) => handleBuildingChange(e.target.value)}
+                            onChange={(e) =>
+                              handleBuildingChange(e.target.value)
+                            }
                           >
                             <option value="">Select Building</option>
                             {buildings?.map((b) => (
-                              <option key={b.id} value={b.id}>{b.name}</option>
+                              <option key={b.id} value={b.id}>
+                                {b.name}
+                              </option>
                             ))}
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Available Room</label>
+                          <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                            Available Room{" "}
+                            {targetRoomType && (
+                              <span className="text-blue-600 ml-1">
+                                (
+                                {targetRoomType.replace("_", " ").toUpperCase()}
+                                )
+                              </span>
+                            )}
+                          </label>
                           <select
                             required
-                            disabled={!availableRooms?.length}
+                            disabled={!filteredAvailableRooms?.length}
                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:bg-gray-50"
                             value={formData.room_id}
-                            onChange={(e) => setFormData({ ...formData, room_id: e.target.value, bed_id: "" })}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                room_id: e.target.value,
+                                bed_id: "",
+                              })
+                            }
                           >
                             <option value="">Select Room</option>
-                            {availableRooms?.map((r) => (
-                              <option key={r.id} value={r.id}>Room {r.room_number} ({r.current_occupancy}/{r.capacity})</option>
+                            {filteredAvailableRooms?.map((r) => (
+                              <option key={r.id} value={r.id}>
+                                Room {r.room_number} ({r.current_occupancy}/
+                                {r.capacity})
+                              </option>
                             ))}
                           </select>
+                          {!filteredAvailableRooms?.length &&
+                            availableRooms?.length > 0 && (
+                              <p className="text-[10px] text-orange-600 font-bold mt-1">
+                                No {targetRoomType?.replace("_", " ")} rooms
+                                available in this building.
+                              </p>
+                            )}
                         </div>
 
                         {formData.room_id && (
                           <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-2">Select Bed</label>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                              Select Bed
+                            </label>
                             <div className="grid grid-cols-4 gap-3">
-                              {availableRooms?.find(r => r.id === formData.room_id)?.beds?.map((bed) => (
-                                <button
-                                  key={bed.id}
-                                  type="button"
-                                  disabled={bed.status !== "available"}
-                                  onClick={() => setFormData({ ...formData, bed_id: bed.id })}
-                                  className={`p-3 rounded-lg border text-center transition-all ${formData.bed_id === bed.id
-                                    ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-200"
-                                    : bed.status !== "available"
-                                      ? "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed"
-                                      : "bg-white border-gray-200 hover:border-blue-400 text-gray-700"
+                              {availableRooms
+                                ?.find((r) => r.id === formData.room_id)
+                                ?.beds?.map((bed) => (
+                                  <button
+                                    key={bed.id}
+                                    type="button"
+                                    disabled={bed.status !== "available"}
+                                    onClick={() =>
+                                      setFormData({
+                                        ...formData,
+                                        bed_id: bed.id,
+                                      })
+                                    }
+                                    className={`p-3 rounded-lg border text-center transition-all ${
+                                      formData.bed_id === bed.id
+                                        ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-200"
+                                        : bed.status !== "available"
+                                          ? "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed"
+                                          : "bg-white border-gray-200 hover:border-blue-400 text-gray-700"
                                     }`}
-                                >
-                                  <Bed className="w-5 h-5 mx-auto mb-1" />
-                                  <span className="text-[10px] font-bold block">{bed.bed_number.split('-B')[1]}</span>
-                                </button>
-                              ))}
+                                  >
+                                    <Bed className="w-5 h-5 mx-auto mb-1" />
+                                    <span className="text-[10px] font-bold block">
+                                      {bed.bed_number.split("-B")[1]}
+                                    </span>
+                                  </button>
+                                ))}
                             </div>
                           </div>
                         )}
@@ -654,7 +804,13 @@ const StudentAllocation = () => {
                   disabled={operationStatus === "loading"}
                   className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 transition-all flex items-center shadow-lg shadow-blue-500/30 disabled:opacity-70"
                 >
-                  {operationStatus === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Save Changes" : "Confirm Allocation")}
+                  {operationStatus === "loading" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isEditing ? (
+                    "Save Changes"
+                  ) : (
+                    "Confirm Allocation"
+                  )}
                 </button>
               </div>
             </div>
@@ -669,47 +825,75 @@ const StudentAllocation = () => {
                 <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-100">
                   <LogOut className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-black text-gray-900">Confirm Checkout</h3>
-                <p className="text-sm text-gray-500 mt-1">Select checkout type for the student</p>
+                <h3 className="text-lg font-black text-gray-900">
+                  Confirm Checkout
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Select checkout type for the student
+                </p>
               </div>
 
               <div className="p-6 space-y-3 bg-gray-50/50">
                 <button
-                  onClick={() => setCheckoutData({ ...checkoutData, type: "current" })}
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${checkoutData.type === "current"
-                    ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
-                    : "bg-white border-gray-200 hover:border-blue-300"
-                    }`}
+                  onClick={() =>
+                    setCheckoutData({ ...checkoutData, type: "current" })
+                  }
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
+                    checkoutData.type === "current"
+                      ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
+                      : "bg-white border-gray-200 hover:border-blue-300"
+                  }`}
                 >
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-gray-900 text-sm">Immediate Checkout</p>
-                    <p className="text-xs text-gray-500">End stay and stop billing now</p>
+                    <p className="font-bold text-gray-900 text-sm">
+                      Immediate Checkout
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      End stay and stop billing now
+                    </p>
                   </div>
                 </button>
 
                 <button
-                  onClick={() => setCheckoutData({ ...checkoutData, type: "next" })}
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${checkoutData.type === "next"
-                    ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
-                    : "bg-white border-gray-200 hover:border-blue-300"
-                    }`}
+                  onClick={() =>
+                    setCheckoutData({ ...checkoutData, type: "next" })
+                  }
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
+                    checkoutData.type === "next"
+                      ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
+                      : "bg-white border-gray-200 hover:border-blue-300"
+                  }`}
                 >
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                     <ArrowRight className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-gray-900 text-sm">End of Semester</p>
-                    <p className="text-xs text-gray-500">Schedule checkout for sem end</p>
+                    <p className="font-bold text-gray-900 text-sm">
+                      End of Semester
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Schedule checkout for sem end
+                    </p>
                   </div>
                 </button>
               </div>
 
               <div className="p-6 border-t border-gray-100 flex gap-3 bg-white">
-                <button onClick={() => setIsCheckoutModalOpen(false)} className="flex-1 py-2.5 border border-gray-300 rounded-lg font-bold text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button onClick={confirmCheckout} className="flex-1 py-2.5 bg-gray-900 text-white rounded-lg font-bold text-sm hover:bg-black shadow-lg">Process</button>
+                <button
+                  onClick={() => setIsCheckoutModalOpen(false)}
+                  className="flex-1 py-2.5 border border-gray-300 rounded-lg font-bold text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmCheckout}
+                  className="flex-1 py-2.5 bg-gray-900 text-white rounded-lg font-bold text-sm hover:bg-black shadow-lg"
+                >
+                  Process
+                </button>
               </div>
             </div>
           </div>
@@ -725,13 +909,19 @@ const StudentAllocation = () => {
                     <History className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">Stay History</h2>
+                    <h2 className="text-lg font-black text-gray-900">
+                      Stay History
+                    </h2>
                     <p className="text-xs font-bold text-gray-500 uppercase">
-                      {selectedHistoryAllocation?.student?.first_name} {selectedHistoryAllocation?.student?.last_name}
+                      {selectedHistoryAllocation?.student?.first_name}{" "}
+                      {selectedHistoryAllocation?.student?.last_name}
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setIsHistoryOpen(false)} className="text-gray-400 hover:text-gray-900">
+                <button
+                  onClick={() => setIsHistoryOpen(false)}
+                  className="text-gray-400 hover:text-gray-900"
+                >
                   <XCircle className="w-6 h-6" />
                 </button>
               </div>
@@ -740,17 +930,36 @@ const StudentAllocation = () => {
                 {stayHistory?.length > 0 ? (
                   <div className="space-y-4">
                     {stayHistory.map((log, idx) => (
-                      <div key={log.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                      <div
+                        key={log.id}
+                        className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between"
+                      >
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border ${!log.check_out_date ? "bg-green-50 text-green-600 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border ${!log.check_out_date ? "bg-green-50 text-green-600 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}
+                          >
                             {stayHistory.length - idx}
                           </div>
                           <div>
                             <p className="text-sm font-bold text-gray-900">
-                              Room {log.room?.room_number} <span className="text-gray-400 font-normal mx-1">•</span> Sem {log.semester}
+                              Room {log.room?.room_number}{" "}
+                              <span className="text-gray-400 font-normal mx-1">
+                                •
+                              </span>{" "}
+                              Sem {log.semester}
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">
-                              {new Date(log.check_in_date).toLocaleDateString()} — {log.check_out_date ? new Date(log.check_out_date).toLocaleDateString() : <span className="text-green-600 font-bold">Present</span>}
+                              {new Date(log.check_in_date).toLocaleDateString()}{" "}
+                              —{" "}
+                              {log.check_out_date ? (
+                                new Date(
+                                  log.check_out_date,
+                                ).toLocaleDateString()
+                              ) : (
+                                <span className="text-green-600 font-bold">
+                                  Present
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -769,7 +978,6 @@ const StudentAllocation = () => {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

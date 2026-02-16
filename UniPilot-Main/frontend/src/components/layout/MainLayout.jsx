@@ -102,7 +102,7 @@ const MainLayout = () => {
       name: "My HR",
       href: "/hr/my-profile",
       icon: UserIcon,
-      permission: "hr:leaves:view", // Staff/Faculty have this, Students don't
+      // permission: "hr:leaves:view", // Staff/Faculty have this, Students don't
       roles: [
         "faculty",
         "hod",
@@ -126,13 +126,13 @@ const MainLayout = () => {
     //   permission: "proctoring:view",
     //   roles: ["faculty", "hod", "principal", "super_admin"],
     // },
-    {
-      name: "Reports",
-      href: "/hostel/reports",
-      icon: FileText,
-      permission: "hostel:read",
-      roles: ["super_admin", "principal", "hostel_admin"],
-    },
+    // {
+    //   name: "Reports",
+    //   href: "/hostel/reports",
+    //   icon: FileText,
+    //   permission: "hostel:read",
+    //   roles: ["super_admin", "principal", "hostel_admin"],
+    // },
     {
       name: "Attendance",
       href: "/attendance",
