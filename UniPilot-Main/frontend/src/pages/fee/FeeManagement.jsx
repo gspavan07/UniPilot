@@ -35,6 +35,7 @@ import {
   Award,
   StopCircle,
   Pencil,
+  PieChartIcon,
 } from "lucide-react";
 import {
   fetchFeeStructures,
@@ -1111,9 +1112,9 @@ const FeeManagement = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Program-wise chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="lg:col-span-4 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-6">
             <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">
               Collection by Program
@@ -1157,17 +1158,22 @@ const FeeManagement = () => {
             </ResponsiveContainer>
           </div>
         </div>
-
         {/* Method-wise chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">
-            Payment Mode Distribution
-          </h4>
-          <div className="h-[300px]">
+        <div className="lg:col-span-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <PieChartIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-black dark:text-white">
+              Payment Mode Distribution
+            </h3>
+          </div>
+          <div className="h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={stats?.methodWise || []}
+                  data={(stats?.methodWise || []).map((m) => ({
+                    ...m,
+                    total: parseFloat(m.total),
+                  }))}
                   dataKey="total"
                   nameKey="payment_method"
                   cx="50%"
@@ -1176,7 +1182,7 @@ const FeeManagement = () => {
                   outerRadius={100}
                   paddingAngle={5}
                 >
-                  {(stats?.methodWise || []).map((entry, index) => (
+                  {(stats?.methodWise || []).map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={
@@ -1186,6 +1192,7 @@ const FeeManagement = () => {
                   ))}
                 </Pie>
                 <Tooltip
+                  formatter={(value) => formatCurrency(value)}
                   contentStyle={{
                     borderRadius: "16px",
                     border: "none",
@@ -1195,6 +1202,35 @@ const FeeManagement = () => {
                 />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+          <div className="space-y-2 mt-4">
+            {(stats?.methodWise || []).map((entry, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-3">
+                  {/* The color dot matching the chart */}
+                  <div
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{
+                      backgroundColor: [
+                        "#4f46e5",
+                        "#10b981",
+                        "#f59e0b",
+                        "#ef4444",
+                      ][idx % 4],
+                    }}
+                  />
+                  <span className="font-bold text-gray-500 uppercase tracking-wider">
+                    {entry.payment_method}
+                  </span>
+                </div>
+                <span className="font-black text-gray-900 dark:text-white">
+                  {formatCurrency(entry.total)}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -252,12 +252,12 @@ const ProfileScreen = ({ navigation }) => {
         {renderDetailItem('Joining Date', user?.joining_date, 'calendar')}
       </Surface>
 
-      <SectionTitle title="About / Bio" icon="text-subject" />
+      {/* <SectionTitle title="About / Bio" icon="text-subject" />
       <Surface style={styles.contentCard}>
         <Text style={styles.bioText}>
           {user?.bio || 'No profile description provided yet.'}
         </Text>
-      </Surface>
+      </Surface> */}
     </View>
   );
 
@@ -483,7 +483,7 @@ const ProfileScreen = ({ navigation }) => {
       />
 
       <LinearGradient
-        colors={[theme.colors.primary, '#4f46e5']}
+        colors={[theme.colors.primary, '#2563eb']}
         style={styles.headerGradient}
       >
         <SafeAreaView edges={['top']}>

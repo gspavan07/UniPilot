@@ -29,6 +29,7 @@ import ExamsScreen from '../screens/exams/ExamsScreen';
 import FeeDashboardScreen from '../screens/fee/FeeDashboardScreen';
 import FeeLedgerScreen from '../screens/fee/FeeLedgerScreen';
 import TransactionHistoryScreen from '../screens/fee/TransactionHistoryScreen';
+import TimetableScreen from '../screens/timetable/TimetableScreen';
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
@@ -198,6 +199,7 @@ const TabNavigator = () => {
         name="TransactionHistoryScreen"
         component={TransactionHistoryScreen}
       />
+      <Tab.Screen name="Timetable" component={TimetableScreen} />
     </Tab.Navigator>
   );
 };

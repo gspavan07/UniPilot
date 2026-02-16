@@ -1,5 +1,5 @@
 export const colors = {
-  primary: '#6366f1', // Indigo (Modern, trustworthy)
+  primary: '#1680F0', // Indigo (Modern, trustworthy)
   secondary: '#06b6d4', // Cyan (Fresh)
   accent: '#8b5cf6', // Purple (Cohesive with primary)
   background: '#ffffff',

@@ -1114,12 +1114,37 @@ exports.getDashboardOverview = async (req, res) => {
       totalDrivers,
       activeAllocations,
       pendingTrips,
+      feeStats,
     ] = await Promise.all([
       Route.count({ where: { is_active: true } }),
       Vehicle.count({ where: { is_active: true } }),
       TransportDriver.count({ where: { is_active: true } }),
       StudentRouteAllocation.count({ where: { status: "active" } }),
       SpecialTrip.count({ where: { status: "pending" } }),
+      StudentFeeCharge.findAll({
+        where: { charge_type: "transport_fee" },
+        attributes: [
+          [
+            sequelize.fn(
+              "SUM",
+              sequelize.literal(
+                "CASE WHEN is_paid = true THEN amount ELSE 0 END",
+              ),
+            ),
+            "totalCollected",
+          ],
+          [
+            sequelize.fn(
+              "SUM",
+              sequelize.literal(
+                "CASE WHEN is_paid = false THEN amount ELSE 0 END",
+              ),
+            ),
+            "totalPending",
+          ],
+        ],
+        raw: true,
+      }),
     ]);
 
     res.json({
@@ -1130,6 +1155,8 @@ exports.getDashboardOverview = async (req, res) => {
         totalDrivers,
         activeAllocations,
         pendingTrips,
+        totalCollectedFee: parseFloat(feeStats[0]?.totalCollected || 0),
+        totalToCollectFee: parseFloat(feeStats[0]?.totalPending || 0),
       },
     });
   } catch (error) {

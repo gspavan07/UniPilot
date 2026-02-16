@@ -225,7 +225,7 @@ const FeeLedgerScreen = ({ navigation }) => {
       {/* Header */}
       <SafeAreaView edges={['top']} style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate('FeeDashboardScreen')}
           style={styles.backBtn}
         >
           <ChevronLeft size={24} color="#1e293b" />

@@ -69,6 +69,7 @@ import VehicleManagement from "./pages/transport/VehicleManagement";
 import DriverManagement from "./pages/transport/DriverManagement";
 import StudentAllocation from "./pages/transport/StudentAllocation";
 import TripManagement from "./pages/transport/TripManagement";
+import TransportReports from "./pages/transport/TransportReports";
 
 // Hostel
 import HostelDashboard from "./pages/hostel/HostelDashboard";
@@ -252,6 +253,7 @@ function App() {
             element={<StudentAllocation />}
           />
           <Route path="/transport/trips" element={<TripManagement />} />
+          <Route path="/transport/reports" element={<TransportReports />} />
 
           {/* Hostel Management */}
           <Route path="/hostel" element={<HostelDashboard />} />

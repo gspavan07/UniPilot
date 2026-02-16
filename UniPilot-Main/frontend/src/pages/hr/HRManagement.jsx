@@ -95,8 +95,6 @@ const HRManagement = () => {
     return user?.permissions?.includes(module.permission);
   });
 
-
-
   return (
     <div className="min-h-screen bg-white text-gray-950 font-sans selection:bg-blue-100 selection:text-blue-900 p-6 md:p-12">
       <div className="max-w-7xl mx-auto">
@@ -115,7 +113,10 @@ const HRManagement = () => {
               Workforce Command
             </div>
             <div className="text-sm text-gray-400 text-left md:text-right">
-              Access: <span className="text-gray-900 font-medium">{user?.role || "Administrator"}</span>
+              Access:{" "}
+              <span className="text-gray-900 font-medium">
+                {user?.role || "Administrator"}
+              </span>
             </div>
           </div>
         </div>
@@ -126,7 +127,7 @@ const HRManagement = () => {
             <button
               key={module.id}
               onClick={() => navigate(module.href)}
-              className="group relative flex flex-col justify-between h-full min-h-[240px] p-6 bg-white border border-blue-200 hover:border-blue-500 rounded-2xl transition-all duration-300 text-left hover:shadow-xl hover:shadow-blue-900/5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 overflow-hidden"
+              className="group relative flex flex-col h-full min-h-[180px] p-6 bg-white border border-blue-200 hover:border-blue-500 rounded-2xl transition-all duration-300 text-left hover:shadow-xl hover:shadow-blue-900/5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 overflow-hidden"
             >
               {/* Top Section */}
               <div className="flex justify-between items-start w-full mb-6">

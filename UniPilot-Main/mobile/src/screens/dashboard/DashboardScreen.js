@@ -137,7 +137,7 @@ const DashboardScreen = ({ navigation }) => {
     <View style={styles.mainContainer}>
       {/* Subtle Premium Header */}
       <LinearGradient
-        colors={[theme.colors.primary, '#4f46e5']}
+        colors={[theme.colors.primary, '#2563eb']}
         style={styles.headerGradient}
       >
         <SafeAreaView>
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   headerGradient: {
-    paddingBottom: Platform.OS === 'android' ? 0 : 30,
+    paddingBottom: Platform.OS === 'android' ? 10 : 30,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#ef4444',
     borderWidth: 1.5,
-    borderColor: '#4f46e5',
+    borderColor: '#2563eb',
   },
   headerContent: {
     flexDirection: 'row',

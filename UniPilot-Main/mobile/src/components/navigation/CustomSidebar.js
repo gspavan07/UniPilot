@@ -8,10 +8,10 @@ import {
   Animated,
   ScrollView,
   Image,
-  SafeAreaView,
   TouchableWithoutFeedback,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -54,7 +54,7 @@ const CustomSidebar = ({ visible, onClose, navigation, user, onLogout }) => {
       label: 'My Timetable',
       icon: CalendarClock,
       screen: 'Timetable',
-    }, // Placeholder - not yet in navigator
+    },
     {
       id: 'courses',
       label: 'My Courses',
@@ -110,7 +110,7 @@ const CustomSidebar = ({ visible, onClose, navigation, user, onLogout }) => {
         colors={[theme.colors.primary, '#4f46e5']}
         style={styles.header}
       > */}
-      <SafeAreaView edges={['top']}>
+      <SafeAreaView edges={['top']} style={{ flex: 0 }}>
         <View style={styles.profileContainer}>
           <View style={styles.avatarWrapper}>
             <Image
@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.primary,
+
     paddingTop: 10,
     width: '100%',
   },
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
   },
   profileContainer: {
     paddingHorizontal: 15,
-    marginTop: 0,
+    marginTop: Platform.OS === 'android' ? 50 : 0,
   },
   avatarWrapper: {
     width: 60,

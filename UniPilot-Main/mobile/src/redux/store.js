@@ -11,6 +11,7 @@ import {
 } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer from './slices/authSlice';
+import timetableReducer from './slices/timetableSlice';
 
 const authPersistConfig = {
   key: 'auth',
@@ -20,6 +21,7 @@ const authPersistConfig = {
 
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
+  timetable: timetableReducer,
 });
 
 const persistConfig = {
