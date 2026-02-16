@@ -12,6 +12,8 @@ import FacultyDashboard from "./pages/Faculty/FacultyDashboard";
 import PaperFormatEditor from "./pages/Faculty/PaperFormatEditor";
 import NotFound from "./pages/NotFound";
 import Grades from "./pages/Grades/Grades";
+import HodDashboard from "./pages/HOD/HodDashboard";
+import HodPaperReview from "./pages/HOD/HodPaperReview";
 
 function App() {
   return (
@@ -35,6 +37,10 @@ function App() {
               path="faculty/exam/:timetableId/format"
               element={<PaperFormatEditor />}
             />
+
+            {/* HOD Routes */}
+            <Route path="hod/papers" element={<HodDashboard />} />
+            <Route path="hod/paper/:timetableId" element={<HodPaperReview />} />
 
             {/* Admin Routes */}
             <Route index element={<Dashboard />} />

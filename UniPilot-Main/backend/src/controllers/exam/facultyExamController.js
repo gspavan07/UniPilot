@@ -95,6 +95,13 @@ async function updatePaperFormat(req, res) {
             });
         }
 
+        if (exam.exam_status === 'format_freezed') {
+            return res.status(403).json({
+                success: false,
+                error: "Paper format has been frozen by the HOD and cannot be edited.",
+            });
+        }
+
         // Update paper format and status
         await exam.update({
             paper_format,

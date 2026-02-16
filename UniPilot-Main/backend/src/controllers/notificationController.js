@@ -80,3 +80,24 @@ exports.markAllAsRead = async (req, res) => {
         });
     }
 };
+// @desc    Delete all notifications
+// @route   DELETE /api/notifications/delete-all
+// @access  Private
+exports.deleteAllNotifications = async (req, res) => {
+    try {
+        await Notification.destroy({
+            where: { user_id: req.user.userId }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "All notifications deleted"
+        });
+    } catch (error) {
+        logger.error("Error in deleteAllNotifications:", error);
+        res.status(500).json({
+            success: false,
+            error: "Server Error"
+        });
+    }
+};

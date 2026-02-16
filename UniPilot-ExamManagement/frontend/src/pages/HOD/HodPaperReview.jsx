@@ -1,42 +1,43 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-    getAssignedExams,
-    updatePaperFormat,
-} from "../../services/examCycleService";
+    getHodFormattedPapers,
+    updateHodPaperFormat,
+    freezeHodPaperFormat
+} from "../../services/hodService";
 import { getCourseOutcomes } from "../../services/courseOutcomeService";
 import {
     ArrowLeft,
     Save,
+    Lock,
     Plus,
     Trash2,
     AlertCircle,
     CheckCircle,
     ChevronDown,
-    ChevronRight,
-    FileText,
-    HelpCircle,
-    Layout,
     Layers,
     Type,
-    Hash,
-    Target,
-    Lock
+    HelpCircle,
+    Layout,
+    Target
 } from "lucide-react";
 
-export default function PaperFormatEditor() {
+export default function HodPaperReview() {
     const { timetableId } = useParams();
     const navigate = useNavigate();
     const [exam, setExam] = useState(null);
     const [courseOutcomes, setCourseOutcomes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [freezing, setFreezing] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-    const [isReadOnly, setIsReadOnly] = useState(false);
 
     // Form State for the new structure
     const [componentsConfig, setComponentsConfig] = useState({});
+
+    // Read-only state
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     useEffect(() => {
         loadExamDetails();
@@ -44,7 +45,7 @@ export default function PaperFormatEditor() {
 
     const loadExamDetails = async () => {
         try {
-            const response = await getAssignedExams();
+            const response = await getHodFormattedPapers();
             const foundExam = response.data.data.find((e) => e.id === timetableId);
 
             if (foundExam) {
@@ -224,7 +225,6 @@ export default function PaperFormatEditor() {
     };
 
     const handleSave = async () => {
-        if (isReadOnly) return;
         setSaving(true);
         setError("");
         setSuccess("");
@@ -280,14 +280,32 @@ export default function PaperFormatEditor() {
                 },
             };
 
-            await updatePaperFormat(timetableId, payload);
-            setSuccess("Paper format saved successfully!");
-            setTimeout(() => navigate("/faculty/exams"), 2000);
+            await updateHodPaperFormat(timetableId, payload);
+            setSuccess("Paper format updated successfully!");
         } catch (err) {
             console.error("Save error:", err);
-            setError(err.response?.data?.error || "Failed to save paper format.");
+            setError(err.response?.data?.error || "Failed to update paper format.");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleFreeze = async () => {
+        if (!window.confirm("Are you sure you want to freeze this paper format? Once frozen, the faculty will not be able to edit it anymore.")) return;
+
+        setFreezing(true);
+        setError("");
+
+        try {
+            await freezeHodPaperFormat(timetableId);
+            setSuccess("Paper format frozen successfully!");
+            setIsReadOnly(true);
+            setTimeout(() => navigate("/hod/papers"), 2000);
+        } catch (err) {
+            console.error("Freeze error:", err);
+            setError(err.response?.data?.error || "Failed to freeze paper format.");
+        } finally {
+            setFreezing(false);
         }
     };
 
@@ -679,9 +697,9 @@ export default function PaperFormatEditor() {
                         </button>
                         <div>
                             <h1 className="text-lg font-bold text-gray-900 leading-tight block">
-                                Paper Format Editor {isReadOnly && <span className="text-xs text-red-500 font-bold ml-2 border border-red-500 px-2 py-0.5 rounded-md">FROZEN</span>}
+                                HOD Paper Review {isReadOnly && <span className="text-xs text-red-500 font-bold ml-2 border border-red-500 px-2 py-0.5 rounded-md">VIEW ONLY</span>}
                             </h1>
-                            <p className="text-xs text-gray-500 font-medium">Configure sections, questions and CO mapping</p>
+                            <p className="text-xs text-gray-500 font-medium">Review, updated or freeze the paper format</p>
                         </div>
                     </div>
 
@@ -691,23 +709,40 @@ export default function PaperFormatEditor() {
                             <span className="text-[10px] text-gray-500 font-mono tracking-wider">{exam.course.code}</span>
                         </div>
 
-                        {!isReadOnly ? (
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-black text-white text-sm font-bold rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
-                            >
-                                {saving ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                ) : (
-                                    <Save className="w-4 h-4" />
-                                )}
-                                <span>Save Changes</span>
-                            </button>
-                        ) : (
-                            <div className="px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 text-sm font-bold rounded-xl flex items-center gap-2">
+                        {!isReadOnly && (
+                            <>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving || freezing}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    {saving ? (
+                                        <div className="w-4 h-4 border-2 border-gray-500 border-t-gray-800 rounded-full animate-spin"></div>
+                                    ) : (
+                                        <Save className="w-4 h-4" />
+                                    )}
+                                    <span>Save Draft</span>
+                                </button>
+
+                                <button
+                                    onClick={handleFreeze}
+                                    disabled={saving || freezing}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                                >
+                                    {freezing ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <Lock className="w-4 h-4" />
+                                    )}
+                                    <span>Freeze Format</span>
+                                </button>
+                            </>
+                        )}
+
+                        {isReadOnly && (
+                            <div className="px-4 py-2 bg-gray-100 text-gray-500 text-sm font-bold rounded-xl flex items-center gap-2">
                                 <Lock className="w-4 h-4" />
-                                <span>Frozen by HOD</span>
+                                <span>Frozen</span>
                             </div>
                         )}
                     </div>

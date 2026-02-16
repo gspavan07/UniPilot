@@ -40,6 +40,7 @@ const examSeatingRoutes = require("./exam/seatingArrangement.routes");
 
 const examGradeRoutes = require("./exam/gradeEntry.routes");
 const facultyExamRoutes = require("./exam/facultyExam.routes");
+const hodExamRoutes = require("./exam/hod.routes");
 
 const notificationRoutes = require("./notifications");
 const academicRoutes = require("./academic");
@@ -99,6 +100,7 @@ router.use("/exam/cycles", examCycleRoutes);
 router.use("/exam/hall-tickets", examHallTicketRoutes);
 router.use("/exam/schedules", examScheduleRoutes);
 router.use("/exam/faculty", facultyExamRoutes);
+router.use("/exam/hod", hodExamRoutes);
 router.use("/exam/seating", examSeatingRoutes);
 router.use("/exam/grades", examGradeRoutes);
 

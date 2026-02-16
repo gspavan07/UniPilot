@@ -403,13 +403,11 @@ const MainLayout = () => {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-64 " : "ml-16"}`}
       >
-        {/* Header Bar */}
-        <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-end px-6 sticky top-0 z-30">
+        {/* <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-end px-6 sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <Notifications />
-            {/* User Profile Snippet could go here too if desired */}
           </div>
-        </header>
+        </header> */}
 
         <main className="flex-1  overflow-y-auto bg-gray-50">
           <Outlet />
