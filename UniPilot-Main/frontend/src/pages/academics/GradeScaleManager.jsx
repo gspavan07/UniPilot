@@ -210,13 +210,13 @@ const GradeScaleManager = ({ embedded = false }) => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                        {grade.desc || "-"}
+                        {grade.description || grade.desc || "-"}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
-                        {grade.min_per}
+                        {grade.min || grade.min_per}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
-                        {grade.max_per}
+                        {grade.max}
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center gap-1 text-sm font-semibold text-green-700 dark:text-green-400">
@@ -264,8 +264,8 @@ const GradeScaleManager = ({ embedded = false }) => {
                     Range Coverage
                   </p>
                   <p className="text-2xl font-bold text-black dark:text-white">
-                    {Math.min(...grades.map((g) => g.min_per))} -{" "}
-                    {Math.max(...grades.map((g) => g.max_per))}
+                    {Math.min(...grades.map((g) => g.min))} -{" "}
+                    {Math.max(...grades.map((g) => g.max))}
                   </p>
                 </div>
               </div>

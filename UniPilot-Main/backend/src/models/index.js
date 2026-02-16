@@ -395,20 +395,12 @@ User.hasMany(LeaveRequest, { as: "leave_requests", foreignKey: "student_id" });
 LeaveRequest.belongsTo(User, { as: "reviewer", foreignKey: "reviewed_by" });
 LeaveRequest.belongsTo(User, { as: "approver", foreignKey: "approver_id" });
 
-
-
-
-
-
-
 // Semester Result Associations
 SemesterResult.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(SemesterResult, {
   as: "semester_results",
   foreignKey: "student_id",
 });
-
-
 
 // Fee Management Associations
 FeeStructure.belongsTo(FeeCategory, {
@@ -480,8 +472,6 @@ StudentChargePayment.belongsTo(FeePayment, {
   foreignKey: "fee_payment_id",
 });
 
-
-
 // 2. AcademicFeePayment Associations
 AcademicFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
 User.hasMany(AcademicFeePayment, {
@@ -490,7 +480,7 @@ User.hasMany(AcademicFeePayment, {
 });
 
 AcademicFeePayment.belongsTo(FeeStructure, {
-  as: "fee_structure",
+  as: "structure",
   foreignKey: "fee_structure_id",
 });
 FeeStructure.hasMany(AcademicFeePayment, {
@@ -509,7 +499,7 @@ User.hasMany(StudentChargePayment, {
 });
 
 StudentChargePayment.belongsTo(StudentFeeCharge, {
-  as: "fee_charge",
+  as: "charge",
   foreignKey: "student_fee_charge_id",
 });
 StudentFeeCharge.hasMany(StudentChargePayment, {

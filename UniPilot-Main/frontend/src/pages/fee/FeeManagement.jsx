@@ -107,7 +107,7 @@ const FeeManagement = () => {
   const { users: searchResults } = useSelector((state) => state.users);
 
   // Admin State
-  const [selectedBatch, setSelectedBatch] = useState(new Date().getFullYear());
+  const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
   const [activeTab, setActiveTab] = useState(
     user?.role_data?.slug === "admin" || user?.role === "admin"
@@ -323,6 +323,16 @@ const FeeManagement = () => {
     }
   }, [programs, selectedProgram]);
 
+  // Trigger search for scholarship form
+  useEffect(() => {
+    if (studentSearch.length >= 3) {
+      dispatch(fetchUsers({ role: "student", search: studentSearch }));
+    }
+  }, [studentSearch, dispatch]);
+  // Sync search results to the scholarship dropdown
+  useEffect(() => {
+    setSearchedStudents(searchResults);
+  }, [searchResults]);
   const handleClone = async () => {
     if (!selectedProgram) return;
     try {
@@ -353,12 +363,18 @@ const FeeManagement = () => {
 
   const handleSaveStructure = async (e) => {
     e.preventDefault();
+
+    // Use existing record values if editing, otherwise use current filters
     const data = {
       ...structureForm,
-      batch_year: selectedBatch,
-      program_id: selectedProgram,
+      batch_year: editingStructure?.batch_year || selectedBatch,
+      program_id: editingStructure?.program_id || selectedProgram,
       amount: parseFloat(structureForm.amount),
     };
+    if (!data.batch_year || !data.program_id) {
+      alert("Please select a specific Batch and Program first.");
+      return;
+    }
 
     try {
       if (editingStructure) {
@@ -669,57 +685,7 @@ const FeeManagement = () => {
 
       result.forEach((parent) => {
         totalPaid += parseFloat(parent.amount_paid);
-        let parentChildSum = 0;
-
-        // 1. Academic Fee Payments (Fee Structures)
-        if (parent.academic_fee_payments) {
-          parent.academic_fee_payments.forEach((child) => {
-            allItems.push({
-              ...child,
-              amount_paid: child.amount, // Map for receipt compatibility
-              payment_date: parent.payment_date,
-              transaction_id: parent.transaction_id,
-              payment_method: parent.payment_method,
-              fee_structure: child.structure, // Map included structure
-            });
-            parentChildSum += parseFloat(child.amount);
-          });
-        }
-
-        // 2. Student Charge Payments (Fines/Charges)
-        if (parent.student_charge_payments) {
-          parent.student_charge_payments.forEach((child) => {
-            allItems.push({
-              ...child,
-              amount_paid: child.amount,
-              payment_date: parent.payment_date,
-              transaction_id: parent.transaction_id,
-              payment_method: parent.payment_method,
-              fee_structure: {
-                category: child.charge?.category || { name: "Charge/Fine" },
-              }, // Synthetic structure for receipt
-            });
-            parentChildSum += parseFloat(child.amount);
-          });
-        }
-
-        // 3. Handle Unlinked/Ad-hoc amounts (e.g. Fines without IDs)
-        const gap = parseFloat(parent.amount_paid) - parentChildSum;
-        if (gap > 0.01) {
-          allItems.push({
-            id: `adhoc-${parent.id}`,
-            amount_paid: gap,
-            payment_date: parent.payment_date,
-            transaction_id: parent.transaction_id,
-            payment_method: parent.payment_method,
-            fee_structure: {
-              category: {
-                name: parent.remarks.includes("Fine") ? "Late Fine" : "Ad-hoc Payment",
-              },
-            },
-            semester: parent.semester || "N/A",
-          });
-        }
+        allItems = [...allItems, ...flattenTransactionItems(parent)];
       });
 
       setPaymentSuccess({
@@ -729,7 +695,10 @@ const FeeManagement = () => {
         payment_date: counterPaymentDate,
         payment_method: counterPaymentMethod,
         // For simple display, just pick the first category name
-        fee_structure: allItems.length > 0 ? allItems[0].fee_structure : { category: { name: "Fee Payment" } },
+        fee_structure:
+          allItems.length > 0
+            ? allItems[0].fee_structure
+            : { category: { name: "Fee Payment" } },
         semester: result.length === 1 ? result[0].semester : "Multi",
         remarks: counterRemarks,
         items: allItems, // Pass flattened items
@@ -958,7 +927,8 @@ const FeeManagement = () => {
     if (t.academic_fee_payments?.length > 0) {
       const firstItem = t.academic_fee_payments[0];
       category = firstItem.fee_structure?.category?.name || "Academic Fee";
-      semester = firstItem.semester || firstItem.fee_structure?.semester || "N/A";
+      semester =
+        firstItem.semester || firstItem.fee_structure?.semester || "N/A";
       if (t.academic_fee_payments.length > 1) {
         category += ` (+${t.academic_fee_payments.length - 1} more)`;
       }
@@ -990,6 +960,82 @@ const FeeManagement = () => {
     }
 
     return { category, semester };
+  };
+
+  const flattenTransactionItems = (t) => {
+    let items = [];
+    // 1. Academic Fee Payments
+    if (t.academic_fee_payments?.length > 0) {
+      t.academic_fee_payments.forEach((child) => {
+        items.push({
+          ...child,
+          amount_paid: child.amount,
+          payment_date: t.payment_date,
+          transaction_id: t.transaction_id,
+          payment_method: t.payment_method,
+          fee_structure: child.structure,
+          semester: child.structure?.semester || t.semester,
+          student: t.student || selectedStudent,
+          remarks: t.remarks,
+        });
+      });
+    }
+
+    // 2. Student Charge Payments
+    if (t.student_charge_payments?.length > 0) {
+      t.student_charge_payments.forEach((child) => {
+        items.push({
+          ...child,
+          amount_paid: child.amount,
+          payment_date: t.payment_date,
+          transaction_id: t.transaction_id,
+          payment_method: t.payment_method,
+          fee_structure: {
+            category: child.charge?.category || { name: "Charge/Fine" },
+          },
+          semester: child.charge?.semester || t.semester,
+          student: t.student || selectedStudent,
+          remarks: t.remarks,
+        });
+      });
+    }
+
+    // 3. Handle gaps/adhoc
+    const childTotal = items.reduce(
+      (sum, i) => sum + parseFloat(i.amount_paid || 0),
+      0,
+    );
+    const gap = parseFloat(t.amount_paid) - childTotal;
+    if (gap > 0.01) {
+      items.push({
+        id: `adhoc-${t.id}`,
+        amount_paid: gap,
+        payment_date: t.payment_date,
+        transaction_id: t.transaction_id,
+        payment_method: t.payment_method,
+        fee_structure: {
+          category: {
+            name: t.remarks?.includes("Fine") ? "Late Fine" : "Ad-hoc Payment",
+          },
+        },
+        semester: t.semester || "N/A",
+        student: t.student || selectedStudent,
+        remarks: t.remarks,
+      });
+    }
+
+    // Fallback if no children (single structure legacy record)
+    if (items.length === 0) {
+      items.push({
+        ...t,
+        fee_structure: t.fee_structure || {
+          category: { name: "Fee Payment" },
+        },
+        student: t.student || selectedStudent,
+      });
+    }
+
+    return items;
   };
 
   // ADMIN VIEW HELPER FUNCTIONS
@@ -1265,10 +1311,11 @@ const FeeManagement = () => {
                       <button
                         key={sem}
                         onClick={() => setActiveCounterSemester(sem)}
-                        className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border ${isActive
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                          : "bg-white dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700 hover:border-indigo-200"
-                          }`}
+                        className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border ${
+                          isActive
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                            : "bg-white dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700 hover:border-indigo-200"
+                        }`}
                       >
                         Semester {sem}
                       </button>
@@ -1278,39 +1325,47 @@ const FeeManagement = () => {
 
               <div className="p-6">
                 {activeCounterSemester &&
-                  studentStatus?.semesterWise?.[activeCounterSemester] ? (
+                studentStatus?.semesterWise?.[activeCounterSemester] ? (
                   <div className="space-y-4">
                     {/* Fees List */}
                     <div className="space-y-3">
                       {studentStatus.semesterWise[activeCounterSemester].fees
-                        .filter((f) => f.due > 0)
+                        // .filter((f) => f.due === 0)
                         .map((fee) => (
                           <div
                             key={fee.id}
-                            className={`p-4 rounded-2xl border transition-all ${selectedCounterFees.has(fee.id)
-                              ? "bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-900/30 shadow-sm"
-                              : "bg-gray-50/50 border-gray-100 dark:bg-gray-900/20 dark:border-gray-700"
-                              }`}
+                            className={`p-4 rounded-2xl border transition-all ${
+                              selectedCounterFees.has(fee.id)
+                                ? "bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-900/30 shadow-sm"
+                                : "bg-gray-50/50 border-gray-100 dark:bg-gray-900/20 dark:border-gray-700"
+                            }`}
                           >
                             <div className="flex items-center justify-between gap-4">
                               <div className="flex items-center gap-4 flex-1">
                                 <input
                                   type="checkbox"
                                   checked={selectedCounterFees.has(fee.id)}
+                                  disabled={fee.due === 0}
                                   onChange={() =>
                                     toggleCounterFeeSelection(fee.id, fee.due)
                                   }
-                                  className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                  className={`w-5 h-4 rounded border-indigo-600 text-indigo-600 focus:ring-indigo-500 ${fee.due === 0 ? "opacity-20 cursor-not-allowed" : "cursor-pointer"}`}
                                 />
                                 <div>
                                   <div className="text-sm font-bold text-gray-900 dark:text-white">
                                     {fee.category}
                                   </div>
+
                                   <div className="text-[10px] font-black text-gray-400 uppercase">
                                     Balance Due: ₹
                                     {fee.due.toLocaleString("en-IN")}
                                   </div>
                                 </div>
+                                {fee.due === 0 && (
+                                  <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                    Paid
+                                  </span>
+                                )}
                               </div>
 
                               {selectedCounterFees.has(fee.id) && (
@@ -1350,74 +1405,75 @@ const FeeManagement = () => {
                       {/* Fines */}
                       {studentStatus.semesterWise[activeCounterSemester].fine
                         .due > 0 && (
-                          <div
-                            className={`p-4 rounded-2xl border transition-all ${selectedCounterFees.has(
+                        <div
+                          className={`p-4 rounded-2xl border transition-all ${
+                            selectedCounterFees.has(
                               `fine:${activeCounterSemester}`,
                             )
                               ? "bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-900/30 shadow-sm"
                               : "bg-red-50/20 border-red-100 dark:bg-red-900/5 dark:border-red-900/20"
-                              }`}
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-4 flex-1">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedCounterFees.has(
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={selectedCounterFees.has(
+                                  `fine:${activeCounterSemester}`,
+                                )}
+                                onChange={() =>
+                                  toggleCounterFeeSelection(
                                     `fine:${activeCounterSemester}`,
-                                  )}
-                                  onChange={() =>
-                                    toggleCounterFeeSelection(
+                                    studentStatus.semesterWise[
+                                      activeCounterSemester
+                                    ].fine.due,
+                                  )
+                                }
+                                className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                              />
+                              <div>
+                                <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                                  Late Payment Fine
+                                </div>
+                                <div className="text-[10px] font-black text-red-400/70 uppercase">
+                                  Balance Due: ₹
+                                  {studentStatus.semesterWise[
+                                    activeCounterSemester
+                                  ].fine.due.toLocaleString("en-IN")}
+                                </div>
+                              </div>
+                            </div>
+                            {selectedCounterFees.has(
+                              `fine:${activeCounterSemester}`,
+                            ) && (
+                              <div className="relative animate-in zoom-in-95">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400">
+                                  ₹
+                                </span>
+                                <input
+                                  type="number"
+                                  value={
+                                    counterCustomAmounts[
+                                      `fine:${activeCounterSemester}`
+                                    ] ?? ""
+                                  }
+                                  onChange={(e) =>
+                                    handleCounterAmountChange(
                                       `fine:${activeCounterSemester}`,
+                                      e.target.value,
                                       studentStatus.semesterWise[
                                         activeCounterSemester
                                       ].fine.due,
                                     )
                                   }
-                                  className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                  placeholder="0.00"
+                                  className="w-32 pl-7 pr-3 py-2 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 rounded-xl text-sm font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
                                 />
-                                <div>
-                                  <div className="text-sm font-bold text-red-600 dark:text-red-400">
-                                    Late Payment Fine
-                                  </div>
-                                  <div className="text-[10px] font-black text-red-400/70 uppercase">
-                                    Balance Due: ₹
-                                    {studentStatus.semesterWise[
-                                      activeCounterSemester
-                                    ].fine.due.toLocaleString("en-IN")}
-                                  </div>
-                                </div>
                               </div>
-                              {selectedCounterFees.has(
-                                `fine:${activeCounterSemester}`,
-                              ) && (
-                                  <div className="relative animate-in zoom-in-95">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400">
-                                      ₹
-                                    </span>
-                                    <input
-                                      type="number"
-                                      value={
-                                        counterCustomAmounts[
-                                        `fine:${activeCounterSemester}`
-                                        ] ?? ""
-                                      }
-                                      onChange={(e) =>
-                                        handleCounterAmountChange(
-                                          `fine:${activeCounterSemester}`,
-                                          e.target.value,
-                                          studentStatus.semesterWise[
-                                            activeCounterSemester
-                                          ].fine.due,
-                                        )
-                                      }
-                                      placeholder="0.00"
-                                      className="w-32 pl-7 pr-3 py-2 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 rounded-xl text-sm font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
-                                    />
-                                  </div>
-                                )}
-                            </div>
+                            )}
                           </div>
-                        )}
+                        </div>
+                      )}
                     </div>
 
                     {!studentStatus.semesterWise[
@@ -1489,7 +1545,7 @@ const FeeManagement = () => {
                           {Math.max(
                             0,
                             calculateCounterSelectedTotal() -
-                            studentStatus.grandTotals.excessBalance,
+                              studentStatus.grandTotals.excessBalance,
                           ).toLocaleString("en-IN")}
                         </div>
                       </div>
@@ -1497,10 +1553,10 @@ const FeeManagement = () => {
 
                     {calculateCounterSelectedTotal() >
                       studentStatus.grandTotals.excessBalance && (
-                        <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/30">
-                          Collect Cash/Transfer for the rest
-                        </div>
-                      )}
+                      <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/30">
+                        Collect Cash/Transfer for the rest
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1513,21 +1569,20 @@ const FeeManagement = () => {
                       Payment Method
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      {["cash"].map(
-                        (method) => (
-                          <button
-                            key={method}
-                            type="button"
-                            onClick={() => setCounterPaymentMethod(method)}
-                            className={`p-3 rounded-xl border-2 text-xs font-black uppercase transition-all ${counterPaymentMethod === method
+                      {["cash"].map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setCounterPaymentMethod(method)}
+                          className={`p-3 rounded-xl border-2 text-xs font-black uppercase transition-all ${
+                            counterPaymentMethod === method
                               ? "border-indigo-600 bg-indigo-50 text-indigo-600"
                               : "border-gray-100 text-gray-400 hover:border-indigo-200"
-                              }`}
-                          >
-                            {method.replace("_", " ")}
-                          </button>
-                        ),
-                      )}
+                          }`}
+                        >
+                          {method.replace("_", " ")}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -1604,7 +1659,7 @@ const FeeManagement = () => {
           </div>
         )}
       </div>
-    </div >
+    </div>
   );
 
   const renderScholarshipImportPreview = () => (
@@ -1840,33 +1895,35 @@ const FeeManagement = () => {
                 />
               </div>
 
-              {showStudentDropdown && searchedStudents.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 max-h-64 overflow-y-auto">
-                  {searchedStudents.map((student) => (
-                    <div
-                      key={student.id}
-                      onClick={() => {
-                        setScholarshipForm({
-                          ...scholarshipForm,
-                          student_id: student.id,
-                        });
-                        setStudentSearch(
-                          `${student.first_name} ${student.last_name}`,
-                        );
-                        setShowStudentDropdown(false);
-                      }}
-                      className="p-4 hover:bg-indigo-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 transition-colors"
-                    >
-                      <div className="text-sm font-bold text-gray-900 dark:text-white">
-                        {student.first_name} {student.last_name}
+              {showStudentDropdown &&
+                studentSearch.length >= 3 &&
+                searchedStudents.length > 0 && (
+                  <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 max-h-64 overflow-y-auto">
+                    {searchedStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        onClick={() => {
+                          setScholarshipForm({
+                            ...scholarshipForm,
+                            student_id: student.id,
+                          });
+                          setStudentSearch(
+                            `${student.first_name} ${student.last_name}`,
+                          );
+                          setShowStudentDropdown(false);
+                        }}
+                        className="p-4 hover:bg-indigo-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 transition-colors"
+                      >
+                        <div className="text-sm font-bold text-gray-900 dark:text-white">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase">
+                          {student.student_id} • {student.program?.name}
+                        </div>
                       </div>
-                      <div className="text-[10px] font-black text-gray-400 uppercase">
-                        {student.student_id} • {student.program?.name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
             </div>
 
             {scholarshipForm.student_id && (
@@ -2095,20 +2152,22 @@ const FeeManagement = () => {
         <div className="flex bg-gray-100/50 dark:bg-gray-900/50 p-1 rounded-2xl border border-gray-100 dark:border-gray-800 w-fit">
           <button
             onClick={() => setScholarshipView("assigned")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scholarshipView === "assigned"
-              ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-              : "text-gray-400 hover:text-indigo-600"
-              }`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+              scholarshipView === "assigned"
+                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+                : "text-gray-400 hover:text-indigo-600"
+            }`}
           >
             <History className="w-4 h-4" />
             Assigned Board
           </button>
           <button
             onClick={() => setScholarshipView("new")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scholarshipView === "new"
-              ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-              : "text-gray-400 hover:text-indigo-600"
-              }`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+              scholarshipView === "new"
+                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+                : "text-gray-400 hover:text-indigo-600"
+            }`}
           >
             <Plus className="w-4 h-4" />
             Grant New
@@ -2297,10 +2356,11 @@ const FeeManagement = () => {
                   onClick={() =>
                     setInsightFilters({ ...insightFilters, payment_type: t.id })
                   }
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${insightFilters.payment_type === t.id
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
-                    : "text-gray-400 hover:text-indigo-600"
-                    }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                    insightFilters.payment_type === t.id
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                      : "text-gray-400 hover:text-indigo-600"
+                  }`}
                 >
                   <t.icon className="w-3.5 h-3.5" />
                   {t.label}
@@ -2466,10 +2526,7 @@ const FeeManagement = () => {
                           <>
                             {category}
                             <div className="text-[10px] opacity-60">
-                              {String(semester).startsWith("Charge") ||
-                                String(semester).startsWith("Cycle")
-                                ? semester
-                                : `SEM ${semester}`}
+                              SEM {t?.semester || "N/A"}
                             </div>
                           </>
                         );
@@ -2477,12 +2534,13 @@ const FeeManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.payment_method === "cash"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : t.payment_method === "WALLET"
-                            ? "bg-amber-50 text-amber-600"
-                            : "bg-blue-50 text-blue-600"
-                          }`}
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          t.payment_method === "cash"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : t.payment_method === "WALLET"
+                              ? "bg-amber-50 text-amber-600"
+                              : "bg-blue-50 text-blue-600"
+                        }`}
                       >
                         {t.payment_method === "WALLET"
                           ? "Internal Wallet"
@@ -2494,7 +2552,10 @@ const FeeManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
-                        onClick={() => printReceipt(t)}
+                        onClick={() => {
+                          const items = flattenTransactionItems(t);
+                          printReceipt(null, items);
+                        }}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all"
                       >
                         <FileText className="w-4 h-4" />
@@ -2503,19 +2564,19 @@ const FeeManagement = () => {
                   </tr>
                 ))}
                 {(Object.values(insightFilters).some((v) => v !== "") &&
-                  dailyReport
+                dailyReport
                   ? dailyReport.transactions
                   : transactions
                 ).length === 0 && (
-                    <tr>
-                      <td
-                        colSpan="6"
-                        className="px-6 py-12 text-center text-gray-400 font-bold"
-                      >
-                        No transactions found.
-                      </td>
-                    </tr>
-                  )}
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="px-6 py-12 text-center text-gray-400 font-bold"
+                    >
+                      No transactions found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -2741,16 +2802,16 @@ const FeeManagement = () => {
                       !Object.values(studentStatus.semesterWise).some((d) =>
                         d.fees.some((f) => f.is_personal),
                       )) && (
-                        <tr>
-                          <td
-                            colSpan="3"
-                            className="px-6 py-12 text-center text-gray-400 font-bold"
-                          >
-                            No personal fines or ad-hoc charges recorded for this
-                            student.
-                          </td>
-                        </tr>
-                      )}
+                      <tr>
+                        <td
+                          colSpan="3"
+                          className="px-6 py-12 text-center text-gray-400 font-bold"
+                        >
+                          No personal fines or ad-hoc charges recorded for this
+                          student.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2902,7 +2963,10 @@ const FeeManagement = () => {
                             <span
                               className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${s.applies_to === "all" ? "bg-indigo-50 text-indigo-600" : "bg-amber-50 text-amber-600"}`}
                             >
-                              {s.applies_to}
+                              {s.applies_to === "all"
+                                ? "All Students"
+                                : s.applies_to.charAt(0).toUpperCase() +
+                                  s.applies_to.slice(1)}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-center font-bold text-gray-500">
@@ -2940,6 +3004,24 @@ const FeeManagement = () => {
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-4">
           <div className="flex-1 flex items-center gap-4">
+            {/* 0. Batch selection */}
+            <div className="relative">
+              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
+                Batch
+              </label>
+              <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(parseInt(e.target.value))}
+                className="w-32 px-4 py-2 bg-gray-50 dark:bg-gray-900 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">All Batches</option>
+                {batches.map((year) => (
+                  <option key={year} value={year}>
+                    Batch {year}
+                  </option>
+                ))}
+              </select>
+            </div>
             {/* 1. Department */}
             <div className="relative">
               <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
@@ -3310,10 +3392,11 @@ const FeeManagement = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all rounded-xl whitespace-nowrap ${activeTab === tab.id
-                  ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
-                  : "text-gray-400 hover:text-gray-600"
-                  }`}
+                className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all rounded-xl whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
               >
                 <tab.icon className="w-3.5 h-3.5" />
                 {tab.label}
@@ -3533,8 +3616,8 @@ const FeeManagement = () => {
                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl font-bold border-none"
                   >
                     <option value="all">All Students</option>
-                    <option value="hostellers">Hostellers</option>
-                    <option value="day_scholars">Day Scholars</option>
+                    <option value="convener">Convener</option>
+                    <option value="management">Management</option>
                   </select>
                 </div>
 
@@ -3696,7 +3779,6 @@ const FeeManagement = () => {
               </span>
             </p>
 
-
             <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 mb-6 text-left max-h-60 overflow-y-auto">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                 Summary
@@ -3730,7 +3812,10 @@ const FeeManagement = () => {
                   Total Paid
                 </div>
                 <div className="text-sm font-black text-emerald-600">
-                  ₹{parseFloat(paymentSuccess.amount_paid).toLocaleString("en-IN")}
+                  ₹
+                  {parseFloat(paymentSuccess.amount_paid).toLocaleString(
+                    "en-IN",
+                  )}
                 </div>
               </div>
             </div>
@@ -3754,9 +3839,8 @@ const FeeManagement = () => {
             </div>
           </div>
         </div>
-      )
-      }
-    </div >
+      )}
+    </div>
   );
 };
 

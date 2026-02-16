@@ -47,7 +47,7 @@ const FeeStructure = sequelize.define(
       defaultValue: false,
     },
     applies_to: {
-      type: DataTypes.ENUM("all", "hostellers", "day_scholars"),
+      type: DataTypes.ENUM("all", "convener", "management"),
       defaultValue: "all",
     },
     is_active: {

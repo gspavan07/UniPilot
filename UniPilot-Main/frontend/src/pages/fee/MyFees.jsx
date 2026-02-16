@@ -97,7 +97,7 @@ const MyFees = () => {
         const sem = feeId.split(":")[1];
         fineDetails.push({
           semester: parseInt(sem),
-          amount: amount
+          amount: amount,
         });
       } else {
         // Find the fee object in all semesters
@@ -109,13 +109,13 @@ const MyFees = () => {
                 category: feeObj.category,
                 semester: parseInt(sem),
                 amount: amount,
-                description: feeObj.description
+                description: feeObj.description,
               });
             } else {
               feeDetails.push({
                 category: feeObj.category,
                 semester: parseInt(sem),
-                amount: amount
+                amount: amount,
               });
             }
           }
@@ -128,7 +128,7 @@ const MyFees = () => {
 
     if (feeDetails.length > 0) {
       confirmMsg += `📚 Academic Fees:\n`;
-      feeDetails.forEach(fee => {
+      feeDetails.forEach((fee) => {
         confirmMsg += `  • ${fee.category} (Sem ${fee.semester}): ₹${fee.amount.toLocaleString("en-IN")}\n`;
       });
       confirmMsg += `\n`;
@@ -136,7 +136,7 @@ const MyFees = () => {
 
     if (chargeDetails.length > 0) {
       confirmMsg += `💳 Charges:\n`;
-      chargeDetails.forEach(charge => {
+      chargeDetails.forEach((charge) => {
         confirmMsg += `  • ${charge.category} (Sem ${charge.semester}): ₹${charge.amount.toLocaleString("en-IN")}\n`;
       });
       confirmMsg += `\n`;
@@ -144,7 +144,7 @@ const MyFees = () => {
 
     if (fineDetails.length > 0) {
       confirmMsg += `⚠️ Late Payment Fines:\n`;
-      fineDetails.forEach(fine => {
+      fineDetails.forEach((fine) => {
         confirmMsg += `  • Semester ${fine.semester}: ₹${fine.amount.toLocaleString("en-IN")}\n`;
       });
       confirmMsg += `\n`;
@@ -227,17 +227,20 @@ const MyFees = () => {
         // Build description and notes for Razorpay
         let description = "Student Fee Payment";
         if (feeDetails.length > 0) {
-          const categories = feeDetails.map(f => f.category).join(', ');
-          description = categories.length > 50
-            ? `Academic Fees - ${categories.substring(0, 47)}...`
-            : `Academic Fees - ${categories}`;
+          const categories = feeDetails.map((f) => f.category).join(", ");
+          description =
+            categories.length > 50
+              ? `Academic Fees - ${categories.substring(0, 47)}...`
+              : `Academic Fees - ${categories}`;
         }
 
-        const allSemesters = [...new Set([
-          ...feeDetails.map(f => f.semester),
-          ...chargeDetails.map(c => c.semester),
-          ...fineDetails.map(f => f.semester)
-        ])];
+        const allSemesters = [
+          ...new Set([
+            ...feeDetails.map((f) => f.semester),
+            ...chargeDetails.map((c) => c.semester),
+            ...fineDetails.map((f) => f.semester),
+          ]),
+        ];
 
         const options = {
           key: orderRes.key_id,
@@ -278,11 +281,14 @@ const MyFees = () => {
             student_id: user.student_id || user.id,
             admission_number: user.admission_number || "N/A",
             student_name: `${user.first_name} ${user.last_name}`,
-            payment_type: feeDetails.length > 0 ? "academic_fees" : "fee_payment",
-            fee_categories: feeDetails.map(f => f.category).join(', ') || "N/A",
-            semesters: allSemesters.join(', ') || "N/A",
+            payment_type:
+              feeDetails.length > 0 ? "academic_fees" : "fee_payment",
+            fee_categories:
+              feeDetails.map((f) => f.category).join(", ") || "N/A",
+            semesters: allSemesters.join(", ") || "N/A",
             total_items: selectedFees.size,
-            wallet_credit_used: appliedWallet > 0 ? `₹${appliedWallet}` : "None"
+            wallet_credit_used:
+              appliedWallet > 0 ? `₹${appliedWallet}` : "None",
           },
           theme: {
             color: "#4f46e5",
@@ -359,7 +365,10 @@ const MyFees = () => {
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
             Batch {studentInfo?.batch_year || "N/A"} •{" "}
-            {studentInfo?.is_hosteller ? "Hosteller" : "Day Scholar"}
+            {studentInfo?.admission_type
+              ? studentInfo.admission_type.charAt(0).toUpperCase() +
+                studentInfo.admission_type.slice(1)
+              : "N/A"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -463,12 +472,13 @@ const MyFees = () => {
                 return (
                   <div
                     key={sem}
-                    className={`min-w-[180px] p-3 rounded-xl border-l-4 transition-all ${isPaid
-                      ? "bg-emerald-50/30 border-emerald-500"
-                      : d.fine.isOverdue
-                        ? "bg-red-50/30 border-red-500"
-                        : "bg-amber-50/30 border-amber-500"
-                      }`}
+                    className={`min-w-[180px] p-3 rounded-xl border-l-4 transition-all ${
+                      isPaid
+                        ? "bg-emerald-50/30 border-emerald-500"
+                        : d.fine.isOverdue
+                          ? "bg-red-50/30 border-red-500"
+                          : "bg-amber-50/30 border-amber-500"
+                    }`}
                   >
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-black text-gray-500">
@@ -482,12 +492,13 @@ const MyFees = () => {
                       {formatDate(d.fine.deadline)}
                     </div>
                     <div
-                      className={`text-[10px] font-black mt-1 uppercase ${isPaid
-                        ? "text-emerald-600"
-                        : d.fine.isOverdue
-                          ? "text-red-600"
-                          : "text-amber-600"
-                        }`}
+                      className={`text-[10px] font-black mt-1 uppercase ${
+                        isPaid
+                          ? "text-emerald-600"
+                          : d.fine.isOverdue
+                            ? "text-red-600"
+                            : "text-amber-600"
+                      }`}
                     >
                       {isPaid
                         ? "Cleared"
@@ -514,10 +525,11 @@ const MyFees = () => {
             <button
               key={sem}
               onClick={() => setActiveSemester(sem)}
-              className={`px-5 py-3 rounded-t-xl font-bold text-sm whitespace-nowrap transition-all ${isActive
-                ? "bg-white dark:bg-gray-800 text-indigo-600 border-b-2 border-indigo-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
+              className={`px-5 py-3 rounded-t-xl font-bold text-sm whitespace-nowrap transition-all ${
+                isActive
+                  ? "bg-white dark:bg-gray-800 text-indigo-600 border-b-2 border-indigo-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              }`}
             >
               {getSemesterLabel(sem)}
             </button>
@@ -600,7 +612,7 @@ const MyFees = () => {
                     <td className="px-6 py-4 text-right">
                       {selectedFees.has(fee.id) ? (
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                          <span className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                             ₹
                           </span>
                           <input
@@ -679,8 +691,8 @@ const MyFees = () => {
                     <td className="px-6 py-4 text-sm text-right font-bold text-emerald-600">
                       {semesterWise[activeSemester].fine.paid > 0
                         ? semesterWise[activeSemester].fine.paid.toLocaleString(
-                          "en-IN",
-                        )
+                            "en-IN",
+                          )
                         : "-"}
                     </td>
                     <td className="px-6 py-4 text-right">

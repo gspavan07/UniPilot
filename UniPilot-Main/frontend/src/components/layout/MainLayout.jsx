@@ -6,33 +6,24 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
-  Calendar,
   FileText,
   Settings,
   LogOut,
-  Menu,
-  X,
   Clock,
   Users,
-  Search,
-  ChevronRight,
   User as UserIcon,
-  Shield,
-  LifeBuoy,
   ClipboardCheck,
   Award,
   Wallet,
   Coins,
-  Library,
   Briefcase,
   Building,
   Bus,
   Home,
-  RefreshCw,
 } from "lucide-react";
 
 const MainLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -146,7 +137,7 @@ const MainLayout = () => {
       href: "/attendance",
       icon: ClipboardCheck,
       permission: ["academics:attendance:view", "academics:attendance:manage"], // Students view, Faculty manage
-      roles: ["student", "faculty", "hod", "principal", "super_admin"],
+      roles: ["student", "faculty", "hod", "principal"],
     },
 
     {
@@ -199,7 +190,8 @@ const MainLayout = () => {
       name: "Dept. Placements",
       href: "/placement/department",
       icon: Briefcase,
-      roles: ["hod"],
+      roles: ["hod", "faculty"],
+      isPlacementCoordinator: true,
     },
     {
       name: "My Placements",
@@ -227,7 +219,7 @@ const MainLayout = () => {
       isHostellerOnly: true, // Custom flag for student-level restriction
     },
     {
-      name: "Settings",
+      name: "Roles & Permissions",
       href: "/settings/roles",
       icon: Settings,
       permission: "settings:roles:manage",
@@ -262,6 +254,14 @@ const MainLayout = () => {
       return false;
     }
 
+    if (
+      item.isPlacementCoordinator &&
+      user?.role === "faculty" &&
+      !user?.is_placement_coordinator
+    ) {
+      return false;
+    }
+
     // 4. Strict Permission Check (if item has permission but user is not admin)
     if (item.permission) {
       if (Array.isArray(item.permission)) {
@@ -283,22 +283,10 @@ const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-white flex">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Archivo:wght@600;700;800&display=swap');
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-        .nav-link { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .nav-link:hover .nav-accent { width: 3px; }
-        .nav-accent { transition: width 0.25s ease; }
-        .tooltip { position: absolute; left: 100%; margin-left: 12px; padding: 6px 12px; background: #1f2937; color: white; font-size: 13px; font-weight: 500; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 50; }
-        .nav-link:hover .tooltip { opacity: 1; }
-        * { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
-        h1, h2, h3 { font-family: 'Archivo', sans-serif; letter-spacing: -0.02em; }
-      `}</style>
-
       <aside
-        className={`${sidebarOpen ? "w-64" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-out flex flex-col fixed h-full z-40`}
+        className={`${sidebarOpen ? "w-52" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-out flex flex-col fixed h-full z-40`}
         onMouseEnter={() => setSidebarOpen(true)}
-        onMouseLeave={() => setSidebarOpen(false)}
+        // onMouseLeave={() => setSidebarOpen(false)}
       >
         <div
           className={`h-16 flex items-center border-b border-gray-100 ${sidebarOpen ? "justify-start" : "justify-center"}`}
@@ -406,45 +394,8 @@ const MainLayout = () => {
       </aside>
 
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-64" : "ml-16"}`}
+        className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-52 " : "ml-16"}`}
       >
-        {/* <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
-          <div className="px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-1 h-4 bg-blue-600 rounded-full" />
-                    <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest">
-                      Current Module
-                    </span>
-                  </div>
-                  <h1 className="text-3xl font-bold text-black tracking-tight">
-                    {filteredNavigation.find((item) => isActive(item.href))
-                      ?.name || "Dashboard"}
-                  </h1>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-black">
-                    {user?.first_name} {user?.last_name}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user?.role?.replace(/_/g, " ")}
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">
-                    {user?.first_name?.[0]}
-                    {user?.last_name?.[0]}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header> */}
-
         <main className="flex-1  overflow-y-auto bg-gray-50">
           <Outlet />
         </main>

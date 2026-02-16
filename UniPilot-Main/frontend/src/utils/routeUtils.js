@@ -11,9 +11,9 @@ export const getLandingPage = (user) => {
   // Use role_data slug    // Higher level staff roles can land on their specific module dashboard
   const roleSlug = user.role_data?.slug;
 
-  if (user.is_placement_coordinator) {
-    return "/placement/department";
-  }
+  // if (user.is_placement_coordinator) {
+  //   return "/placement/department";
+  // }
 
   switch (roleSlug) {
     case "finance_staff":

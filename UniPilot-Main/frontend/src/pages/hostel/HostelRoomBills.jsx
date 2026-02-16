@@ -24,7 +24,7 @@ import {
   Wrench,
   Trash2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import {
   fetchRoomsForBilling,
@@ -255,13 +255,13 @@ const HostelRoomBills = () => {
   // Get unique floors from filtered building
   const availableFloors = buildingFilter
     ? [
-      ...new Set(
-        roomsForBilling
-          .filter((r) => r.building?.id === buildingFilter)
-          .map((r) => r.floor?.id)
-          .filter(Boolean),
-      ),
-    ]
+        ...new Set(
+          roomsForBilling
+            .filter((r) => r.building?.id === buildingFilter)
+            .map((r) => r.floor?.id)
+            .filter(Boolean),
+        ),
+      ]
     : [];
 
   // Filter rooms
@@ -277,19 +277,34 @@ const HostelRoomBills = () => {
 
   const getMonthName = (month) => {
     const months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
     return months[month - 1] || "N/A";
   };
 
   const getBillIcon = (type) => {
     switch (type) {
-      case 'electricity': return <Zap className="w-5 h-5 text-amber-500" />;
-      case 'water': return <Droplets className="w-5 h-5 text-blue-500" />;
-      case 'internet': return <Wifi className="w-5 h-5 text-cyan-500" />;
-      case 'maintenance': return <Wrench className="w-5 h-5 text-gray-500" />;
-      default: return <CreditCard className="w-5 h-5 text-purple-500" />;
+      case "electricity":
+        return <Zap className="w-5 h-5 text-amber-500" />;
+      case "water":
+        return <Droplets className="w-5 h-5 text-blue-500" />;
+      case "internet":
+        return <Wifi className="w-5 h-5 text-cyan-500" />;
+      case "maintenance":
+        return <Wrench className="w-5 h-5 text-gray-500" />;
+      default:
+        return <CreditCard className="w-5 h-5 text-purple-500" />;
     }
   };
 
@@ -307,7 +322,6 @@ const HostelRoomBills = () => {
   return (
     <div className="min-h-screen bg-gray-50/30 pb-20 font-sans text-gray-900 selection:bg-blue-100">
       <div className="max-w-[1600px] mx-auto p-6 lg:p-10 space-y-10">
-
         {/* Top Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-5">
@@ -319,8 +333,12 @@ const HostelRoomBills = () => {
               <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-900 transition-colors" />
             </button>
             <div className="space-y-1">
-              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Room Billing</h1>
-              <p className="text-gray-500 font-medium text-lg">Manage utility charges and track payments.</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+                Room Billing
+              </h1>
+              <p className="text-gray-500 font-medium text-lg">
+                Manage utility charges and track payments.
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -344,16 +362,52 @@ const HostelRoomBills = () => {
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: "Total Rooms", value: roomsForBilling.length, icon: Home, bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100" },
-            { label: "Occupied Rooms", value: roomsForBilling.filter((r) => r.current_occupancy > 0).length, icon: Users, bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100" },
-            { label: "Filtered View", value: filteredRooms.length, icon: Filter, bg: "bg-indigo-50", text: "text-indigo-600", border: "border-indigo-100" },
-            { label: "Total Capacity", value: roomsForBilling.reduce((sum, r) => sum + r.capacity, 0), icon: Building, bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100" }
+            {
+              label: "Total Rooms",
+              value: roomsForBilling.length,
+              icon: Home,
+              bg: "bg-blue-50",
+              text: "text-blue-600",
+              border: "border-blue-100",
+            },
+            {
+              label: "Occupied Rooms",
+              value: roomsForBilling.filter((r) => r.current_occupancy > 0)
+                .length,
+              icon: Users,
+              bg: "bg-emerald-50",
+              text: "text-emerald-600",
+              border: "border-emerald-100",
+            },
+            {
+              label: "Filtered View",
+              value: filteredRooms.length,
+              icon: Filter,
+              bg: "bg-indigo-50",
+              text: "text-indigo-600",
+              border: "border-indigo-100",
+            },
+            {
+              label: "Total Capacity",
+              value: roomsForBilling.reduce((sum, r) => sum + r.capacity, 0),
+              icon: Building,
+              bg: "bg-purple-50",
+              text: "text-purple-600",
+              border: "border-purple-100",
+            },
           ].map((stat, idx) => (
-            <div key={idx} className={`bg-white p-6 rounded-2xl border ${stat.border} shadow-sm hover:shadow-md transition-all`}>
+            <div
+              key={idx}
+              className={`bg-white p-6 rounded-2xl border ${stat.border} shadow-sm hover:shadow-md transition-all`}
+            >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
-                  <p className="text-4xl font-black text-gray-900 mt-2 tracking-tight">{stat.value}</p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    {stat.label}
+                  </p>
+                  <p className="text-4xl font-black text-gray-900 mt-2 tracking-tight">
+                    {stat.value}
+                  </p>
                 </div>
                 <div className={`p-3 rounded-xl ${stat.bg} ${stat.text}`}>
                   <stat.icon className="w-6 h-6" />
@@ -388,7 +442,11 @@ const HostelRoomBills = () => {
                 className="w-full pl-10 pr-8 py-2.5 bg-gray-50 hover:bg-gray-100 border-none rounded-lg text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer"
               >
                 <option value="">All Buildings</option>
-                {buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {buildings.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="relative min-w-[180px]">
@@ -400,9 +458,15 @@ const HostelRoomBills = () => {
                 className="w-full pl-10 pr-8 py-2.5 bg-gray-50 hover:bg-gray-100 border-none rounded-lg text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer disabled:opacity-50"
               >
                 <option value="">All Floors</option>
-                {availableFloors.map(fid => {
-                  const floor = roomsForBilling.find(r => r.floor?.id === fid)?.floor;
-                  return <option key={fid} value={fid}>Floor {floor?.floor_number}</option>
+                {availableFloors.map((fid) => {
+                  const floor = roomsForBilling.find(
+                    (r) => r.floor?.id === fid,
+                  )?.floor;
+                  return (
+                    <option key={fid} value={fid}>
+                      Floor {floor?.floor_number}
+                    </option>
+                  );
                 })}
               </select>
             </div>
@@ -415,11 +479,21 @@ const HostelRoomBills = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100">
-                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Room Details</th>
-                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Occupancy</th>
-                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">Last Billing</th>
-                  <th className="px-6 py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Room Details
+                  </th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Occupancy
+                  </th>
+                  <th className="px-6 py-5 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Last Billing
+                  </th>
+                  <th className="px-6 py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -429,23 +503,36 @@ const HostelRoomBills = () => {
                       <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Home className="w-10 h-10 text-gray-300" />
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900">No rooms found</h3>
-                      <p className="text-gray-500 mt-1">Try adjusting your filters or search terms</p>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        No rooms found
+                      </h3>
+                      <p className="text-gray-500 mt-1">
+                        Try adjusting your filters or search terms
+                      </p>
                     </td>
                   </tr>
                 ) : (
                   filteredRooms.map((room) => (
-                    <tr key={room.id} className="group hover:bg-blue-50/40 transition-colors">
+                    <tr
+                      key={room.id}
+                      className="group hover:bg-blue-50/40 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
                             {room.room_number.substring(0, 3)}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900 text-lg">Room {room.room_number}</p>
+                            <p className="font-bold text-gray-900 text-lg">
+                              Room {room.room_number}
+                            </p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className={`w-2 h-2 rounded-full ${room.status === 'active' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                              <span className="text-xs font-medium text-gray-500 capitalize">{room.status}</span>
+                              <span
+                                className={`w-2 h-2 rounded-full ${room.status === "active" ? "bg-green-500" : "bg-gray-300"}`}
+                              ></span>
+                              <span className="text-xs font-medium text-gray-500 capitalize">
+                                {room.status}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -456,32 +543,46 @@ const HostelRoomBills = () => {
                             <Building className="w-3.5 h-3.5 text-gray-400" />
                             {room.building?.name}
                           </p>
-                          <p className="text-xs font-medium text-gray-500 pl-5.5">Floor {room.floor?.floor_number}</p>
+                          <p className="text-xs font-medium text-gray-500 pl-5.5">
+                            Floor {room.floor?.floor_number}
+                          </p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-32 h-2.5 bg-gray-100 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${room.current_occupancy >= room.capacity ? 'bg-red-500' : 'bg-blue-500'}`}
-                              style={{ width: `${(room.current_occupancy / room.capacity) * 100}%` }}
+                              className={`h-full rounded-full ${room.current_occupancy >= room.capacity ? "bg-red-500" : "bg-blue-500"}`}
+                              style={{
+                                width: `${(room.current_occupancy / room.capacity) * 100}%`,
+                              }}
                             ></div>
                           </div>
-                          <span className="text-sm font-bold text-gray-700">{room.current_occupancy}/{room.capacity}</span>
+                          <span className="text-sm font-bold text-gray-700">
+                            {room.current_occupancy}/{room.capacity}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         {room.last_bill_date ? (
                           <div className="flex flex-col">
-                            <span className="text-sm font-bold text-gray-900">{new Date(room.last_bill_date).toLocaleDateString()}</span>
-                            <span className="text-xs font-medium text-blue-600 uppercase tracking-wide mt-0.5">{room.last_bill_type}</span>
+                            <span className="text-sm font-bold text-gray-900">
+                              {new Date(
+                                room.last_bill_date,
+                              ).toLocaleDateString()}
+                            </span>
+                            <span className="text-xs font-medium text-blue-600 uppercase tracking-wide mt-0.5">
+                              {room.last_bill_type}
+                            </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400 italic">No history</span>
+                          <span className="text-sm text-gray-400 italic">
+                            No history
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-end gap-2 opacity-100 transition-opacity">
                           <button
                             onClick={() => handleShowHistory(room)}
                             className="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-gray-200 rounded-xl transition-all"
@@ -514,22 +615,43 @@ const HostelRoomBills = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 tracking-tight">New Bill</h3>
-                  <p className="text-sm text-gray-500 font-medium">{selectedRoom.building?.name} • Room {selectedRoom.room_number}</p>
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">
+                    New Bill
+                  </h3>
+                  <p className="text-sm text-gray-500 font-medium">
+                    {selectedRoom.building?.name} • Room{" "}
+                    {selectedRoom.room_number}
+                  </p>
                 </div>
-                <button onClick={() => { setShowAddBillModal(false); resetForm(); }} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                <button
+                  onClick={() => {
+                    setShowAddBillModal(false);
+                    resetForm();
+                  }}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <form onSubmit={handleSubmitBill} className="p-8 space-y-6 overflow-y-auto">
+              <form
+                onSubmit={handleSubmitBill}
+                className="p-8 space-y-6 overflow-y-auto"
+              >
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Type</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Type
+                    </label>
                     <div className="relative">
                       <select
                         required
                         value={formData.bill_type}
-                        onChange={(e) => setFormData({ ...formData, bill_type: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            bill_type: e.target.value,
+                          })
+                        }
                         className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
                       >
                         <option value="electricity">Electricity</option>
@@ -543,14 +665,21 @@ const HostelRoomBills = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Amount (₹)</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Amount (₹)
+                    </label>
                     <input
                       type="number"
                       required
                       min="0"
                       step="0.01"
                       value={formData.total_amount}
-                      onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          total_amount: e.target.value,
+                        })
+                      }
                       className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all placeholder:font-normal"
                       placeholder="0.00"
                     />
@@ -559,39 +688,68 @@ const HostelRoomBills = () => {
 
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Month</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Month
+                    </label>
                     <div className="relative">
                       <select
                         required
                         value={formData.billing_month}
-                        onChange={(e) => setFormData({ ...formData, billing_month: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            billing_month: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                          <option key={m} value={m}>
+                            {getMonthName(m)}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Year</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Year
+                    </label>
                     <div className="relative">
                       <select
                         required
                         value={formData.billing_year}
-                        onChange={(e) => setFormData({ ...formData, billing_year: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            billing_year: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
                       >
-                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                        {Array.from(
+                          { length: 5 },
+                          (_, i) => new Date().getFullYear() - 1 + i,
+                        ).map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Note</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    Note
+                  </label>
                   <textarea
                     rows="3"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl font-medium text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none resize-none transition-all"
                     placeholder="Add any details about this bill..."
                   />
@@ -600,7 +758,10 @@ const HostelRoomBills = () => {
                 <div className="pt-4 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => { setShowAddBillModal(false); resetForm(); }}
+                    onClick={() => {
+                      setShowAddBillModal(false);
+                      resetForm();
+                    }}
                     className="flex-1 py-3.5 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-colors"
                   >
                     Cancel
@@ -610,7 +771,11 @@ const HostelRoomBills = () => {
                     disabled={operationStatus === "loading"}
                     className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 hover:shadow-blue-300 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
                   >
-                    {operationStatus === "loading" ? <Loader2 className="w-5 h-5 animate-spin" /> : "Generate Bill"}
+                    {operationStatus === "loading" ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      "Generate Bill"
+                    )}
                   </button>
                 </div>
               </form>
@@ -624,10 +789,20 @@ const HostelRoomBills = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 tracking-tight">Bulk Import</h3>
-                  <p className="text-sm text-gray-500 font-medium">Upload CSV to generate multiple bills</p>
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">
+                    Bulk Import
+                  </h3>
+                  <p className="text-sm text-gray-500 font-medium">
+                    Upload CSV to generate multiple bills
+                  </p>
                 </div>
-                <button onClick={() => { setShowImportModal(false); resetForm(); }} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    resetForm();
+                  }}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -639,8 +814,14 @@ const HostelRoomBills = () => {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Type</label>
-                      <select value={importBillType} onChange={(e) => setImportBillType(e.target.value)} className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                        Type
+                      </label>
+                      <select
+                        value={importBillType}
+                        onChange={(e) => setImportBillType(e.target.value)}
+                        className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                      >
                         <option value="electricity">Electricity</option>
                         <option value="water">Water</option>
                         <option value="internet">Internet</option>
@@ -649,15 +830,42 @@ const HostelRoomBills = () => {
                     </div>
                     <div className="col-span-2 grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Month</label>
-                        <select value={importMonth} onChange={(e) => setImportMonth(parseInt(e.target.value))} className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                          Month
+                        </label>
+                        <select
+                          value={importMonth}
+                          onChange={(e) =>
+                            setImportMonth(parseInt(e.target.value))
+                          }
+                          className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                            <option key={m} value={m}>
+                              {getMonthName(m)}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Year</label>
-                        <select value={importYear} onChange={(e) => setImportYear(parseInt(e.target.value))} className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none">
-                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                          Year
+                        </label>
+                        <select
+                          value={importYear}
+                          onChange={(e) =>
+                            setImportYear(parseInt(e.target.value))
+                          }
+                          className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                        >
+                          {Array.from(
+                            { length: 5 },
+                            (_, i) => new Date().getFullYear() - 1 + i,
+                          ).map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -665,19 +873,30 @@ const HostelRoomBills = () => {
                 </div>
 
                 <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-blue-400 hover:bg-blue-50/20 transition-all cursor-pointer relative group">
-                  <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
                   <div className="inline-flex p-4 bg-gray-50 group-hover:bg-white rounded-full mb-4 transition-colors shadow-sm">
                     <Upload className="w-8 h-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
                   </div>
-                  <p className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{csvFile ? csvFile.name : "Click to Upload CSV"}</p>
-                  <p className="text-sm text-gray-400 mt-1">or drag and drop file here</p>
+                  <p className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
+                    {csvFile ? csvFile.name : "Click to Upload CSV"}
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    or drag and drop file here
+                  </p>
                 </div>
 
                 {parsedBills.length > 0 && (
                   <div className="space-y-4">
                     <h4 className="text-sm font-bold text-gray-900 flex justify-between items-center">
                       <span>Preview Data</span>
-                      <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs font-bold">{parsedBills.length} items</span>
+                      <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs font-bold">
+                        {parsedBills.length} items
+                      </span>
                     </h4>
                     <div className="max-h-56 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50">
                       <table className="w-full text-sm text-left">
@@ -691,9 +910,15 @@ const HostelRoomBills = () => {
                         <tbody className="divide-y divide-gray-200/50">
                           {parsedBills.slice(0, 50).map((b, i) => (
                             <tr key={i}>
-                              <td className="px-4 py-2.5 text-gray-900 font-bold">{b.room_id}</td>
-                              <td className="px-4 py-2.5 text-gray-900">₹{b.total_amount}</td>
-                              <td className="px-4 py-2.5 text-gray-500 truncate max-w-[150px]">{b.description || "-"}</td>
+                              <td className="px-4 py-2.5 text-gray-900 font-bold">
+                                {b.room_id}
+                              </td>
+                              <td className="px-4 py-2.5 text-gray-900">
+                                ₹{b.total_amount}
+                              </td>
+                              <td className="px-4 py-2.5 text-gray-500 truncate max-w-[150px]">
+                                {b.description || "-"}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -708,20 +933,38 @@ const HostelRoomBills = () => {
                       <AlertCircle className="w-5 h-5" /> Validation Errors
                     </div>
                     <ul className="list-disc pl-5 space-y-1 opacity-80">
-                      {importErrors.slice(0, 5).map((e, i) => <li key={i}>Row {e.row}: {e.error}</li>)}
-                      {importErrors.length > 5 && <li>...and {importErrors.length - 5} more</li>}
+                      {importErrors.slice(0, 5).map((e, i) => (
+                        <li key={i}>
+                          Row {e.row}: {e.error}
+                        </li>
+                      ))}
+                      {importErrors.length > 5 && (
+                        <li>...and {importErrors.length - 5} more</li>
+                      )}
                     </ul>
                   </div>
                 )}
               </div>
               <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                <button onClick={() => { setShowImportModal(false); resetForm(); }} className="px-6 py-3 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    resetForm();
+                  }}
+                  className="px-6 py-3 text-gray-700 font-bold hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handleBulkImport}
-                  disabled={!parsedBills.length || operationStatus === "loading"}
+                  disabled={
+                    !parsedBills.length || operationStatus === "loading"
+                  }
                   className="px-8 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-gray-200"
                 >
-                  {operationStatus === "loading" ? "Processing..." : "Import Bills"}
+                  {operationStatus === "loading"
+                    ? "Processing..."
+                    : "Import Bills"}
                 </button>
               </div>
             </div>
@@ -734,59 +977,100 @@ const HostelRoomBills = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
               <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 tracking-tight">Billing History</h3>
-                  <p className="text-sm text-gray-500 font-medium mt-1">Room {selectedRoom.room_number}, {selectedRoom.building?.name}</p>
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">
+                    Billing History
+                  </h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">
+                    Room {selectedRoom.room_number},{" "}
+                    {selectedRoom.building?.name}
+                  </p>
                 </div>
-                <button onClick={() => { setShowHistoryModal(false); setSelectedRoom(null); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+                <button
+                  onClick={() => {
+                    setShowHistoryModal(false);
+                    setSelectedRoom(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
                 {status === "loading" ? (
-                  <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>
+                  <div className="flex justify-center py-20">
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                  </div>
                 ) : roomBills.length === 0 ? (
                   <div className="text-center py-24">
                     <FileText className="w-16 h-16 mx-auto text-gray-200 mb-6" />
-                    <h4 className="text-xl font-bold text-gray-900">No records found</h4>
-                    <p className="text-gray-400 mt-2">This room has no billing history yet.</p>
+                    <h4 className="text-xl font-bold text-gray-900">
+                      No records found
+                    </h4>
+                    <p className="text-gray-400 mt-2">
+                      This room has no billing history yet.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {roomBills.map((bill) => (
-                      <div key={bill.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 hover:border-blue-300 hover:shadow-md transition-all group">
+                      <div
+                        key={bill.id}
+                        className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6 hover:border-blue-300 hover:shadow-md transition-all group"
+                      >
                         <div className="flex items-center gap-5 w-full sm:w-auto">
                           <div className="p-4 bg-gray-50 rounded-xl text-gray-700 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                             {getBillIcon(bill.bill_type)}
                           </div>
                           <div>
                             <div className="flex items-center gap-3">
-                              <h4 className="font-bold text-gray-900 capitalize text-lg">{bill.bill_type} Bill</h4>
-                              {bill.status === 'distributed' && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                              <h4 className="font-bold text-gray-900 capitalize text-lg">
+                                {bill.bill_type} Bill
+                              </h4>
+                              {bill.status === "distributed" && (
+                                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                              )}
                             </div>
-                            <p className="text-sm text-gray-500 font-medium mt-0.5">{getMonthName(bill.billing_month)} {bill.billing_year}</p>
+                            <p className="text-sm text-gray-500 font-medium mt-0.5">
+                              {getMonthName(bill.billing_month)}{" "}
+                              {bill.billing_year}
+                            </p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-8 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-gray-100 pt-4 sm:pt-0">
                           <div className="text-right">
-                            <p className="text-2xl font-black text-gray-900">₹{bill.total_amount}</p>
-                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide ${bill.status === "distributed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                            <p className="text-2xl font-black text-gray-900">
+                              ₹{bill.total_amount}
+                            </p>
+                            <span
+                              className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide ${bill.status === "distributed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}
+                            >
                               {bill.status}
                             </span>
                           </div>
 
                           <div className="flex items-center gap-2">
                             {bill.status === "pending" && (
-                              <button onClick={() => handleDistributeBill(bill.id)} className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-wide transition-colors" title="Distribute">
+                              <button
+                                onClick={() => handleDistributeBill(bill.id)}
+                                className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-wide transition-colors"
+                                title="Distribute"
+                              >
                                 Distribute
                               </button>
                             )}
                             <div className="h-8 w-px bg-gray-100 mx-2"></div>
-                            <button onClick={() => handleEditBill(bill)} className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">
+                            <button
+                              onClick={() => handleEditBill(bill)}
+                              className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
                               <Wrench className="w-5 h-5" />
                             </button>
-                            <button onClick={() => handleDeleteBill(bill.id)} className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                            <button
+                              onClick={() => handleDeleteBill(bill.id)}
+                              className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                            >
                               <Trash2 className="w-5 h-5" />
                             </button>
                           </div>
@@ -806,68 +1090,135 @@ const HostelRoomBills = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
               <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
                 <div>
-                  <h3 className="text-xl font-black text-gray-900">Edit Bill</h3>
-                  <p className="text-sm text-gray-500 font-medium">{selectedBill.bill_type} • {getMonthName(selectedBill.billing_month)} {selectedBill.billing_year}</p>
+                  <h3 className="text-xl font-black text-gray-900">
+                    Edit Bill
+                  </h3>
+                  <p className="text-sm text-gray-500 font-medium">
+                    {selectedBill.bill_type} •{" "}
+                    {getMonthName(selectedBill.billing_month)}{" "}
+                    {selectedBill.billing_year}
+                  </p>
                 </div>
-                <button onClick={() => { setShowEditBillModal(false); setSelectedBill(null); }} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-all">
+                <button
+                  onClick={() => {
+                    setShowEditBillModal(false);
+                    setSelectedBill(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-all"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <form onSubmit={handleUpdateBill} className="p-8 space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Amount (₹)</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    Amount (₹)
+                  </label>
                   <input
                     type="number"
                     required
                     value={formData.total_amount}
-                    onChange={(e) => setFormData({ ...formData, total_amount: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_amount: e.target.value })
+                    }
                     className="w-full p-4 bg-gray-50 border border-transparent hover:bg-white hover:border-blue-200 rounded-2xl font-bold text-xl text-gray-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white outline-none transition-all"
                   />
                   {selectedBill.status === "distributed" && (
                     <p className="text-xs text-amber-600 font-bold flex items-center gap-1.5 bg-amber-50 p-3 rounded-xl">
-                      <AlertCircle className="w-4 h-4" /> Updates will reflect on student fees automatically.
+                      <AlertCircle className="w-4 h-4" /> Updates will reflect
+                      on student fees automatically.
                     </p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Month</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Month
+                    </label>
                     <div className="relative">
-                      <select value={formData.billing_month} onChange={(e) => setFormData({ ...formData, billing_month: parseInt(e.target.value) })} className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:border-blue-500 focus:bg-white outline-none">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                      <select
+                        value={formData.billing_month}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            billing_month: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:border-blue-500 focus:bg-white outline-none"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                          <option key={m} value={m}>
+                            {getMonthName(m)}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Year</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                      Year
+                    </label>
                     <div className="relative">
-                      <select value={formData.billing_year} onChange={(e) => setFormData({ ...formData, billing_year: parseInt(e.target.value) })} className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:border-blue-500 focus:bg-white outline-none">
-                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                      <select
+                        value={formData.billing_year}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            billing_year: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl appearance-none font-bold text-gray-900 focus:border-blue-500 focus:bg-white outline-none"
+                      >
+                        {Array.from(
+                          { length: 5 },
+                          (_, i) => new Date().getFullYear() - 1 + i,
+                        ).map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Note</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    Note
+                  </label>
                   <textarea
                     rows="3"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     className="w-full p-3.5 bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white rounded-2xl font-medium text-gray-900 focus:border-blue-500 focus:bg-white outline-none resize-none transition-all"
                   />
                 </div>
 
                 <div className="pt-2 flex gap-3">
-                  <button type="button" onClick={() => { setShowEditBillModal(false); setSelectedBill(null); }} className="flex-1 py-3.5 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all">Save Changes</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditBillModal(false);
+                      setSelectedBill(null);
+                    }}
+                    className="flex-1 py-3.5 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all"
+                  >
+                    Save Changes
+                  </button>
                 </div>
               </form>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
