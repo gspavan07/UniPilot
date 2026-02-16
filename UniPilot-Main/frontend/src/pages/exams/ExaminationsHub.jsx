@@ -12,6 +12,7 @@ import {
   Download,
   Info,
   FileText,
+  Clock,
 } from "lucide-react";
 import api from "../../utils/api";
 import { toast } from "react-hot-toast";
@@ -57,7 +58,6 @@ const ExaminationsHub = () => {
     const breakup = payment.amount_breakup || {};
     const semester = payment.exam_cycle?.semester || "N/A";
 
-    // Prepare header info that will be used for the receipt identification
     const headerInfo = {
       transaction_id: payment.transaction?.transaction_id || "N/A",
       student: user,
@@ -71,7 +71,6 @@ const ExaminationsHub = () => {
 
     const items = [];
 
-    // 1. Base Fee
     if (breakup.base_fee > 0) {
       items.push({
         ...headerInfo,
@@ -81,7 +80,6 @@ const ExaminationsHub = () => {
       });
     }
 
-    // 2. Late Fine
     if (breakup.late_fine > 0) {
       items.push({
         ...headerInfo,
@@ -91,7 +89,6 @@ const ExaminationsHub = () => {
       });
     }
 
-    // 3. Condonation Fee
     if (breakup.condonation > 0) {
       items.push({
         ...headerInfo,
@@ -101,7 +98,6 @@ const ExaminationsHub = () => {
       });
     }
 
-    // Fallback if no breakup is available
     if (items.length === 0) {
       items.push({
         ...headerInfo,
@@ -131,7 +127,6 @@ const ExaminationsHub = () => {
       }
     }
 
-    // Add condonation fee if applicable
     if (eligibility?.has_condonation && cycle.condonation_fee_amount) {
       total += parseFloat(cycle.condonation_fee_amount);
     }
@@ -188,8 +183,11 @@ const ExaminationsHub = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="relative">
+          <div className="w-12 h-12 rounded-full border-4 border-gray-100"></div>
+          <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+        </div>
       </div>
     );
   }
@@ -197,491 +195,329 @@ const ExaminationsHub = () => {
   const cyclesNeedingFee = exams.filter((c) => c.needs_fee);
 
   return (
-    <div className="space-y-6 text-gray-900 dark:text-white pb-20 p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-bold font-display flex items-center">
-            <Award className="w-8 h-8 mr-3 text-blue-600" />
-            Examinations Hub
+    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-blue-50 selection:text-blue-900 pb-20">
+
+      {/* Top Navigation Bar */}
+      <header className="border-b border-gray-100 bg-white sticky top-0 z-10 backdrop-blur-md bg-white/90">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
+              <Award className="w-5 h-5" />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-gray-900">Examinations Hub</span>
+          </div>
+
+          <nav className="flex space-x-1 bg-gray-50/80 p-1 rounded-xl border border-gray-100">
+            {/* Styled Tabs */}
+            {['schedule', 'payments'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`
+                    px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2
+                    ${activeTab === tab
+                    ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-200/50"}
+                  `}
+              >
+                {tab === 'schedule' ? <Calendar className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                {tab === 'schedule' ? 'Schedule' : 'Payments'}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 py-10 animate-fade-in-up">
+
+        {/* Dynamic Header */}
+        <div className="mb-10 text-center md:text-left">
+          <h1 className="text-4xl font-light text-gray-900 mb-3 tracking-tight">
+            {activeTab === 'schedule' ? 'Examination Schedule' : 'Fee Status & History'}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Manage your exam schedules and fee payments.
+          <p className="text-gray-500 font-normal flex items-center justify-center md:justify-start gap-2 text-lg">
+            {activeTab === 'schedule'
+              ? `Upcoming sessions for ${new Date().getFullYear()} Academic Year`
+              : 'manage your recurring examination fees'}
           </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-full md:w-auto">
-          <button
-            onClick={() => setActiveTab("schedule")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === "schedule"
-                ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Schedule
-          </button>
-          <button
-            onClick={() => setActiveTab("payments")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === "payments"
-                ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            Exam Fee
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === "schedule" ? (
-        // SCHEDULE TAB
-        <div className="space-y-4">
-          {exams.length > 0 ? (
-            exams.map((exam) => {
+        {/* Content Area */}
+        {activeTab === "schedule" ? (
+          <div className="space-y-16">
+            {exams.length > 0 ? exams.map((exam) => {
               const eligibility = exam.student_eligibilities?.[0];
               const needsFee = exam.needs_fee;
               const paymentStatus = exam.student_payments?.[0]?.status;
-              const isEligible =
-                eligibility?.hod_permission &&
-                eligibility?.fee_clear_permission;
+              const isEligible = eligibility?.hod_permission && eligibility?.fee_clear_permission;
 
               return (
-                <div
-                  key={exam.id}
-                  className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700"
-                >
-                  <div className="flex justify-between items-start mb-4">
+                <section key={exam.id} className="group relative">
+                  <div className="absolute -left-10 top-0 bottom-0 w-px bg-gray-100 hidden xl:block"></div>
+
+                  {/* Exam Cycle Header */}
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 pb-6 border-b border-gray-100">
                     <div>
-                      <h3 className="text-lg font-bold">
-                        {exam.cycle_name.replace(/_/g, " ")}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Semester {exam.semester} • {exam.exam_month}{" "}
-                        {exam.exam_year}
-                      </p>
-                    </div>
-                    {needsFee &&
-                      (paymentStatus === "completed" ? (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded-full text-xs font-bold">
-                          Registered
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
+                          {exam.semester} Semester
                         </span>
-                      ) : (
-                        <button
-                          onClick={() => setActiveTab("payments")}
-                          className="px-3 py-1 cursor-pointer bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 rounded-lg border border-yellow-700 text-xs font-bold"
-                        >
-                          Pay Fee
-                        </button>
-                      ))}
-                  </div>
-
-                  {/* Timetable */}
-                  {exam.timetables && exam.timetables.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 dark:bg-gray-900/50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Course
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Session
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Time
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                          {exam.timetables
-                            .sort(
-                              (a, b) =>
-                                new Date(a.exam_date) - new Date(b.exam_date),
-                            )
-                            .map((timetable) => (
-                              <tr
-                                key={timetable.id}
-                                className="hover:bg-gray-50 dark:hover:bg-gray-900/30"
-                              >
-                                <td className="px-6 py-4">
-                                  <div className="font-bold text-sm">
-                                    {timetable.course.code}
-                                  </div>
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                                    {timetable.course.name}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 text-sm font-medium">
-                                  {new Date(
-                                    timetable.exam_date,
-                                  ).toLocaleDateString("en-US", {
-                                    weekday: "short",
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-xs font-bold ${timetable.session === "morning"
-                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                                        : "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
-                                      }`}
-                                  >
-                                    {timetable.session.charAt(0).toUpperCase() +
-                                      timetable.session.slice(1)}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 text-sm font-medium">
-                                  {timetable.start_time.slice(0, 5)} -{" "}
-                                  {timetable.end_time.slice(0, 5)}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-                      <p className="text-sm">No timetable available yet</p>
-                    </div>
-                  )}
-
-                  {/* Eligibility Issues */}
-                  {eligibility && !isEligible && (
-                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                      <p className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wide mb-2">
-                        Eligibility Issues
-                      </p>
-                      <div className="space-y-1">
-                        {!eligibility.hod_permission && (
-                          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                            <XCircle className="w-4 h-4" />
-                            HOD permission required
-                          </div>
-                        )}
-                        {!eligibility.fee_clear_permission && (
-                          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                            <XCircle className="w-4 h-4" />
-                            Fee clearance required (₹
-                            {(
-                              eligibility.fee_balance || 0
-                            ).toLocaleString()}{" "}
-                            pending)
-                          </div>
-                        )}
-                        {eligibility.has_condonation && (
-                          <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
-                            <AlertTriangle className="w-4 h-4" />
-                            Condonation fee applicable
+                        {needsFee && (
+                          <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded ${paymentStatus === "completed" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"
+                            }`}>
+                            {paymentStatus === "completed" ? (
+                              <><CheckCircle className="w-3.5 h-3.5" /> Registered</>
+                            ) : (
+                              <><AlertCircle className="w-3.5 h-3.5" /> Fee Pending</>
+                            )}
                           </div>
                         )}
                       </div>
+                      <h2 className="text-2xl font-semibold text-gray-900">
+                        {exam.cycle_name.replace(/_/g, " ")}
+                      </h2>
+                    </div>
+                    {needsFee && paymentStatus !== "completed" && (
+                      <button
+                        onClick={() => setActiveTab("payments")}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-full transition-all shadow-lg shadow-blue-200 hover:shadow-blue-300 transform hover:-translate-y-0.5"
+                      >
+                        Pay Registration Fee
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Issues Alert */}
+                  {eligibility && !isEligible && (
+                    <div className="mb-8 p-6 bg-gray-50/50 border border-gray-200 rounded-2xl flex gap-5 items-start">
+                      <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
+                        <AlertTriangle className="w-5 h-5 text-gray-700" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-gray-900 mb-2">Action Required</h4>
+                        <ul className="space-y-2">
+                          {!eligibility.hod_permission && (
+                            <li className="text-sm text-gray-600 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                              Department HOD approval is pending
+                            </li>
+                          )}
+                          {!eligibility.fee_clear_permission && (
+                            <li className="text-sm text-gray-600 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                              Tuition fee clearance pending (Outstanding: ₹{(eligibility.fee_balance || 0).toLocaleString()})
+                            </li>
+                          )}
+                        </ul>
+                      </div>
                     </div>
                   )}
-                </div>
+
+                  {/* Timetable Grid */}
+                  {exam.timetables?.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+                      {exam.timetables
+                        .sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date))
+                        .map((timetable) => (
+                          <div key={timetable.id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-200 hover:ring-4 hover:ring-blue-50 hover:shadow-xl transition-all duration-300 group/card relative overflow-hidden">
+                            <div className="flex justify-between items-start mb-5">
+                              <div className="text-center bg-gray-50 rounded-xl p-3 min-w-[4rem] border border-gray-100">
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                  {new Date(timetable.exam_date).toLocaleDateString("en-US", { month: "short" })}
+                                </div>
+                                <div className="text-2xl font-black text-gray-900 leading-none mt-1">
+                                  {new Date(timetable.exam_date).toLocaleDateString("en-US", { day: "numeric" })}
+                                </div>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${timetable.session === 'morning' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                {timetable.session}
+                              </span>
+                            </div>
+
+                            <div className="mb-6">
+                              <h3 className="font-bold text-lg text-gray-900 mb-1 leading-snug line-clamp-2" title={timetable.course.name}>{timetable.course.name}</h3>
+                              <p className="text-xs font-mono text-gray-400">{timetable.course.code}</p>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 pt-4 border-t border-gray-100">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              {timetable.start_time.slice(0, 5)} - {timetable.end_time.slice(0, 5)}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-24 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-gray-400 font-medium">Timetable Pending Publication</p>
+                    </div>
+                  )}
+                </section>
               );
-            })
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-20 text-center">
-              <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">No Exams Scheduled</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                You don't have any exam schedules at the moment.
-              </p>
-            </div>
-          )}
-        </div>
-      ) : (
-        // EXAM FEE TAB
-        <div className="space-y-8">
-          {/* Active Fee Payments */}
-          {cyclesNeedingFee.length > 0 && (
-            <div>
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-orange-500" />
-                Active Fee Payments
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {cyclesNeedingFee.map((cycle) => {
+            }) : (
+              <div className="text-center py-32 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-6">
+                  <Calendar className="w-10 h-10 text-gray-300" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">No Examinations Scheduled</h3>
+                <p className="text-gray-500 mt-2">Check back later for updates to your exam cycle.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 items-start">
+            {/* Left Column: Active Payments */}
+            <div className="xl:col-span-8 space-y-10">
+              <div className="flex items-center gap-4">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Due Payments</h2>
+                <div className="h-px bg-gray-100 flex-1"></div>
+              </div>
+
+              {cyclesNeedingFee.length > 0 ? (
+                cyclesNeedingFee.map((cycle) => {
                   const isPaid = cycle.student_payments?.length > 0;
                   const eligibility = cycle.student_eligibilities?.[0];
                   const totalAmount = calculateTotalFee(cycle, eligibility);
                   const today = new Date().toISOString().split("T")[0];
-                  const isLate =
-                    today > cycle.fee_configuration.regular_end_date;
-                  const isBlocked =
-                    eligibility &&
-                    (!eligibility.hod_permission ||
-                      !eligibility.fee_clear_permission);
+                  const isLate = today > cycle.fee_configuration.regular_end_date;
+                  const isBlocked = eligibility && (!eligibility.hod_permission || !eligibility.fee_clear_permission);
 
                   return (
-                    <div
-                      key={cycle.id}
-                      className="p-6 rounded-2xl border bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800"
-                    >
-                      {!isPaid && isLate && (
-                        <div className="absolute top-0 right-0 p-4">
-                          <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                            Pending
+                    <div key={cycle.id} className="bg-white rounded-2xl shadow-xl shadow-gray-200/40 border border-gray-100 overflow-hidden relative transition-transform hover:-translate-y-1 duration-300">
+                      {/* Status Strip */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${isPaid ? 'bg-blue-400' : isBlocked ? 'bg-gray-300' : 'bg-blue-600'}`}></div>
+
+                      <div className="p-8 pl-10">
+                        <div className="flex flex-col sm:flex-row justify-between items-start mb-8 gap-6">
+                          <div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                              {cycle.cycle_name.replace(/_/g, " ")}
+                            </h3>
+                            <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              Registration closes {new Date(cycle.fee_configuration.final_registration_date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-left sm:text-right bg-gray-50 p-4 rounded-xl border border-gray-100 min-w-[140px]">
+                            <div className="text-3xl font-black text-gray-900 tracking-tight">₹{totalAmount.toLocaleString()}</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total Fee</div>
                           </div>
                         </div>
-                      )}
 
-                      <h3 className="text-lg font-bold mb-1">
-                        {cycle.cycle_name.replace(/_/g, " ")}
-                      </h3>
-                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-6 font-bold">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        Deadline:{" "}
-                        {new Date(
-                          cycle.fee_configuration.final_registration_date,
-                        ).toLocaleDateString()}
-                      </div>
-
-                      {/* Fee Breakdown */}
-                      <div className="p-4 bg-white dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700 mb-4">
-                        <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-3">
-                          Fee Breakdown
-                        </p>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Base Fee
-                            </span>
-                            <span className="font-bold">
-                              ₹
-                              {parseFloat(
-                                cycle.fee_configuration.base_fee,
-                              ).toLocaleString()}
-                            </span>
+                        {/* Fee Decomposition */}
+                        <div className="border-t border-b border-gray-100 py-6 mb-8 space-y-3">
+                          <div className="flex justify-between text-sm items-center">
+                            <span className="text-gray-600 font-medium">Standard Exam Fee</span>
+                            <span className="font-bold text-gray-900">₹{parseFloat(cycle.fee_configuration.base_fee).toLocaleString()}</span>
                           </div>
                           {isLate && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-red-600 dark:text-red-400 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                Late Fee
-                              </span>
-                              <span className="font-bold text-red-600 dark:text-red-400">
-                                +₹
-                                {parseFloat(
-                                  cycle.fee_configuration.slabs.find(
-                                    (s) =>
-                                      today >= s.start_date &&
-                                      today <= s.end_date,
-                                  )?.fine_amount || 0,
-                                ).toLocaleString()}
-                              </span>
+                            <div className="flex justify-between text-sm items-center">
+                              <span className="text-gray-600 font-medium flex items-center gap-2"><AlertCircle className="w-4 h-4 text-gray-400" /> Late Registration Fine</span>
+                              <span className="font-bold text-gray-900">+ ₹{parseFloat(cycle.fee_configuration.slabs.find(s => today >= s.start_date && today <= s.end_date)?.fine_amount || 0).toLocaleString()}</span>
                             </div>
                           )}
                           {eligibility?.has_condonation && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3" />
-                                Condonation Fee
-                              </span>
-                              <span className="font-bold text-orange-600 dark:text-orange-400">
-                                +₹
-                                {parseFloat(
-                                  cycle.condonation_fee_amount || 0,
-                                ).toLocaleString()}
-                              </span>
+                            <div className="flex justify-between text-sm items-center">
+                              <span className="text-gray-600 font-medium flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-gray-400" /> Condonation Fee</span>
+                              <span className="font-bold text-gray-900">+ ₹{parseFloat(cycle.condonation_fee_amount || 0).toLocaleString()}</span>
                             </div>
                           )}
-                          <div className="pt-2 border-t border-gray-200 dark:border-gray-600 flex justify-between">
-                            <span className="font-black text-gray-900 dark:text-white">
-                              Total Amount
-                            </span>
-                            <span className="text-xl font-black text-blue-600">
-                              ₹{totalAmount.toLocaleString()}
-                            </span>
+                        </div>
+
+                        {/* Blockers */}
+                        {isBlocked && !isPaid && (
+                          <div className="mb-8 flex gap-4 items-start p-5 bg-gray-50 rounded-xl border border-gray-200">
+                            <XCircle className="w-5 h-5 text-gray-900 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                              <p className="text-sm font-black text-gray-900 uppercase tracking-wide">Registration Blocked</p>
+                              <div className="text-sm text-gray-600 space-y-1 pt-1">
+                                {!eligibility.hod_permission && <p>• Attendance below threshold ({cycle.attendance_threshold_condonation}%). HOD Approval required.</p>}
+                                {!eligibility.fee_clear_permission && <p>• Outstanding tuition fees pending.</p>}
+                              </div>
+                            </div>
                           </div>
+                        )}
+
+                        {/* Action */}
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs text-gray-400 font-medium">
+                            Transaction secured by Razorpay
+                          </div>
+
+                          {isPaid ? (
+                            <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-blue-50 text-blue-700 font-bold text-sm">
+                              <CheckCircle className="w-4 h-4" /> Paid & Verified
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handlePayFee(cycle.id)}
+                              disabled={paying === cycle.id || isBlocked}
+                              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-200 hover:shadow-blue-300 transform active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
+                            >
+                              {paying === cycle.id ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Proceed to Payment'}
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-
-                      {/* Condonation Notice */}
-                      {eligibility?.has_condonation && !isPaid && (
-                        <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-200 dark:border-orange-800/50">
-                          <p className="text-xs text-orange-700 dark:text-orange-400 flex items-start gap-2">
-                            <Info className="w-4 h-4 mt-0.5 shrink-0" />
-                            <span>
-                              Your attendance is in the{" "}
-                              <strong>condonation range</strong>. An additional
-                              fee of ₹
-                              {parseFloat(
-                                cycle.condonation_fee_amount || 0,
-                              ).toLocaleString()}{" "}
-                              has been included in the total.
-                            </span>
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Block Warning */}
-                      {isBlocked && !isPaid && (
-                        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                          <p className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4" />
-                            Payment Blocked
-                          </p>
-                          <div className="space-y-1.5">
-                            {!eligibility.hod_permission && (
-                              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                                <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                <span>
-                                  <strong>HOD Permission Required:</strong> Your
-                                  attendance is below{" "}
-                                  {cycle.attendance_threshold_condonation}%.
-                                  Contact your department for approval.
-                                </span>
-                              </div>
-                            )}
-                            {!eligibility.fee_clear_permission && (
-                              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                                <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                <span>
-                                  <strong>Fee Clearance Required:</strong> You
-                                  have pending tuition fees of ₹
-                                  {(
-                                    eligibility.fee_balance || 0
-                                  ).toLocaleString()}
-                                  . Clear your dues first.
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pay Button */}
-                      {!isPaid ? (
-                        <button
-                          onClick={() => handlePayFee(cycle.id)}
-                          disabled={paying === cycle.id || isBlocked}
-                          className={`w-full py-4 rounded-xl font-black text-sm transition-all shadow-xl flex items-center justify-center gap-2 group ${isBlocked
-                              ? "bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed"
-                              : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20"
-                            } disabled:opacity-50`}
-                        >
-                          {paying === cycle.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Processing...
-                            </>
-                          ) : isBlocked ? (
-                            <>
-                              <XCircle className="w-4 h-4" />
-                              Payment Blocked
-                            </>
-                          ) : (
-                            <>
-                              Proceed to Pay
-                              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <div className="flex items-center text-emerald-600 text-sm font-bold bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl ring-1 ring-emerald-500/20">
-                          <CheckCircle className="w-5 h-5 mr-2" />
-                          Payment Completed
-                        </div>
-                      )}
                     </div>
-                  );
-                })}
+                  )
+                })
+              ) : (
+                <div className="p-16 border-2 border-dashed border-gray-100 rounded-3xl text-center bg-gray-50/30">
+                  <CheckCircle className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                  <p className="text-gray-400 font-medium">No pending payments needed.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: History */}
+            <div className="xl:col-span-4">
+              <div className="sticky top-28 space-y-6">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">History</h2>
+                  <div className="h-px bg-gray-100 flex-1"></div>
+                </div>
+
+                <div className="space-y-4">
+                  {paymentHistory.length > 0 ? paymentHistory.map((payment) => (
+                    <div key={payment.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-gray-50 group-hover:bg-blue-500 transition-colors"></div>
+
+                      <div className="pl-2">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{new Date(payment.payment_date).toLocaleDateString()}</span>
+                          <span className="text-sm font-bold text-gray-900">₹{parseFloat(payment.amount_paid).toLocaleString()}</span>
+                        </div>
+
+                        <div className="mb-4">
+                          <p className="text-sm font-medium text-gray-800 line-clamp-2">
+                            {payment.exam_cycle?.cycle_name?.replace(/_/g, " ")}
+                          </p>
+                        </div>
+
+                        {payment.payment_status === "success" && (
+                          <button
+                            onClick={() => handlePrintReceipt(payment)}
+                            className="w-full py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download Receipt
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="text-center py-10 text-gray-400 text-sm">
+                      No transaction history available
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Payment History */}
-          <div>
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" />
-              Payment History
-            </h2>
-            {paymentHistory.length > 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-900/50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Exam Cycle
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Payment Date
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Receipt
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {paymentHistory.map((payment) => (
-                      <tr key={payment.id}>
-                        <td className="px-6 py-4">
-                          <div className="font-bold">
-                            {payment.exam_cycle?.cycle_name?.replace(/_/g, " ")}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {payment.exam_cycle?.semester} Semester
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-blue-600">
-                          ₹{parseFloat(payment.amount_paid).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {new Date(payment.payment_date).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${payment.payment_status === "success"
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                                : payment.payment_status === "pending"
-                                  ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400"
-                                  : "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-                              }`}
-                          >
-                            {payment.payment_status.toUpperCase()}
-                          </span>
-
-                          {payment.payment_status === "success" && (
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                onClick={() => handlePrintReceipt(payment)}
-                                className="px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-[10px] font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1 transition-colors"
-                              >
-                                <Download className="w-3 h-3" /> #
-                                {payment?.transaction?.transaction_id?.slice(
-                                  -6,
-                                )}
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center border border-gray-100 dark:border-gray-700">
-                <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  No payment history found
-                </p>
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 };

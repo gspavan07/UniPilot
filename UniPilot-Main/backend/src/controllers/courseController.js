@@ -290,7 +290,10 @@ exports.getMyCourses = async (req, res) => {
     if (program_id && coursesList[program_id]) {
       const semCourses = coursesList[program_id][current_semester] || [];
       semCourses.forEach(id => targetIds.add(id));
+
     }
+
+
 
     // Add Common Courses? (If your model supports it, e.g. key "common")
     if (coursesList["common"]) {
@@ -322,7 +325,8 @@ exports.getMyCourses = async (req, res) => {
       const courseJson = course.toJSON();
       return {
         ...courseJson,
-        program_id: student.program_id
+        program_id: student.program_id,
+        semester: student.current_semester
       };
     });
 

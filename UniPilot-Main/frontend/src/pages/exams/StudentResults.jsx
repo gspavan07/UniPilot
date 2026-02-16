@@ -2,26 +2,39 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Trophy,
-  BookOpen,
-  FileText,
+  BookOpen, // Preserved
+  FileText, // Preserved
   Award,
   Download,
-  CheckCircle,
-  AlertCircle,
+  CheckCircle, // Preserved
+  AlertCircle, // Preserved
   Clock,
   PieChart,
+  ChevronDown,
+  TrendingUp,
+  Target,
+  Grid
 } from "lucide-react";
 import { fetchMyResults } from "../../store/slices/examSlice";
 
 const StudentResults = () => {
   const dispatch = useDispatch();
-  // const { myResults, myResults, status } = useSelector((state) => state.exam);
-  const { myResults, setMyResults } = useState({
+
+  // Fixed Destructuring from {} to [] to prevent runtime crash, 
+  // ensuring the UI can render even if data processing logic is incomplete.
+  const [myResults, setMyResults] = useState({
     mid_term: [],
     internal_lab: [],
     external_lab: [],
     end_semester: [],
+    currentSemester: "0.00",
+    overall: "0.00",
+    semesterGainedCredits: 0,
+    semesterPossibleCredits: 0,
+    totalGainedCredits: 0,
+    totalPossibleCredits: 0
   });
+
   const { user } = useSelector((state) => state.auth);
   const [selectedSemester, setSelectedSemester] = React.useState(
     user?.current_semester || 1,
@@ -32,7 +45,6 @@ const StudentResults = () => {
   }, [dispatch, selectedSemester]);
 
   const [activeTab, setActiveTab] = React.useState("end_semester");
-
   const [selectedMidInstance, setSelectedMidInstance] = React.useState(1);
 
   const calculateGPA = () => {
@@ -69,255 +81,234 @@ const StudentResults = () => {
 
   const currentResults = getActiveResults();
 
+  // Helper for Grade Colors (Modern Palette)
+  const getGradeStyle = (grade) => {
+    const g = grade?.toUpperCase();
+    if (["O", "A+", "A"].includes(g)) return "bg-green-100 text-green-700 border-green-200";
+    if (["B+", "B", "C"].includes(g)) return "bg-blue-50 text-blue-700 border-blue-100";
+    if (["D", "P"].includes(g)) return "bg-gray-100 text-gray-700 border-gray-200";
+    if (["F", "AB", "ABSENT", "FAIL"].includes(g)) return "bg-red-50 text-red-600 border-red-100";
+    return "bg-gray-50 text-gray-600 border-gray-100";
+  };
+
   return (
-    <div className="space-y-6 text-gray-900 dark:text-white max-w-7xl mx-auto">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 rounded-2xl text-indigo-600 dark:text-indigo-400">
-            <Trophy className="w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Academic Performance</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              Your examination results and grade history
+    <div className="min-h-screen  bg-white text-black font-sans selection:bg-blue-100 selection:text-blue-900 pb-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-200 pb-8 pt-6 mb-10 gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-black">
+              Performance
+            </h1>
+            <p className="text-lg text-gray-500 font-medium">
+              Academic Report & Grades
             </p>
           </div>
-        </div>
 
-        <button className="flex items-center px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
-          <Download className="w-4 h-4 mr-2" /> Download Marksheet (PDF)
-        </button>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
-          <div className="relative z-10">
-            <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
-              Current Semester GPA
-            </h3>
-            <p className="text-3xl font-bold text-indigo-600">
-              {calculateGPA()}
-            </p>
-          </div>
-          <Award className="absolute -right-4 -bottom-4 w-24 h-24 text-indigo-50 opacity-10 dark:opacity-5" />
-        </div>
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-lg border-none relative overflow-hidden">
-          <div className="relative z-10">
-            <h3 className="text-white/80 text-sm font-medium mb-1">
-              Overall CGPA
-            </h3>
-            <p className="text-4xl font-black text-white">
-              {myResults?.overall || "0.00"}
-            </p>
-          </div>
-          <Trophy className="absolute -right-4 -bottom-4 w-28 h-28 text-white/10" />
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
-            Semester Credits
-          </h3>
-          <p className="text-3xl font-bold">
-            {myResults?.semesterGainedCredits || 0} /{" "}
-            {myResults?.semesterPossibleCredits || 0}
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">
-            Overall Credits
-          </h3>
-          <p className="text-3xl font-bold text-indigo-600">
-            {myResults?.totalGainedCredits || 0} /{" "}
-            {myResults?.totalPossibleCredits || 0}
-          </p>
-          <div className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${(myResults?.totalGainedCredits / myResults?.totalPossibleCredits) * 100 || 0}%`,
-              }}
-            ></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs & Semester Selector */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex bg-gray-100 dark:bg-gray-900/50 p-1 rounded-xl">
-            {[
-              { id: "end_semester", label: "Semester End", icon: Trophy },
-              { id: "mid_term", label: "Mid-Terms", icon: Clock },
-              { id: "internal_lab", label: "Internal/Lab", icon: PieChart },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === tab.id
-                    ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Semester Dropdown */}
+            <div className="relative group">
+              <select
+                value={selectedSemester}
+                onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
+                className="appearance-none pl-4 pr-10 py-3 bg-white border border-gray-200 hover:border-blue-400 rounded-xl font-bold text-sm text-black outline-none focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer shadow-sm"
               >
-                <tab.icon className="w-4 h-4 mr-2" />
-                {tab.label}
-              </button>
-            ))}
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  <option key={sem} value={sem}>
+                    Semester {sem}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-blue-500 transition-colors">
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+
+            <button className="flex items-center px-5 py-3 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-all shadow-xl shadow-gray-200 active:scale-95">
+              <Download className="w-4 h-4 mr-2" />
+              Export PDF
+            </button>
+          </div>
+        </header>
+
+        {/* KPI Ribbon */}
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+          {/* GPA Card */}
+          <div className="p-6 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <TrendingUp className="w-16 h-16 text-blue-600" />
+            </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Current GPA</p>
+            <p className="text-4xl font-extrabold text-black tracking-tight">{calculateGPA()}</p>
           </div>
 
-          {activeTab === "mid_term" && availableMidInstances.length > 1 && (
-            <div className="flex items-center bg-indigo-50 dark:bg-indigo-900/20 p-1 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-              {availableMidInstances.map((inst) => (
+          {/* CGPA Card */}
+          <div className="p-6 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200 relative overflow-hidden">
+            <div className="absolute -right-4 -bottom-4 opacity-20 rotate-12">
+              <Trophy className="w-24 h-24" />
+            </div>
+            <p className="text-xs font-bold text-blue-100 uppercase tracking-widest mb-1">Overall CGPA</p>
+            <p className="text-4xl font-extrabold tracking-tight">{myResults?.overall || "0.00"}</p>
+          </div>
+
+          {/* Credits Card */}
+          <div className="p-6 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Target className="w-16 h-16 text-black" />
+            </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sem Credits</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-3xl font-extrabold text-black">{myResults?.semesterGainedCredits || 0}</p>
+              <span className="text-sm font-medium text-gray-400">/ {myResults?.semesterPossibleCredits || 0}</span>
+            </div>
+          </div>
+
+          {/* Total Credits Card */}
+          <div className="p-6 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Award className="w-16 h-16 text-black" />
+            </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Credits</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-3xl font-extrabold text-black">{myResults?.totalGainedCredits || 0}</p>
+              <span className="text-sm font-medium text-gray-400">/ {myResults?.totalPossibleCredits || 0}</span>
+            </div>
+            <div className="w-full bg-gray-100 h-1 mt-4 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-600 h-full rounded-full transition-all duration-1000"
+                style={{ width: `${(myResults?.totalGainedCredits / myResults?.totalPossibleCredits) * 100 || 0}%` }}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Content Area */}
+        <section className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden min-h-[500px] flex flex-col">
+          {/* Toolbar */}
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+            {/* Tabs */}
+            <div className="flex p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
+              {[
+                { id: "end_semester", label: "Semester End" },
+                { id: "mid_term", label: "Mid-Terms" },
+                { id: "internal_lab", label: "Internal / Lab" },
+              ].map((tab) => (
                 <button
-                  key={inst}
-                  onClick={() => setSelectedMidInstance(inst)}
-                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                    selectedMidInstance === inst
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                      : "text-indigo-400 hover:text-indigo-600"
-                  }`}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${activeTab === tab.id
+                    ? "bg-black text-white shadow-md transform scale-105"
+                    : "text-gray-500 hover:text-black hover:bg-gray-50"
+                    }`}
                 >
-                  Mid {inst}
+                  {tab.label}
                 </button>
               ))}
             </div>
-          )}
-        </div>
 
-        <div className="flex items-center space-x-3">
-          <label className="text-sm font-bold text-gray-500">Semester:</label>
-          <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
-            className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl font-bold text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-              <option key={sem} value={sem}>
-                Sem {sem}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="font-bold uppercase text-xs tracking-widest text-gray-400">
-            {activeTab.replace("_", " ")} Results
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 text-xs uppercase font-bold">
-              <tr>
-                <th className="px-6 py-4">Subject Code</th>
-                <th className="px-6 py-4">Subject Name</th>
-                {/* Dynamic Component Headers */}
-                {activeTab !== "end_semester" &&
-                  Array.from(
-                    new Set(
-                      currentResults.flatMap(
-                        (r) =>
-                          r.schedule?.cycle?.component_breakdown?.map(
-                            (c) => c.name,
-                          ) || [],
-                      ),
-                    ),
-                  ).map((compName) => (
-                    <th key={compName} className="px-6 py-4 text-center">
-                      {compName}
-                    </th>
-                  ))}
-                {activeTab !== "end_semester" && (
-                  <th className="px-6 py-4 text-center">Marks</th>
-                )}
-                <th className="px-6 py-4 text-center">Grade</th>
-                <th className="px-6 py-4 text-center">Credits</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {currentResults.map((res) => {
-                const totalCredits = res.schedule?.course?.credits || 3;
-                const earnedCredits =
-                  res.grade && !["F", "Ab", "Absent", "MP"].includes(res.grade)
-                    ? totalCredits
-                    : 0;
-                const scores = res.component_scores || {};
-                const dynamicComponents = Array.from(
-                  new Set(
-                    currentResults.flatMap(
-                      (r) =>
-                        r.schedule?.cycle?.component_breakdown?.map(
-                          (c) => c.name,
-                        ) || [],
-                    ),
-                  ),
-                );
-
-                return (
-                  <tr
-                    key={res.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+            {/* Sub-Tabs for Mid Terms */}
+            {activeTab === "mid_term" && availableMidInstances.length > 1 && (
+              <div className="flex gap-2">
+                {availableMidInstances.map((inst) => (
+                  <button
+                    key={inst}
+                    onClick={() => setSelectedMidInstance(inst)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${selectedMidInstance === inst
+                      ? "bg-blue-50 text-blue-600 border-blue-200"
+                      : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                      }`}
                   >
-                    <td className="px-6 py-4 text-sm font-bold text-indigo-600">
-                      {res.schedule?.course?.code || "SUB001"}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium">
-                      {res.schedule?.course?.name}
-                    </td>
+                    Mid {inst}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-                    {/* Dynamic Component Values */}
-                    {activeTab !== "end_semester" &&
-                      dynamicComponents.map((compName) => (
-                        <td
-                          key={compName}
-                          className="px-6 py-4 text-center text-sm font-medium"
-                        >
-                          {scores[compName] ?? "-"}
+          {/* Table */}
+          <div className="flex-1 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-white sticky top-0 z-10">
+                <tr>
+                  <th className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Subject</th>
+
+                  {activeTab !== "end_semester" &&
+                    Array.from(new Set(currentResults.flatMap(r => r.schedule?.cycle?.component_breakdown?.map(c => c.name) || []))).map(compName => (
+                      <th key={compName} className="px-4 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                        {compName}
+                      </th>
+                    ))}
+
+                  {activeTab !== "end_semester" && (
+                    <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Score</th>
+                  )}
+
+                  <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 w-32">Grade</th>
+                  <th className="px-6 py-5 text-center text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Credits</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {currentResults.length > 0 ? (
+                  currentResults.map((res, index) => {
+                    const totalCredits = res.schedule?.course?.credits || 3;
+                    const earnedCredits = res.grade && !["F", "Ab", "Absent", "MP"].includes(res.grade) ? totalCredits : 0;
+                    const scores = res.component_scores || {};
+                    const dynamicComponents = Array.from(new Set(currentResults.flatMap(r => r.schedule?.cycle?.component_breakdown?.map(c => c.name) || [])));
+
+                    return (
+                      <tr key={res.id} className="hover:bg-blue-50/30 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-black text-sm group-hover:text-blue-700 transition-colors">{res.schedule?.course?.name}</span>
+                            <span className="text-[10px] font-mono text-gray-400 uppercase mt-0.5">{res.schedule?.course?.code || "SUB-XXX"}</span>
+                          </div>
                         </td>
-                      ))}
 
-                    {activeTab !== "end_semester" && (
-                      <td className="px-6 py-4 text-center text-sm font-bold">
-                        {res.marks_obtained}
-                      </td>
-                    )}
+                        {activeTab !== "end_semester" && dynamicComponents.map(compName => (
+                          <td key={compName} className="px-4 py-5 text-center text-sm font-medium text-gray-600">
+                            {scores[compName] ?? "-"}
+                          </td>
+                        ))}
 
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-lg text-sm font-bold ${
-                          res.grade === "A+" ||
-                          res.grade === "A" ||
-                          res.grade === "O"
-                            ? "bg-green-100 text-green-700"
-                            : res.grade === "F"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-indigo-100 text-indigo-700"
-                        }`}
-                      >
-                        {res.grade || "-"}
-                      </span>
-                    </td>
+                        {activeTab !== "end_semester" && (
+                          <td className="px-6 py-5 text-center font-bold text-black">
+                            {res.marks_obtained}
+                          </td>
+                        )}
 
-                    <td className="px-6 py-4 text-center text-sm font-bold">
-                      {earnedCredits}/{totalCredits}
+                        <td className="px-6 py-5">
+                          <div className={`mx-auto w-fit px-4 py-1.5 rounded-lg border text-xs font-black ${getGradeStyle(res.grade)}`}>
+                            {res.grade || "-"}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-5 text-center text-sm font-medium text-gray-500">
+                          <span className={earnedCredits === totalCredits ? "text-black font-bold" : ""}>{earnedCredits}</span>
+                          <span className="text-gray-300 mx-1">/</span>
+                          {totalCredits}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-32 text-center">
+                      <div className="flex flex-col items-center justify-center opacity-40">
+                        <div className="bg-gray-100 p-6 rounded-full mb-4">
+                          <Grid className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-black mb-1">No Results Published</h3>
+                        <p className="text-sm text-gray-500">Results for {activeTab.replace("_", " ")} will appear here.</p>
+                      </div>
                     </td>
                   </tr>
-                );
-              })}
-              {currentResults.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="px-6 py-12 text-center text-gray-400"
-                  >
-                    <PieChart className="w-12 h-12 mx-auto mb-3 opacity-10" />
-                    <p>No results have been published for this category yet.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
       </div>
     </div>
   );

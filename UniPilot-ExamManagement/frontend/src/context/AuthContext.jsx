@@ -40,6 +40,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
+      console.log(response);
+      if (response?.data?.user?.role !== "super_admin" || response?.data?.user?.role !== "faculty") {
+        return {
+          success: false,
+          error: "You are not authorized to login",
+        };
+      }
       // authService.login already returns response.data
       // response structure: { success, data: { user, accessToken, refreshToken } }
       const { accessToken, user } = response.data;

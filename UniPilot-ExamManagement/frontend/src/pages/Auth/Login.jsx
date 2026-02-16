@@ -24,7 +24,6 @@ export default function Login() {
     } else {
       setError(result.error);
     }
-
     setLoading(false);
   };
 
@@ -38,7 +37,7 @@ export default function Login() {
       */}
       <div className="hidden md:flex flex-col items-center justify-center bg-blue-600 text-white p-12 relative overflow-hidden">
         {/* Subtle geometric pattern */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-blue-600 to-blue-800"></div>
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-white via-blue-600 to-blue-800"></div>
         <div className="absolute top-1/4 -right-20 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse"></div>
         <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse" style={{ animationDelay: '2s' }}></div>
 
@@ -95,14 +94,17 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+              <label htmlFor="email" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
                 Email Address
               </label>
               <div className="relative group">
                 <Mail className="absolute left-0 top-3.5 text-gray-300 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
                 <input
+                  id="email"
+                  name="email"
                   type="email"
                   value={email}
+                  autoComplete="email"
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-8 pr-4 py-3 border-b-2 border-gray-100 focus:border-blue-600 outline-none transition-colors bg-transparent text-gray-900 font-medium placeholder-gray-300"
                   placeholder="you@university.edu"
@@ -112,14 +114,17 @@ export default function Login() {
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+              <label htmlFor="password" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
                 Password
               </label>
               <div className="relative group">
                 <Lock className="absolute left-0 top-3.5 text-gray-300 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
                 <input
+                  id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
+                  autoComplete="current-password"
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-8 pr-10 py-3 border-b-2 border-gray-100 focus:border-blue-600 outline-none transition-colors bg-transparent text-gray-900 font-medium placeholder-gray-300"
                   placeholder="••••••••••••"
@@ -153,11 +158,11 @@ export default function Login() {
             </div>
           </form>
 
-          <div className="text-center text-xs text-gray-400 mt-8">
+          {/* <div className="text-center text-xs text-gray-400 mt-8">
             <a href="#" className="hover:text-blue-600 transition-colors">Forgot Password?</a>
             <span className="mx-2">•</span>
             <a href="#" className="hover:text-blue-600 transition-colors">Help</a>
-          </div>
+          </div> */}
         </div>
 
         <div className="absolute bottom-6 right-8 text-[10px] text-gray-300 hidden md:block">
