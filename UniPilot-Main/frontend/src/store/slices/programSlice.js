@@ -11,9 +11,9 @@ const initialState = {
 // Async thunks
 export const fetchPrograms = createAsyncThunk(
   "programs/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get("/programs");
+      const response = await api.get("/programs", { params });
       return response.data.data;
     } catch (error) {
       return rejectWithValue(

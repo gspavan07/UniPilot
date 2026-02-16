@@ -12,6 +12,7 @@ import {
   PlusCircle,
   Settings,
   ListChecks, // Added for Manage Sections
+  UserPlus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../../utils/api";
@@ -249,6 +250,23 @@ const HodDashboard = () => {
                   </h4>
                   <p className="text-xs text-purple-600/70">
                     Organize students into batches
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                to="/academic/faculty-assignment"
+                className="flex items-center p-4 rounded-2xl bg-pink-50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/20 hover:scale-[1.02] transition-all"
+              >
+                <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm mr-4">
+                  <UserPlus className="w-6 h-6 text-pink-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-pink-900 dark:text-pink-100">
+                    Assign Faculty
+                  </h4>
+                  <p className="text-xs text-pink-600/70">
+                    Course Instructors
                   </p>
                 </div>
               </Link>

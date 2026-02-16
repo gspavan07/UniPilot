@@ -11,6 +11,7 @@ const {
   bulkUpdateSections,
   getAllBatches,
   getStudentSemesters,
+  getBatchDetails,
 } = require("../controllers/userController");
 const upload = require("../middleware/upload");
 const studentUpload = require("../middleware/studentUpload");
@@ -79,7 +80,10 @@ router.get(
   "/semesters",
   checkDynamicPermission("view"),
   getStudentSemesters,
+  getStudentSemesters,
 );
+
+router.get("/batch-details", getBatchDetails);
 
 router
   .route("/")

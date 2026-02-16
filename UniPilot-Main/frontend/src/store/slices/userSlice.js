@@ -99,6 +99,22 @@ export const fetchBatchYears = createAsyncThunk(
   },
 );
 
+export const fetchBatchDetails = createAsyncThunk(
+  "users/fetchBatchDetails",
+  async ({ department_id, batch_year, program_id }, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/users/batch-details", {
+        params: { department_id, batch_year, program_id },
+      });
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to fetch batch details",
+      );
+    }
+  },
+);
+
 export const createUser = createAsyncThunk(
   "users/create",
   async (userData, { rejectWithValue }) => {

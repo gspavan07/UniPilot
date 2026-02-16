@@ -48,6 +48,8 @@ const SemesterResult = require("./SemesterResult");
 const ProgramOutcome = require("./ProgramOutcome");
 const CourseOutcome = require("./CourseOutcome");
 const CoPoMap = require("./CoPoMap");
+const Notification = require("./Notification");
+const CourseFaculty = require("./CourseFaculty");
 
 // Placement Module Models
 const Company = require("./Company");
@@ -183,9 +185,26 @@ const models = {
   ProgramOutcome,
   CourseOutcome,
   CoPoMap,
+
+  // New Faculty Assignment Models
+  Notification,
+  CourseFaculty,
 };
 
 // Define associations
+
+// Notification Associations
+Notification.belongsTo(User, { as: "user", foreignKey: "user_id" });
+User.hasMany(Notification, { as: "notifications", foreignKey: "user_id" });
+
+// CourseFaculty Associations
+CourseFaculty.belongsTo(Course, { as: "course", foreignKey: "course_id" });
+Course.hasMany(CourseFaculty, { as: "faculty_assignments", foreignKey: "course_id" });
+
+CourseFaculty.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
+User.hasMany(CourseFaculty, { as: "course_assignments", foreignKey: "faculty_id" });
+
+CourseFaculty.belongsTo(User, { as: "assigner", foreignKey: "assigned_by" });
 
 // Department <-> User (HOD)
 Department.belongsTo(User, {
