@@ -284,7 +284,7 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen bg-white flex">
       <aside
-        className={`${sidebarOpen ? "w-52" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-out flex flex-col fixed h-full z-40`}
+        className={`${sidebarOpen ? "w-64" : "w-16"} flex-1 bg-white border-r border-gray-200 transition-all duration-300 ease-out flex flex-col fixed h-full z-40`}
         onMouseEnter={() => setSidebarOpen(true)}
         // onMouseLeave={() => setSidebarOpen(false)}
       >
@@ -317,28 +317,32 @@ const MainLayout = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${isActive(item.href)
+              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${
+                isActive(item.href)
                   ? "bg-blue-600 text-white"
                   : "text-gray-700 hover:bg-gray-100"
-                }`}
+              }`}
               style={{ animationDelay: `${index * 25}ms` }}
             >
               <div
-                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${isActive(item.href) ? "w-0" : "w-0"
-                  }`}
+                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${
+                  isActive(item.href) ? "w-0" : "w-0"
+                }`}
               />
               <item.icon
-                className={`w-[18px] h-[18px] shrink-0 transition-colors ${isActive(item.href)
+                className={`w-[18px] h-[18px] shrink-0 transition-colors ${
+                  isActive(item.href)
                     ? "text-white"
                     : "text-gray-600 group-hover:text-blue-600"
-                  }`}
+                }`}
               />
               {sidebarOpen && (
                 <span
-                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${isActive(item.href)
+                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${
+                    isActive(item.href)
                       ? "font-semibold text-white"
                       : "text-gray-700"
-                    }`}
+                  }`}
                 >
                   {item.name}
                 </span>
@@ -394,7 +398,7 @@ const MainLayout = () => {
       </aside>
 
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-52 " : "ml-16"}`}
+        className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-64 " : "ml-16"}`}
       >
         <main className="flex-1  overflow-y-auto bg-gray-50">
           <Outlet />
