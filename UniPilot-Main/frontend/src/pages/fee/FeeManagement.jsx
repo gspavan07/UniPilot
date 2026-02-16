@@ -1159,7 +1159,7 @@ const FeeManagement = () => {
           </div>
         </div>
         {/* Method-wise chart */}
-        <div className="lg:col-span-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+        <div className="lg:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <PieChartIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <h3 className="text-lg font-semibold text-black dark:text-white">
