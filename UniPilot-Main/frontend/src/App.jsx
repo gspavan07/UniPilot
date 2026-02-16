@@ -122,6 +122,7 @@ import MyTimetable from "./pages/timetable/MyTimetable";
 
 // Exams
 import ExaminationsHub from "./pages/exams/ExaminationsHub";
+import StudentResults from "./pages/exams/StudentResults";
 
 function App() {
   const dispatch = useDispatch();
@@ -235,6 +236,7 @@ function App() {
 
           {/* Exams */}
           <Route path="/my-exams" element={<ExaminationsHub />} />
+          <Route path="/results" element={<StudentResults />} />
 
           {/* Transport Management */}
           <Route path="/transport" element={<TransportDashboard />} />

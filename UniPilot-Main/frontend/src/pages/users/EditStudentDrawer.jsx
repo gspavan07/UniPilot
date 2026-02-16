@@ -39,7 +39,7 @@ const schema = yup.object().shape({
   date_of_birth: yup.string().optional(),
   aadhaar_number: yup.string().optional(),
   pan_number: yup.string().optional(),
-  passport_number: yup.string().optional(),
+  passport_number: yup.string().optional().nullable(),
   religion: yup.string().optional(),
   caste: yup.string().optional(),
   nationality: yup.string().optional(),
@@ -65,7 +65,7 @@ const schema = yup.object().shape({
     .min(1)
     .max(12)
     .required("Semester is required"),
-  section: yup.string().optional(),
+  // section: yup.string().optional(),
 
   // Family (Parent Details)
   parent_details: yup
@@ -166,7 +166,9 @@ const EditStudentDrawer = ({
         regulation_id: user.regulation_id || "",
         parent_details: parsedParent,
         previous_academics: parsedAcademics,
-        date_of_birth: user.date_of_birth ? new Date(user.date_of_birth).toISOString().split('T')[0] : "",
+        date_of_birth: user.date_of_birth
+          ? new Date(user.date_of_birth).toISOString().split("T")[0]
+          : "",
       });
       setError(null);
     }
@@ -192,11 +194,39 @@ const EditStudentDrawer = ({
     setError(`Please fix the ${errorCount} error(s) highlighted in red.`);
 
     // Auto-switch to tab with error
-    const academicFields = ["program_id", "regulation_id", "student_id", "admission_number", "batch_year", "current_semester", "department_id", "section"];
-    const personalFields = ["first_name", "last_name", "email", "phone", "date_of_birth", "aadhaar_number", "pan_number", "passport_number", "nationality", "religion", "caste", "address", "city", "state", "zip_code"];
+    const academicFields = [
+      "program_id",
+      "regulation_id",
+      "student_id",
+      "admission_number",
+      "batch_year",
+      "current_semester",
+      "department_id",
+      // "section",
+    ];
+    const personalFields = [
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "date_of_birth",
+      "aadhaar_number",
+      "pan_number",
+      // "passport_number",
+      "nationality",
+      "religion",
+      "caste",
+      "address",
+      "city",
+      "state",
+      "zip_code",
+    ];
 
     // Helper to check if any field in the list has an error
-    const hasErrorIn = (fields) => fields.some(field => field.split('.').reduce((obj, key) => obj?.[key], errors));
+    const hasErrorIn = (fields) =>
+      fields.some((field) =>
+        field.split(".").reduce((obj, key) => obj?.[key], errors),
+      );
 
     if (hasErrorIn(academicFields) && activeTab !== "academic") {
       setActiveTab("academic");
@@ -252,14 +282,16 @@ const EditStudentDrawer = ({
       label: "Academic Info",
       icon: GraduationCap,
       hasError: !!(
-        errors.program_id ||
-        errors.regulation_id ||
-        errors.student_id ||
-        errors.admission_number ||
-        errors.batch_year ||
-        errors.current_semester ||
-        errors.department_id ||
-        errors.section
+        (
+          errors.program_id ||
+          errors.regulation_id ||
+          errors.student_id ||
+          errors.admission_number ||
+          errors.batch_year ||
+          errors.current_semester ||
+          errors.department_id
+        )
+        // errors.section
       ),
     },
     {
@@ -274,7 +306,7 @@ const EditStudentDrawer = ({
         errors.date_of_birth ||
         errors.aadhaar_number ||
         errors.pan_number ||
-        errors.passport_number ||
+        // errors.passport_number ||
         errors.nationality ||
         errors.religion ||
         errors.caste ||
@@ -360,11 +392,12 @@ const EditStudentDrawer = ({
                   onClick={() => setActiveTab(tab.id)}
                   className={`
                     relative group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                    ${isActive
-                      ? "text-secondary-600 bg-secondary-50 dark:bg-secondary-900/20 dark:text-secondary-400 ring-1 ring-secondary-500/10"
-                      : tab.hasError
-                        ? "text-error-600 bg-error-50 dark:bg-error-900/10 dark:text-error-400 ring-1 ring-error-500/10"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+                    ${
+                      isActive
+                        ? "text-secondary-600 bg-secondary-50 dark:bg-secondary-900/20 dark:text-secondary-400 ring-1 ring-secondary-500/10"
+                        : tab.hasError
+                          ? "text-error-600 bg-error-50 dark:bg-error-900/10 dark:text-error-400 ring-1 ring-error-500/10"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
                     }
                   `}
                 >
@@ -521,7 +554,7 @@ const EditStudentDrawer = ({
                         </p>
                       )}
                     </div>
-                    <div>
+                    {/* <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
                         Section
                       </label>
@@ -529,7 +562,7 @@ const EditStudentDrawer = ({
                         {...register("section")}
                         className="form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-secondary-500 focus:ring-4 focus:ring-secondary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                       />
-                    </div>
+                    </div> */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
                         Current Sem
@@ -943,13 +976,13 @@ const EditStudentDrawer = ({
                           </select>
                           {errors.previous_academics?.[index]
                             ?.qualification && (
-                              <p className="text-[10px] text-error-500 mt-1 ml-1">
-                                {
-                                  errors.previous_academics[index].qualification
-                                    .message
-                                }
-                              </p>
-                            )}
+                            <p className="text-[10px] text-error-500 mt-1 ml-1">
+                              {
+                                errors.previous_academics[index].qualification
+                                  .message
+                              }
+                            </p>
+                          )}
                         </div>
                         <div className="col-span-2">
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">

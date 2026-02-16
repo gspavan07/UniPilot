@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchUsers,
@@ -25,7 +27,6 @@ import {
   Plus,
   Wand2,
   Search,
-  Filter,
   Edit2,
   Trash2,
   Loader2,
@@ -33,11 +34,8 @@ import {
   Download,
   Upload,
   FileText,
-  FileDown,
   Mail,
   Eye,
-  UserCheck,
-  UserX,
 } from "lucide-react";
 
 const StudentList = () => {
@@ -51,6 +49,7 @@ const StudentList = () => {
     userStats,
   } = useSelector((state) => state.users);
   const { departments } = useSelector((state) => state.departments);
+  const navigate = useNavigate();
   const { programs } = useSelector((state) => state.programs);
   const { roles } = useSelector((state) => state.roles);
 
@@ -396,7 +395,7 @@ const StudentList = () => {
                       Import
                     </button>
                     <button
-                      onClick={openAddForm}
+                      onClick={() => navigate("/student/register")}
                       className="flex items-center px-5 py-2 text-sm font-bold text-white bg-black border border-black rounded-full hover:bg-blue-700 hover:border-blue-700 transition-all shadow-xl shadow-blue-900/10"
                     >
                       <Plus className="w-4 h-4 mr-2" />
