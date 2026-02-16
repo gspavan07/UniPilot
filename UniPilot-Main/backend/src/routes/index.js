@@ -41,6 +41,9 @@ const examSeatingRoutes = require("./exam/seatingArrangement.routes");
 const examGradeRoutes = require("./exam/gradeEntry.routes");
 const facultyExamRoutes = require("./exam/facultyExam.routes");
 
+const notificationRoutes = require("./notifications");
+const academicRoutes = require("./academic");
+
 const router = express.Router();
 
 // API version
@@ -86,6 +89,10 @@ router.use("/placement", placementRoutes);
 router.use("/program-outcomes", programOutcomeRoutes);
 router.use("/course-outcomes", courseOutcomeRoutes);
 router.use("/co-po-maps", coPoMapRoutes);
+
+// Faculty Assignment & Notifications
+router.use("/notifications", notificationRoutes);
+router.use("/academic", academicRoutes);
 
 // Exam Management routes
 router.use("/exam/cycles", examCycleRoutes);

@@ -41,10 +41,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.login(email, password);
       console.log(response);
-      if (
-        response?.data?.user?.role != "super_admin" &&
-        response?.data?.user?.role != "faculty"
-      ) {
+      if (response?.data?.user?.role !== "super_admin" && response?.data?.user?.role !== "faculty") {
         return {
           success: false,
           error: "You are not authorized to login",

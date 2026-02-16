@@ -7,19 +7,36 @@ import {
   CheckSquare,
   FileText,
   UserCheck,
+  Bell
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { fetchMyProctees } from "../../store/slices/proctorSlice";
+// import { fetchMyProctees } from "../../store/slices/proctorSlice"; // Removed from dashboard view
 import { fetchTimetable } from "../../store/slices/timetableSlice";
+import api from "../../utils/api";
 
 const FacultyDashboard = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { myProctees } = useSelector((state) => state.proctor);
+  const { myProctees } = useSelector((state) => state.proctor); // Kept if needed for stats, or can remove
   const { currentTimetable } = useSelector((state) => state.timetable);
+  const [notifications, setNotifications] = React.useState([]);
 
   useEffect(() => {
-    dispatch(fetchMyProctees());
+    // dispatch(fetchMyProctees()); // Removed
+
+    // Fetch Notifications
+    const loadNotifications = async () => {
+      try {
+        const res = await api.get('/notifications');
+        if (res.data.success) {
+          setNotifications(res.data.data);
+        }
+      } catch (e) {
+        console.error("Failed to load notifications", e);
+      }
+    };
+    loadNotifications();
+
     // Also fetch timetable context - ideally backend provides "my-schedule" endpoint
     // For now we use the slice if available or placeholder logic
   }, [dispatch]);
@@ -131,40 +148,44 @@ const FacultyDashboard = () => {
           </div>
         </div>
 
-        {/* Right Sidebar - Proctees / Notifications */}
+        {/* Right Sidebar - Notifications */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold flex items-center">
-              <UserCheck className="w-4 h-4 mr-2" /> My Proctees
+              <Bell className="w-4 h-4 mr-2 text-yellow-500" /> Notifications
             </h3>
             <Link
-              to="/proctoring"
+              to="/notifications"
               className="text-xs font-bold text-gray-400 hover:text-primary-500"
             >
               View All
             </Link>
           </div>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto">
-            {myProctees.length > 0 ? (
-              myProctees.slice(0, 5).map((student) => (
-                <div key={student.id} className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold">
-                    {student.first_name[0]}
-                    {student.last_name[0]}
-                  </div>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+            {notifications.length > 0 ? (
+              notifications.slice(0, 10).map((notif) => (
+                <div key={notif.id} className={`flex items-start space-x-3 p-3 rounded-lg ${notif.is_read ? 'opacity-70' : 'bg-blue-50 dark:bg-blue-900/10'}`}>
+                  <div className={`mt-1 min-w-[8px] h-2 rounded-full ${notif.is_read ? 'bg-gray-300' : 'bg-blue-500'}`}></div>
                   <div className="flex-1">
-                    <p className="text-sm font-bold">
-                      {student.first_name} {student.last_name}
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      {notif.title}
                     </p>
-                    <p className="text-[10px] text-gray-400 capitalize">
-                      {student.id.slice(0, 8)}... • Sem{" "}
-                      {student.current_semester}
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                      {notif.message}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-2 text-right">
+                      {new Date(notif.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-gray-400">No students assigned yet.</p>
+              <div className="text-center py-8">
+                <div className="bg-gray-100 dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                  <Bell className="w-6 h-6" />
+                </div>
+                <p className="text-sm text-gray-500">No new notifications.</p>
+              </div>
             )}
           </div>
         </div>

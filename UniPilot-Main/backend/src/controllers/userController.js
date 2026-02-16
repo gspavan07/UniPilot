@@ -390,9 +390,66 @@ exports.getAllBatches = async (req, res) => {
     });
   }
 };
-// @desc    Get single user
-// @route   GET /api/users/:id
+// @desc    Get batch details (semesters and sections)
+// @route   GET /api/users/batch-details
 // @access  Private
+exports.getBatchDetails = async (req, res) => {
+  try {
+    const { department_id, batch_year, program_id } = req.query;
+    const where = {
+      role: "student",
+      batch_year: batch_year,
+    };
+
+    if (department_id) where.department_id = department_id;
+    if (program_id) where.program_id = program_id;
+
+    // Get distinct semesters
+    const semesters = await User.findAll({
+      attributes: [
+        [
+          sequelize.fn("DISTINCT", sequelize.col("current_semester")),
+          "current_semester",
+        ],
+      ],
+      where,
+      order: [["current_semester", "ASC"]],
+      raw: true,
+    });
+
+    const semesterList = semesters.map((s) => s.current_semester).filter(Boolean);
+
+    // Get distinct sections
+    const sections = await User.findAll({
+      attributes: [
+        [sequelize.fn("DISTINCT", sequelize.col("section")), "section"],
+      ],
+      where: {
+        ...where,
+        section: { [Op.ne]: null },
+      },
+      order: [["section", "ASC"]],
+      raw: true,
+    });
+
+    const sectionList = sections.map((s) => s.section).filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        semesters: semesterList,
+        sections: sectionList,
+      },
+    });
+  } catch (error) {
+    logger.error("Error in getBatchDetails:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server Error",
+    });
+  }
+};
+
 exports.getUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id, {

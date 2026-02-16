@@ -235,18 +235,19 @@ exports.getHodDashboardStats = async (req, res) => {
       },
     });
 
-    // 3. Total Courses in Department (via Programs)
+    // 3. Total Courses in Department
+    const totalCourses = await Course.count({
+      where: { department_id: departmentId },
+    });
+
+    // 4. Classes Today in Department
+    // Get program IDs for timetable filtering
     const programs = await Program.findAll({
       where: { department_id: departmentId },
       attributes: ["id"],
     });
     const programIds = programs.map((p) => p.id);
 
-    const totalCourses = await Course.count({
-      where: { program_id: { [Op.in]: programIds } },
-    });
-
-    // 4. Classes Today in Department
     const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
     const activeClasses = await TimetableSlot.count({
       include: [

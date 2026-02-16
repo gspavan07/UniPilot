@@ -33,6 +33,7 @@ import CoPoMapping from "./pages/academics/CoPoMapping";
 import SectionManager from "./pages/academics/SectionManager";
 import CourseList from "./pages/courses/CourseList";
 import MyCourses from "./pages/courses/MyCourses";
+import FacultyAssignment from "./pages/hod/FacultyAssignment";
 
 // Infrastructure
 import BlockList from "./pages/infrastructure/BlockList";
@@ -179,6 +180,7 @@ function App() {
           <Route path="/courses" element={<CourseList />} />
           <Route path="/my-courses" element={<MyCourses />} />
           <Route path="/academic/sections" element={<SectionManager />} />
+          <Route path="/academic/faculty-assignment" element={<FacultyAssignment />} />
 
           {/* Infrastructure */}
           <Route path="/infrastructure" element={<BlockList />} />

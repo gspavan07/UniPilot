@@ -11,7 +11,29 @@ const logger = require("../utils/logger");
 // @access  Private
 exports.getAllPrograms = async (req, res) => {
   try {
+    let { department_id } = req.query;
+
+    // If no department_id provided, and user is likely an HOD/Faculty, try to scope it
+    if (!department_id && req.user) {
+      // If user is HOD, find their department
+      // We can check if the user object has department_id (if added to token)
+      // OR we can query the Department table
+      const userWithDept = await User.findByPk(req.user.userId, {
+        include: [{ model: Department, as: 'departments_as_hod' }]
+      });
+
+      if (userWithDept && userWithDept.departments_as_hod && userWithDept.departments_as_hod.length > 0) {
+        department_id = userWithDept.departments_as_hod[0].id;
+      }
+    }
+
+    const where = {};
+    if (department_id) {
+      where.department_id = department_id;
+    }
+
     const programs = await Program.findAll({
+      where,
       include: [
         {
           model: Department,
