@@ -30,15 +30,20 @@ export default function MainLayout() {
         { path: "/faculty/exams", icon: LayoutDashboard, label: "My Exams" },
         { path: "/profile", icon: User, label: "Profile" },
       ]
-      : [
-        { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-        { path: "/exam-cycles", icon: Calendar, label: "Exam Cycles" },
-        { path: "/hall-tickets", icon: Ticket, label: "Hall Tickets" },
-        { path: "/schedules", icon: ClipboardList, label: "Schedules" },
-        { path: "/seating", icon: Users, label: "Seating" },
-        { path: "/grades", icon: FileText, label: "Grades" },
-        { path: "/settings", icon: Settings, label: "Settings" },
-      ];
+      : user?.role === "hod"
+        ? [
+          { path: "/hod/papers", icon: LayoutDashboard, label: "Paper Reviews" },
+          { path: "/profile", icon: User, label: "Profile" },
+        ]
+        : [
+          { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+          { path: "/exam-cycles", icon: Calendar, label: "Exam Cycles" },
+          { path: "/hall-tickets", icon: Ticket, label: "Hall Tickets" },
+          { path: "/schedules", icon: ClipboardList, label: "Schedules" },
+          { path: "/seating", icon: Users, label: "Seating" },
+          { path: "/grades", icon: FileText, label: "Grades" },
+          { path: "/settings", icon: Settings, label: "Settings" },
+        ];
 
   const handleLogout = async () => {
     await logout();
@@ -99,8 +104,8 @@ export default function MainLayout() {
               to={item.path}
               end={item.path === "/"}
               className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${isActive(item.path)
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+                ? "bg-blue-600 text-white"
+                : "text-gray-700 hover:bg-gray-100"
                 }`}
               style={{ animationDelay: `${index * 25}ms` }}
             >
@@ -110,15 +115,15 @@ export default function MainLayout() {
               />
               <item.icon
                 className={`w-[18px] h-[18px] shrink-0 transition-colors ${isActive(item.path)
-                    ? "text-white"
-                    : "text-gray-600 group-hover:text-blue-600"
+                  ? "text-white"
+                  : "text-gray-600 group-hover:text-blue-600"
                   }`}
               />
               {sidebarOpen && (
                 <span
                   className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${isActive(item.path)
-                      ? "font-semibold text-white"
-                      : "text-gray-700"
+                    ? "font-semibold text-white"
+                    : "text-gray-700"
                     }`}
                 >
                   {item.label}

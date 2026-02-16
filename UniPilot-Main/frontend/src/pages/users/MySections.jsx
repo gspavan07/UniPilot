@@ -230,26 +230,6 @@ const MySections = () => {
         </div>
       )}
 
-      {/* Scalability Notice for South Indian Universities */}
-      <div className="mt-12 bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col md:flex-row items-center gap-6">
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-emerald-600 dark:text-emerald-400">
-          <GraduationCap className="w-10 h-10" />
-        </div>
-        <div className="flex-1">
-          <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-            Scale-Focused Academic Management
-          </h4>
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed italic">
-            "We understand that South Indian universities manage massive student
-            intakes. Our system is optimized to load thousands of records
-            instantly, ensuring you can focus on mentorship rather than
-            searching for data."
-          </p>
-          <p className="mt-2 text-xs font-bold text-gray-400 uppercase tracking-widest">
-            UniPilot Engineering, Kakinada, AP
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
