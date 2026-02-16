@@ -9,7 +9,7 @@ import theme from '../../theme/theme';
 import { useDrawer } from '../../context/DrawerContext';
 
 import ScheduleTab from './tabs/ScheduleTab';
-import MyExamsTab from './tabs/MyExamsTab';
+import PaymentsTab from './tabs/PaymentsTab';
 import ReverificationTab from './tabs/ReverificationTab';
 import ScriptsTab from './tabs/ScriptsTab';
 
@@ -47,7 +47,7 @@ const ExamTabNavigator = () => {
           tabBarActiveTintColor: theme.colors.primary,
           tabBarInactiveTintColor: '#94a3b8',
           tabBarScrollEnabled: true,
-          tabBarItemStyle: { width: 'auto', minWidth: 90 },
+          tabBarItemStyle: { width: 'auto', minWidth: 100 },
         }}
       >
         <Tab.Screen
@@ -56,9 +56,9 @@ const ExamTabNavigator = () => {
           options={{ tabBarLabel: 'Schedule' }}
         />
         <Tab.Screen
-          name="MyExams"
-          component={MyExamsTab}
-          options={{ tabBarLabel: 'My Exams' }}
+          name="Payments"
+          component={PaymentsTab}
+          options={{ tabBarLabel: 'Payments' }}
         />
         <Tab.Screen
           name="Reverification"

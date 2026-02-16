@@ -137,17 +137,25 @@ exports.getMyAttendance = async (req, res) => {
 
       let targetIds = new Set();
 
-      if (student && student.regulation_id && student.program_id) {
+      if (
+        student &&
+        student.regulation_id &&
+        student.program_id &&
+        student.batch_year
+      ) {
         const regulation = await Regulation.findByPk(student.regulation_id);
 
         if (regulation && regulation.courses_list) {
           const coursesList = regulation.courses_list;
+          const batchYear = student.batch_year;
           const progId = student.program_id;
           const semKey = String(semester);
 
           // Program Courses
-          if (coursesList[progId] && coursesList[progId][semKey]) {
-            coursesList[progId][semKey].forEach(id => targetIds.add(id));
+          if (coursesList[progId] && coursesList[progId][batchYear][semKey]) {
+            coursesList[progId][batchYear][semKey].forEach((id) =>
+              targetIds.add(id),
+            );
           }
 
           // Common Courses
@@ -161,13 +169,27 @@ exports.getMyAttendance = async (req, res) => {
         console.log("targetIds", targetIds);
         if (where.course_id) {
           if (!targetIds.has(where.course_id)) {
-            return res.status(200).json({ success: true, data: { records: [], summary: { total: 0, present: 0, percentage: 0 }, courseWise: [] } });
+            return res.status(200).json({
+              success: true,
+              data: {
+                records: [],
+                summary: { total: 0, present: 0, percentage: 0 },
+                courseWise: [],
+              },
+            });
           }
         } else {
           where.course_id = { [Op.in]: Array.from(targetIds) };
         }
       } else {
-        return res.status(200).json({ success: true, data: { records: [], summary: { total: 0, present: 0, percentage: 0 }, courseWise: [] } });
+        return res.status(200).json({
+          success: true,
+          data: {
+            records: [],
+            summary: { total: 0, present: 0, percentage: 0 },
+            courseWise: [],
+          },
+        });
       }
     }
 

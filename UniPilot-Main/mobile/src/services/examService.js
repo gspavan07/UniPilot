@@ -4,19 +4,46 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 class ExamService {
-  // Get student's exam schedules
+  // Get student's exam cycles and schedules (Updated to match frontend)
+  async getMyExams() {
+    const response = await api.get('/exam/cycles/my/exams');
+    return response.data;
+  }
+
+  // Get student's exam payment history (Updated to match frontend)
+  async getExamPaymentHistory() {
+    const response = await api.get('/exam/cycles/my/payments');
+    return response.data;
+  }
+
+  // Process exam fee payment (New)
+  async payExamFee(cycleId) {
+    const response = await api.post(`/exam/cycles/${cycleId}/pay-fee`);
+    return response.data;
+  }
+
+  // Verify Razorpay Payment (New)
+  async verifyPayment(cycleId, paymentData) {
+    const response = await api.post(
+      `/exam/cycles/${cycleId}/verify-payment`,
+      paymentData,
+    );
+    return response.data;
+  }
+
+  // Deprecated: keeping old methods for compatibility if needed elsewhere temporarily
   async getMySchedules() {
     const response = await api.get('/exam/my-schedules');
     return response.data;
   }
 
-  // Get available exam cycles
+  // Deprecated: Get available exam cycles
   async getExamCycles() {
     const response = await api.get('/exam/cycles');
     return response.data;
   }
 
-  // Get student's exam registrations
+  // Deprecated: Get student's exam registrations
   async getMyRegistrations() {
     const response = await api.get('/exam/my-registrations');
     return response.data;

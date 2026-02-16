@@ -1,13 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  Calendar,
-  MapPin,
-  Clock,
-  User,
-  Info,
-  Coffee,
-} from "lucide-react";
+import { Calendar, MapPin, Clock, User, Info, Coffee } from "lucide-react";
 import { fetchMyTimetable } from "../../store/slices/timetableSlice";
 import api from "../../utils/api";
 
@@ -50,121 +43,191 @@ const MyTimetable = () => {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   if (isSatWorking) days.push("Saturday");
 
-  return (
-    <div className="min-h-screen bg-white text-black font-sans pb-24 selection:bg-blue-100 selection:text-blue-900">
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-12">
-        {/* Header Section */}
-        <header className="flex flex-col md:flex-row justify-between items-end pb-8 gap-8">
-          <div>
-            <span className="block text-xs font-bold tracking-widest text-blue-600 uppercase mb-2">
-              Weekly Schedule
-            </span>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tighter text-black leading-none">
-              Timetable.
-            </h1>
-          </div>
+  // Helper to get date for the current week based on day name
+  const getDateForDay = (dayName) => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const dayIndex = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ].indexOf(dayName);
 
-          {holidays.length > 0 && (
-            <div className="flex items-center gap-4 px-6 py-4 border border-blue-600 bg-blue-50/50 rounded-none w-full md:w-auto">
-              <div className="p-2 bg-blue-600 text-white rounded-full">
-                <Coffee className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-0.5">
-                  Upcoming Break
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h4 className="text-sm font-bold text-black">
-                    {holidays[0].name}
-                  </h4>
-                  <span className="text-xs font-mono text-gray-500">
-                    {new Date(holidays[0].date).toLocaleDateString()}
-                  </span>
+    // Calculate difference (handling Sunday as 0, but Monday is start of our logical week)
+    const diff = dayIndex - (currentDay === 0 ? 7 : currentDay);
+    const targetDate = new Date(today);
+    targetDate.setDate(
+      today.getDate() + (currentDay === 0 && dayIndex !== 0 ? diff + 7 : diff),
+    );
+
+    return targetDate.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-white text-black font-sans selection:bg-blue-100 selection:text-blue-900 pb-20 overflow-x-hidden">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-16 pt-12">
+        {/* Modern Header Section */}
+        <header className="mb-12">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 bg-gray-50/50 p-8 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden">
+            {/* Background Decoration */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl"></div>
+
+            <div className="space-y-2 relative z-10">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em]">
+                Academic Schedule
+              </span>
+              <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight leading-none">
+                Weekly <span className="text-blue-600">Timetable.</span>
+              </h1>
+              <p className="text-gray-500 text-sm font-medium">
+                Your structured learning journey for the current academic
+                session.
+              </p>
+            </div>
+
+            {holidays.length > 0 && (
+              <div className="relative z-10 group flex items-center gap-6 px-8 py-6 bg-white border border-gray-100 rounded-[2rem] shadow-md shadow-black/[0.02] w-full lg:w-auto transition-all hover:shadow-xl hover:-translate-y-1">
+                <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                  <Coffee className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">
+                    Upcoming Recess
+                  </p>
+                  <div className="flex flex-col">
+                    <h4 className="text-lg font-black text-black leading-none mb-1">
+                      {holidays[0].name}
+                    </h4>
+                    <span className="text-xs font-bold text-blue-600/60 font-mono">
+                      {new Date(holidays[0].date).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </header>
 
         {!currentTimetable ? (
-          <div className="mt-8 flex flex-col items-center justify-center py-24 border border-dashed border-gray-200 rounded-3xl bg-gray-50/30">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100 mb-6 transform rotate-3">
-              <Calendar className="w-8 h-8 text-blue-600" />
+          <div className="py-40 flex flex-col items-center justify-center bg-gray-50/30 border-2 border-dashed border-gray-100 rounded-[3rem]">
+            <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-black/[0.02] mb-8 group transition-transform hover:rotate-6">
+              <Calendar className="w-10 h-10 text-gray-200 group-hover:text-blue-600 transition-colors" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">No Timetable Synced</h3>
-            <p className="text-gray-400 mt-2 text-sm text-center max-w-xs font-medium">
-              Your weekly schedule hasn't been published yet. Check back later.
+            <h3 className="text-2xl font-black text-black mb-3">
+              Syncing Unavailable
+            </h3>
+            <p className="text-gray-400 font-medium text-center max-w-sm px-6">
+              We couldn't locate your published schedule. Please verify with the
+              academic department or try again later.
             </p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto pb-12 mt-6">
+          <div className="w-full overflow-x-auto pb-12 mt-6 custom-scrollbar">
             <div
-              className="min-w-[1000px] lg:min-w-0 grid gap-px bg-gray-200 border border-gray-200 rounded-3xl overflow-hidden shadow-sm"
-              style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+              className={`min-w-[1200px] lg:min-w-0 grid gap-8`}
+              style={{
+                gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+              }}
             >
-              {days.map((day, index) => {
+              {days.map((day) => {
                 const daySlots =
-                  currentTimetable.slots?.filter((s) => s.day_of_week === day) ||
-                  [];
+                  currentTimetable.slots?.filter(
+                    (s) => s.day_of_week === day,
+                  ) || [];
 
-                // Sort slots by time
-                daySlots.sort((a, b) => a.start_time.localeCompare(b.start_time));
+                daySlots.sort((a, b) =>
+                  a.start_time.localeCompare(b.start_time),
+                );
 
                 return (
-                  <div key={day} className="flex flex-col bg-white h-full min-h-[500px]">
-                    {/* Day Header */}
-                    <div className="py-6 px-4 border-b border-gray-100 bg-white sticky top-0 z-10 text-center">
-                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-full">{day.substring(0, 3)}</span>
-                      <h3 className="text-lg font-black text-gray-900 mt-3">{day}</h3>
-                      <p className="text-xs font-medium text-gray-400 mt-1">{daySlots.length} Sessions</p>
+                  <div key={day} className="flex flex-col gap-6">
+                    {/* Day Header - Premium Floating Style */}
+                    <div className="bg-gray-50/50 p-6 rounded-[2rem] border border-blue-200 flex flex-col items-center justify-center text-center shadow-sm">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3 bg-blue-50 px-4 py-1.5 rounded-full">
+                        {getDateForDay(day)}
+                      </span>
+                      <h3 className="text-xl font-black text-black">{day}</h3>
+                      <div className="mt-2 h-1 w-8 bg-blue-600/20 rounded-full"></div>
                     </div>
 
                     {/* Slots Container */}
-                    <div className="flex-1 p-3 space-y-3 bg-gray-50/30">
+                    <div className="flex-1 space-y-4">
                       {daySlots.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-300 py-12 opacity-60">
-                          <Coffee className="w-6 h-6 mb-2 text-gray-200" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">No Classes</span>
+                        <div className="h-[200px] flex flex-col items-center justify-center bg-gray-50/30 border-2 border-dashed border-gray-100 rounded-[2rem] opacity-60">
+                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mb-4">
+                            <Coffee className="w-5 h-5 text-gray-200" />
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300">
+                            Quiet Day
+                          </span>
                         </div>
                       ) : (
                         daySlots.map((slot) => (
                           <div
                             key={slot.id}
-                            className="group relative bg-white p-4 rounded-xl border border-blue-200 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[4px_5px_2px_0.5px_rgba(37,99,235,0.2)] hover:border-blue-300 transition-all duration-300"
+                            className="group relative bg-white p-6 rounded-[2rem] border border-gray-300 shadow-md shadow-black/[0.02] transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 hover:border-blue-100 cursor-default overflow-hidden"
                           >
+                            {/* Accent Bar */}
+                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                            <div className="absolute left-0 t op-3 bottom-3 w-1 bg-blue-600 rounded-r-md transition-opacity"></div>
-
-                            {/* Time Badge */}
-                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border  mb-3 bg-blue-50 order-blue-100 transition-colors">
-                              <Clock className="w-3 h-3 text-blue-500" />
-                              <span className="text-[10px] font-bold text-blue-700">
-                                {slot.start_time.slice(0, 5)}
-                              </span>
+                            {/* Time Badge - Striking Design */}
+                            <div className="flex items-center justify-between mb-5">
+                              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[1rem] bg-gray-50 group-hover:bg-blue-600 transition-all duration-500">
+                                <Clock className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors" />
+                                <span className="text-xs font-black text-black group-hover:text-white transition-colors">
+                                  {slot.start_time.slice(0, 5)}
+                                </span>
+                              </div>
+                              <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-blue-600">
+                                <Info className="w-4 h-4" />
+                              </div>
                             </div>
 
-                            {/* Content */}
-                            <div>
-                              <h4 className="text-sm font-extrabold leading-snug mb-1   text-blue-700 transition-colors">
-                                {slot.activity_name || slot.course?.name}
-                              </h4>
+                            {/* Main Content */}
+                            <div className="space-y-4">
+                              <div className="space-y-1">
+                                <h4 className="text-base font-black text-black leading-tight group-hover:text-blue-600 transition-colors">
+                                  {slot.activity_name || slot.course?.name}
+                                </h4>
+                                {slot.course?.code && (
+                                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    {slot.course.code}
+                                  </p>
+                                )}
+                              </div>
 
-                              {slot.course?.code && (
-                                <div className="text-[10px] font-mono font-bold text-gray-400 mb-3">
-                                  {slot.course.code}
-                                </div>
-                              )}
-
-                              <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-50">
-                                <div className="flex items-center text-[10px] font-bold text-gray-500">
-                                  <MapPin className="w-3 h-3 mr-1.5 text-blue-500" />
-                                  {slot.room?.room_number || slot.room_number || "TBD"}
+                              <div className="grid grid-cols-1 gap-2 pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-600">
+                                    Room{" "}
+                                    {slot.room?.room_number ||
+                                      slot.room_number ||
+                                      "TBA"}
+                                  </span>
                                 </div>
 
                                 {(slot.faculty?.name || slot.faculty_id) && (
-                                  <div className="flex items-center text-[10px] font-medium text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap">
-                                    <User className="w-3 h-3 mr-1.5 text-gray-300" />
-                                    {slot.faculty?.name || "Faculty Member"}
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
+                                      <User className="w-3.5 h-3.5 text-gray-400" />
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-500 truncate">
+                                      {slot.faculty?.name || "Academic Staff"}
+                                    </span>
                                   </div>
                                 )}
                               </div>

@@ -13,10 +13,12 @@ import {
   Ticket,
   ChevronRight,
   ArrowUpRight,
+  User,
+  Bell,
+  Book,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { fetchMyFeeStatus } from "../../store/slices/feeSlice";
-import { fetchTimetable } from "../../store/slices/timetableSlice";
 import { fetchMyAttendance } from "../../store/slices/attendanceSlice";
 import { fetchMyTimetable } from "../../store/slices/timetableSlice";
 
@@ -30,15 +32,10 @@ const StudentDashboard = () => {
   );
 
   useEffect(() => {
-    // 1. Fetch Fees
     dispatch(fetchMyFeeStatus());
-    // 2. Fetch Attendance
     dispatch(fetchMyAttendance());
-    // 3. Fetch Exam Notices
     fetchExams();
-    // 4. Fetch Timetable
     dispatch(fetchMyTimetable());
-    // 5. Fetch Performance
     if (user?.id) {
       fetchPerformance();
     }
@@ -64,10 +61,7 @@ const StudentDashboard = () => {
     }
   };
 
-  // Calculate Real Stats
   const totalDue = myStatus?.grandTotals?.due || 0;
-
-  // Filter Today's Classes
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
   const todaysClasses =
     currentTimetable?.slots
@@ -78,253 +72,274 @@ const StudentDashboard = () => {
     {
       label: "Attendance",
       value: `${attendanceSummary?.percentage || 0}%`,
-      subLabel: "Current Semester",
       icon: CheckCircle,
-      // Minimalist: Use blue scale for status or just neutral
-      border:
-        (attendanceSummary?.percentage || 0) < 75
-          ? "border-gray-200"
-          : "border-blue-100",
+      // status: (attendanceSummary?.percentage || 0) < 75 ? "Warning" : "😁",
     },
     {
       label: "Fee Dues",
       value: `₹${totalDue.toLocaleString()}`,
-      subLabel: totalDue > 0 ? "Action Required" : "No Pending Dues",
       icon: AlertCircle,
-      isAlert: totalDue > 0,
+      // isAlert: totalDue > 0,
     },
     {
       label: "Overall CGPA",
       value: performance?.summary?.cgpa || "N/A",
-      subLabel: "Academic Performance",
       icon: TrendingUp,
-      border: "border-gray-200",
     },
   ];
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-
   return (
-    <div className="min-h-fit bg-white text-gray-900 font-sans selection:bg-blue-100 selection:text-blue-900 pb-24">
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-12">
-        {/* Header Section: Minimal & Bold */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-6 mb-6">
-          <div className="space-y-2">
-            <span className="text-sm font-semibold tracking-widest text-blue-600 uppercase">
-              Student Dashboard
-            </span>
-            <h1 className="text-3xl md:text-6xl font-extrabold tracking-tight text-black">
-              Hello, {user?.first_name}
-            </h1>
-            <p className="text-gray-500 text-lg">
-              {user?.program?.name || "Student"} • {user?.current_semester ? `Sem ${user.current_semester}` : "N/A"}
-            </p>
-          </div>
-          <div className="mt-6 md:mt-0 text-left md:text-right">
-            <p className="text-6xl font-light text-gray-200 leading-none select-none">
-              {new Date().getDate()}
-            </p>
-            <p className="text-sm font-medium text-gray-400 uppercase tracking-widest mt-1">
-              {new Date().toLocaleDateString("en-US", { month: "long", weekday: "long" })}
-            </p>
-          </div>
-        </header>
-
-        {/* Overview Section - Moved to Top */}
-        <section className="mb-10">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-            Overview
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-            {stats.map((stat, idx) => (
-              <div
-                key={idx}
-                className={`group p-5 rounded-2xl border ${stat.isAlert ? "border-blue-600 bg-blue-50/50" : "border-gray-200 hover:border-gray-300"
-                  } transition-all duration-300 flex flex-col justify-between`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <stat.icon
-                    className={`w-4 h-4 ${stat.isAlert ? "text-blue-600" : "text-gray-400 group-hover:text-blue-500"
-                      } transition-colors`}
-                  />
-                  {stat.isAlert && (
-                    <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-3xl font-bold tracking-tight">
-                    {stat.value}
-                  </p>
-                  <p className="text-sm font-medium text-gray-500">
-                    {stat.label}
-                  </p>
-                </div>
-                {/* <p className="mt-4 text-xs font-medium text-gray-400 border-t border-gray-200/50 pt-3">
-                  {stat.subLabel}
-                </p> */}
-              </div>
-            ))}
+    <div className="min-h-screen bg-white text-black selection:bg-blue-100 selection:text-blue-900 pb-20 overflow-x-hidden">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-16 pt-8">
+        {/* Hero Section */}
+        <section className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-gray-50/50 p-8 rounded-[2rem] border border-gray-100 shadow-md shadow-black/[0.03]">
+            <div className="space-y-3">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wider">
+                Current Semester:{" "}
+                {user?.current_semester
+                  ? `Sem ${user.current_semester}`
+                  : "N/A"}
+              </span>
+              <h1 className="text-3xl md:text-4xl font-black text-black leading-tight">
+                Welcome back,
+                <br />
+                <span className="text-blue-600 truncate">
+                  {user?.first_name} {user?.last_name}
+                </span>
+              </h1>
+              <p className="text-gray-500 text-md font-medium max-w-md truncate">
+                {user?.program?.name || "Academic Program"}
+                <br />
+                Student ID: {user?.student_id?.toUpperCase()}
+              </p>
+            </div>
+            <div className="flex flex-col items-end">
+              <img
+                src={
+                  user?.profile_picture ||
+                  "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                }
+                alt=""
+                className="w-32 h-32 rounded-full"
+              />
+            </div>
           </div>
         </section>
 
-        {/* Main Content Grid: Schedule (Left) & Notices/Hostel (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        {/* Stats Grid */}
+        <section className="mb-16 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {stats.map((stat, idx) => (
+            <div
+              key={idx}
+              className={`group p-8 rounded-[2rem] border border-blue-300 transition-all duration-500 shadow-md shadow-black/[0.03] hover:shadow-xl hover:-translate-y-1 ${
+                stat.isAlert
+                  ? "border-blue-600 bg-white"
+                  : "border-gray-100 bg-white hover:border-blue-200"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div
+                  className={`p-3 rounded-2xl ${
+                    stat.isAlert
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-50 text-blue-600 group-hover:bg-blue-50"
+                  } transition-colors`}
+                >
+                  <stat.icon className="w-6 h-6" />
+                </div>
 
-          {/* Center Column: Daily Schedule (8 cols) */}
-          <main className="lg:col-span-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-black tracking-tight flex items-center gap-3">
-                <span className="w-8 h-[1px] bg-black block display-block"></span>
-                Today's Schedule
+                {/* <span className="flex items-center gap-1.5 rounded-full bg-blue-50 text-blue-600 text-3xl font-bold uppercase">
+                  {stat.status}
+                </span> */}
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest leading-none">
+                  {stat.label}
+                </h3>
+                <p className="text-4xl font-black text-black tracking-tight">
+                  {stat.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Main Interface Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+          {/* Left Column: Schedule */}
+          <div className="lg:col-span-8 space-y-10">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <h2 className="text-2xl font-black flex items-center gap-4">
+                <span className="w-1.5 h-8 bg-blue-600 rounded-full"></span>
+                Today's Timeline
               </h2>
               <Link
                 to="/timetable/my"
-                className="text-sm font-bold text-blue-600 hover:text-black transition-colors flex items-center gap-1 group"
+                className="group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-bold hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm"
               >
-                Full Timetable
-                <ArrowUpRight className="w-4 h-4 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
+                View Full Calendar
+                <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </Link>
             </div>
 
-            <div className="relative border-l border-gray-200 ml-3 md:ml-0 md:border-none space-y-0">
+            <div className="space-y-6">
               {todaysClasses.length > 0 ? (
                 todaysClasses.map((cls, idx) => (
-                  <div key={idx} className="group relative pl-8 md:pl-0 md:flex md:gap-8 pb-12 last:pb-0">
-                    {/* Timeline Line (Mobile) */}
-                    <div className="absolute left-[-5px] top-1 h-2.5 w-2.5 rounded-full bg-white border-2 border-blue-600 md:hidden z-10"></div>
-
-                    {/* Time Column */}
-                    <div className="md:w-32 flex-shrink-0 pt-1">
-                      <span className="block text-xl font-bold text-black group-hover:text-blue-600 transition-colors">
+                  <div
+                    key={idx}
+                    className="group relative flex gap-6 md:gap-10 transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-blue-600/[0.02] hover:border-blue-600/20 p-6 rounded-[1.5rem] border border-gray-100 hover:shadow-xl"
+                  >
+                    <div className="w-20 md:w-28 flex-shrink-0 flex flex-col justify-center border-r border-gray-100 pr-4">
+                      <span className="text-2xl font-black text-black group-hover:text-blue-600 transition-colors">
                         {cls.start_time.slice(0, 5)}
                       </span>
-                      <span className="text-sm text-gray-400 font-medium">
-                        {parseInt(cls.start_time.slice(0, 2)) >= 12 ? "PM" : "AM"}
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-wider">
+                        {parseInt(cls.start_time.slice(0, 2)) >= 12
+                          ? "PM"
+                          : "AM"}
                       </span>
                     </div>
 
-                    {/* Divider details (Desktop) */}
-                    <div className="hidden md:block w-px bg-gray-200 relative group-hover:bg-blue-200 transition-colors">
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-black group-hover:bg-blue-600 transition-colors"></div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 bg-white pt-1 md:pb-6 border-b border-gray-100 group-last:border-none group-hover:pl-4 transition-all duration-300">
-                      <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                        {cls.course?.name}
-                      </h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-sm bg-blue-500"></span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="text-xl font-bold text-black truncate group-hover:text-blue-600 transition-colors">
+                          {cls.course?.name}
+                        </h3>
+                        <span className="px-3 py-1 rounded-full bg-gray-50 text-[10px] font-bold text-gray-500 uppercase border border-gray-100">
                           Room {cls.room_number}
                         </span>
-                        <span className="h-4 w-px bg-gray-200"></span>
-                        <span className="font-medium text-gray-700">
-                          {cls.faculty?.first_name} {cls.faculty?.last_name}
-                        </span>
+                      </div>
+                      <div className="flex items-center gap-6 mt-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                            <User className="w-3 h-3 text-gray-500" />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-600 leading-none">
+                            {cls.faculty?.first_name} {cls.faculty?.last_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <Clock className="w-4 h-4" />
+                          <span className="text-xs font-medium uppercase tracking-tight">
+                            1 Hour
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="py-20 text-center border border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
-                  <p className="text-gray-400 font-medium">No classes scheduled for today.</p>
+                <div className="py-24 text-center border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-50">
+                    <Calendar className="w-8 h-8 text-gray-200" />
+                  </div>
+                  <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">
+                    A quiet day ahead
+                  </p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    No classes scheduled for today.
+                  </p>
                 </div>
               )}
             </div>
-          </main>
+          </div>
 
-          {/* Right Column: Notices & Hostel (4 cols) */}
+          {/* Right Column: Widgets */}
           <aside className="lg:col-span-4 space-y-12">
-
-            {/* Notices Section */}
-            <div>
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Notices
-                </h2>
-                <Link to="/my-exams" className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-                  <ArrowUpRight className="w-4 h-4 text-gray-400" />
+            {/* Notices Widget */}
+            <div className="space-y-6">
+              <h2 className="text-lg font-black flex items-center justify-between">
+                Latest Updates
+                <Link
+                  to="/my-exams"
+                  className="text-xs font-bold text-blue-600 hover:underline"
+                >
+                  See All
                 </Link>
-              </div>
+              </h2>
 
               <div className="space-y-4">
                 {exams.length > 0 ? (
                   exams.map((cycle) => (
-                    <Link
-                      key={cycle.id}
-                      to="/my-exams"
-                      className="block group"
-                    >
-                      <article className="p-5 bg-gray-50 rounded-2xl border border-transparent group-hover:border-blue-200 group-hover:bg-white border-l-2 border-l-blue-600 transition-all duration-300">
-                        <div className="flex justify-between items-start mb-2">
-                          <Award className="w-4 h-4 text-blue-600" />
-                          <span className="text-[10px] font-bold uppercase text-gray-400">New</span>
+                    <Link key={cycle.id} to="/my-exams" className="block group">
+                      <div className="p-6 bg-white rounded-3xl border border-gray-100 shadow-md shadow-black/[0.03] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-blue-600/[0.02] hover:border-blue-600/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50/50 rounded-bl-[2rem] flex items-center justify-center">
+                          <BookOpen className="w-6 h-6 text-blue-600" />
                         </div>
-                        <h4 className="font-bold text-gray-900 text-sm leading-relaxed group-hover:text-blue-600 transition-colors">
+                        <span className="inline-block px-2 py-0.5 rounded-lg bg-blue-50 text-[9px] font-black text-blue-600 uppercase tracking-tighter mb-4">
+                          Exam Notice
+                        </span>
+                        <h4 className="font-bold text-black text-base leading-tight group-hover:text-blue-600 transition-colors">
                           {cycle.cycle_name.replace(/_/g, " ")}
                         </h4>
-                        <p className="mt-2 text-xs text-gray-500">
-                          Registration active
-                        </p>
-                      </article>
+                        <div className="mt-4 flex items-center justify-between text-[11px] font-bold text-gray-400 uppercase">
+                          <span>Active Now</span>
+                          <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5" />
+                        </div>
+                      </div>
                     </Link>
                   ))
                 ) : (
-                  <div className="text-center py-8 bg-gray-50 border border-gray-100 rounded-2xl">
-                    <p className="text-sm text-gray-400">No active notices.</p>
+                  <div className="p-8 text-center bg-gray-50/50 border border-gray-100 rounded-3xl">
+                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-3" />
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      Everything is up to date
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Hostel Section (If Hosteller) - Moved Here */}
+            {/* Hostel Services */}
             {user?.is_hosteller && (
-              <div className="space-y-4">
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Hostel Services
+              <div className="p-8 bg-black rounded-[2rem] text-white shadow-2xl shadow-gray-200 relative overflow-hidden group">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all duration-700"></div>
+                <h2 className="text-xl font-black mb-6 relative z-10 flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                  Hostel Life
                 </h2>
-                <nav className="flex flex-col space-y-2">
+                <div className="space-y-3 relative z-10">
                   <Link
                     to="/hostel/gate-pass"
-                    className="flex items-center justify-between p-3 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-xl transition-colors group"
+                    className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 border border-white/5 transition-all group/btn"
                   >
-                    <span className="flex items-center">
-                      <Ticket className="w-4 h-4 mr-3 text-gray-400 group-hover:text-blue-500" />
-                      Gate Pass
+                    <span className="flex items-center font-bold text-sm">
+                      <Ticket className="w-4 h-4 mr-3 text-blue-400" />
+                      Digital Gate Pass
                     </span>
-                    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-blue-500" />
+                    <ChevronRight className="w-4 h-4 text-white/20 group-hover/btn:translate-x-1 transition-transform" />
                   </Link>
                   <Link
                     to="/hostel/complaints"
-                    className="flex items-center justify-between p-3 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-xl transition-colors group"
+                    className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 border border-white/5 transition-all group/btn"
                   >
-                    <span className="flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-3 text-gray-400 group-hover:text-blue-500" />
-                      Complaints
+                    <span className="flex items-center font-bold text-sm">
+                      <AlertCircle className="w-4 h-4 mr-3 text-red-400" />
+                      Report Issue
                     </span>
-                    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-blue-500" />
+                    <ChevronRight className="w-4 h-4 text-white/20 group-hover/btn:translate-x-1 transition-transform" />
                   </Link>
-                </nav>
+                </div>
               </div>
             )}
 
-            {/* Quick Tip or Decorative Element - Preserved Comment */}
-            {/* <div className="p-6 bg-blue-900 text-white">
-                <div className="mb-4">
-                   <TrendingUp className="w-6 h-6 text-blue-400" />
-                </div>
-                <p className="text-lg font-bold leading-snug mb-2">
-                   Stay Consistent.
-                </p>
-                <p className="text-xs text-blue-200/80 leading-relaxed opacity-80">
-                   "Success is the sum of small efforts, repeated day in and day out."
-                </p>
-             </div> */}
+            {/* Quote/Motivation Card */}
+            <div className="p-8 bg-gradient-to-br from-blue-600 to-blue-800 rounded-[2rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+              <div className="absolute bottom-[-20px] right-[-20px] opacity-10">
+                <BookOpen className="w-40 h-40" />
+              </div>
+              <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-4">
+                Focus of the week
+              </p>
+              <p className="text-xl font-black leading-snug mb-2">
+                Consistency is key.
+              </p>
+              <p className="text-sm font-medium text-blue-100/70 leading-relaxed italic">
+                "Success is the sum of small efforts, repeated day in and day
+                out."
+              </p>
+            </div>
           </aside>
         </div>
       </div>

@@ -126,6 +126,9 @@ import MyTimetable from "./pages/timetable/MyTimetable";
 import ExaminationsHub from "./pages/exams/ExaminationsHub";
 import StudentResults from "./pages/exams/StudentResults";
 
+// Attendance
+import MyAttendance from "./pages/attendance/MyAttendence";
+
 function App() {
   const dispatch = useDispatch();
   const { user, accessToken } = useSelector((state) => state.auth);
@@ -324,6 +327,9 @@ function App() {
             path="/placement/coordinators"
             element={<CoordinatorManagement />}
           />
+
+          {/* Attendance */}
+          <Route path="/my-attendance" element={<MyAttendance />} />
 
           {/* Settings */}
           <Route path="/settings/roles" element={<RoleManagement />} />

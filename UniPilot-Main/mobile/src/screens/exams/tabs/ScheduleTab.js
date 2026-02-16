@@ -7,93 +7,56 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { Text, Surface, ActivityIndicator } from 'react-native-paper';
+import { Text, Surface, ActivityIndicator, Badge } from 'react-native-paper';
 import {
   Calendar,
   Clock,
   MapPin,
   Award,
   Download,
-  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  AlertCircle,
+  ChevronRight,
+  Info,
 } from 'lucide-react-native';
 import theme from '../../../theme/theme';
 import examService from '../../../services/examService';
 import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const ScheduleTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [schedules, setSchedules] = useState([]);
-  const [subTab, setSubTab] = useState('upcoming'); // upcoming | completed
-  const [downloading, setDownloading] = useState(null);
+  const [exams, setExams] = useState([]);
   const user = useSelector(state => state.auth.user);
+  const navigation = useNavigation();
 
-  const fetchSchedules = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const data = await examService.getMySchedules();
-      setSchedules(data);
+      const response = await examService.getMyExams();
+      // The backend returns { success: true, data: [...] }
+      setExams(response || []);
     } catch (error) {
-      console.error('Error fetching schedules:', error);
+      console.error('Error fetching exams:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
+  console.log(exams);
+
   useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+    fetchData();
+  }, [fetchData]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchSchedules();
+    fetchData();
   };
-
-  const handleDownloadHallTicket = async (cycleId, cycleName) => {
-    setDownloading(cycleId);
-    try {
-      const result = await examService.downloadHallTicket(
-        cycleId,
-        cycleName,
-        user?.student_id || 'Student',
-      );
-      if (result.success) {
-        alert(`Hall ticket downloaded to ${result.path}`);
-      }
-    } catch (error) {
-      alert('Failed to download hall ticket');
-    } finally {
-      setDownloading(null);
-    }
-  };
-
-  // Group schedules by cycle
-  const groupedSchedules = schedules.reduce((acc, schedule) => {
-    const cycleId = schedule.cycle?.id || schedule.exam_cycle_id;
-    if (!acc[cycleId]) {
-      acc[cycleId] = {
-        id: cycleId,
-        name: schedule.cycle?.name || 'Exam Cycle',
-        type: schedule.cycle?.cycle_type,
-        instance: schedule.cycle?.instance_number,
-        latest_date: schedule.exam_date,
-        schedules: [],
-      };
-    }
-    acc[cycleId].schedules.push(schedule);
-    if (schedule.exam_date > acc[cycleId].latest_date) {
-      acc[cycleId].latest_date = schedule.exam_date;
-    }
-    return acc;
-  }, {});
-
-  const today = new Date().toISOString().split('T')[0];
-  const cycles = Object.values(groupedSchedules);
-  const upcomingCycles = cycles.filter(c => c.latest_date >= today);
-  const completedCycles = cycles.filter(c => c.latest_date < today);
-  const activeCycles = subTab === 'upcoming' ? upcomingCycles : completedCycles;
 
   if (loading && !refreshing) {
     return (
@@ -105,44 +68,6 @@ const ScheduleTab = () => {
 
   return (
     <View style={styles.container}>
-      {/* Sub-Tab Toggle */}
-      <View style={styles.tabToggleContainer}>
-        <View style={styles.tabToggle}>
-          <TouchableOpacity
-            onPress={() => setSubTab('upcoming')}
-            style={[
-              styles.tabButton,
-              subTab === 'upcoming' && styles.tabButtonActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.tabButtonText,
-                subTab === 'upcoming' && styles.tabButtonTextActive,
-              ]}
-            >
-              UPCOMING ({upcomingCycles.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setSubTab('completed')}
-            style={[
-              styles.tabButton,
-              subTab === 'completed' && styles.tabButtonActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.tabButtonText,
-                subTab === 'completed' && styles.tabButtonTextActive,
-              ]}
-            >
-              COMPLETED ({completedCycles.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -154,112 +79,184 @@ const ScheduleTab = () => {
           />
         }
       >
-        {activeCycles.length > 0 ? (
-          activeCycles.map(cycleInfo => (
-            <Surface key={cycleInfo.id} style={styles.cycleCard}>
-              {/* Cycle Header */}
-              <View style={styles.cycleHeader}>
-                <View style={styles.cycleHeaderLeft}>
-                  <View style={styles.cycleIconBox}>
-                    <Calendar size={20} color={theme.colors.primary} />
-                  </View>
-                  <View style={styles.cycleInfo}>
-                    <Text style={styles.cycleName}>{cycleInfo.name}</Text>
-                    <View style={styles.cycleBadges}>
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>
-                          {cycleInfo.type?.replace('_', ' ')}
+        {exams.length > 0 ? (
+          exams.map(exam => {
+            const eligibility = exam.student_eligibilities?.[0];
+            const needsFee = exam.needs_fee;
+            const studentPayment = exam.student_payments?.[0];
+            const isPaid = studentPayment?.status === 'completed';
+            const isEligible =
+              eligibility?.hod_permission && eligibility?.fee_clear_permission;
+
+            return (
+              <View key={exam.id} style={styles.examSection}>
+                {/* Exam Cycle Header */}
+                <View style={styles.cycleHeader}>
+                  <View style={styles.cycleBadgeRow}>
+                    <View style={styles.semesterBadge}>
+                      <Text style={styles.semesterBadgeText}>
+                        {exam.semester} SEMESTER
+                      </Text>
+                    </View>
+                    {needsFee && (
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          isPaid ? styles.paidBadge : styles.pendingBadge,
+                        ]}
+                      >
+                        {isPaid ? (
+                          <CheckCircle size={10} color="#10b981" />
+                        ) : (
+                          <AlertCircle size={10} color="#f59e0b" />
+                        )}
+                        <Text
+                          style={[
+                            styles.statusBadgeText,
+                            isPaid ? styles.paidText : styles.pendingText,
+                          ]}
+                        >
+                          {isPaid ? 'REGISTERED' : 'FEE PENDING'}
                         </Text>
                       </View>
-                      {cycleInfo.instance && (
-                        <View style={[styles.badge, styles.badgePurple]}>
-                          <Text style={styles.badgeText}>
-                            Instance {cycleInfo.instance}
+                    )}
+                  </View>
+                  <Text style={styles.cycleName}>
+                    {exam.cycle_name.replace(/_/g, ' ')}
+                  </Text>
+
+                  {needsFee && !isPaid && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('Payments')}
+                      style={styles.payPrompt}
+                    >
+                      <Text style={styles.payPromptText}>
+                        Pay Registration Fee
+                      </Text>
+                      <ChevronRight size={14} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Eligibility Alerts */}
+                {eligibility && !isEligible && (
+                  <Surface style={styles.alertCard}>
+                    <View style={styles.alertHeader}>
+                      <AlertTriangle size={18} color="#1e293b" />
+                      <Text style={styles.alertTitle}>ACTION REQUIRED</Text>
+                    </View>
+                    <View style={styles.alertList}>
+                      {!eligibility.hod_permission && (
+                        <View style={styles.alertItem}>
+                          <View style={styles.alertDot} />
+                          <Text style={styles.alertText}>
+                            Department HOD approval is pending
+                          </Text>
+                        </View>
+                      )}
+                      {!eligibility.fee_clear_permission && (
+                        <View style={styles.alertItem}>
+                          <View style={styles.alertDot} />
+                          <Text style={styles.alertText}>
+                            Tuition fee clearance pending ({'\u20B9'}
+                            {(eligibility.fee_balance || 0).toLocaleString()})
                           </Text>
                         </View>
                       )}
                     </View>
-                  </View>
-                </View>
-                {subTab === 'upcoming' && (
-                  <TouchableOpacity
-                    onPress={() =>
-                      handleDownloadHallTicket(cycleInfo.id, cycleInfo.name)
-                    }
-                    disabled={downloading === cycleInfo.id}
-                    style={styles.downloadButton}
-                  >
-                    {downloading === cycleInfo.id ? (
-                      <RefreshCw size={16} color="#fff" />
-                    ) : (
-                      <Download size={16} color="#fff" />
-                    )}
-                  </TouchableOpacity>
+                  </Surface>
                 )}
-              </View>
 
-              {/* Schedule List */}
-              <View style={styles.scheduleList}>
-                {cycleInfo.schedules.map(schedule => (
-                  <View key={schedule.id} style={styles.scheduleItem}>
-                    <View style={styles.scheduleIconBox}>
-                      <Award size={18} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.scheduleDetails}>
-                      <Text style={styles.courseName}>
-                        {schedule.course?.name}
+                {/* Timetable Cards */}
+                <View style={styles.timetableGrid}>
+                  {exam.timetables?.length > 0 ? (
+                    exam.timetables
+                      .sort(
+                        (a, b) => new Date(a.exam_date) - new Date(b.exam_date),
+                      )
+                      .map(timetable => (
+                        <Surface
+                          key={timetable.id}
+                          style={styles.timetableCard}
+                        >
+                          <View style={styles.dateBox}>
+                            <Text style={styles.monthText}>
+                              {new Date(timetable.exam_date)
+                                .toLocaleDateString('en-US', { month: 'short' })
+                                .toUpperCase()}
+                            </Text>
+                            <Text style={styles.dayText}>
+                              {new Date(timetable.exam_date).toLocaleDateString(
+                                'en-US',
+                                { day: 'numeric' },
+                              )}
+                            </Text>
+                          </View>
+
+                          <View style={styles.timetableInfo}>
+                            <View style={styles.cardTopRow}>
+                              <Text style={styles.courseCode}>
+                                {timetable.course?.code}
+                              </Text>
+                              <View
+                                style={[
+                                  styles.sessionBadge,
+                                  timetable.session === 'morning'
+                                    ? styles.morningBadge
+                                    : styles.afternoonBadge,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.sessionText,
+                                    timetable.session === 'morning'
+                                      ? styles.morningText
+                                      : styles.afternoonText,
+                                  ]}
+                                >
+                                  {timetable.session.toUpperCase()}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={styles.courseName}>
+                              {timetable.course?.name}
+                            </Text>
+                            <View style={styles.timeRow}>
+                              <Clock size={12} color="#94a3b8" />
+                              <Text style={styles.timeText}>
+                                {timetable.start_time.slice(0, 5)} -{' '}
+                                {timetable.end_time.slice(0, 5)}
+                              </Text>
+                              <View style={styles.venueDivider} />
+                              <MapPin size={12} color="#ef4444" />
+                              <Text style={styles.venueText}>
+                                {timetable.venue || 'TBA'}
+                              </Text>
+                            </View>
+                          </View>
+                        </Surface>
+                      ))
+                  ) : (
+                    <View style={styles.emptyTimetable}>
+                      <Info size={24} color="#CBD5E1" />
+                      <Text style={styles.emptyTimetableText}>
+                        Timetable pending publication
                       </Text>
-                      <Text style={styles.courseCode}>
-                        {schedule.course?.code}
-                      </Text>
-                      <View style={styles.scheduleMetaRow}>
-                        <View style={styles.metaItem}>
-                          <Calendar size={12} color="#94a3b8" />
-                          <Text style={styles.metaText}>
-                            {new Date(schedule.exam_date).toLocaleDateString(
-                              'en-GB',
-                              {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              },
-                            )}
-                          </Text>
-                        </View>
-                        <View style={styles.metaItem}>
-                          <Clock size={12} color="#94a3b8" />
-                          <Text style={styles.metaText}>
-                            {schedule.start_time?.substring(0, 5)} -{' '}
-                            {schedule.end_time?.substring(0, 5)}
-                          </Text>
-                        </View>
-                        <View style={styles.metaItem}>
-                          <MapPin size={12} color="#ef4444" />
-                          <Text style={styles.metaText}>
-                            {schedule.venue || 'TBA'}
-                          </Text>
-                        </View>
-                      </View>
                     </View>
-                  </View>
-                ))}
+                  )}
+                </View>
               </View>
-            </Surface>
-          ))
+            );
+          })
         ) : (
-          <Surface style={styles.emptyCard}>
+          <View style={styles.emptyContainer}>
             <Calendar size={64} color="#e0e7ff" />
-            <Text style={styles.emptyTitle}>
-              {subTab === 'upcoming' ? 'Timetable Clear' : 'No Past Records'}
-            </Text>
+            <Text style={styles.emptyTitle}>No Examinations Scheduled</Text>
             <Text style={styles.emptySubtitle}>
-              {subTab === 'upcoming'
-                ? 'Examination schedules are currently being processed.'
-                : 'No past examination records found.'}
+              Check back later for updates to your exam cycle.
             </Text>
-          </Surface>
+          </View>
         )}
-
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
@@ -276,188 +273,257 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tabToggleContainer: {
-    padding: 20,
-    paddingBottom: 10,
-  },
-  tabToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 16,
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  tabButtonActive: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabButtonText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 0.5,
-  },
-  tabButtonTextActive: {
-    color: theme.colors.primary,
-  },
   scrollContent: {
     padding: 20,
-    paddingTop: 10,
   },
-  cycleCard: {
+  examSection: {
+    marginBottom: 40,
+  },
+  cycleHeader: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: 15,
+  },
+  cycleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  semesterBadge: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  semesterBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.5,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  paidBadge: {
+    backgroundColor: '#10b98110',
+  },
+  pendingBadge: {
+    backgroundColor: '#f59e0b10',
+  },
+  statusBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  paidText: {
+    color: '#10b981',
+  },
+  pendingText: {
+    color: '#f59e0b',
+  },
+  cycleName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 10,
+  },
+  payPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  payPromptText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  alertCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  alertTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#1e293b',
+    letterSpacing: 0.5,
+  },
+  alertList: {
+    gap: 8,
+  },
+  alertItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  alertDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#94a3b8',
+  },
+  alertText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
+  timetableGrid: {
+    gap: 16,
+  },
+  timetableCard: {
+    flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
-  cycleHeader: {
+  dateBox: {
+    width: 50,
+    height: 65,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  monthText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94a3b8',
+    marginBottom: 2,
+  },
+  dayText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1e293b',
+  },
+  timetableInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  cycleHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cycleIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: theme.colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cycleInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  cycleName: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  cycleBadges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  badge: {
-    backgroundColor: theme.colors.primary + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginRight: 6,
-  },
-  badgePurple: {
-    backgroundColor: '#9333ea15',
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: theme.colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  downloadButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scheduleList: {
-    gap: 12,
-  },
-  scheduleItem: {
-    flexDirection: 'row',
-    padding: 12,
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-  },
-  scheduleIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scheduleDetails: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  courseName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 2,
+    marginBottom: 6,
   },
   courseCode: {
     fontSize: 10,
     fontWeight: '800',
-    color: theme.colors.primary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
+    color: '#94a3b8',
     letterSpacing: 0.5,
   },
-  scheduleMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  sessionBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  morningBadge: {
+    backgroundColor: '#1680F010',
   },
-  metaText: {
-    fontSize: 10,
-    fontWeight: '600',
+  afternoonBadge: {
+    backgroundColor: '#f1f5f9',
+  },
+  sessionText: {
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  morningText: {
+    color: theme.colors.primary,
+  },
+  afternoonText: {
     color: '#64748b',
   },
-  emptyCard: {
-    padding: 40,
-    borderRadius: 24,
-    backgroundColor: '#fff',
+  courseName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 10,
+    lineHeight: 20,
+  },
+  timeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+  },
+  timeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    marginLeft: 4,
+  },
+  venueDivider: {
+    width: 1,
+    height: 10,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 10,
+  },
+  venueText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    marginLeft: 4,
+  },
+  emptyTimetable: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderStyle: 'dashed',
+  },
+  emptyTimetableText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginTop: 8,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 60,
+    marginTop: 40,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#1e293b',
     marginTop: 20,
-    marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#94a3b8',
+    marginTop: 8,
     textAlign: 'center',
-    lineHeight: 22,
   },
 });
 
