@@ -350,9 +350,9 @@ exports.getStudentSemesters = async (req, res) => {
 };
 
 // @desc    Get distinct batch years for students
-// @route   GET /api/users/batch-years
+// @route   GET /api/users/batches
 // @access  Private
-exports.getBatchYears = async (req, res) => {
+exports.getAllBatches = async (req, res) => {
   try {
     const { department_id } = req.query;
     const where = {
@@ -360,12 +360,14 @@ exports.getBatchYears = async (req, res) => {
       batch_year: { [Op.ne]: null },
     };
 
-    if (department_id) where.department_id = department_id;
+    if (department_id && department_id !== "undefined") {
+      where.department_id = department_id;
+    }
 
     const batches = await User.findAll({
       attributes: [
         [
-          User.sequelize.fn("DISTINCT", User.sequelize.col("batch_year")),
+          sequelize.fn("DISTINCT", sequelize.col("batch_year")),
           "batch_year",
         ],
       ],
@@ -381,7 +383,7 @@ exports.getBatchYears = async (req, res) => {
       data: batchList,
     });
   } catch (error) {
-    logger.error("Error in getBatchYears:", error);
+    logger.error("Error in getAllBatches:", error);
     res.status(500).json({
       success: false,
       error: "Server Error",
