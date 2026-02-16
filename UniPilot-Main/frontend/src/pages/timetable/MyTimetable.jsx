@@ -189,9 +189,9 @@ const MyTimetable = () => {
                                   {slot.start_time.slice(0, 5)}
                                 </span>
                               </div>
-                              <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-blue-600">
+                              {/* <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-blue-600">
                                 <Info className="w-4 h-4" />
-                              </div>
+                              </div> */}
                             </div>
 
                             {/* Main Content */}

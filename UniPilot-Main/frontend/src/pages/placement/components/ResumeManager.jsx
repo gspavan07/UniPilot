@@ -5,7 +5,7 @@ import {
   Upload,
   ExternalLink,
   CheckCircle2,
-  Info
+  Info,
 } from "lucide-react";
 import { uploadResume } from "../../../store/slices/placementSlice";
 import toast from "react-hot-toast";
@@ -48,7 +48,6 @@ const ResumeManager = () => {
 
   return (
     <div className="w-full bg-white rounded-3xl border border-gray-100 p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-500 overflow-hidden relative">
-
       {/* Hidden Input */}
       <input
         type="file"
@@ -71,7 +70,8 @@ const ResumeManager = () => {
             )}
           </h2>
           <p className="text-gray-500 mt-2 font-medium text-sm leading-relaxed max-w-lg">
-            This is your primary document shared with recruiters. Keep it polished and always up-to-date.
+            This is your primary document shared with recruiters. Keep it
+            polished and always up-to-date.
           </p>
         </div>
       </div>
@@ -88,17 +88,27 @@ const ResumeManager = () => {
               <div className="flex items-center gap-5 w-full md:w-auto">
                 <div className="relative w-14 h-14 shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                   <div className="absolute inset-0 bg-blue-50 rounded-2xl rotate-6 scale-90 -z-10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <FileText className="w-7 h-7 text-gray-800 group-hover:text-blue-600 transition-colors" strokeWidth={1.5} />
+                  <FileText
+                    className="w-7 h-7 text-gray-800 group-hover:text-blue-600 transition-colors"
+                    strokeWidth={1.5}
+                  />
                 </div>
 
                 <div className="min-w-0">
-                  <h3 className="text-base font-bold text-gray-900 truncate max-w-[200px] md:max-w-md" title={fileName}>
+                  <h3
+                    className="text-base font-bold text-gray-900 truncate max-w-[200px] md:max-w-md"
+                    title={fileName}
+                  >
                     {fileName}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 uppercase tracking-wider">PDF</span>
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 uppercase tracking-wider">
+                      PDF
+                    </span>
                     <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                    <span className="text-xs font-medium text-gray-400">Ready for review</span>
+                    <span className="text-xs font-medium text-gray-400">
+                      Ready for review
+                    </span>
                   </div>
                 </div>
               </div>
@@ -116,6 +126,7 @@ const ResumeManager = () => {
                 </a>
 
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
                   className="flex-1 md:flex-none h-11 px-6 rounded-xl bg-black text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed group/btn"
@@ -136,12 +147,19 @@ const ResumeManager = () => {
             className="cursor-pointer group relative flex flex-col items-center justify-center py-16 px-6 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/30 hover:bg-blue-50/10 hover:border-blue-400/50 transition-all duration-300"
           >
             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
-              <Upload className="w-7 h-7 text-gray-400 group-hover:text-blue-600 transition-colors" strokeWidth={1.5} />
+              <Upload
+                className="w-7 h-7 text-gray-400 group-hover:text-blue-600 transition-colors"
+                strokeWidth={1.5}
+              />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Upload Master Resume</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Upload Master Resume
+            </h3>
             <p className="text-gray-500 text-center max-w-sm text-sm mb-8 font-medium">
               Drag and drop your PDF here, or click to browse. <br />
-              <span className="text-gray-400 text-xs mt-1 block">Maximum file size: 10MB</span>
+              <span className="text-gray-400 text-xs mt-1 block">
+                Maximum file size: 10MB
+              </span>
             </p>
             <button className="px-8 py-3 bg-black text-white rounded-full font-bold text-sm shadow-lg shadow-gray-200 hover:bg-blue-600 hover:shadow-blue-500/20 active:scale-95 transition-all transform duration-200">
               Select PDF File
@@ -155,9 +173,15 @@ const ResumeManager = () => {
             <Info className="w-3.5 h-3.5 text-gray-400" />
           </div>
           <div className="flex-1">
-            <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Pro Tip</span>
+            <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">
+              Pro Tip
+            </span>
             <p className="text-xs text-gray-600 font-medium leading-relaxed">
-              Use a professional naming convention like <span className="font-mono bg-white px-1 py-0.5 rounded border border-gray-200 text-gray-800 mx-1">firstname_lastname_resume.pdf</span> to help recruiters identify your file instantly.
+              Use a professional naming convention like{" "}
+              <span className="font-mono bg-white px-1 py-0.5 rounded border border-gray-200 text-gray-800 mx-1">
+                firstname_lastname_resume.pdf
+              </span>{" "}
+              to help recruiters identify your file instantly.
             </p>
           </div>
         </div>

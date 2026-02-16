@@ -293,7 +293,7 @@ const MainLayout = () => {
       <aside
         className={`${sidebarOpen ? "w-64" : "w-16"} flex-1 bg-white border-r border-gray-200 transition-all duration-300 ease-out flex flex-col fixed h-full z-40`}
         onMouseEnter={() => setSidebarOpen(true)}
-      // onMouseLeave={() => setSidebarOpen(false)}
+        // onMouseLeave={() => setSidebarOpen(false)}
       >
         <div
           className={`h-16 flex items-center border-b border-gray-100 ${sidebarOpen ? "justify-start" : "justify-center"}`}
@@ -324,28 +324,32 @@ const MainLayout = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${isActive(item.href)
-                ? "bg-blue-600 text-white"
-                : "text-gray-700 hover:bg-gray-100"
-                }`}
+              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${
+                isActive(item.href)
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
               style={{ animationDelay: `${index * 25}ms` }}
             >
               <div
-                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${isActive(item.href) ? "w-0" : "w-0"
-                  }`}
+                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${
+                  isActive(item.href) ? "w-0" : "w-0"
+                }`}
               />
               <item.icon
-                className={`w-[18px] h-[18px] shrink-0 transition-colors ${isActive(item.href)
-                  ? "text-white"
-                  : "text-gray-600 group-hover:text-blue-600"
-                  }`}
+                className={`w-[18px] h-[18px] shrink-0 transition-colors ${
+                  isActive(item.href)
+                    ? "text-white"
+                    : "text-gray-600 group-hover:text-blue-600"
+                }`}
               />
               {sidebarOpen && (
                 <span
-                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${isActive(item.href)
-                    ? "font-semibold text-white"
-                    : "text-gray-700"
-                    }`}
+                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${
+                    isActive(item.href)
+                      ? "font-semibold text-white"
+                      : "text-gray-700"
+                  }`}
                 >
                   {item.name}
                 </span>
@@ -403,14 +407,6 @@ const MainLayout = () => {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ease-out ${sidebarOpen ? "ml-64 " : "ml-16"}`}
       >
-        {/* Header Bar */}
-        <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-end px-6 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <Notifications />
-            {/* User Profile Snippet could go here too if desired */}
-          </div>
-        </header>
-
         <main className="flex-1  overflow-y-auto bg-gray-50">
           <Outlet />
         </main>

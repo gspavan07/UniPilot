@@ -121,9 +121,6 @@ const MyApplications = () => {
                   Career Intelligence
                 </span>
                 <div className="h-px w-8 bg-gray-100"></div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Track your journey
-                </span>
               </div>
               <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight leading-none">
                 Application <span className="text-blue-600">Funnel.</span>
@@ -209,22 +206,10 @@ const MyApplications = () => {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
-                        <div
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 flex items-center gap-2 ${getStatusColor(app.status)} shadow-sm`}
-                        >
-                          {app.status === "Placed" ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : app.status === "Rejected" ? (
-                            <XCircle className="w-3.5 h-3.5" />
-                          ) : (
-                            <Clock className="w-3.5 h-3.5" />
-                          )}
-                          {app.status}
-                        </div>
                         <div className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-500 border border-gray-100 shadow-sm flex items-center gap-2">
                           <Calendar className="w-3.5 h-3.5" />
                           Applied:{" "}
-                          {new Date(app.createdAt).toLocaleDateString(
+                          {new Date(app.created_at).toLocaleDateString(
                             undefined,
                             { month: "short", day: "numeric", year: "numeric" },
                           )}

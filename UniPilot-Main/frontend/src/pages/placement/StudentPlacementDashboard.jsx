@@ -13,6 +13,7 @@ import {
   UserCircle,
   ChevronRight,
   GraduationCap,
+  ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
@@ -35,16 +36,19 @@ const StudentPlacementDashboard = () => {
       name: "Eligible Drives",
       value: eligibleDrives.length,
       icon: Briefcase,
+      link: "/placement/eligible",
     },
     {
       name: "My Applications",
       value: myApplications.length,
       icon: Clock,
+      link: "/placement/my-applications",
     },
     {
       name: "Offers Received",
       value: myOffers.length,
       icon: BadgeCheck,
+      link: "/placement/offers",
     },
   ];
 
@@ -62,9 +66,6 @@ const StudentPlacementDashboard = () => {
                   Career Portal
                 </span>
                 <div className="h-px w-8 bg-gray-100"></div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Session 2024-2025
-                </span>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-black tracking-tight leading-none">
                 Placement <span className="text-blue-600">Overview.</span>
@@ -103,11 +104,12 @@ const StudentPlacementDashboard = () => {
         {/* Stats Section */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
           {stats.map((stat, idx) => (
-            <div
+            <Link
               key={stat.name}
-              className="group relative p-10 rounded-[2.5rem] bg-white border border-gray-100 hover:border-blue-200 shadow-[0_2px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_60px_rgba(59,130,246,0.08)] transition-all duration-500 ease-out overflow-hidden"
+              to={stat.link}
+              className="group relative p-10 rounded-[2.5rem] bg-white border border-blue-300 hover:border-blue-200 shadow-[0_2px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_60px_rgba(59,130,246,0.08)] transition-all duration-500 ease-out overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
+              <div className="absolute top-0 right-0 p-8 opacity-[0.2] group-hover:opacity-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 pointer-events-none">
                 <stat.icon className="w-24 h-24 text-blue-600" />
               </div>
 
@@ -128,8 +130,11 @@ const StudentPlacementDashboard = () => {
                     Active
                   </span>
                 </div>
+                <div className="absolute right-0 -bottom-5 w-10 h-10 rounded-full bg-gray-50 border border-blue-200 flex items-center justify-center group-hover:bg-blue-600 transition-all duration-500">
+                  <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-white group-hover:-rotate-45 transition-colors" />
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </section>
 
@@ -271,28 +276,28 @@ const StudentPlacementDashboard = () => {
           {/* Sidebar */}
           <aside className="lg:col-span-4 space-y-12">
             {/* Profile Widget */}
-            <div className="bg-gray-950 text-white rounded-[3rem] p-10 relative overflow-hidden shadow-2xl shadow-blue-900/10">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/20 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none"></div>
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] -ml-32 -mb-32 pointer-events-none"></div>
+            <div className="bg-950 text-white rounded-[3rem] p-10 relative overflow-hidden shadow-2xl shadow-blue-900/10">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/50 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/30 rounded-full blur-[80px] -ml-32 -mb-32 pointer-events-none"></div>
 
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-10">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">
                       Profile Status
                     </p>
-                    <h3 className="font-black text-2xl tracking-tight">
+                    <h3 className="font-black text-black text-2xl tracking-tight">
                       Readiness
                     </h3>
                   </div>
-                  <div className="bg-white/10 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest backdrop-blur-md border border-white/5">
+                  {/* <div className="bg-white/10 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest backdrop-blur-md border border-white/5">
                     {profileCompletion > 80 ? "Premium" : "Standard"}
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="mb-10">
                   <div className="flex justify-between items-end mb-4">
-                    <span className="text-6xl font-black tracking-tighter tabular-nums">
+                    <span className="text-6xl font-black text-black tracking-tighter tabular-nums">
                       {profileCompletion}
                       <span className="text-2xl text-blue-500 ml-1">%</span>
                     </span>
@@ -305,9 +310,9 @@ const StudentPlacementDashboard = () => {
                   </div>
                 </div>
 
-                <p className="text-gray-400 text-sm font-medium leading-relaxed mb-8">
+                <p className="text-gray-600 text-sm font-medium leading-relaxed mb-8">
                   A complete profile increases your visibility to{" "}
-                  <span className="text-white font-bold">
+                  <span className="text-blue-600 font-bold">
                     top-tier recruiters
                   </span>{" "}
                   by up to 3x.
@@ -315,7 +320,7 @@ const StudentPlacementDashboard = () => {
 
                 <Link
                   to="/placement/profile"
-                  className="group flex items-center justify-center gap-3 w-full py-5 bg-white text-black font-black text-xs uppercase tracking-[0.2em] rounded-[1.5rem] hover:bg-blue-600 hover:text-white transition-all duration-500 shadow-xl shadow-white/5"
+                  className="group flex items-center justify-center gap-3 w-full py-5 text-black font-black text-xs uppercase tracking-[0.2em] rounded-[1.5rem] border-1 border-blue-600 bg-gray-50 hover:bg-blue-600 hover:text-white transition-all duration-500 shadow-xl shadow-white/5"
                 >
                   <UserCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   Optimize Profile
@@ -324,7 +329,7 @@ const StudentPlacementDashboard = () => {
             </div>
 
             {/* Navigation Widget */}
-            <div className="bg-gray-50/50 rounded-[3rem] p-10 border border-gray-100">
+            {/* <div className="bg-gray-50/50 rounded-[3rem] p-10 border border-gray-100">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-gray-200"></div>
                 Quick Access
@@ -359,10 +364,10 @@ const StudentPlacementDashboard = () => {
                   </Link>
                 ))}
               </nav>
-            </div>
+            </div> */}
 
             {/* Help/Support Box */}
-            <div className="bg-blue-50/50 rounded-[3rem] p-10 border border-blue-100 relative overflow-hidden">
+            {/* <div className="bg-blue-50/50 rounded-[3rem] p-10 border border-blue-100 relative overflow-hidden">
               <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-blue-600/5 rounded-full blur-2xl"></div>
               <div className="relative z-10">
                 <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-blue-100 flex items-center justify-center mb-6">
@@ -382,7 +387,7 @@ const StudentPlacementDashboard = () => {
                   </span>
                 </button>
               </div>
-            </div>
+            </div> */}
           </aside>
         </div>
       </div>
