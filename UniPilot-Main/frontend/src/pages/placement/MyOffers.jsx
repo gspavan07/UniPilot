@@ -58,20 +58,6 @@ const MyOffers = () => {
                 and hard-won opportunities.
               </p>
             </div>
-
-            <div className="hidden lg:flex items-center gap-6 p-8 bg-gray-950 rounded-[3rem] text-white shadow-2xl shadow-blue-900/10 border border-white/5">
-              <div className="w-16 h-16 bg-white/5 rounded-[1.5rem] flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
-                <Trophy className="w-8 h-8 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">
-                  Success Rate
-                </p>
-                <p className="text-3xl font-black tracking-tight leading-none">
-                  Top 5%
-                </p>
-              </div>
-            </div>
           </div>
         </header>
 

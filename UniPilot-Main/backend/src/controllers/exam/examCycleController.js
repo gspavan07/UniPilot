@@ -293,6 +293,29 @@ async function getMyExams(req, res) {
         .json({ success: false, error: "Student record not found" });
     }
 
+    const cyclesList = await ExamCycle.findAll({
+      where: {
+        regulation_id: student.regulation_id,
+        semester: student.current_semester,
+        status: { [Op.ne]: "draft" },
+      },
+      attributes: ["id"],
+    });
+
+    // Sync eligibility for all found cycles in parallel
+    if (cyclesList.length > 0) {
+      await Promise.all(
+        cyclesList.map((c) =>
+          calculateEligibility(userId, c.id).catch((err) =>
+            logger.error(
+              `Eligibility sync failed in getMyExams for cycle ${c.id}:`,
+              err,
+            ),
+          ),
+        ),
+      );
+    }
+
     const cycles = await ExamCycle.findAll({
       where: {
         regulation_id: student.regulation_id,

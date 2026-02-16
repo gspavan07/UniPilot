@@ -230,7 +230,7 @@ const StudentDashboard = () => {
                   </div>
                 ))
               ) : (
-                <div className="py-24 text-center border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                <div className="py-24 text-center border-2  border-gray-200 rounded-[2rem] bg-gray-50/30">
                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-50">
                     <Calendar className="w-8 h-8 text-gray-200" />
                   </div>

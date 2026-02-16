@@ -11,8 +11,14 @@ const logger = require("../utils/logger");
 // @access  Private
 exports.getAllCourses = async (req, res) => {
   try {
-    const { regulation_id, department_id, program_id, semester, course_type, batch_year } =
-      req.query;
+    const {
+      regulation_id,
+      department_id,
+      program_id,
+      semester,
+      course_type,
+      batch_year,
+    } = req.query;
     const whereClause = {};
     const { Regulation } = require("../models");
     const { Op } = require("sequelize");
@@ -48,12 +54,12 @@ exports.getAllCourses = async (req, res) => {
                 if (sem) {
                   // Level 3: Semester
                   const ids = batchData[sem] || [];
-                  ids.forEach(id => targetCourseIds.add(id));
+                  ids.forEach((id) => targetCourseIds.add(id));
                 } else {
                   // All semesters in this batch
-                  Object.values(batchData).forEach(semIds => {
+                  Object.values(batchData).forEach((semIds) => {
                     if (Array.isArray(semIds)) {
-                      semIds.forEach(id => targetCourseIds.add(id));
+                      semIds.forEach((id) => targetCourseIds.add(id));
                     }
                   });
                 }
@@ -64,7 +70,7 @@ exports.getAllCourses = async (req, res) => {
               processBatch(batch);
             } else {
               // Iterate all batches if no batch specified
-              Object.keys(programData).forEach(bKey => {
+              Object.keys(programData).forEach((bKey) => {
                 processBatch(bKey);
               });
             }
@@ -75,7 +81,7 @@ exports.getAllCourses = async (req, res) => {
           collectIds(program_id, batch_year, semester);
         } else {
           // If no program_id, iterate ALL programs in this regulation
-          Object.keys(coursesList).forEach(pKey => {
+          Object.keys(coursesList).forEach((pKey) => {
             collectIds(pKey, batch_year, semester);
           });
         }
@@ -100,9 +106,7 @@ exports.getAllCourses = async (req, res) => {
           attributes: ["id", "name", "code"],
         },
       ],
-      order: [
-        ["name", "ASC"],
-      ],
+      order: [["name", "ASC"]],
     });
 
     res.status(200).json({
@@ -261,7 +265,9 @@ exports.getMyCourses = async (req, res) => {
     }
 
     if (!student.regulation_id) {
-      return res.status(404).json({ error: "Student has no regulation assigned" });
+      return res
+        .status(404)
+        .json({ error: "Student has no regulation assigned" });
     }
 
     const { Regulation } = require("../models");
@@ -272,34 +278,43 @@ exports.getMyCourses = async (req, res) => {
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
-    const { program_id, current_semester, batch_year } = student;
+    const { program_id, batch_year } = student;
     const coursesList = regulation.courses_list;
     let targetIds = new Set();
+    let courseToSemesterMap = {};
 
-    // Add Program Specific Courses (Scoped by Batch Year)
+    // 2. Collect courses from all semesters for this student's program and batch
     if (program_id && coursesList[program_id] && batch_year) {
-      // Check if batch exists in regulation
       if (coursesList[program_id][batch_year]) {
-        const semCourses = coursesList[program_id][batch_year][current_semester] || [];
-        semCourses.forEach(id => targetIds.add(id));
+        const programBatchData = coursesList[program_id][batch_year];
+        Object.keys(programBatchData).forEach((sem) => {
+          const semCourses = programBatchData[sem] || [];
+          semCourses.forEach((id) => {
+            targetIds.add(id);
+            courseToSemesterMap[id] = parseInt(sem);
+          });
+        });
       }
     }
 
-    // Add Common Courses? (If your model supports it, e.g. key "common")
-    // Assuming "common" might not be batch-specific or follows same struct?
-    // If "common" also needs batch_year:
+    // Add Common Courses (All Semesters)
     if (coursesList["common"]) {
+      const addFromSource = (source) => {
+        Object.keys(source).forEach((sem) => {
+          const semCourses = source[sem] || [];
+          semCourses.forEach((id) => {
+            targetIds.add(id);
+            if (!courseToSemesterMap[id]) {
+              courseToSemesterMap[id] = parseInt(sem);
+            }
+          });
+        });
+      };
+
       if (coursesList["common"][batch_year]) {
-        const commonCourses = coursesList["common"][batch_year][current_semester] || [];
-        commonCourses.forEach(id => targetIds.add(id));
+        addFromSource(coursesList["common"][batch_year]);
       } else if (coursesList["common"]["all_batches"]) {
-        // Fallback for non-batch specific common courses if designed so
-        const commonCourses = coursesList["common"]["all_batches"][current_semester] || [];
-        commonCourses.forEach(id => targetIds.add(id));
-      }
-      // If old structure (direct semester access) exists for migration safety
-      else if (Array.isArray(coursesList["common"][current_semester])) {
-        coursesList["common"][current_semester].forEach(id => targetIds.add(id));
+        addFromSource(coursesList["common"]["all_batches"]);
       }
     }
 
@@ -310,7 +325,7 @@ exports.getMyCourses = async (req, res) => {
     // 3. Fetch actual course data
     const courses = await Course.findAll({
       where: {
-        id: { [Op.in]: Array.from(targetIds) }
+        id: { [Op.in]: Array.from(targetIds) },
       },
       include: [
         {
@@ -322,13 +337,13 @@ exports.getMyCourses = async (req, res) => {
       order: [["name", "ASC"]],
     });
 
-    // 4. Attach student's program_id to each course for context-aware features (like CO-PO mapping)
-    const coursesWithContext = courses.map(course => {
+    // 4. Attach mapping context
+    const coursesWithContext = courses.map((course) => {
       const courseJson = course.toJSON();
       return {
         ...courseJson,
         program_id: student.program_id,
-        semester: student.current_semester
+        semester: courseToSemesterMap[course.id],
       };
     });
 

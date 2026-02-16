@@ -98,7 +98,7 @@ const MyPlacementProfile = () => {
         <PlacementBreadcrumbs
           items={[
             { label: "Dashboard", href: "/placement/student/dashboard" },
-            { label: "Settings" },
+
             { label: "Placement Profile" },
           ]}
         />
@@ -111,10 +111,6 @@ const MyPlacementProfile = () => {
                   Candidate Settings
                 </span>
                 <div className="h-px w-8 bg-gray-100"></div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider rounded-full">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                  Active for Placement
-                </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight leading-none">
                 Professional <span className="text-blue-600">Identity.</span>
@@ -165,7 +161,7 @@ const MyPlacementProfile = () => {
                   {user?.email}
                 </p>
                 <div className="px-6 py-2 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">
-                  ID: {user?.id_number}
+                  ID: {user?.student_id}
                 </div>
               </div>
             </div>
