@@ -498,17 +498,17 @@ const ExaminationsHub = () => {
                         <div
                           className={`absolute left-0 top-0 bottom-0 w-3 transition-colors ${
                             isPaid
-                              ? "bg-blue-600"
+                              ? "bg-green-600"
                               : isBlocked
-                                ? "bg-gray-200"
-                                : "bg-black animate-pulse"
+                                ? "bg-red-200"
+                                : "bg-blue-600 animate-pulse"
                           }`}
                         ></div>
 
-                        <div className="p-10 pl-14">
-                          <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-8">
+                        <div className="p-6 pl-14">
+                          <div className="flex flex-col md:flex-row justify-between items-start mb-5 gap-8">
                             <div className="space-y-4">
-                              <h3 className="text-3xl font-black text-black tracking-tight leading-none">
+                              <h3 className="text-2xl font-black text-black tracking-tight leading-none">
                                 {cycle.cycle_name.replace(/_/g, " ")}
                               </h3>
                               <div className="flex items-center gap-4">
@@ -531,14 +531,14 @@ const ExaminationsHub = () => {
                               <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">
                                 Total Outstanding
                               </div>
-                              <div className="text-4xl font-black text-black tracking-tighter">
+                              <div className="text-xl font-black text-black tracking-tighter">
                                 ₹{totalAmount.toLocaleString()}
                               </div>
                             </div>
                           </div>
 
                           {/* Order Details Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 pt-10 border-t border-gray-100 mb-10">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 pt-5 border-t border-gray-100 mb-10">
                             <div className="flex justify-between items-center group/item">
                               <span className="text-sm font-bold text-gray-400 group-hover/item:text-black transition-colors">
                                 Exam Base Fee
@@ -583,9 +583,111 @@ const ExaminationsHub = () => {
                             )}
                           </div>
 
+                          {/* Late Fee Schedule */}
+                          <div className="mb-5 p-4 bg-gray-50/50 rounded-[1rem] border border-gray-200">
+                            <div className="flex items-center gap-3 mb-3">
+                              <Info className="w-4 h-4 text-blue-600" />
+                              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                                Late Fee Schedule
+                              </h4>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {/* Regular Slab */}
+                              <div className="relative px-5 py-2 rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden group/slab">
+                                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/slab:opacity-100 transition-opacity">
+                                  <CheckCircle className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <div className="space-y-1 relative z-10">
+                                  <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded">
+                                    Regular
+                                  </span>
+                                  <p className="text-xs font-black text-black pt-1">
+                                    Until{" "}
+                                    {new Date(
+                                      cycle.fee_configuration.regular_end_date,
+                                    ).toLocaleDateString("en-GB", {
+                                      day: "2-digit",
+                                      month: "short",
+                                    })}
+                                  </p>
+                                  <p className="text-[10px] font-bold text-gray-400">
+                                    Base Fee Only
+                                  </p>
+                                  <div className="text-sm font-black text-gray-600 tracking-tighter">
+                                    +₹
+                                    {parseFloat(
+                                      cycle.fee_configuration.base_fee,
+                                    ).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Fine Slabs */}
+                              {cycle.fee_configuration.slabs.map(
+                                (slab, index) => (
+                                  <div
+                                    key={index}
+                                    className={`relative px-5 py-2  rounded-2xl border transition-all duration-300 overflow-hidden group/slab ${
+                                      today >= slab.start_date &&
+                                      today <= slab.end_date
+                                        ? "bg-red-50/30 border-red-200 shadow-md ring-1 ring-red-100"
+                                        : "bg-white border-gray-100 opacity-60 hover:opacity-100"
+                                    }`}
+                                  >
+                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/slab:opacity-100 transition-opacity">
+                                      <AlertCircle className="w-8 h-8 text-red-600" />
+                                    </div>
+                                    <div className="space-y-1 relative z-10">
+                                      <span
+                                        className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${
+                                          today >= slab.start_date &&
+                                          today <= slab.end_date
+                                            ? "bg-red-600 text-white"
+                                            : "bg-gray-100 text-gray-400"
+                                        }`}
+                                      >
+                                        Slab {index + 1}
+                                      </span>
+                                      <p className="text-xs font-black text-black pt-1">
+                                        {new Date(
+                                          slab.start_date,
+                                        ).toLocaleDateString("en-GB", {
+                                          day: "2-digit",
+                                          month: "short",
+                                        })}{" "}
+                                        -{" "}
+                                        {new Date(
+                                          slab.end_date,
+                                        ).toLocaleDateString("en-GB", {
+                                          day: "2-digit",
+                                          month: "short",
+                                        })}
+                                      </p>
+                                      <p
+                                        className={`text-[10px] font-bold ${
+                                          today >= slab.start_date &&
+                                          today <= slab.end_date
+                                            ? "text-red-600"
+                                            : "text-gray-400"
+                                        }`}
+                                      >
+                                        + ₹
+                                        {parseFloat(
+                                          slab.fine_amount,
+                                        ).toLocaleString()}{" "}
+                                        Fine
+                                      </p>
+                                    </div>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </div>
+
                           {/* Blockers / Warnings */}
                           {isBlocked && !isPaid && (
-                            <div className="mb-10 p-6 bg-red-50/50 rounded-2xl border border-red-100 flex gap-4 items-start">
+                            <div className="mb-5 p-6 bg-red-50/50 rounded-2xl border border-red-100 flex gap-4 items-start">
                               <XCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
                               <div className="space-y-1">
                                 <p className="text-sm font-black text-red-600 uppercase tracking-wide">
@@ -612,7 +714,7 @@ const ExaminationsHub = () => {
                           )}
 
                           {/* Footer Action */}
-                          <div className="flex flex-col sm:flex-row justify-between items-center gap-8 pt-8 border-t border-gray-50">
+                          <div className="flex flex-col sm:flex-row justify-between items-center gap-8 border-t border-gray-50">
                             <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] italic">
                               Payment Gateway: Encrypted & Secure
                             </p>

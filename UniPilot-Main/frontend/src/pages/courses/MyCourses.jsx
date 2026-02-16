@@ -28,6 +28,11 @@ const MyCourses = () => {
   const [loadingOutcomes, setLoadingOutcomes] = useState(false);
   const [matrixData, setMatrixData] = useState(null);
   const [loadingMatrix, setLoadingMatrix] = useState(false);
+  const [selectedSemester, setSelectedSemester] = useState("All");
+
+  const semesters = ["All", ...new Set(courses.map((c) => c.semester))].sort(
+    (a, b) => (a === "All" ? -1 : b === "All" ? 1 : a - b),
+  );
 
   const handleViewSyllabus = async (course) => {
     setSelectedCourse(course);
@@ -72,11 +77,14 @@ const MyCourses = () => {
     dispatch(fetchMyCourses());
   }, [dispatch]);
 
-  const filteredCourses = courses.filter(
-    (course) =>
+  const filteredCourses = courses.filter((course) => {
+    const matchesSearch =
       course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.code.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+      course.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSemester =
+      selectedSemester === "All" || course.semester === selectedSemester;
+    return matchesSearch && matchesSemester;
+  });
 
   return (
     <div className="min-h-screen bg-white text-black font-sans selection:bg-blue-100 selection:text-blue-900 pb-20 overflow-x-hidden">
@@ -97,7 +105,7 @@ const MyCourses = () => {
             </div>
 
             {/* Search - Refined Pill Style */}
-            <div className="w-full lg:w-auto">
+            <div className="w-full lg:w-auto flex flex-col md:flex-row gap-6">
               <div className="relative group min-w-[320px]">
                 <input
                   type="text"
@@ -109,6 +117,26 @@ const MyCourses = () => {
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-blue-600 transition-colors" />
               </div>
             </div>
+          </div>
+
+          {/* Semester Filter Tabs */}
+          <div className="mt-8 flex items-center gap-4 overflow-x-auto pb-4 no-scrollbar">
+            {semesters.map((sem) => (
+              <button
+                key={sem}
+                onClick={() => setSelectedSemester(sem)}
+                className={`
+                  px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300
+                  ${
+                    selectedSemester === sem
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                      : "bg-gray-50 text-gray-400 border border-gray-100 hover:bg-white hover:text-black hover:shadow-md"
+                  }
+                `}
+              >
+                {sem === "All" ? "All Semesters" : `Semester ${sem}`}
+              </button>
+            ))}
           </div>
         </header>
 
