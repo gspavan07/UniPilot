@@ -9,7 +9,7 @@ const {
   bulkImportUsers,
   updateBankDetails,
   bulkUpdateSections,
-  getBatchYears,
+  getAllBatches,
   getStudentSemesters,
 } = require("../controllers/userController");
 const upload = require("../middleware/upload");
@@ -72,7 +72,7 @@ router.get(
   checkDynamicPermission("view"),
   require("../controllers/userController").getStudentSections,
 );
-router.get("/batch-years", getBatchYears);
+router.get("/batch-years", getAllBatches);
 
 // Dynamic Semesters route
 router.get(

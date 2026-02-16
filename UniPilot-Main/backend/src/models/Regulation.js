@@ -42,7 +42,7 @@ const Regulation = sequelize.define(
       type: DataTypes.JSONB,
       defaultValue: {},
       comment:
-        "Mapping of courses to programs and semesters: { 'program_id': { 'Semester Number': [Course IDs] } }",
+        "Mapping of courses: { 'program_id': { 'batch_year': { 'Semester Number': [Course IDs] } } }",
     },
     exam_configuration: {
       type: DataTypes.JSONB,

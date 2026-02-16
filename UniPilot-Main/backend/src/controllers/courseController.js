@@ -11,7 +11,7 @@ const logger = require("../utils/logger");
 // @access  Private
 exports.getAllCourses = async (req, res) => {
   try {
-    const { regulation_id, department_id, program_id, semester, course_type } =
+    const { regulation_id, department_id, program_id, semester, course_type, batch_year } =
       req.query;
     const whereClause = {};
     const { Regulation } = require("../models");
@@ -34,28 +34,49 @@ exports.getAllCourses = async (req, res) => {
         let targetCourseIds = new Set();
         const coursesList = regulation.courses_list;
 
-        // Helper to add IDs from a specific program's semester list
-        const collectIds = (pId, sem) => {
+        // Helper to add IDs from a specific program's structure
+        const collectIds = (pId, batch, sem) => {
           if (coursesList[pId]) {
-            if (sem) {
-              const ids = coursesList[pId][sem] || [];
-              ids.forEach(id => targetCourseIds.add(id));
-            } else {
-              Object.values(coursesList[pId]).forEach(semIds => {
-                if (Array.isArray(semIds)) {
-                  semIds.forEach(id => targetCourseIds.add(id));
+            // Level 1: Program ID
+            const programData = coursesList[pId];
+
+            const processBatch = (bYear) => {
+              if (programData[bYear]) {
+                // Level 2: Batch Year
+                const batchData = programData[bYear];
+
+                if (sem) {
+                  // Level 3: Semester
+                  const ids = batchData[sem] || [];
+                  ids.forEach(id => targetCourseIds.add(id));
+                } else {
+                  // All semesters in this batch
+                  Object.values(batchData).forEach(semIds => {
+                    if (Array.isArray(semIds)) {
+                      semIds.forEach(id => targetCourseIds.add(id));
+                    }
+                  });
                 }
+              }
+            };
+
+            if (batch) {
+              processBatch(batch);
+            } else {
+              // Iterate all batches if no batch specified
+              Object.keys(programData).forEach(bKey => {
+                processBatch(bKey);
               });
             }
           }
         };
 
         if (program_id) {
-          collectIds(program_id, semester);
+          collectIds(program_id, batch_year, semester);
         } else {
           // If no program_id, iterate ALL programs in this regulation
           Object.keys(coursesList).forEach(pKey => {
-            collectIds(pKey, semester);
+            collectIds(pKey, batch_year, semester);
           });
         }
 
@@ -66,21 +87,7 @@ exports.getAllCourses = async (req, res) => {
         }
       }
     } else if (program_id || semester) {
-      // If program/semester is requested but NO regulation, we technically can't fulfill this 
-      // because the link exists only in Regulation.courses_list.
-      // Option A: Return empty.
-      // Option B: Search ALL regulations (expensive).
-      // Option C: Return all courses (ignore filter - bad UX).
-      // User said: "In the courses catalog every course ... doesn't need to be in regulation".
-      // But "In case if they select a program filter ... fetch from courses_list".
-      // This implies the filter is meant to utilize the link. 
-      // I will return empty data if filtering by prog/sem without regulation, or maybe query all regulations?
-      // Let's assume the UI ensures Regulation is selected or we just return nothing/error.
-      // For now, I will treat it as "No results" if you filter by Program without a Regulation context,
-      // because a "Program" only owns courses *within* a Regulation context in this new model.
-      // Wait, does a Course belong to a Department? Yes. Does Program belong to Department? Yes.
-      // Is there a direct Program->Course link? NO, we removed it.
-      // So yes, Program filtering requires Regulation context.
+      // Filtering by program/semester without regulation context is ambiguous in new model
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
@@ -92,21 +99,9 @@ exports.getAllCourses = async (req, res) => {
           as: "department",
           attributes: ["id", "name", "code"],
         },
-        // Program relation on Course model might be deprecated if program_id column is gone?
-        // Checking model definition... user said "course table no longer have program_id".
-        // So we should REMOVE the include for Program if the relation is broken.
-        // Keeping it safe: Only include if model supports it. 
-        // For now, I'll comment it out to be safe based on user input.
-        /* 
-        {
-          model: Program,
-          as: "program",
-          attributes: ["id", "name", "code"],
-        },
-        */
       ],
       order: [
-        ["name", "ASC"], // Semester column also removed from Course?, so sort by Name
+        ["name", "ASC"],
       ],
     });
 
@@ -265,11 +260,6 @@ exports.getMyCourses = async (req, res) => {
       });
     }
 
-    // 2. Fetch derived course IDs from Regulation
-    // Note: Assuming student.regulation_id is mandatory for course mapping now.
-    // If not, we have a problem: "Which courses belong to Semester 1 of Program X?" 
-    // without a regulation, this question is unanswerable in the new model.
-
     if (!student.regulation_id) {
       return res.status(404).json({ error: "Student has no regulation assigned" });
     }
@@ -282,23 +272,35 @@ exports.getMyCourses = async (req, res) => {
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
-    const { program_id, current_semester } = student;
+    const { program_id, current_semester, batch_year } = student;
     const coursesList = regulation.courses_list;
     let targetIds = new Set();
 
-    // Add Program Specific Courses
-    if (program_id && coursesList[program_id]) {
-      const semCourses = coursesList[program_id][current_semester] || [];
-      semCourses.forEach(id => targetIds.add(id));
-
+    // Add Program Specific Courses (Scoped by Batch Year)
+    if (program_id && coursesList[program_id] && batch_year) {
+      // Check if batch exists in regulation
+      if (coursesList[program_id][batch_year]) {
+        const semCourses = coursesList[program_id][batch_year][current_semester] || [];
+        semCourses.forEach(id => targetIds.add(id));
+      }
     }
 
-
-
     // Add Common Courses? (If your model supports it, e.g. key "common")
+    // Assuming "common" might not be batch-specific or follows same struct?
+    // If "common" also needs batch_year:
     if (coursesList["common"]) {
-      const commonCourses = coursesList["common"][current_semester] || [];
-      commonCourses.forEach(id => targetIds.add(id));
+      if (coursesList["common"][batch_year]) {
+        const commonCourses = coursesList["common"][batch_year][current_semester] || [];
+        commonCourses.forEach(id => targetIds.add(id));
+      } else if (coursesList["common"]["all_batches"]) {
+        // Fallback for non-batch specific common courses if designed so
+        const commonCourses = coursesList["common"]["all_batches"][current_semester] || [];
+        commonCourses.forEach(id => targetIds.add(id));
+      }
+      // If old structure (direct semester access) exists for migration safety
+      else if (Array.isArray(coursesList["common"][current_semester])) {
+        coursesList["common"][current_semester].forEach(id => targetIds.add(id));
+      }
     }
 
     if (targetIds.size === 0) {

@@ -13,6 +13,7 @@ import {
   fetchRegulations,
   updateRegulation,
 } from "../../store/slices/regulationSlice";
+import { fetchBatchYears } from "../../store/slices/userSlice";
 import CourseForm from "../courses/CourseForm";
 import {
   X,
@@ -44,9 +45,11 @@ const RegulationViewer = () => {
   const { regulations } = useSelector((state) => state.regulations);
   const { departments } = useSelector((state) => state.departments);
   const { programs } = useSelector((state) => state.programs);
+  const { batchYears } = useSelector((state) => state.users);
 
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const [selectedProgramId, setSelectedProgramId] = useState("");
+  const [selectedBatchYear, setSelectedBatchYear] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -62,6 +65,7 @@ const RegulationViewer = () => {
       dispatch(fetchDepartments());
       dispatch(fetchPrograms());
       dispatch(fetchRegulations());
+      dispatch(fetchBatchYears());
     }
   }, [dispatch, regulationId]);
 
@@ -72,31 +76,51 @@ const RegulationViewer = () => {
   const academicDepartments = departments.filter((d) => d.type === "academic");
 
   // Helper to derive context from Regulation's courses_list
-  const getCourseContext = (courseId, preferredProgramId = null) => {
-    if (!regulation?.courses_list) return { semester: null, program_id: null };
+  const getCourseContext = (courseId, preferredProgramId = null, preferredBatch = null) => {
+    if (!regulation?.courses_list) return { semester: null, program_id: null, batch_year: null };
 
-    // If preferred program is specified, look there first
-    if (preferredProgramId && regulation.courses_list[preferredProgramId]) {
-      const semesters = regulation.courses_list[preferredProgramId];
-      for (const [sem, courses] of Object.entries(semesters)) {
-        if (Array.isArray(courses) && courses.includes(courseId)) {
-          return { semester: Number(sem), program_id: preferredProgramId };
+    // Helper to search within a program's structure
+    const searchProgram = (progId) => {
+      const progData = regulation.courses_list[progId];
+      if (!progData) return null;
+
+      // If batch is preferred, look there first
+      if (preferredBatch && progData[preferredBatch]) {
+        const semesters = progData[preferredBatch];
+        for (const [sem, courses] of Object.entries(semesters)) {
+          if (Array.isArray(courses) && courses.includes(courseId)) {
+            return { semester: Number(sem), program_id: progId, batch_year: Number(preferredBatch) };
+          }
         }
       }
-    }
 
-    // Otherwise scan all (fallback for "common" or initial list view)
-    for (const [progId, semesters] of Object.entries(regulation.courses_list)) {
-      for (const [sem, courses] of Object.entries(semesters)) {
-        if (Array.isArray(courses) && courses.includes(courseId)) {
-          return {
-            semester: Number(sem),
-            program_id: progId === "common" ? null : progId,
-          };
+      // Otherwise scan all batches
+      for (const [batch, semesters] of Object.entries(progData)) {
+        for (const [sem, courses] of Object.entries(semesters)) {
+          if (Array.isArray(courses) && courses.includes(courseId)) {
+            return { semester: Number(sem), program_id: progId, batch_year: Number(batch) };
+          }
         }
       }
+      return null;
+    };
+
+    // 1. Try preferred program
+    if (preferredProgramId) {
+      const result = searchProgram(preferredProgramId);
+      if (result) return result;
     }
-    return { semester: null, program_id: null };
+
+    // 2. Scan all programs
+    for (const progId of Object.keys(regulation.courses_list)) {
+      // Skip if we already checked preferred
+      if (preferredProgramId && progId === preferredProgramId) continue;
+
+      const result = searchProgram(progId);
+      if (result) return result;
+    }
+
+    return { semester: null, program_id: null, batch_year: null };
   };
 
   // Helper to sync courses_list in Regulation model
@@ -111,18 +135,23 @@ const RegulationViewer = () => {
       JSON.stringify(regulation.courses_list || {}),
     );
     const progKey = context?.program_id || selectedProgramId || "common";
+    const batchKey = context?.batch_year || selectedBatchYear; // Must have batch
     const semKey = context?.semester || targetSemester;
+
+    if (!batchKey) {
+      alert("Please select a Batch Year first.");
+      return;
+    }
 
     // Ensure structure exists
     if (!currentList[progKey]) currentList[progKey] = {};
-    if (!currentList[progKey][semKey]) currentList[progKey][semKey] = [];
+    if (!currentList[progKey][batchKey]) currentList[progKey][batchKey] = {};
+    if (!currentList[progKey][batchKey][semKey]) currentList[progKey][batchKey][semKey] = [];
 
-    // Remove ID from CURRENT program only (to handle moves within program or deletes)
-    // If action is delete and we are in a program context, remove from that program.
-    // If action is add, we remove from this program's other semesters to ensure unique semester placement within program.
-    if (newCourseId && currentList[progKey]) {
-      Object.keys(currentList[progKey]).forEach((s) => {
-        currentList[progKey][s] = currentList[progKey][s].filter(
+    // Remove ID from CURRENT program/batch (handle moves/deletes)
+    if (newCourseId && currentList[progKey][batchKey]) {
+      Object.keys(currentList[progKey][batchKey]).forEach((s) => {
+        currentList[progKey][batchKey][s] = currentList[progKey][batchKey][s].filter(
           (id) => id !== newCourseId,
         );
       });
@@ -130,11 +159,8 @@ const RegulationViewer = () => {
 
     // Add to new location if not delete
     if (action !== "delete" && newCourseId) {
-      if (!currentList[progKey]) currentList[progKey] = {};
-      if (!currentList[progKey][semKey]) currentList[progKey][semKey] = [];
-
-      if (!currentList[progKey][semKey].includes(newCourseId)) {
-        currentList[progKey][semKey].push(newCourseId);
+      if (!currentList[progKey][batchKey][semKey].includes(newCourseId)) {
+        currentList[progKey][batchKey][semKey].push(newCourseId);
       }
     }
 
@@ -152,21 +178,25 @@ const RegulationViewer = () => {
       if (!regulation?.courses_list) return false;
 
       // Check if course ID exists in the current regulation's list for the SELECTED program
-      const context = getCourseContext(c.id, selectedProgramId);
+      const context = getCourseContext(c.id, selectedProgramId, selectedBatchYear);
 
       // If context returns nulls, it's not in this program (or regulation if no prog selected)
       if (context.semester === null) return false;
 
       // If a program is selected, duplicate check: getCourseContext with arg ensures we found it IN that program
       if (selectedProgramId && context.program_id !== selectedProgramId) {
-        // This handles the case where getCourseContext fell back to another program but we want strict
+        return false;
+      }
+
+      // If batch is selected, ensure it matches
+      if (selectedBatchYear && context.batch_year !== Number(selectedBatchYear)) {
         return false;
       }
 
       return true;
     })
     .map((c) => {
-      const context = getCourseContext(c.id, selectedProgramId);
+      const context = getCourseContext(c.id, selectedProgramId, selectedBatchYear);
       return { ...c, ...context }; // Inject derived semester
     });
 
@@ -177,7 +207,9 @@ const RegulationViewer = () => {
       )
     ) {
       // 1. Update Regulation courses_list (Remove ID)
-      await syncRegulationCourses(courseId, null, "delete");
+      // Look up context to know where to delete from
+      const context = getCourseContext(courseId, selectedProgramId, selectedBatchYear);
+      await syncRegulationCourses(courseId, context, "delete");
 
       // No need to update Course model anymore as regulation_id column is gone.
 
@@ -193,6 +225,7 @@ const RegulationViewer = () => {
     const context = {
       program_id: formData.program_id,
       semester: formData.semester,
+      batch_year: selectedBatchYear || formData.batch_year,
     };
 
     // Clean up formData to not send regulation_id if backend doesn't support it,
@@ -228,6 +261,7 @@ const RegulationViewer = () => {
     // 2. Add to Regulation.courses_list
     const context = {
       program_id: selectedProgramId,
+      batch_year: selectedBatchYear,
       semester: targetSemester,
     };
     await syncRegulationCourses(courseId, context, "add");
@@ -254,7 +288,7 @@ const RegulationViewer = () => {
 
   const openEditForm = (course) => {
     // Inject context (semester/program) so form knows current state
-    const context = getCourseContext(course.id);
+    const context = getCourseContext(course.id, selectedProgramId, selectedBatchYear);
     setSelectedCourse({ ...course, ...context });
     setIsFormOpen(true);
   };
@@ -364,7 +398,10 @@ const RegulationViewer = () => {
               <ChevronRight className="w-4 h-4 text-gray-300 hidden sm:block" />
               <select
                 value={selectedProgramId}
-                onChange={(e) => setSelectedProgramId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedProgramId(e.target.value);
+                  // Reset batch when program changes? Maybe keep it if applicable.
+                }}
                 className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium text-black dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select Program</option>
@@ -374,6 +411,24 @@ const RegulationViewer = () => {
                   </option>
                 ))}
               </select>
+
+              {selectedProgramId && (
+                <>
+                  <ChevronRight className="w-4 h-4 text-gray-300 hidden sm:block" />
+                  <select
+                    value={selectedBatchYear}
+                    onChange={(e) => setSelectedBatchYear(e.target.value)}
+                    className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium text-black dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Batch Year</option>
+                    {batchYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
             </div>
 
             {selectedProgramId && (
@@ -401,18 +456,18 @@ const RegulationViewer = () => {
         </div>
 
         {/* Main Content */}
-        {!selectedProgramId ? (
+        {!selectedProgramId || !selectedBatchYear ? (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-16 text-center">
             <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mx-auto mb-6">
               <Settings className="w-10 h-10" />
             </div>
             <div className="max-w-md mx-auto">
               <h2 className="text-2xl font-bold text-black dark:text-white mb-2">
-                Select a Program
+                Select Program & Batch
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Please select a department and program above to view and manage
-                courses for this regulation
+                Please select a department, program, and batch year above to view and manage
+                courses for this regulation.
               </p>
             </div>
           </div>
@@ -519,11 +574,12 @@ const RegulationViewer = () => {
             selectedCourse
               ? selectedCourse
               : {
-                  regulation_id: regulationId,
-                  semester: targetSemester,
-                  department_id: selectedDeptId,
-                  program_id: selectedProgramId,
-                }
+                regulation_id: regulationId,
+                semester: targetSemester,
+                department_id: selectedDeptId,
+                program_id: selectedProgramId,
+                batch_year: selectedBatchYear,
+              }
           }
           departmentList={departments}
           programList={programs}
@@ -627,11 +683,12 @@ const RegulationViewer = () => {
             <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-2">
               {(Array.isArray(allCourses) ? allCourses : [])
                 .filter((c) => {
-                  const ctx = getCourseContext(c.id, selectedProgramId);
-                  // Hide if found in the current program context
+                  const ctx = getCourseContext(c.id, selectedProgramId, selectedBatchYear);
+                  // Hide if found in the current program/batch context
                   if (
                     ctx.semester !== null &&
-                    ctx.program_id === selectedProgramId
+                    ctx.program_id === selectedProgramId &&
+                    ctx.batch_year === Number(selectedBatchYear)
                   ) {
                     return false;
                   }

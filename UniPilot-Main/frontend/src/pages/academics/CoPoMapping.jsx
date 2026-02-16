@@ -82,9 +82,14 @@ const CoPoMapping = () => {
     const allCoursesInRegulation = new Set();
     Object.values(coursesInRegulation).forEach(programCourses => {
         if (typeof programCourses === 'object') {
-            Object.values(programCourses).forEach(semesterCourses => {
-                if (Array.isArray(semesterCourses)) {
-                    semesterCourses.forEach(courseId => allCoursesInRegulation.add(courseId));
+            // New structure: Program -> Batch -> Semester -> Courses
+            Object.values(programCourses).forEach(batchData => {
+                if (typeof batchData === 'object') {
+                    Object.values(batchData).forEach(semesterCourses => {
+                        if (Array.isArray(semesterCourses)) {
+                            semesterCourses.forEach(courseId => allCoursesInRegulation.add(courseId));
+                        }
+                    });
                 }
             });
         }
