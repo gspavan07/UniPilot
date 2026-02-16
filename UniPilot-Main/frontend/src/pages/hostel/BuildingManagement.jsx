@@ -159,8 +159,8 @@ const BuildingManagement = () => {
             <button
               onClick={() => setViewMode("grid")}
               className={`p-2 rounded-md transition-all ${viewMode === "grid"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
                 }`}
               title="Grid View"
             >
@@ -169,8 +169,8 @@ const BuildingManagement = () => {
             <button
               onClick={() => setViewMode("list")}
               className={`p-2 rounded-md transition-all ${viewMode === "list"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
                 }`}
               title="List View"
             >
@@ -205,18 +205,18 @@ const BuildingManagement = () => {
                         <div className="flex items-center gap-2 mb-3">
                           <span
                             className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase border ${building.type === "boys"
-                                ? "bg-blue-50 text-blue-700 border-blue-100"
-                                : building.type === "girls"
-                                  ? "bg-pink-50 text-pink-700 border-pink-100"
-                                  : "bg-purple-50 text-purple-700 border-purple-100"
+                              ? "bg-blue-50 text-blue-700 border-blue-100"
+                              : building.type === "girls"
+                                ? "bg-pink-50 text-pink-700 border-pink-100"
+                                : "bg-purple-50 text-purple-700 border-purple-100"
                               }`}
                           >
                             {building.type}
                           </span>
                           <span
                             className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase border ${building.status === "active"
-                                ? "bg-green-50 text-green-700 border-green-100"
-                                : "bg-red-50 text-red-700 border-red-100"
+                              ? "bg-green-50 text-green-700 border-green-100"
+                              : "bg-red-50 text-red-700 border-red-100"
                               }`}
                           >
                             {building.status}
@@ -226,7 +226,7 @@ const BuildingManagement = () => {
                           {building.name}
                         </h3>
                         <div className="flex items-center text-xs text-gray-500 mt-2 font-medium">
-                          <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" />
                           <span className="truncate">
                             {building.address || "No address specified"}
                           </span>
@@ -345,10 +345,10 @@ const BuildingManagement = () => {
                       <td className="px-6 py-4">
                         <span
                           className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase border ${building.type === "boys"
-                              ? "bg-blue-50 text-blue-700 border-blue-100"
-                              : building.type === "girls"
-                                ? "bg-pink-50 text-pink-700 border-pink-100"
-                                : "bg-purple-50 text-purple-700 border-purple-100"
+                            ? "bg-blue-50 text-blue-700 border-blue-100"
+                            : building.type === "girls"
+                              ? "bg-pink-50 text-pink-700 border-pink-100"
+                              : "bg-purple-50 text-purple-700 border-purple-100"
                             }`}
                         >
                           {building.type}
@@ -377,8 +377,8 @@ const BuildingManagement = () => {
                       <td className="px-6 py-4">
                         <span
                           className={`flex items-center text-xs font-bold w-fit ${building.status === "active"
-                              ? "text-green-700"
-                              : "text-red-700"
+                            ? "text-green-700"
+                            : "text-red-700"
                             }`}
                         >
                           {building.status === "active" ? (

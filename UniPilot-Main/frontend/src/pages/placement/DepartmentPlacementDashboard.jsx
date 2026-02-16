@@ -438,21 +438,19 @@ const DepartmentPlacementDashboard = () => {
         <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
           <button
             onClick={() => setActiveTab("drives")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-              activeTab === "drives"
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === "drives"
                 ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
                 : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
+              }`}
           >
             <Calendar className="w-4 h-4" /> Drives
           </button>
           <button
             onClick={() => setActiveTab("students")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-              activeTab === "students"
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === "students"
                 ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
                 : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
+              }`}
           >
             <Users className="w-4 h-4" /> Students
           </button>
@@ -519,7 +517,7 @@ const DepartmentPlacementDashboard = () => {
                     <div className="p-8">
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                         <div className="flex items-start gap-6">
-                          <div className="w-20 h-20 bg-gray-50 dark:bg-gray-900 rounded-[32px] flex items-center justify-center flex-shrink-0 border border-gray-100 dark:border-gray-700 shadow-sm relative group overflow-hidden">
+                          <div className="w-20 h-20 bg-gray-50 dark:bg-gray-900 rounded-[32px] flex items-center justify-center shrink-0 border border-gray-100 dark:border-gray-700 shadow-sm relative group overflow-hidden">
                             {drive.job_posting?.company?.logo_url ? (
                               <img
                                 src={drive.job_posting.company.logo_url}
@@ -590,11 +588,10 @@ const DepartmentPlacementDashboard = () => {
 
                             <button
                               onClick={() => toggleDriveExpansion(drive.id)}
-                              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
-                                expandedDrive === drive.id
+                              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95 ${expandedDrive === drive.id
                                   ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
                                   : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100 dark:shadow-none"
-                              }`}
+                                }`}
                             >
                               {expandedDrive === drive.id ? (
                                 <>
@@ -818,11 +815,10 @@ const DepartmentPlacementDashboard = () => {
                           </td>
                           <td className="px-10 py-6">
                             <span
-                              className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] w-fit flex items-center gap-2 shadow-sm ${
-                                placement
+                              className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] w-fit flex items-center gap-2 shadow-sm ${placement
                                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50"
                                   : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50"
-                              }`}
+                                }`}
                             >
                               {placement ? (
                                 <CheckCircle2 className="w-4 h-4" />

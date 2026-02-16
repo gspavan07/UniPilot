@@ -93,7 +93,7 @@ const RoundsSetup = ({ rounds, onChange }) => {
           >
             <div className="flex flex-col md:flex-row gap-6">
               {/* Round Number Indicator */}
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
                   {index + 1}
                 </div>
@@ -149,11 +149,10 @@ const RoundsSetup = ({ rounds, onChange }) => {
                         onClick={() =>
                           updateRound(round.id, { venue_type: v.id })
                         }
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
-                          round.venue_type === v.id
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${round.venue_type === v.id
                             ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
                             : "bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:border-indigo-300"
-                        }`}
+                          }`}
                       >
                         <v.icon
                           className={`w-4 h-4 ${round.venue_type === v.id ? "text-white" : "text-gray-400"}`}

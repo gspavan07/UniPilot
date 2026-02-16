@@ -108,7 +108,7 @@ export default function FacultyDashboard() {
                                     <div className="mb-6">
                                         <div className="relative pl-3 border-l-2 border-slate-200 py-0.5">
                                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Exam Cycle</p>
-                                            <p className="text-xs font-medium text-slate-600 uppercase tracking-wide break-words leading-relaxed">
+                                            <p className="text-xs font-medium text-slate-600 uppercase tracking-wide wrap-break-word leading-relaxed">
                                                 {exam.exam_cycle.cycle_name.replace(/_/g, ' ')}
                                             </p>
                                         </div>

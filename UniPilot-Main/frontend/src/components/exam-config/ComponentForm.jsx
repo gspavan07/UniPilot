@@ -103,7 +103,7 @@ const ComponentForm = ({ component, onSave, onClose }) => {
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono text-sm"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-start gap-1.5">
-                <HelpCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <HelpCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>
                   Define how sub-components are combined. Leave empty if this is
                   a leaf component. Use component names, math operators (+, -,

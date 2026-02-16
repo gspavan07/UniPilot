@@ -250,7 +250,7 @@ export default function Dashboard() {
                   className="p-5 hover:bg-gray-50 rounded-2xl transition-colors group cursor-default"
                 >
                   <div className="flex gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center ${activity.bg} group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center ${activity.bg} group-hover:scale-110 transition-transform duration-300`}>
                       <activity.icon className={`w-5 h-5 ${activity.color}`} />
                     </div>
                     <div className="flex-1 min-w-0 pt-1">

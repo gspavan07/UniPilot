@@ -325,7 +325,7 @@ const StaffAttendance = () => {
                       <tr key={person.user_id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
+                            <div className="shrink-0 h-10 w-10">
                               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
                                 {person.name
                                   .split(" ")
@@ -423,7 +423,7 @@ const StaffAttendance = () => {
                         )}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center max-w-[200px]" title={person.remarks}>
-                            <Info className="flex-shrink-0 h-4 w-4 text-gray-400 mr-2" />
+                            <Info className="shrink-0 h-4 w-4 text-gray-400 mr-2" />
                             <span className="truncate">{person.remarks || "-"}</span>
                           </div>
                         </td>
@@ -464,7 +464,7 @@ const StaffAttendance = () => {
                 </div>
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <div className="sm:flex sm:items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <div className="mx-auto shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
                       <Fingerprint className="h-6 w-6 text-blue-600" />
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">

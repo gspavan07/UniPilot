@@ -73,7 +73,7 @@ export default function MainLayout() {
         >
           {sidebarOpen ? (
             <div className="flex items-center gap-3 px-5">
-              <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center shrink-0">
                 <span className="text-white text-sm font-bold">U</span>
               </div>
               <div className="leading-tight">
@@ -86,7 +86,7 @@ export default function MainLayout() {
               </div>
             </div>
           ) : (
-            <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center shrink-0">
               <span className="text-white text-sm font-bold">U</span>
             </div>
           )}
@@ -98,32 +98,28 @@ export default function MainLayout() {
               key={item.path}
               to={item.path}
               end={item.path === "/"}
-              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${
-                isActive(item.path)
+              className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${isActive(item.path)
                   ? "bg-blue-600 text-white"
                   : "text-gray-700 hover:bg-gray-100"
-              }`}
+                }`}
               style={{ animationDelay: `${index * 25}ms` }}
             >
               <div
-                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${
-                  isActive(item.path) ? "w-0" : "w-0"
-                }`}
+                className={`absolute left-0 top-0 bottom-0 nav-accent bg-blue-600 rounded-r ${isActive(item.path) ? "w-0" : "w-0"
+                  }`}
               />
               <item.icon
-                className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                  isActive(item.path)
+                className={`w-[18px] h-[18px] shrink-0 transition-colors ${isActive(item.path)
                     ? "text-white"
                     : "text-gray-600 group-hover:text-blue-600"
-                }`}
+                  }`}
               />
               {sidebarOpen && (
                 <span
-                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${
-                    isActive(item.path)
+                  className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${isActive(item.path)
                       ? "font-semibold text-white"
                       : "text-gray-700"
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </span>
@@ -169,7 +165,7 @@ export default function MainLayout() {
               </button>
             )}
           </div>
-    
+
         </div>
       </aside>
 

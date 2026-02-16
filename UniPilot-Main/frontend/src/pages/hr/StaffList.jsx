@@ -316,8 +316,8 @@ const StaffList = () => {
                         </span>
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${user.is_active
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-500"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-gray-100 text-gray-500"
                             }`}
                         >
                           {user.is_active ? "Active" : "Inactive"}
@@ -390,7 +390,7 @@ const StaffList = () => {
                 {/* Card Body */}
                 <div className="p-6 pt-4 space-y-3">
                   <div className="flex items-center gap-3 text-sm">
-                    <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
                         Department
@@ -402,7 +402,7 @@ const StaffList = () => {
                   </div>
 
                   <div className="flex items-center gap-3 text-sm">
-                    <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <Briefcase className="w-4 h-4 text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
                         Employee ID
@@ -414,7 +414,7 @@ const StaffList = () => {
                   </div>
 
                   <div className="flex items-center gap-3 text-sm">
-                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
                         Joined

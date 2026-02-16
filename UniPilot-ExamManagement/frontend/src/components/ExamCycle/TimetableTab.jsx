@@ -327,7 +327,7 @@ export default function TimetableTab({ cycleId, cycle, onUpdate }) {
 
             <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-6">
               <div className="flex items-start gap-2 text-xs text-gray-500 max-w-md">
-                <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-blue-500" />
+                <AlertCircle size={14} className="shrink-0 mt-0.5 text-blue-500" />
                 <p>System automatically handles academic holidays and Sundays. Courses with identical codes are synchronized across programs.</p>
               </div>
               <button
@@ -453,8 +453,8 @@ export default function TimetableTab({ cycleId, cycle, onUpdate }) {
                       </select>
                     ) : (
                       <span className={`inline-block px-3 py-1 rounded-full text-[10px] uppercase font-extrabold tracking-in ${tt.session === 'morning' ? 'bg-amber-100 text-amber-700 border border-amber-200/50' :
-                          tt.session === 'afternoon' ? 'bg-blue-100 text-blue-700 border border-blue-200/50' :
-                            'bg-gray-100 text-gray-600'
+                        tt.session === 'afternoon' ? 'bg-blue-100 text-blue-700 border border-blue-200/50' :
+                          'bg-gray-100 text-gray-600'
                         }`}>
                         {tt.session === 'morning' ? 'AM' : 'PM'}
                       </span>

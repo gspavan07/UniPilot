@@ -45,7 +45,7 @@ const ExamComponentNode = ({
             {hasChildren && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="mt-0.5 p-1 rounded hover:bg-white/50 dark:hover:bg-black/20 transition-colors flex-shrink-0"
+                className="mt-0.5 p-1 rounded hover:bg-white/50 dark:hover:bg-black/20 transition-colors shrink-0"
               >
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -104,7 +104,7 @@ const ExamComponentNode = ({
               {/* Relation Formula */}
               {component.relation && (
                 <div className="flex items-start gap-2 mt-2">
-                  <Calculator className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                  <Calculator className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       Calculation:
@@ -119,7 +119,7 @@ const ExamComponentNode = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => onAddChild(component, currentPath)}
               className="p-2 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-gray-800 transition-colors"

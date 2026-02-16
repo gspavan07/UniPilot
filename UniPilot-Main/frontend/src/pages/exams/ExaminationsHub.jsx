@@ -214,22 +214,20 @@ const ExaminationsHub = () => {
         <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-full md:w-auto">
           <button
             onClick={() => setActiveTab("schedule")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${
-              activeTab === "schedule"
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === "schedule"
                 ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
+              }`}
           >
             <Calendar className="w-4 h-4" />
             Schedule
           </button>
           <button
             onClick={() => setActiveTab("payments")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${
-              activeTab === "payments"
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === "payments"
                 ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
+              }`}
           >
             <CreditCard className="w-4 h-4" />
             Exam Fee
@@ -330,11 +328,10 @@ const ExaminationsHub = () => {
                                 </td>
                                 <td className="px-6 py-4">
                                   <span
-                                    className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                      timetable.session === "morning"
+                                    className={`px-2 py-1 rounded-full text-xs font-bold ${timetable.session === "morning"
                                         ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
                                         : "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
-                                    }`}
+                                      }`}
                                   >
                                     {timetable.session.charAt(0).toUpperCase() +
                                       timetable.session.slice(1)}
@@ -511,7 +508,7 @@ const ExaminationsHub = () => {
                       {eligibility?.has_condonation && !isPaid && (
                         <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-200 dark:border-orange-800/50">
                           <p className="text-xs text-orange-700 dark:text-orange-400 flex items-start gap-2">
-                            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <Info className="w-4 h-4 mt-0.5 shrink-0" />
                             <span>
                               Your attendance is in the{" "}
                               <strong>condonation range</strong>. An additional
@@ -535,7 +532,7 @@ const ExaminationsHub = () => {
                           <div className="space-y-1.5">
                             {!eligibility.hod_permission && (
                               <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                                <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
                                 <span>
                                   <strong>HOD Permission Required:</strong> Your
                                   attendance is below{" "}
@@ -546,7 +543,7 @@ const ExaminationsHub = () => {
                             )}
                             {!eligibility.fee_clear_permission && (
                               <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                                <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
                                 <span>
                                   <strong>Fee Clearance Required:</strong> You
                                   have pending tuition fees of ₹
@@ -566,11 +563,10 @@ const ExaminationsHub = () => {
                         <button
                           onClick={() => handlePayFee(cycle.id)}
                           disabled={paying === cycle.id || isBlocked}
-                          className={`w-full py-4 rounded-xl font-black text-sm transition-all shadow-xl flex items-center justify-center gap-2 group ${
-                            isBlocked
+                          className={`w-full py-4 rounded-xl font-black text-sm transition-all shadow-xl flex items-center justify-center gap-2 group ${isBlocked
                               ? "bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed"
                               : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20"
-                          } disabled:opacity-50`}
+                            } disabled:opacity-50`}
                         >
                           {paying === cycle.id ? (
                             <>
@@ -646,13 +642,12 @@ const ExaminationsHub = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              payment.payment_status === "success"
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${payment.payment_status === "success"
                                 ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
                                 : payment.payment_status === "pending"
                                   ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400"
                                   : "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-                            }`}
+                              }`}
                           >
                             {payment.payment_status.toUpperCase()}
                           </span>

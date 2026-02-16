@@ -104,7 +104,7 @@ const LeaveDashboard = () => {
                 >
                   <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8">
                     {/* User Info Column */}
-                    <div className="flex-shrink-0 flex md:flex-col items-center md:items-start gap-4 md:w-48 border-b md:border-b-0 md:border-r border-slate-100 pb-6 md:pb-0 md:pr-6">
+                    <div className="shrink-0 flex md:flex-col items-center md:items-start gap-4 md:w-48 border-b md:border-b-0 md:border-r border-slate-100 pb-6 md:pb-0 md:pr-6">
                       <div className="relative">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-600 font-bold text-2xl shadow-inner">
                           {req.applicant?.first_name?.[0]}

@@ -230,11 +230,10 @@ const BulkImportModal = ({
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-[2rem] p-10 transition-all flex flex-col items-center justify-center group ${
-                  dragActive
+                className={`relative border-2 border-dashed rounded-[2rem] p-10 transition-all flex flex-col items-center justify-center group ${dragActive
                     ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/20"
                     : "border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
+                  }`}
               >
                 <input
                   ref={fileInputRef}
@@ -282,7 +281,7 @@ const BulkImportModal = ({
 
               {error && (
                 <div className="p-4 rounded-2xl bg-error-50 dark:bg-error-900/30 border border-error-500/30 text-error-700 dark:text-error-300 text-sm flex items-start animate-shake">
-                  <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="w-5 h-5 mr-3 mt-0.5 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
@@ -367,7 +366,7 @@ const BulkImportModal = ({
                         className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-between group"
                       >
                         <div className="flex items-center overflow-hidden">
-                          <span className="w-6 h-6 rounded-lg bg-gray-200 dark:bg-gray-700 text-[10px] font-bold flex items-center justify-center mr-3 flex-shrink-0">
+                          <span className="w-6 h-6 rounded-lg bg-gray-200 dark:bg-gray-700 text-[10px] font-bold flex items-center justify-center mr-3 shrink-0">
                             {err.row}
                           </span>
                           <div className="overflow-hidden">

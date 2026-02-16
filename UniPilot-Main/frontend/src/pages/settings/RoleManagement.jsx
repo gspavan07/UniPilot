@@ -195,8 +195,8 @@ const RoleManagement = () => {
                 key={role.id}
                 onClick={() => setSelectedRole(role)}
                 className={`w-full text-left p-4 rounded-xl border transition-all duration-200 group relative overflow-hidden ${selectedRole?.id === role.id
-                    ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-100"
-                    : "bg-white border-gray-200 hover:border-blue-200 hover:shadow-sm"
+                  ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-100"
+                  : "bg-white border-gray-200 hover:border-blue-200 hover:shadow-sm"
                   }`}
               >
                 <div
@@ -368,7 +368,7 @@ const RoleManagement = () => {
                   {activeTab === "forms" && (
                     <div className="max-w-4xl mx-auto space-y-6">
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3 text-blue-900">
-                        <Layout className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <Layout className="w-5 h-5 shrink-0 mt-0.5" />
                         <div>
                           <h4 className="font-bold text-sm">
                             Form Visibility Rules
