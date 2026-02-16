@@ -162,7 +162,7 @@ const SuperAdminDashboard = () => {
       path: "/attendance",
     },
     {
-      name: "Account Settings",
+      name: "Roles & Permissions",
       icon: Settings,
       color: "text-gray-600",
       bg: "bg-gray-100",
@@ -232,7 +232,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-5 gap-6">
         {kpis.map((stat, idx) => (
           <div
             key={idx}
