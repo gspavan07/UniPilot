@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: "http://localhost:3000/api", // Proxy will forward to backend
+  baseURL: import.meta.env.VITE_API_URL || "/api", // Use env var or default to relative path for proxy
   headers: {
     "Content-Type": "application/json",
   },

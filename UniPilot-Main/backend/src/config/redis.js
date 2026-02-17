@@ -3,12 +3,12 @@ const logger = require('../utils/logger');
 
 // Create Redis client
 const client = redis.createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT) || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
+  url: `redis://${process.env.REDIS_PASSWORD ? `:${process.env.REDIS_PASSWORD}@` : ''}${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+  socket: {
+    reconnectStrategy: (times) => {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
   },
 });
 

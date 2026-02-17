@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  redis:
+    container_name: unipilot-redis-v2
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6385:6379"
+    volumes:
+      - redis_data_v2:/data
+    networks:
+      - unipilot-net-v2
+
+  backend:
+    container_name: unipilot-backend-v2
+    build: ./backend
+    restart: always
+    ports:
+      - "3100:3000"
+    # command: "node --dns-result-order=ipv4first server.js"
+    # Using default command from Dockerfile (npm start) is fine if family: 4 works.
+    env_file:
+      - ./backend/.env
+    environment:
+      # Ensure DATABASE_URL is passed if present in .env
+      # Override Redis host to internal service name
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NODE_ENV: production
+      PORT: 3000
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
+    depends_on:
+      - redis
+    networks:
+      - unipilot-net-v2
+
+  frontend:
+    container_name: unipilot-frontend-v2
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    restart: always
+    ports:
+      - "8085:80"
+    depends_on:
+      - backend
+    networks:
+      - unipilot-net-v2
+
+  exam-management:
+    container_name: unipilot-exam-management-v2
+    build:
+      context: ../UniPilot-ExamManagement/frontend
+      args:
+        VITE_API_URL: /api
+        VITE_MAIN_API_URL: /api
+    restart: always
+    ports:
+      - "8086:80"
+    depends_on:
+      - backend
+    networks:
+      - unipilot-net-v2
+
+volumes:
+  redis_data_v2:
+
+networks:
+  unipilot-net-v2:
+    driver: bridge
