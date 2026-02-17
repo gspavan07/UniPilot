@@ -25,7 +25,7 @@ import toast from "react-hot-toast";
 const GradeManagement = () => {
   const dispatch = useDispatch();
   const { salaryGrades, operationStatus, operationError } = useSelector(
-    (state) => state.hr
+    (state) => state.hr,
   );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,14 +63,14 @@ const GradeManagement = () => {
             if (typeof val === "object")
               return { name, value: val.value, type: val.type };
             return { name, value: val, type: "fixed" };
-          }
+          },
         ),
         deductions: Object.entries(grade.deductions || {}).map(
           ([name, val]) => {
             if (typeof val === "object")
               return { name, value: val.value, type: val.type };
             return { name, value: val, type: "fixed" };
-          }
+          },
         ),
         leave_policy: grade.leave_policy || [],
         lop_config: grade.lop_config || {
@@ -90,7 +90,7 @@ const GradeManagement = () => {
         deductions: [{ name: "PF", value: 12, type: "percentage" }],
         leave_policy: [
           { name: "Casual Leave", days: 12, carry_forward: false },
-          { name: "Sick Leave", days: 10, carry_forward: true },
+          { name: "Sick Leave", days: 10, carry_forward: false },
         ],
         lop_config: { basis: "basic", deduction_factor: 1.0 },
         description: "",
@@ -119,7 +119,7 @@ const GradeManagement = () => {
         basic_salary: Number(formData.basic_salary),
         allowances: allowancesObj,
         deductions: deductionsObj,
-      })
+      }),
     );
   };
 
@@ -143,46 +143,46 @@ const GradeManagement = () => {
   };
 
   return (
-<div className="max-w-6xl mx-auto space-y-8 pb-12 pt-6">
-  {/* Header Section */}
-  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-    <div className="flex items-start gap-4">
-      {/* Enhanced Back Button */}
-      <button
-        onClick={() => window.history.back()}
-        className="mt-1 flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-primary-600 hover:border-primary-200 hover:bg-primary-50 transition-all duration-200 shadow-sm active:scale-95"
-        title="Go Back"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </button>
+    <div className="max-w-6xl mx-auto space-y-8 pb-12 pt-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          {/* Enhanced Back Button */}
+          <button
+            onClick={() => window.history.back()}
+            className="mt-1 flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-500 hover:text-primary-600 hover:border-primary-200 hover:bg-primary-50 transition-all duration-200 shadow-sm active:scale-95"
+            title="Go Back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
 
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="p-1.5 bg-primary-50 rounded-lg">
-            <Layers className="w-5 h-5 text-primary-600" />
-          </span>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-            Salary Grades
-          </h1>
-          <span className="px-2 py-0.5 text-xs font-medium text-primary-700 bg-primary-50 border border-primary-100 rounded-full">
-            Templates
-          </span>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="p-1.5 bg-primary-50 rounded-lg">
+                <Layers className="w-5 h-5 text-primary-600" />
+              </span>
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                Salary Grades
+              </h1>
+              <span className="px-2 py-0.5 text-xs font-medium text-primary-700 bg-primary-50 border border-primary-100 rounded-full">
+                Templates
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 font-medium">
+              Manage and define standardized university pay scales.
+            </p>
+          </div>
         </div>
-        <p className="text-sm text-slate-500 font-medium">
-          Manage and define standardized university pay scales.
-        </p>
-      </div>
-    </div>
 
-    {/* Action Button with refined shadow */}
-    <button
-      onClick={() => handleOpenModal()}
-      className="flex items-center justify-center px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold text-sm hover:bg-slate-800 transition-all shadow-md hover:shadow-lg active:scale-[0.98] group"
-    >
-      <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200" />
-      Create New Grade
-    </button>
-  </div>
+        {/* Action Button with refined shadow */}
+        <button
+          onClick={() => handleOpenModal()}
+          className="flex items-center justify-center px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold text-sm hover:bg-slate-800 transition-all shadow-md hover:shadow-lg active:scale-[0.98] group"
+        >
+          <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200" />
+          Create New Grade
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {salaryGrades.map((grade) => (
@@ -373,7 +373,7 @@ const GradeManagement = () => {
                           DAYS/YR
                         </span>
                       </div>
-                      <label
+                      {/* <label
                         className="cursor-pointer label p-0 gap-2"
                         title="Carry Forward?"
                       >
@@ -390,7 +390,7 @@ const GradeManagement = () => {
                             setFormData({ ...formData, leave_policy: newArr });
                           }}
                         />
-                      </label>
+                      </label> */}
                       <button
                         onClick={() => removeComponent("leave_policy", idx)}
                         className="btn btn-sm btn-ghost text-red-400"

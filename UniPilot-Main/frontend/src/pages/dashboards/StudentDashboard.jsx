@@ -293,18 +293,18 @@ const StudentDashboard = () => {
 
             {/* Hostel Services */}
             {user?.is_hosteller && (
-              <div className="p-8 bg-black rounded-[2rem] text-white shadow-2xl shadow-gray-200 relative overflow-hidden group">
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all duration-700"></div>
-                <h2 className="text-xl font-black mb-6 relative z-10 flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-blue-400" />
+              <div className="p-8  rounded-[2rem] text-white border border-gray-200 shadow-2xl shadow-gray-200 relative overflow-hidden group">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl group-hover:bg-blue-600/40 transition-all duration-700"></div>
+                <h2 className="text-xl font-black text-black mb-6 relative z-10 flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-blue-600" />
                   Hostel Life
                 </h2>
                 <div className="space-y-3 relative z-10">
                   <Link
                     to="/hostel/gate-pass"
-                    className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 border border-white/5 transition-all group/btn"
+                    className="flex items-center justify-between p-4 bg-blue-600/5 rounded-2xl hover:bg-white/10 border border-white/5 transition-all group/btn"
                   >
-                    <span className="flex items-center font-bold text-sm">
+                    <span className="flex items-center text-black font-bold text-sm">
                       <Ticket className="w-4 h-4 mr-3 text-blue-400" />
                       Digital Gate Pass
                     </span>
@@ -312,9 +312,9 @@ const StudentDashboard = () => {
                   </Link>
                   <Link
                     to="/hostel/complaints"
-                    className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 border border-white/5 transition-all group/btn"
+                    className="flex items-center justify-between p-4 bg-red-600/5 rounded-2xl hover:bg-white/10 border border-white/5 transition-all group/btn"
                   >
-                    <span className="flex items-center font-bold text-sm">
+                    <span className="flex items-center text-black font-bold text-sm">
                       <AlertCircle className="w-4 h-4 mr-3 text-red-400" />
                       Report Issue
                     </span>
