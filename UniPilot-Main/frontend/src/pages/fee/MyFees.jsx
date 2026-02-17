@@ -387,14 +387,14 @@ const MyFees = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-[1.5rem] border border-gray-100">
+          {/* <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-[1.5rem] border border-gray-100">
             <button className="flex items-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-blue-600 hover:bg-white rounded-xl transition-all">
               <History className="w-3.5 h-3.5" /> History
             </button>
             <button className="flex items-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-500/20">
               <Download className="w-3.5 h-3.5" /> Statement
             </button>
-          </div>
+          </div> */}
         </header>
 
         {/* Financial Summary Cards */}
