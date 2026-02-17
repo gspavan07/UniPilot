@@ -665,11 +665,9 @@ const PayrollTab = ({
 
   const currentUser = useSelector((state) => state.auth.user);
   const { salaryGrades } = useSelector((state) => state.hr);
-  const isHR = ["super_admin", "hr", "hr_admin"].includes(
+  const isHR = ["admin", "super_admin", "hr", "hr_admin"].includes(
     currentUser?.role?.toLowerCase(),
   );
-
-  console.log("salaryGrades", isHR);
 
   useEffect(() => {
     if (isHR) dispatch(fetchSalaryGrades());
@@ -1273,9 +1271,14 @@ const StaffProfile = ({ isSelf }) => {
   const [myLeaves, setMyLeaves] = useState([]);
   const [myAttendance, setMyAttendance] = useState([]);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [formData, setFormData] = useState({ leave_type: "", start_date: "", end_date: "", reason: "", is_half_day: false });
-  const user = useSelector((state) => state.auth.user);
-  
+  const [formData, setFormData] = useState({
+    leave_type: "",
+    start_date: "",
+    end_date: "",
+    reason: "",
+    is_half_day: false,
+  });
+
   const handleApply = async (e) => {
     e.preventDefault();
     try {
@@ -1361,17 +1364,19 @@ const StaffProfile = ({ isSelf }) => {
 
         <div className="relative bg-white rounded-3xl p-8 mb-8 border border-slate-200/60 shadow-sm overflow-hidden">
           {/* Modernized Back Button - Relocated to top-right for a cleaner profile flow */}
-          <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
-            <button
-              onClick={() => window.history.back()}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 backdrop-blur-md border border-slate-200 text-slate-500 rounded-lg hover:bg-white hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition-all active:scale-95 group"
-            >
-              <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-              <span className="text-xs font-bold uppercase tracking-wider">
-                Back
-              </span>
-            </button>
-          </div>
+          {localUser.role === "super_admin" && (
+            <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
+              <button
+                onClick={() => window.history.back()}
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 backdrop-blur-md border border-slate-200 text-slate-500 rounded-lg hover:bg-white hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition-all active:scale-95 group"
+              >
+                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  Back
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Soft ambient background accent */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-50/50 to-transparent -mr-20 -mt-20 rounded-full blur-3xl" />
@@ -1452,55 +1457,13 @@ const StaffProfile = ({ isSelf }) => {
             </div>
 
             {/* Action Buttons - Pushed down slightly on desktop to align with profile content */}
-            {/* <div className="flex flex-col gap-3 self-center lg:self-start lg:mt-14 shrink-0">
+            <div className="flex flex-col gap-3 self-center lg:self-start lg:mt-14 shrink-0">
               <button className="flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95">
                 <Edit3 className="w-4 h-4" />
                 Edit Profile
               </button>
-            </div> */}
+            </div>
           </div>
-        </div> */}
-<div className="relative bg-white rounded-3xl p-8 mb-8 border border-slate-200/60 shadow-sm overflow-hidden">
-  {user.role !== "hod" && (
-    <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
-      <button
-        onClick={() => window.history.back()}
-        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 backdrop-blur-md border border-slate-200 text-slate-500 rounded-lg hover:bg-white hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition-all active:scale-95 group"
-      >
-        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        <span className="text-xs font-bold uppercase tracking-wider">Back</span>
-      </button>
-    </div>
-)}
-  {/* Soft ambient background accent */}
-  <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-50/50 to-transparent -mr-20 -mt-20 rounded-full blur-3xl" />
-
-  {/* Main Container */}
-  <div className="relative flex flex-col lg:flex-row items-center lg:items-start gap-10">
-    
-    {/* Avatar Section with Ring Effect */}
-    <div className="relative group shrink-0">
-      <div className="absolute -inset-1.5 bg-gradient-to-tr from-blue-600 to-indigo-400 rounded-full opacity-20 group-hover:opacity-40 transition duration-500 blur"></div>
-      <div className="relative">
-        <img 
-          src={localUser.profile_picture || `https://ui-avatars.com/api/?name=${localUser.first_name}+${localUser.last_name}&background=6366f1&color=fff`} 
-          alt="Profile" 
-          className="w-36 h-36 rounded-full object-cover border-4 border-white shadow-inner" 
-        />
-        <div className={`absolute bottom-2 right-2 w-7 h-7 rounded-full border-4 border-white shadow-sm ${localUser.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-      </div>
-    </div>
-
-    {/* Main Content */}
-    <div className="flex-1 space-y-6 pt-4 lg:pt-0">
-      <div className="text-center lg:text-left">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-2">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            {localUser.first_name} {localUser.last_name}
-          </h1>
-          <span className="w-fit mx-auto lg:mx-0 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-100">
-            {localUser.role}
-          </span>
         </div>
 
         {/* Navigation Tabs */}
