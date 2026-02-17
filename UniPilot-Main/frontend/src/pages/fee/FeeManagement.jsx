@@ -1041,130 +1041,183 @@ const FeeManagement = () => {
 
   // ADMIN VIEW HELPER FUNCTIONS
   const renderOverviewTab = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
       {/* Quick Actions & Analytics Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                Total Collection
-              </span>
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                <CircleDollarSign className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-black text-gray-900 dark:text-white">
-              {formatCurrency(stats?.totalCollected || 0)}
-            </h3>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                Collected Today
-              </span>
-              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                <RefreshCw className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-black text-emerald-600">
-              {formatCurrency(stats?.todayCollected || 0)}
-            </h3>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                Active Programs
-              </span>
-              <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
-                <LayoutGrid className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-black text-gray-900 dark:text-white">
-              {programs.length}
-            </h3>
-          </div>
-        </div>
-
-        {/* Quick Actions Card */}
-        {canAdminFees && (
-          <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none">
-            <h4 className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-70">
-              Quick Management
-            </h4>
-            <div className="space-y-3">
-              <button
-                onClick={() => openAddStructure(1)}
-                className="w-full flex items-center justify-between p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all group"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Total Collection",
+            value: formatCurrency(stats?.totalCollected || 0),
+            icon: CircleDollarSign,
+            color: "from-blue-500 to-indigo-600",
+            sub: "Lifetime",
+          },
+          {
+            label: "Collected Today",
+            value: formatCurrency(stats?.todayCollected || 0),
+            icon: RefreshCw,
+            color: "from-emerald-500 to-teal-600",
+            sub: "Daily",
+          },
+          {
+            label: "Active Programs",
+            value: programs.length,
+            icon: LayoutGrid,
+            color: "from-purple-500 to-violet-600",
+            sub: "Academic",
+          },
+          {
+            label: "Pending Dues",
+            value: formatCurrency(totalDues || 0),
+            icon: AlertCircle,
+            color: "from-amber-500 to-orange-600",
+            sub: "Outstanding",
+          },
+        ].map((stat, idx) => (
+          <div
+            key={idx}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div
+                className={`p-2.5 rounded-lg bg-gradient-to-br ${stat.color} text-white shadow-sm`}
               >
-                <span className="text-xs font-bold">Add New Fee</span>
-                <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
-              </button>
-              <button
-                onClick={() => setShowCategoryModal(true)}
-                className="w-full flex items-center justify-between p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"
-              >
-                <span className="text-xs font-bold">New Category</span>
-                <FileText className="w-4 h-4" />
-              </button>
+                <stat.icon className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                {stat.sub}
+              </span>
             </div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              {stat.label}
+            </p>
+            <h3 className="text-2xl font-bold text-black dark:text-white truncate">
+              {stat.value}
+            </h3>
           </div>
-        )}
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      {/* Quick Management Shortcuts */}
+      {canAdminFees && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => setActiveTab("structure")}
+            className="group flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-indigo-500 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                  Fee Structure
+                </p>
+                <p className="text-xs text-gray-500">Create fee structure</p>
+              </div>
+            </div>
+          </button>
+
+          {/* <button
+            onClick={() => setShowCategoryModal(true)}
+            className="group flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-pink-500 transition-all"
+            >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-pink-50 dark:bg-pink-900/20 text-pink-600 rounded-lg group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                  New Category
+                </p>
+                <p className="text-xs text-gray-500">Define fee type</p>
+              </div>
+            </div>
+          </button> */}
+
+          <button
+            onClick={() => setActiveTab("defaulters")}
+            className="group flex items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-amber-500 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-lg group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                  Check Defaulters
+                </p>
+                <p className="text-xs text-gray-500">View pending dues</p>
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Program-wise chart */}
-        <div className="lg:col-span-4 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-              Collection by Program
-            </h4>
+        <div className="lg:col-span-8 bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 mb-6">
+            <LayoutGrid className="w-5 h-5 text-indigo-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Collection by Program
+              </h3>
+              <p className="text-xs text-gray-500">
+                Revenue distribution across academic programs
+              </p>
+            </div>
           </div>
-          <div className="h-[300px]">
+          <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats?.programWise || []}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
-                  stroke="#f1f5f9"
+                  stroke="#e5e7eb"
                 />
                 <XAxis
                   dataKey="program_name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }}
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }}
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  tickFormatter={(value) => `₹${value / 1000}k`}
                 />
                 <Tooltip
-                  cursor={{ fill: "#f8fafc" }}
+                  formatter={(value) => formatCurrency(value)}
                   contentStyle={{
-                    borderRadius: "16px",
+                    borderRadius: "8px",
                     border: "none",
-                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                     padding: "12px",
                   }}
                 />
                 <Bar
                   dataKey="total"
                   fill="#4f46e5"
-                  radius={[6, 6, 0, 0]}
+                  radius={[4, 4, 0, 0]}
                   barSize={40}
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+
         {/* Method-wise chart */}
         <div className="lg:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <PieChartIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-lg font-semibold text-black dark:text-white">
-              Payment Mode Distribution
-            </h3>
+          <div className="flex items-center gap-2 mb-6">
+            <PieChartIcon className="w-5 h-5 text-emerald-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Payment Modes
+              </h3>
+              <p className="text-xs text-gray-500">Transaction methods</p>
+            </div>
           </div>
           <div className="h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -1179,14 +1232,20 @@ const FeeManagement = () => {
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={100}
+                  outerRadius={80}
                   paddingAngle={5}
                 >
                   {(stats?.methodWise || []).map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={
-                        ["#4f46e5", "#10b981", "#f59e0b", "#ef4444"][index % 4]
+                        [
+                          "#4f46e5",
+                          "#10b981",
+                          "#f59e0b",
+                          "#ec4899",
+                          "#6366f1",
+                        ][index % 5]
                       }
                     />
                   ))}
@@ -1194,23 +1253,22 @@ const FeeManagement = () => {
                 <Tooltip
                   formatter={(value) => formatCurrency(value)}
                   contentStyle={{
-                    borderRadius: "16px",
+                    borderRadius: "8px",
                     border: "none",
-                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                     padding: "12px",
                   }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="space-y-2 mt-4">
+          <div className="space-y-3 mt-4">
             {(stats?.methodWise || []).map((entry, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between text-xs"
               >
-                <div className="flex items-center gap-3">
-                  {/* The color dot matching the chart */}
+                <div className="flex items-center gap-2">
                   <div
                     className="w-2.5 h-2.5 rounded-full"
                     style={{
@@ -1218,15 +1276,16 @@ const FeeManagement = () => {
                         "#4f46e5",
                         "#10b981",
                         "#f59e0b",
-                        "#ef4444",
-                      ][idx % 4],
+                        "#ec4899",
+                        "#6366f1",
+                      ][idx % 5],
                     }}
                   />
-                  <span className="font-bold text-gray-500 uppercase tracking-wider">
+                  <span className="font-medium text-gray-600 dark:text-gray-400 capitalize">
                     {entry.payment_method}
                   </span>
                 </div>
-                <span className="font-black text-gray-900 dark:text-white">
+                <span className="font-bold text-gray-900 dark:text-white">
                   {formatCurrency(entry.total)}
                 </span>
               </div>
@@ -1241,7 +1300,7 @@ const FeeManagement = () => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4">
       {/* Search & Selection Section */}
       <div className="lg:col-span-1 space-y-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
             Step 1: Find Student
           </h4>
@@ -1327,7 +1386,7 @@ const FeeManagement = () => {
         {selectedStudent ? (
           <>
             {/* Dues Selection Area */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden min-h-[400px]">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden min-h-[400px]">
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   Step 2: Selection & Partial Amounts
@@ -1347,11 +1406,10 @@ const FeeManagement = () => {
                       <button
                         key={sem}
                         onClick={() => setActiveCounterSemester(sem)}
-                        className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border ${
-                          isActive
-                            ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                            : "bg-white dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700 hover:border-indigo-200"
-                        }`}
+                        className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border ${isActive
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                          : "bg-white dark:bg-gray-800 text-gray-400 border-gray-100 dark:border-gray-700 hover:border-indigo-200"
+                          }`}
                       >
                         Semester {sem}
                       </button>
@@ -1361,7 +1419,7 @@ const FeeManagement = () => {
 
               <div className="p-6">
                 {activeCounterSemester &&
-                studentStatus?.semesterWise?.[activeCounterSemester] ? (
+                  studentStatus?.semesterWise?.[activeCounterSemester] ? (
                   <div className="space-y-4">
                     {/* Fees List */}
                     <div className="space-y-3">
@@ -1370,11 +1428,10 @@ const FeeManagement = () => {
                         .map((fee) => (
                           <div
                             key={fee.id}
-                            className={`p-4 rounded-2xl border transition-all ${
-                              selectedCounterFees.has(fee.id)
-                                ? "bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-900/30 shadow-sm"
-                                : "bg-gray-50/50 border-gray-100 dark:bg-gray-900/20 dark:border-gray-700"
-                            }`}
+                            className={`p-4 rounded-2xl border transition-all ${selectedCounterFees.has(fee.id)
+                              ? "bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/10 dark:border-indigo-900/30 shadow-sm"
+                              : "bg-gray-50/50 border-gray-100 dark:bg-gray-900/20 dark:border-gray-700"
+                              }`}
                           >
                             <div className="flex items-center justify-between gap-4">
                               <div className="flex items-center gap-4 flex-1">
@@ -1441,75 +1498,74 @@ const FeeManagement = () => {
                       {/* Fines */}
                       {studentStatus.semesterWise[activeCounterSemester].fine
                         .due > 0 && (
-                        <div
-                          className={`p-4 rounded-2xl border transition-all ${
-                            selectedCounterFees.has(
+                          <div
+                            className={`p-4 rounded-2xl border transition-all ${selectedCounterFees.has(
                               `fine:${activeCounterSemester}`,
                             )
                               ? "bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-900/30 shadow-sm"
                               : "bg-red-50/20 border-red-100 dark:bg-red-900/5 dark:border-red-900/20"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={selectedCounterFees.has(
-                                  `fine:${activeCounterSemester}`,
-                                )}
-                                onChange={() =>
-                                  toggleCounterFeeSelection(
-                                    `fine:${activeCounterSemester}`,
-                                    studentStatus.semesterWise[
-                                      activeCounterSemester
-                                    ].fine.due,
-                                  )
-                                }
-                                className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                              />
-                              <div>
-                                <div className="text-sm font-bold text-red-600 dark:text-red-400">
-                                  Late Payment Fine
-                                </div>
-                                <div className="text-[10px] font-black text-red-400/70 uppercase">
-                                  Balance Due: ₹
-                                  {studentStatus.semesterWise[
-                                    activeCounterSemester
-                                  ].fine.due.toLocaleString("en-IN")}
-                                </div>
-                              </div>
-                            </div>
-                            {selectedCounterFees.has(
-                              `fine:${activeCounterSemester}`,
-                            ) && (
-                              <div className="relative animate-in zoom-in-95">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400">
-                                  ₹
-                                </span>
+                              }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4 flex-1">
                                 <input
-                                  type="number"
-                                  value={
-                                    counterCustomAmounts[
-                                      `fine:${activeCounterSemester}`
-                                    ] ?? ""
-                                  }
-                                  onChange={(e) =>
-                                    handleCounterAmountChange(
+                                  type="checkbox"
+                                  checked={selectedCounterFees.has(
+                                    `fine:${activeCounterSemester}`,
+                                  )}
+                                  onChange={() =>
+                                    toggleCounterFeeSelection(
                                       `fine:${activeCounterSemester}`,
-                                      e.target.value,
                                       studentStatus.semesterWise[
                                         activeCounterSemester
                                       ].fine.due,
                                     )
                                   }
-                                  placeholder="0.00"
-                                  className="w-32 pl-7 pr-3 py-2 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 rounded-xl text-sm font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
+                                  className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
                                 />
+                                <div>
+                                  <div className="text-sm font-bold text-red-600 dark:text-red-400">
+                                    Late Payment Fine
+                                  </div>
+                                  <div className="text-[10px] font-black text-red-400/70 uppercase">
+                                    Balance Due: ₹
+                                    {studentStatus.semesterWise[
+                                      activeCounterSemester
+                                    ].fine.due.toLocaleString("en-IN")}
+                                  </div>
+                                </div>
                               </div>
-                            )}
+                              {selectedCounterFees.has(
+                                `fine:${activeCounterSemester}`,
+                              ) && (
+                                  <div className="relative animate-in zoom-in-95">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400">
+                                      ₹
+                                    </span>
+                                    <input
+                                      type="number"
+                                      value={
+                                        counterCustomAmounts[
+                                        `fine:${activeCounterSemester}`
+                                        ] ?? ""
+                                      }
+                                      onChange={(e) =>
+                                        handleCounterAmountChange(
+                                          `fine:${activeCounterSemester}`,
+                                          e.target.value,
+                                          studentStatus.semesterWise[
+                                            activeCounterSemester
+                                          ].fine.due,
+                                        )
+                                      }
+                                      placeholder="0.00"
+                                      className="w-32 pl-7 pr-3 py-2 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-900/50 rounded-xl text-sm font-black text-gray-900 dark:text-white focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
+                                    />
+                                  </div>
+                                )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
 
                     {!studentStatus.semesterWise[
@@ -1535,7 +1591,7 @@ const FeeManagement = () => {
 
             {/* Payment Details Form */}
             {selectedCounterFees.size > 0 && (
-              <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-6 animate-in fade-in slide-in-from-top-4">
+              <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-6 animate-in fade-in slide-in-from-top-4">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   Step 3: Recording Details
                 </h4>
@@ -1581,7 +1637,7 @@ const FeeManagement = () => {
                           {Math.max(
                             0,
                             calculateCounterSelectedTotal() -
-                              studentStatus.grandTotals.excessBalance,
+                            studentStatus.grandTotals.excessBalance,
                           ).toLocaleString("en-IN")}
                         </div>
                       </div>
@@ -1589,10 +1645,10 @@ const FeeManagement = () => {
 
                     {calculateCounterSelectedTotal() >
                       studentStatus.grandTotals.excessBalance && (
-                      <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/30">
-                        Collect Cash/Transfer for the rest
-                      </div>
-                    )}
+                        <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/30">
+                          Collect Cash/Transfer for the rest
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -1610,11 +1666,10 @@ const FeeManagement = () => {
                           key={method}
                           type="button"
                           onClick={() => setCounterPaymentMethod(method)}
-                          className={`p-3 rounded-xl border-2 text-xs font-black uppercase transition-all ${
-                            counterPaymentMethod === method
-                              ? "border-indigo-600 bg-indigo-50 text-indigo-600"
-                              : "border-gray-100 text-gray-400 hover:border-indigo-200"
-                          }`}
+                          className={`p-3 rounded-xl border-2 text-xs font-black uppercase transition-all ${counterPaymentMethod === method
+                            ? "border-indigo-600 bg-indigo-50 text-indigo-600"
+                            : "border-gray-100 text-gray-400 hover:border-indigo-200"
+                            }`}
                         >
                           {method.replace("_", " ")}
                         </button>
@@ -1683,7 +1738,7 @@ const FeeManagement = () => {
             )}
           </>
         ) : (
-          <div className="bg-indigo-50/50 dark:bg-indigo-900/5 p-12 rounded-3xl border-2 border-dashed border-indigo-100 dark:border-indigo-900/20 text-center">
+          <div className="bg-indigo-50/50 dark:bg-indigo-900/5 p-12 rounded-xl border-2 border-dashed border-indigo-100 dark:border-indigo-900/20 text-center">
             <User className="w-12 h-12 text-indigo-200 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-indigo-300">
               Select a student to start recording payments
@@ -1700,7 +1755,7 @@ const FeeManagement = () => {
 
   const renderScholarshipImportPreview = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center">
         <div>
           <h3 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
             <Upload className="w-5 h-5 text-indigo-500" />
@@ -1727,7 +1782,7 @@ const FeeManagement = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
           <Settings2 className="w-4 h-4" /> Bulk Apply Settings to All Rows
         </h4>
@@ -1822,7 +1877,7 @@ const FeeManagement = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="text-[10px] font-black uppercase text-gray-400 tracking-widest bg-gray-50/50 dark:bg-gray-900/50">
@@ -1908,7 +1963,7 @@ const FeeManagement = () => {
   const renderGrantScholarshipForm = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
       <div className="lg:col-span-1 space-y-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
             Grant New Scholarship
           </h4>
@@ -2047,7 +2102,7 @@ const FeeManagement = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-indigo-100 dark:border-gray-700 border-dashed relative group overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border border-indigo-100 dark:border-gray-700 border-dashed relative group overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
           <input
             type="file"
             onChange={handleFileUpload}
@@ -2071,7 +2126,7 @@ const FeeManagement = () => {
   );
 
   const renderAssignedScholarships = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
       <div className="px-6 py-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
         <div>
           <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
@@ -2188,22 +2243,20 @@ const FeeManagement = () => {
         <div className="flex bg-gray-100/50 dark:bg-gray-900/50 p-1 rounded-2xl border border-gray-100 dark:border-gray-800 w-fit">
           <button
             onClick={() => setScholarshipView("assigned")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              scholarshipView === "assigned"
-                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                : "text-gray-400 hover:text-indigo-600"
-            }`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scholarshipView === "assigned"
+              ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+              : "text-gray-400 hover:text-indigo-600"
+              }`}
           >
             <History className="w-4 h-4" />
             Assigned Board
           </button>
           <button
             onClick={() => setScholarshipView("new")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              scholarshipView === "new"
-                ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
-                : "text-gray-400 hover:text-indigo-600"
-            }`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scholarshipView === "new"
+              ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-700"
+              : "text-gray-400 hover:text-indigo-600"
+              }`}
           >
             <Plus className="w-4 h-4" />
             Grant New
@@ -2221,7 +2274,7 @@ const FeeManagement = () => {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
         {/* Search & Filter Bar */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 relative min-w-[300px]">
               <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -2392,11 +2445,10 @@ const FeeManagement = () => {
                   onClick={() =>
                     setInsightFilters({ ...insightFilters, payment_type: t.id })
                   }
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                    insightFilters.payment_type === t.id
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
-                      : "text-gray-400 hover:text-indigo-600"
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${insightFilters.payment_type === t.id
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                    : "text-gray-400 hover:text-indigo-600"
+                    }`}
                 >
                   <t.icon className="w-3.5 h-3.5" />
                   {t.label}
@@ -2413,7 +2465,7 @@ const FeeManagement = () => {
         {/* Summary Cards */}
         {dailyReport && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in zoom-in-95 duration-300">
-            <div className="bg-indigo-600 p-6 rounded-3xl shadow-lg shadow-indigo-100 dark:shadow-none text-white overflow-hidden relative group">
+            <div className="bg-indigo-600 p-6 rounded-xl shadow-lg shadow-indigo-100 dark:shadow-none text-white overflow-hidden relative group">
               <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
                 <BarChart className="w-32 h-32" />
               </div>
@@ -2424,7 +2476,7 @@ const FeeManagement = () => {
                 {formatCurrency(dailyReport.summary.total_collected)}
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-emerald-100 dark:border-emerald-900/30 overflow-hidden relative group">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-emerald-100 dark:border-emerald-900/30 overflow-hidden relative group">
               <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">
                 Cash Collection
               </div>
@@ -2435,7 +2487,7 @@ const FeeManagement = () => {
                 <Banknote className="w-3 h-3" /> VERIFIED CASH
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-blue-100 dark:border-blue-900/30 overflow-hidden relative group">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/30 overflow-hidden relative group">
               <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">
                 Online Collection
               </div>
@@ -2450,7 +2502,7 @@ const FeeManagement = () => {
         )}
 
         {/* Unified Transaction Ledger */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
               {Object.values(insightFilters).some((v) => v !== "")
@@ -2570,13 +2622,12 @@ const FeeManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                          t.payment_method === "cash"
-                            ? "bg-emerald-50 text-emerald-600"
-                            : t.payment_method === "WALLET"
-                              ? "bg-amber-50 text-amber-600"
-                              : "bg-blue-50 text-blue-600"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.payment_method === "cash"
+                          ? "bg-emerald-50 text-emerald-600"
+                          : t.payment_method === "WALLET"
+                            ? "bg-amber-50 text-amber-600"
+                            : "bg-blue-50 text-blue-600"
+                          }`}
                       >
                         {t.payment_method === "WALLET"
                           ? "Internal Wallet"
@@ -2600,19 +2651,19 @@ const FeeManagement = () => {
                   </tr>
                 ))}
                 {(Object.values(insightFilters).some((v) => v !== "") &&
-                dailyReport
+                  dailyReport
                   ? dailyReport.transactions
                   : transactions
                 ).length === 0 && (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-12 text-center text-gray-400 font-bold"
-                    >
-                      No transactions found.
-                    </td>
-                  </tr>
-                )}
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="px-6 py-12 text-center text-gray-400 font-bold"
+                      >
+                        No transactions found.
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
@@ -2626,7 +2677,7 @@ const FeeManagement = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start animate-in fade-in">
         {/* Left: Find & Selection */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 block">
               Target Student
             </label>
@@ -2683,7 +2734,7 @@ const FeeManagement = () => {
           </div>
 
           {selectedStudent && (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
                 Impose New Penalty
               </h4>
@@ -2781,14 +2832,14 @@ const FeeManagement = () => {
         {/* Right: Active Fines for Student */}
         <div className="lg:col-span-2">
           {!selectedStudent ? (
-            <div className="h-full min-h-[400px] border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-3xl flex flex-col items-center justify-center text-gray-400 p-8">
+            <div className="h-full min-h-[400px] border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl flex flex-col items-center justify-center text-gray-400 p-8">
               <Search className="w-12 h-12 mb-4 opacity-20" />
               <p className="font-bold">
                 Select a student to manage their fines and ad-hoc charges
               </p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   Current Owed Personal Charges
@@ -2838,16 +2889,16 @@ const FeeManagement = () => {
                       !Object.values(studentStatus.semesterWise).some((d) =>
                         d.fees.some((f) => f.is_personal),
                       )) && (
-                      <tr>
-                        <td
-                          colSpan="3"
-                          className="px-6 py-12 text-center text-gray-400 font-bold"
-                        >
-                          No personal fines or ad-hoc charges recorded for this
-                          student.
-                        </td>
-                      </tr>
-                    )}
+                        <tr>
+                          <td
+                            colSpan="3"
+                            className="px-6 py-12 text-center text-gray-400 font-bold"
+                          >
+                            No personal fines or ad-hoc charges recorded for this
+                            student.
+                          </td>
+                        </tr>
+                      )}
                   </tbody>
                 </table>
               </div>
@@ -2869,7 +2920,7 @@ const FeeManagement = () => {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
         {/* Local Tab-Specific Filters */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-4">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-4">
           <div className="flex-1 flex items-center gap-2 p-1 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 w-fit">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-3 border-r border-gray-200 dark:border-gray-700 pr-3">
               Configure For:
@@ -2924,7 +2975,7 @@ const FeeManagement = () => {
               return (
                 <div
                   key={semNum}
-                  className="p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl text-center"
+                  className="p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-center"
                 >
                   <p className="text-gray-400 font-bold">
                     Semester {semNum} - No structures defined
@@ -2941,7 +2992,7 @@ const FeeManagement = () => {
             return (
               <div
                 key={semNum}
-                className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
               >
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                   <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-xs">
@@ -3002,7 +3053,7 @@ const FeeManagement = () => {
                               {s.applies_to === "all"
                                 ? "All Students"
                                 : s.applies_to.charAt(0).toUpperCase() +
-                                  s.applies_to.slice(1)}
+                                s.applies_to.slice(1)}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-center font-bold text-gray-500">
@@ -3223,7 +3274,7 @@ const FeeManagement = () => {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
               Defaulters List ({defaultersMeta?.total || 0})
@@ -3347,17 +3398,21 @@ const FeeManagement = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-7xl mx-auto">
-      {/* Unified Admin Filters & Header */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-6 lg:p-10">
+      <div className="max-w-[1600px] mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <LayoutGrid className="w-8 h-8 text-indigo-600" />
-              Fee Management
-            </h1>
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-              University Financial Controller
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                <Banknote className="w-6 h-6" />
+              </div>
+              <h1 className="text-3xl font-bold text-black dark:text-white">
+                Fee Management
+              </h1>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Financial controls, collections, and student payment records
             </p>
           </div>
 
@@ -3367,18 +3422,19 @@ const FeeManagement = () => {
                 dispatch(fetchCollectionStats());
                 dispatch(fetchTransactions());
               }}
-              className="p-3 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 rounded-2xl transition-all"
-              title="Refresh Global Stats"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-500"
+              title="Refresh Stats"
             >
               <RefreshCw
-                className={`w-4 h-4 text-gray-400 ${status === "loading" ? "animate-spin" : ""}`}
+                className={`w-5 h-5 ${status === "loading" ? "animate-spin" : ""}`}
               />
             </button>
+            {/* Dynamic Filter Controls (if needed per tab) */}
           </div>
         </div>
 
-        {/* Dynamic Admin Tabs */}
-        <div className="flex gap-2 p-1 bg-gray-50 dark:bg-gray-900 rounded-2xl w-fit overflow-x-auto">
+        {/* Navigation Tabs */}
+        <div className="flex overflow-x-auto gap-8 border-b border-gray-200 dark:border-gray-700 scrollbar-hide">
           {[
             {
               id: "overview",
@@ -3394,7 +3450,7 @@ const FeeManagement = () => {
             },
             {
               id: "fines",
-              label: "Fines",
+              label: "Fines & Charges",
               icon: CircleDollarSign,
               visible: canManageFees,
             },
@@ -3406,19 +3462,19 @@ const FeeManagement = () => {
             },
             {
               id: "defaulters",
-              label: "Dues & Defaulters",
+              label: "Dues Monitoring",
               icon: AlertCircle,
               visible: canViewOversight,
             },
             {
               id: "structure",
-              label: "Structures",
+              label: "Fee Structures",
               icon: FileText,
               visible: canAdminFees,
             },
             {
               id: "insights",
-              label: "Insights",
+              label: "Reports",
               icon: BarChart,
               visible: canViewOversight,
             },
@@ -3428,33 +3484,34 @@ const FeeManagement = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all rounded-xl whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "bg-white dark:bg-gray-800 text-indigo-600 shadow-sm"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
+                className={`flex items-center gap-2 pb-4 text-sm font-semibold transition-all whitespace-nowrap border-b-2 ${activeTab === tab.id
+                  ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
+                  : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
               >
-                <tab.icon className="w-3.5 h-3.5" />
+                <tab.icon className="w-4 h-4" />
                 {tab.label}
               </button>
             ))}
         </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeTab === "overview" && renderOverviewTab()}
+          {activeTab === "counter" && renderCounterPaymentTab()}
+          {activeTab === "fines" && renderFinesTab()}
+          {activeTab === "scholarships" && renderScholarshipsTab()}
+          {activeTab === "defaulters" && renderDefaultersTab()}
+          {activeTab === "structure" && renderStructureTab()}
+          {activeTab === "insights" && renderInsightsTab()}
+        </div>
       </div>
 
-      <div className="mt-8">
-        {activeTab === "overview" && renderOverviewTab()}
-        {activeTab === "counter" && renderCounterPaymentTab()}
-        {activeTab === "fines" && renderFinesTab()}
-        {activeTab === "scholarships" && renderScholarshipsTab()}
-        {activeTab === "defaulters" && renderDefaultersTab()}
-        {activeTab === "structure" && renderStructureTab()}
-        {activeTab === "insights" && renderInsightsTab()}
-      </div>
 
       {/* Clone Modal */}
       {showCloneModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-md p-8 shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-bold mb-2">Clone Fee Structure</h2>
             <p className="text-gray-500 text-sm mb-6">
               Copy all 8 semesters from batch {selectedBatch} to a new admission
@@ -3510,8 +3567,8 @@ const FeeManagement = () => {
 
       {/* Category Modal */}
       {showCategoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-sm p-8 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-8 shadow-2xl">
             <h2 className="text-xl font-bold mb-6">Add Fee Category</h2>
             <form onSubmit={handleSaveCategory} className="space-y-6">
               <div>
@@ -3551,7 +3608,7 @@ const FeeManagement = () => {
       {/* Structure Modal */}
       {showStructureModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-md p-8 shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-bold mb-6">
               {editingStructure ? "Edit Fee" : "Add Fee"} Structure
             </h2>
@@ -3564,12 +3621,16 @@ const FeeManagement = () => {
                   <select
                     required
                     value={structureForm.category_id}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (e.target.value === "new") {
+                        setShowCategoryModal(true);
+                        return;
+                      }
                       setStructureForm({
                         ...structureForm,
                         category_id: e.target.value,
-                      })
-                    }
+                      });
+                    }}
                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl font-bold border-none"
                   >
                     {categories.map((c) => (
@@ -3577,6 +3638,12 @@ const FeeManagement = () => {
                         {c.name}
                       </option>
                     ))}
+                    <option
+                      value="new"
+                      className="font-black text-indigo-600 bg-indigo-50"
+                    >
+                      + Create New Category...
+                    </option>
                   </select>
                 </div>
 
@@ -3698,7 +3765,7 @@ const FeeManagement = () => {
       {/* Deadline Modal */}
       {showDeadlineModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-md p-8 shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-bold mb-2">
               Semester {selectedSemForDeadline} Deadlines
             </h2>
@@ -3801,7 +3868,7 @@ const FeeManagement = () => {
 
       {paymentSuccess && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-sm p-8 shadow-2xl text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-8 shadow-2xl text-center">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8" />
             </div>
