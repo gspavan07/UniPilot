@@ -405,6 +405,7 @@ const AdmissionVerifications = () => {
         onClose={() => setDocModal({ ...docModal, isOpen: false })}
         studentId={docModal.studentId}
         studentName={docModal.studentName}
+        onSuccess={fetchStats}
       />
       <BulkCommunicationModal
         isOpen={isBulkNotifOpen}

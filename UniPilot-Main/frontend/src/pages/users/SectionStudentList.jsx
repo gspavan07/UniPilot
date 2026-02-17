@@ -254,7 +254,7 @@ const SectionStudentList = () => {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <button
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group-hover:translate-x-0 translate-x-2 opacity-0 group-hover:opacity-100"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group-hover:translate-x-0 translate-x-2"
                             title="View Details"
                           >
                             Profile <ArrowLeft className="w-3 h-3 rotate-180" />

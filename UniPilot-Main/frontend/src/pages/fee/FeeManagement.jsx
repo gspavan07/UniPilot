@@ -81,6 +81,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import toast from "react-hot-toast";
 import { printReceipt } from "../../utils/receiptGenerator";
 
 const FeeManagement = () => {
@@ -478,6 +479,7 @@ const FeeManagement = () => {
     if (!scholarshipForm.student_id || !scholarshipForm.fee_category_id) return;
     try {
       await dispatch(applyWaiver(scholarshipForm)).unwrap();
+      toast.success("Scholarship granted successfully!");
       setScholarshipForm({
         ...scholarshipForm,
         amount: "",
@@ -488,6 +490,7 @@ const FeeManagement = () => {
       dispatch(fetchCollectionStats());
     } catch (err) {
       console.error("Failed to apply scholarship", err);
+      toast.error("Failed to apply scholarship: " + (err.message || "Unknown error"));
     }
   };
 
@@ -623,7 +626,7 @@ const FeeManagement = () => {
   };
 
   const handleDeleteFine = async (fineId) => {
-    if (window.confirm("Are you sure you want to remove this fine?")) {
+    if (window.confirm("Are you sure you want to remove this fee?")) {
       try {
         await dispatch(deleteStudentFine(fineId)).unwrap();
         // Refresh student status to reflect removal
@@ -1482,11 +1485,11 @@ const FeeManagement = () => {
                                 </div>
                               )}
 
-                              {fee.is_charge && (
+                              {fee.is_charge && fee.due !== 0 && (
                                 <button
                                   onClick={() => handleDeleteFine(fee.id)}
                                   className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Remove Fine"
+                                  title="Remove this fine"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -2417,9 +2420,9 @@ const FeeManagement = () => {
                 className="bg-transparent border-none text-xs font-black w-full focus:ring-0 appearance-none"
               >
                 <option value="">All Batches</option>
-                {[2020, 2021, 2022, 2023, 2024, 2025].map((y) => (
+                {batches.map((y) => (
                   <option key={y} value={y}>
-                    {y}
+                    Batch {y}
                   </option>
                 ))}
               </select>

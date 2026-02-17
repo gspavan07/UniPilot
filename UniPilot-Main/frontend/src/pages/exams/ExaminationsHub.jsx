@@ -28,6 +28,12 @@ const ExaminationsHub = () => {
   const [paying, setPaying] = useState(false);
   const [expandedCycles, setExpandedCycles] = useState([]);
 
+  useEffect(() => {
+    if (exams.length > 0) {
+      setExpandedCycles(exams.map(exam => exam.id));
+    }
+  }, [exams]);
+
   const toggleCycle = (id) => {
     setExpandedCycles((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
@@ -267,7 +273,10 @@ const ExaminationsHub = () => {
                   return (
                     <section key={exam.id} className="relative">
                       {/* Exam Cycle Hero Block */}
-                      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-10 pb-10 border-b border-gray-100">
+                      <div 
+                        onClick={() => toggleCycle(exam.id)}
+                        className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-10 pb-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50/50 transition-colors rounded-2xl p-6 -m-6 mb-4"
+                      >
                         <div className="space-y-4">
                           <div className="flex items-center gap-3">
                             <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-100 text-gray-500 border border-gray-200">
@@ -315,7 +324,7 @@ const ExaminationsHub = () => {
                             className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 border ${
                               isExpanded
                                 ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20"
-                                : "bg-white text-gray-400 border-gray-200 hover:border-blue-600 hover:text-blue-600 hover:shadow-md"
+                                : "bg-white text-gray-400 border-gray-400 hover:border-blue-600 hover:text-blue-600 hover:shadow-md"
                             }`}
                           >
                             <ChevronRight

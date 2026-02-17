@@ -189,7 +189,7 @@ const FacultyDashboard = () => {
                   Mark Attendance
                 </Link>
                 <Link
-                  to="/timetable/manage"
+                  to="/timetable/my"
                   className="group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-bold hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm"
                 >
                   Full Schedule

@@ -15,6 +15,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import api from "../../utils/api";
 
 const BlockList = () => {
   const dispatch = useDispatch();
@@ -27,9 +28,17 @@ const BlockList = () => {
     total_floors: 1,
     description: "",
   });
+  const [hostelCount, setHostelCount] = useState(0);
 
   useEffect(() => {
     dispatch(fetchBlocks());
+    // Fetch Hostel Buildings count separately
+    api
+      .get("/hostel/buildings")
+      .then((res) => {
+        setHostelCount(res.data.data.length);
+      })
+      .catch((err) => console.error("Failed to fetch hostel buildings count", err));
   }, [dispatch]);
 
   const handleCreate = async () => {
@@ -103,7 +112,7 @@ const BlockList = () => {
             },
             {
               label: "Hostels",
-              value: blocks.filter((b) => b.type === "hostel").length,
+              value: blocks.filter((b) => b.type === "hostel").length + hostelCount,
               icon: BedDouble,
               color: "from-purple-500 to-violet-600",
             },

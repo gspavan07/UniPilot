@@ -37,7 +37,16 @@ const AcademicCalendar = ({ target = "staff" }) => {
     date: "",
     type: "Public Holiday",
     description: "",
+    description: "",
     duration: 1,
+  });
+
+  // State for Managing Day Events (Context Menu / Click)
+  const [dayMenu, setDayMenu] = useState({
+    isOpen: false,
+    date: null,
+    events: [],
+    position: { x: 0, y: 0 }, // For context menu positioning if needed, or just center modal
   });
 
   useEffect(() => {
@@ -175,6 +184,47 @@ const AcademicCalendar = ({ target = "staff" }) => {
     if (!day) return [];
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     return holidays.filter((h) => h.date === dateStr);
+  };
+
+  const handleDayClick = (day, events) => {
+    if (!day) return;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    if (events.length === 0) {
+      // No events: Open New Entry modal with date pre-filled
+      setFormData({
+        name: "",
+        date: dateStr,
+        type: "Public Holiday",
+        description: "",
+        duration: 1,
+      });
+      setEditingHoliday(null);
+      setShowModal(true);
+    } else {
+      // Has events: Open Management Modal
+      setDayMenu({
+        isOpen: true,
+        date: dateStr,
+        events: events,
+      });
+    }
+  };
+
+  const handleDayContextMenu = (e, day, events) => {
+    e.preventDefault();
+    if (!day) return;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    // Always open management modal on right click, even if empty (optional, but consistent with "feature too")
+    // Or if empty, open new entry form? User said "implement this right click feature too".
+    // "if there already a event... show edit/delete options".
+    // I'll stick to: Right click behaves like left click for empty (new entry), but forces management menu for existing?
+    // Actually, context menu implies options. Let's show the management modal which can have "Add New" even if empty?
+    // User request: "clicking... should also open... new event... implement right click too".
+    // I will make right click behave exactly like left click for consistency, or maybe show the menu always.
+    // Let's make it consistent:
+    handleDayClick(day, events);
   };
 
   const groupHolidays = () => {
@@ -348,8 +398,10 @@ const AcademicCalendar = ({ target = "staff" }) => {
                 return (
                   <div
                     key={idx}
-                    className={`bg-white min-h-[120px] p-2 relative group transition-all hover:z-10 ${!day ? "!bg-gray-50/30" : "hover:shadow-md"
+                    className={`bg-white min-h-[120px] p-2 relative group transition-all hover:z-10 ${!day ? "!bg-gray-50/30" : "hover:shadow-md cursor-pointer"
                       } flex flex-col`}
+                    onClick={() => handleDayClick(day, dayHolidays)}
+                    onContextMenu={(e) => handleDayContextMenu(e, day, dayHolidays)}
                   >
                     {day && (
                       <>
@@ -599,7 +651,110 @@ const AcademicCalendar = ({ target = "staff" }) => {
         </div>,
         document.body
       )}
-    </div>
+
+      {/* ─── Day Events Management Modal ────────────────────────────────── */}
+      {dayMenu.isOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 m-4">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {new Date(dayMenu.date).toLocaleDateString("default", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </h3>
+                <p className="text-xs font-medium text-gray-500">
+                  {dayMenu.events.length} Event{dayMenu.events.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => setDayMenu({ ...dayMenu, isOpen: false })}
+                className="text-gray-400 hover:text-gray-900 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {dayMenu.events.map((event) => (
+                <div key={event.id} className="p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all group">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-gray-400 tracking-wider block mb-0.5">
+                        {event.type}
+                      </span>
+                      <h4 className="font-bold text-gray-900 text-sm">
+                        {event.name}
+                      </h4>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        setEditingHoliday(event);
+                        setFormData({
+                          name: event.name,
+                          date: event.date,
+                          type: event.type,
+                          description: event.description,
+                          duration: event.duration || event.count || 1,
+                        });
+                        setDayMenu({ ...dayMenu, isOpen: false });
+                        setShowModal(true);
+                      }}
+                      className="flex-1 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Edit2 className="w-3 h-3" /> Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Delete this event?")) {
+                          handleDelete(event.id);
+                          // We might need to close or refresh the menu here.
+                          // handleDelete refreshes holidays, which updates props, but this local state 'dayMenu.events' might be stale.
+                          // Simpler to close the menu.
+                          setDayMenu({ ...dayMenu, isOpen: false });
+                        }
+                      }}
+                      className="flex-1 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {dayMenu.events.length === 0 && (
+                <p className="text-center text-gray-400 text-sm py-4">No events scheduled.</p>
+              )}
+
+              <button
+                onClick={() => {
+                  setFormData({
+                    name: "",
+                    date: dayMenu.date,
+                    type: "Public Holiday",
+                    description: "",
+                    duration: 1,
+                  });
+                  setEditingHoliday(null);
+                  setDayMenu({ ...dayMenu, isOpen: false });
+                  setShowModal(true);
+                }}
+                className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 ${buttonClass}`}
+              >
+                <Plus className="w-4 h-4" />
+                Add New Event
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+      }
+    </div >
   );
 };
 

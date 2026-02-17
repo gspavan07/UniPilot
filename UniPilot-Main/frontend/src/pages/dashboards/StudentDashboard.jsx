@@ -34,22 +34,64 @@ const StudentDashboard = () => {
   useEffect(() => {
     dispatch(fetchMyFeeStatus());
     dispatch(fetchMyAttendance());
-    fetchExams();
     dispatch(fetchMyTimetable());
     if (user?.id) {
-      fetchPerformance();
+      // fetchPerformance(); // Endpoint /exam/results/:id not implemented
     }
   }, [dispatch, user?.id]);
 
-  const [exams, setExams] = useState([]);
-  const fetchExams = async () => {
+  // Fetch Updates (Exams and Notifications)
+  const [updates, setUpdates] = useState([]);
+  const [loadingUpdates, setLoadingUpdates] = useState(false);
+
+  useEffect(() => {
+    fetchUpdates();
+  }, [user]);
+
+  const fetchUpdates = async () => {
     try {
-      const response = await api.get("/exam/cycles/my/exams");
-      setExams(response.data.data);
+      setLoadingUpdates(true);
+      const [examsRes, notifRes] = await Promise.all([
+        api.get("/exam/cycles/my/exams"),
+        api.get("/notifications"),
+      ]);
+
+      const examUpdates = examsRes.data.data.map(exam => ({
+        id: `exam-${exam.id}`,
+        type: "EXAM_NOTICE",
+        title: exam.cycle_name.replace(/_/g, " "),
+        description: "Exam Schedule Released",
+        date: exam.created_at || new Date().toISOString(),
+        link: "/my-exams",
+        icon: BookOpen,
+        color: "text-blue-600",
+        bg: "bg-blue-50",
+      }));
+
+      const notificationUpdates = notifRes.data.data.map(notif => ({
+        id: `notif-${notif.id}`,
+        type: notif.type || "INFO",
+        title: notif.title,
+        description: notif.message,
+        date: notif.createdAt || notif.created_at || new Date().toISOString(),
+        link: null,
+        icon: notif.type === "WARNING" ? AlertCircle : Bell,
+        color: notif.type === "WARNING" ? "text-red-600" : "text-gray-600",
+        bg: notif.type === "WARNING" ? "bg-red-50" : "bg-gray-50",
+      }));
+
+      const allUpdates = [...examUpdates, ...notificationUpdates].sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+
+      setUpdates(allUpdates);
     } catch (err) {
-      console.error("Failed to fetch exam notices:", err);
+      console.error("Failed to fetch updates:", err);
+    } finally {
+      setLoadingUpdates(false);
     }
   };
+
 
   const [performance, setPerformance] = useState(null);
   const fetchPerformance = async () => {
@@ -132,19 +174,17 @@ const StudentDashboard = () => {
           {stats.map((stat, idx) => (
             <div
               key={idx}
-              className={`group p-8 rounded-[2rem] border border-blue-300 transition-all duration-500 shadow-md shadow-black/[0.03] hover:shadow-xl hover:-translate-y-1 ${
-                stat.isAlert
-                  ? "border-blue-600 bg-white"
-                  : "border-gray-100 bg-white hover:border-blue-200"
-              }`}
+              className={`group p-8 rounded-[2rem] border border-blue-300 transition-all duration-500 shadow-md shadow-black/[0.03] hover:shadow-xl hover:-translate-y-1 ${stat.isAlert
+                ? "border-blue-600 bg-white"
+                : "border-gray-100 bg-white hover:border-blue-200"
+                }`}
             >
               <div className="flex items-center justify-between mb-6">
                 <div
-                  className={`p-3 rounded-2xl ${
-                    stat.isAlert
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-50 text-blue-600 group-hover:bg-blue-50"
-                  } transition-colors`}
+                  className={`p-3 rounded-2xl ${stat.isAlert
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-50 text-blue-600 group-hover:bg-blue-50"
+                    } transition-colors`}
                 >
                   <stat.icon className="w-6 h-6" />
                 </div>
@@ -259,26 +299,40 @@ const StudentDashboard = () => {
                 </Link>
               </h2>
 
-              <div className="space-y-4">
-                {exams.length > 0 ? (
-                  exams.map((cycle) => (
-                    <Link key={cycle.id} to="/my-exams" className="block group">
-                      <div className="p-6 bg-white rounded-3xl border border-gray-100 shadow-md shadow-black/[0.03] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-blue-600/[0.02] hover:border-blue-600/20 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50/50 rounded-bl-[2rem] flex items-center justify-center">
-                          <BookOpen className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <span className="inline-block px-2 py-0.5 rounded-lg bg-blue-50 text-[9px] font-black text-blue-600 uppercase tracking-tighter mb-4">
-                          Exam Notice
-                        </span>
-                        <h4 className="font-bold text-black text-base leading-tight group-hover:text-blue-600 transition-colors">
-                          {cycle.cycle_name.replace(/_/g, " ")}
-                        </h4>
-                        <div className="mt-4 flex items-center justify-between text-[11px] font-bold text-gray-400 uppercase">
-                          <span>Active Now</span>
-                          <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5" />
-                        </div>
+              <div
+                className="space-y-4 h-[500px] overflow-y-auto pr-2"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <style>{`
+                .space-y-4::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+                {updates.length > 0 ? (
+                  updates.map((update) => (
+                    <div
+                      key={update.id}
+                      className={`block group p-6 bg-white rounded-3xl border border-gray-100 shadow-md shadow-black/[0.03] transition-all duration-300 ease-in-out hover:-translate-y-1 relative overflow-hidden ${update.link ? "hover:bg-blue-600/[0.02] hover:border-blue-600/20 cursor-pointer" : ""
+                        }`}
+                      onClick={() => update.link && (window.location.href = update.link)} // Or use specific navigation if needed
+                    >
+                      <div className={`absolute top-0 right-0 w-16 h-16 rounded-bl-[2rem] flex items-center justify-center ${update.bg} opacity-50`}>
+                        <update.icon className={`w-6 h-6 ${update.color}`} />
                       </div>
-                    </Link>
+                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter mb-4 ${update.bg} ${update.color}`}>
+                        {update.type.replace(/_/g, " ")}
+                      </span>
+                      <h4 className={`font-bold text-black text-base leading-tight transition-colors ${update.link ? "group-hover:text-blue-600" : ""}`}>
+                        {update.title}
+                      </h4>
+                      <p className="text-gray-500 text-xs mt-2 line-clamp-2 font-medium">
+                        {update.description}
+                      </p>
+                      <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <span>{new Date(update.date).toLocaleDateString()}</span>
+                        {update.link && <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />}
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <div className="p-8 text-center bg-gray-50/50 border border-gray-100 rounded-3xl">
@@ -324,22 +378,6 @@ const StudentDashboard = () => {
               </div>
             )}
 
-            {/* Quote/Motivation Card */}
-            <div className="p-8 bg-gradient-to-br from-blue-600 to-blue-800 rounded-[2rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden">
-              <div className="absolute bottom-[-20px] right-[-20px] opacity-10">
-                <BookOpen className="w-40 h-40" />
-              </div>
-              <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-4">
-                Focus of the week
-              </p>
-              <p className="text-xl font-black leading-snug mb-2">
-                Consistency is key.
-              </p>
-              <p className="text-sm font-medium text-blue-100/70 leading-relaxed italic">
-                "Success is the sum of small efforts, repeated day in and day
-                out."
-              </p>
-            </div>
           </aside>
         </div>
       </div>

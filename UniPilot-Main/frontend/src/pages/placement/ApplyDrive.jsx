@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchEligibleDrives,
@@ -39,7 +39,7 @@ const ApplyDrive = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const drive = eligibleDrives.find((d) => d.id === driveId || d.id === String(driveId));
-  console.log("Selected Drive:", { eligibleDrives, driveId, driveIdType: typeof driveId, drive, driveIds: eligibleDrives.map(d => ({ id: d.id, type: typeof d.id })) });
+
   useEffect(() => {
     if (eligibleDrives.length === 0) {
       dispatch(fetchEligibleDrives());
@@ -50,9 +50,9 @@ const ApplyDrive = () => {
   }, [dispatch, eligibleDrives.length, myProfile]);
 
   useEffect(() => {
-    if (drive && drive.registration_form) {
+    if (drive && drive.registration_form_fields) {
       const initialData = {};
-      drive.registration_form.fields.forEach((field) => {
+      drive.registration_form_fields.forEach((field) => {
         initialData[field.name] = "";
       });
       setFormData(initialData);
@@ -157,13 +157,12 @@ const ApplyDrive = () => {
                 {steps.map((s) => (
                   <div
                     key={s.id}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-500 ${
-                      step === s.id
-                        ? "bg-gray-950 text-white shadow-xl shadow-black/10"
-                        : step > s.id
-                          ? "text-blue-600 bg-blue-50"
-                          : "text-gray-300"
-                    }`}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-500 ${step === s.id
+                      ? "bg-gray-950 text-white shadow-xl shadow-black/10"
+                      : step > s.id
+                        ? "text-blue-600 bg-blue-50"
+                        : "text-gray-300"
+                      }`}
                   >
                     <s.icon
                       className={`w-4 h-4 ${step === s.id ? "animate-pulse" : ""}`}
@@ -342,8 +341,8 @@ const ApplyDrive = () => {
                         Registration Form.
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        {drive.registration_form?.fields.map((field) => (
-                          <div key={field.name} className="flex flex-col gap-3">
+                        {drive.registration_form_fields?.map((field, index) => (
+                          <div key={field.name || index} className="flex flex-col gap-3">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">
                               {field.label}{" "}
                               {field.required && (

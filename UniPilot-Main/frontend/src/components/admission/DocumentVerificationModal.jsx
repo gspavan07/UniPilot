@@ -17,6 +17,7 @@ const DocumentVerificationModal = ({
   onClose,
   studentId,
   studentName,
+  onSuccess,
 }) => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +86,7 @@ const DocumentVerificationModal = ({
     try {
       setLoading(true);
       await api.post(`/admission/verify-student/${studentId}`);
+      if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
       alert("Failed to verify student");
@@ -159,13 +161,12 @@ const DocumentVerificationModal = ({
                       </a>
 
                       <div
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center ${
-                          doc.status === "approved"
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center ${doc.status === "approved"
                             ? "bg-success-100 text-success-700"
                             : doc.status === "rejected"
                               ? "bg-error-100 text-error-700"
                               : "bg-warning-100 text-warning-700"
-                        }`}
+                          }`}
                       >
                         {doc.status === "approved" ? (
                           <CheckCircle className="w-3 h-3 mr-1" />

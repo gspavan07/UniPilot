@@ -66,6 +66,29 @@ const AttendanceTracker = () => {
   const [departments, setDepartments] = useState([]);
   const [sections, setSections] = useState([]);
 
+  // Remark Modal State
+  const [remarkModal, setRemarkModal] = useState({ isOpen: false, student: null });
+  const [remarkText, setRemarkText] = useState("");
+
+  const handleSendRemark = async () => {
+    if (!remarkText.trim() || !remarkModal.student) return;
+
+    try {
+      await api.post("/notifications", {
+        user_id: remarkModal.student.id,
+        title: "Attendance Warning",
+        message: remarkText,
+        type: "WARNING",
+      });
+      toast.success("Remark sent successfully");
+      setRemarkModal({ isOpen: false, student: null });
+      setRemarkText("");
+    } catch (error) {
+      toast.error("Failed to send remark");
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === "student") {
       dispatch(
@@ -718,7 +741,10 @@ const AttendanceTracker = () => {
                       Batch info
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
-                      Health
+                      Attendance
+                    </th>
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
+                      Action
                     </th>
                   </tr>
                 </thead>
@@ -777,6 +803,17 @@ const AttendanceTracker = () => {
                           </div>
                         </div>
                       </td>
+                      <td className="px-8 py-5 text-center">
+                        <button
+                          onClick={() => setRemarkModal({ isOpen: true, student })}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${student.is_low
+                            ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100"
+                            : "bg-gray-50 text-gray-400 hover:bg-gray-100 border border-gray-100"
+                            }`}
+                        >
+                          Add Remark
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -784,8 +821,10 @@ const AttendanceTracker = () => {
             </div>
           </div>
         </div>
-      )}
-    </div>
+      )
+      }
+
+    </div >
   );
 
   return (
@@ -840,6 +879,37 @@ const AttendanceTracker = () => {
         ) : (
           <FacultyView />
         )}
+        {/* Remark Modal */}
+        {
+          remarkModal.isOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                <h3 className="text-xl font-bold mb-4">Add Remark for {remarkModal.student?.name}</h3>
+                <textarea
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 font-medium text-sm text-gray-700"
+                  rows={4}
+                  placeholder="Enter your remark here..."
+                  value={remarkText}
+                  onChange={(e) => setRemarkText(e.target.value)}
+                />
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setRemarkModal({ isOpen: false, student: null })}
+                    className="px-4 py-2 text-gray-500 font-bold text-sm hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendRemark}
+                    className="px-6 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                  >
+                    Send Remark
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }
       </div>
     </div>
   );
