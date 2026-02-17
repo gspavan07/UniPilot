@@ -40,9 +40,30 @@ const StudentDashboard = () => {
     }
   }, [dispatch, user?.id]);
 
-  // Fetch Updates (Exams and Notifications)
   const [updates, setUpdates] = useState([]);
   const [loadingUpdates, setLoadingUpdates] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+
+  const handleMarkAllRead = async () => {
+    // Optimistic: Mark all updates as read visually if possible, or trigger refetch
+    // In student dashboard, updates are mixed exam/notifs. We only clear notifications via API.
+    try {
+      await api.put('/notifications/read-all');
+      fetchUpdates(); // Refresh 
+    } catch (e) {
+      console.error("Failed to mark all as read", e);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await api.delete('/notifications/delete-all');
+      setUpdates([]); // Clear for now
+      setShowAllNotifications(false);
+    } catch (e) {
+      console.error("Failed to clear notifications", e);
+    }
+  };
 
   useEffect(() => {
     fetchUpdates();
@@ -287,62 +308,71 @@ const StudentDashboard = () => {
 
           {/* Right Column: Widgets */}
           <aside className="lg:col-span-4 space-y-12">
-            {/* Notices Widget */}
-            <div className="space-y-6">
-              <h2 className="text-lg font-black flex items-center justify-between">
-                Latest Updates
-                <Link
-                  to="/my-exams"
-                  className="text-xs font-bold text-blue-600 hover:underline"
+            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-black/[0.03] overflow-hidden sticky top-8 flex flex-col max-h-[600px]">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white z-10">
+                <div>
+                  <h2 className="text-xl font-black text-black">Latest Updates</h2>
+                </div>
+                <button
+                  onClick={() => setShowAllNotifications(true)}
+                  className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
-                  See All
-                </Link>
-              </h2>
+                  <ArrowUpRight className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
 
-              <div
-                className="space-y-4 h-[500px] overflow-y-auto pr-2"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
-                <style>{`
-                .space-y-4::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
+              <div className="divide-y divide-gray-50 flex-1 overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {updates.length > 0 ? (
-                  updates.map((update) => (
+                  updates.slice(0, 5).map((update) => (
                     <div
                       key={update.id}
-                      className={`block group p-6 bg-white rounded-3xl border border-gray-100 shadow-md shadow-black/[0.03] transition-all duration-300 ease-in-out hover:-translate-y-1 relative overflow-hidden ${update.link ? "hover:bg-blue-600/[0.02] hover:border-blue-600/20 cursor-pointer" : ""
-                        }`}
-                      onClick={() => update.link && (window.location.href = update.link)} // Or use specific navigation if needed
+                      className={`group p-6 hover:bg-gray-50/50 transition-colors ${update.link ? "cursor-pointer" : ""}`}
+                      onClick={() => update.link ? (window.location.href = update.link) : setShowAllNotifications(true)}
                     >
-                      <div className={`absolute top-0 right-0 w-16 h-16 rounded-bl-[2rem] flex items-center justify-center ${update.bg} opacity-50`}>
-                        <update.icon className={`w-6 h-6 ${update.color}`} />
-                      </div>
-                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter mb-4 ${update.bg} ${update.color}`}>
-                        {update.type.replace(/_/g, " ")}
-                      </span>
-                      <h4 className={`font-bold text-black text-base leading-tight transition-colors ${update.link ? "group-hover:text-blue-600" : ""}`}>
-                        {update.title}
-                      </h4>
-                      <p className="text-gray-500 text-xs mt-2 line-clamp-2 font-medium">
-                        {update.description}
-                      </p>
-                      <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                        <span>{new Date(update.date).toLocaleDateString()}</span>
-                        {update.link && <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />}
+                      <div className="flex gap-4">
+                        <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${update.type === "WARNING" ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" : "bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]"}`}></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${update.bg} ${update.color}`}>
+                              {update.type.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tight">
+                              {new Date(update.date).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          <h4 className="font-bold text-sm text-black leading-snug group-hover:text-blue-600 transition-colors">
+                            {update.title}
+                          </h4>
+
+                          <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
+                            {update.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-8 text-center bg-gray-50/50 border border-gray-100 rounded-3xl">
-                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-3" />
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                      Everything is up to date
-                    </p>
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                      <Bell className="w-6 h-6 text-gray-300" />
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">All caught up!</p>
+                    <p className="text-xs text-gray-400 mt-1">No new updates to show.</p>
                   </div>
                 )}
               </div>
+
+              {updates.length > 0 && (
+                <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
+                  <button
+                    onClick={() => setShowAllNotifications(true)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider hover:underline"
+                  >
+                    View All Archive
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Hostel Services */}
@@ -377,10 +407,87 @@ const StudentDashboard = () => {
                 </div>
               </div>
             )}
-
           </aside>
         </div>
       </div>
+
+      {/* Modern Notification Modal */}
+      {showAllNotifications && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6">
+          <div
+            className="absolute inset-0 bg-gray-900/20 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setShowAllNotifications(false)}
+          ></div>
+
+          <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] ring-1 ring-gray-900/5 animate-in slide-in-from-bottom-5 duration-300">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-xl">
+                  <Bell className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">All Updates</h3>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{updates.length} Total</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAllNotifications(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors group"
+              >
+                <span className="text-gray-400 group-hover:text-gray-900 font-bold">Close</span>
+              </button>
+            </div>
+
+            {/* Toolbar */}
+            <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={handleMarkAllRead}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-100/50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                Mark all read
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                Clear all
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto p-4 space-y-2 bg-gray-50/30">
+              {updates.length > 0 ? (
+                updates.map((update, idx) => (
+                  <div key={idx} className="group bg-white p-5 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex gap-4 items-start">
+                      <div className={`mt-1.5 w-2 h-2 rounded-full ring-2 ring-white flex-shrink-0 ${update.type === "WARNING" ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" : "bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]"}`}></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-bold text-gray-900">
+                            {update.title}
+                          </h4>
+                          <span className="text-[10px] font-mono font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                            {new Date(update.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 leading-relaxed">
+                          {update.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                  <Bell className="w-12 h-12 mb-4 text-gray-200" />
+                  <p>Inboxes zero.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

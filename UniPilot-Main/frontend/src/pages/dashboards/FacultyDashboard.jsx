@@ -264,52 +264,72 @@ const FacultyDashboard = () => {
           <aside className="lg:col-span-4 space-y-12">
 
             {/* Notifications Widget */}
-            <div className="space-y-6">
-              <h2 className="text-lg font-black flex items-center justify-between">
-                Notifications
+            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-black/[0.03] overflow-hidden sticky top-8 flex flex-col max-h-[600px]">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white z-10">
+                <div>
+                  <h2 className="text-xl font-black text-black">Notifications</h2>
+                </div>
                 <button
                   onClick={() => setShowAllNotifications(true)}
-                  className="text-xs font-bold text-blue-600 hover:underline"
+                  className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
-                  See All
+                  <ArrowUpRight className="w-5 h-5 text-gray-400" />
                 </button>
-              </h2>
+              </div>
 
-              <div className="space-y-4">
+              <div className="divide-y divide-gray-50 flex-1 overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {notifications.length > 0 ? (
-                  notifications.slice(0, 4).map((notif) => (
-                    <div key={notif.id} className="block group">
-                      <div className="p-6 bg-white rounded-3xl border border-gray-100 shadow-md shadow-black/[0.03] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-blue-600/[0.02] hover:border-blue-600/20 relative overflow-hidden">
-                        <div className={`absolute top-0 right-0 w-16 h-16 ${notif.is_read ? 'bg-gray-50' : 'bg-blue-50/50'} rounded-bl-[2rem] flex items-center justify-center`}>
-                          <Bell className={`w-6 h-6 ${notif.is_read ? 'text-gray-300' : 'text-blue-600'}`} />
-                        </div>
-                        <span className={`inline-block px-2 py-0.5 rounded-lg ${notif.is_read ? 'bg-gray-50 text-gray-400' : 'bg-blue-50 text-blue-600'} text-[9px] font-black uppercase tracking-tighter mb-4`}>
-                          {notif.is_read ? 'Read' : 'New Message'}
-                        </span>
-                        <h4 className={`font-bold text-base leading-tight transition-colors ${notif.is_read ? 'text-gray-500' : 'text-black group-hover:text-blue-600'}`}>
-                          {notif.title}
-                        </h4>
-                        <p className="text-xs text-gray-400 mt-2 line-clamp-2">
-                          {notif.message}
-                        </p>
-                        <div className="mt-4 flex items-center justify-between text-[11px] font-bold text-gray-400 uppercase">
-                          <span>{new Date(notif.created_at).toLocaleDateString()}</span>
+                  notifications.slice(0, 5).map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="group p-6 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                      onClick={() => setShowAllNotifications(true)}
+                    >
+                      <div className="flex gap-4">
+                        <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${notif.is_read ? 'bg-gray-200' : 'bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]'}`}></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${notif.is_read ? 'bg-gray-50 text-gray-400' : 'bg-blue-50 text-blue-600'}`}>
+                              {notif.is_read ? 'Read' : 'New Message'}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tight">
+                              {new Date(notif.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          <h4 className={`font-bold text-sm leading-snug transition-colors ${notif.is_read ? 'text-gray-500' : 'text-black group-hover:text-blue-600'}`}>
+                            {notif.title}
+                          </h4>
+
+                          <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
+                            {notif.message}
+                          </p>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-8 text-center bg-gray-50/50 border border-gray-100 rounded-3xl">
-                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-3" />
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                      Inbox Zero
-                    </p>
+                  <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                      <Bell className="w-6 h-6 text-gray-300" />
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">All caught up!</p>
+                    <p className="text-xs text-gray-400 mt-1">No new notifications.</p>
                   </div>
                 )}
               </div>
+
+              {notifications.length > 0 && (
+                <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
+                  <button
+                    onClick={() => setShowAllNotifications(true)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider hover:underline"
+                  >
+                    View All Archive
+                  </button>
+                </div>
+              )}
             </div>
-
-
 
           </aside>
         </div>

@@ -25,6 +25,21 @@ const HodDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [department, setDepartment] = useState(null);
   const [updates, setUpdates] = useState([]);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+
+  const handleMarkAllRead = async () => {
+    // Optimistic update
+    // In HOD Dashboard, 'updates' might come from a different structure but we simulate the action
+    console.log("Marking all read...");
+    // If there's an API, call it here: await api.put('/notifications/read-all');
+  };
+
+  const handleClearAll = async () => {
+    // Optimistic update
+    setUpdates([]);
+    setShowAllNotifications(false);
+    // If there's an API, call it here: await api.delete('/notifications/delete-all');
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -239,16 +254,22 @@ const HodDashboard = () => {
                 <div>
                   <h2 className="text-xl font-black text-black">Notifications</h2>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
-                  <Bell className="w-5 h-5 text-gray-400" />
-                </div>
+                <button
+                  onClick={() => setShowAllNotifications(true)}
+                  className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                  <ArrowUpRight className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
 
               <div className="divide-y divide-gray-50 flex-1 overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-
                 {updates.length > 0 ? (
-                  updates.map((update, idx) => (
-                    <div key={idx} className="group p-6 hover:bg-gray-50/50 transition-colors cursor-pointer">
+                  updates.slice(0, 5).map((update, idx) => (
+                    <div
+                      key={idx}
+                      className="group p-6 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                      onClick={() => setShowAllNotifications(true)}
+                    >
                       <div className="flex gap-4">
                         <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${update.type === "STUDENT" ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" : "bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]"}`}></div>
                         <div className="flex-1 space-y-2">
@@ -285,7 +306,10 @@ const HodDashboard = () => {
 
               {updates.length > 0 && (
                 <div className="p-4 bg-gray-50/50 border-t border-gray-100 text-center">
-                  <button className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider hover:underline">
+                  <button
+                    onClick={() => setShowAllNotifications(true)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider hover:underline"
+                  >
                     View All Archive
                   </button>
                 </div>
@@ -294,6 +318,85 @@ const HodDashboard = () => {
           </aside>
         </div>
       </div>
+
+      {/* Modern Notification Modal */}
+      {showAllNotifications && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6">
+          <div
+            className="absolute inset-0 bg-gray-900/20 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setShowAllNotifications(false)}
+          ></div>
+
+          <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] ring-1 ring-gray-900/5 animate-in slide-in-from-bottom-5 duration-300">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-xl">
+                  <Bell className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Notifications</h3>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{updates.length} Total</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAllNotifications(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors group"
+              >
+                {/* <X className="w-5 h-5 text-gray-400 group-hover:text-gray-900" /> */}
+                <span className="text-gray-400 group-hover:text-gray-900 font-bold">Close</span>
+              </button>
+            </div>
+
+            {/* Toolbar */}
+            <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={handleMarkAllRead}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-100/50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                Start Over
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                Clear all
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto p-4 space-y-2 bg-gray-50/30">
+              {updates.length > 0 ? (
+                updates.map((update, idx) => (
+                  <div key={idx} className="group bg-white p-5 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all duration-200">
+                    <div className="flex gap-4 items-start">
+                      <div className={`mt-1.5 w-2 h-2 rounded-full ring-2 ring-white flex-shrink-0 ${update.type === "STUDENT" ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" : "bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]"}`}></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-bold text-gray-900">
+                            {update.title}
+                          </h4>
+                          <span className="text-[10px] font-mono font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                            {new Date(update.time).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 leading-relaxed">
+                          {update.message}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                  <Bell className="w-12 h-12 mb-4 text-gray-200" />
+                  <p>Inboxes zero.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
