@@ -143,7 +143,7 @@ const ResumeManager = () => {
           </div>
         ) : (
           <div
-            onClick={() => fileInputRef.current?.click()}
+            // onClick={() => fileInputRef.current?.click()}
             className="cursor-pointer group relative flex flex-col items-center justify-center py-16 px-6 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/30 hover:bg-blue-50/10 hover:border-blue-400/50 transition-all duration-300"
           >
             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
@@ -161,7 +161,12 @@ const ResumeManager = () => {
                 Maximum file size: 10MB
               </span>
             </p>
-            <button className="px-8 py-3 bg-black text-white rounded-full font-bold text-sm shadow-lg shadow-gray-200 hover:bg-blue-600 hover:shadow-blue-500/20 active:scale-95 transition-all transform duration-200">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="px-8 py-3 bg-black text-white rounded-full font-bold text-sm shadow-lg shadow-gray-200 hover:bg-blue-600 hover:shadow-blue-500/20 active:scale-95 transition-all transform duration-200"
+            >
               Select PDF File
             </button>
           </div>
