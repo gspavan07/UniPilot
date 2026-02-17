@@ -230,7 +230,7 @@ const AttendanceScreen = () => {
       />
 
       <LinearGradient
-        colors={[theme.colors.primary, '#4f46e5']}
+        colors={[theme.colors.primary, '#2563eb']}
         style={styles.headerGradient}
       >
         <SafeAreaView>
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   overallValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#fff',
   },

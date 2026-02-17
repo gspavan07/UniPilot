@@ -103,7 +103,7 @@ const FeeDashboardScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[theme.colors.primary, '#4f46e5']}
+        colors={[theme.colors.primary, '#2563eb']}
         style={styles.header}
       >
         <SafeAreaView edges={['top']}>

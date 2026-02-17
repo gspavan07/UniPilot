@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchEligibleDrives,
   applyToDrive,
   fetchMyProfile,
+  fetchSystemFields,
 } from "../../store/slices/placementSlice";
 import {
   CheckCircle2,
@@ -22,23 +23,27 @@ import {
   ArrowRight,
   UserCheck,
   Globe,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
+import ResumeManager from "./components/ResumeManager";
 
 const ApplyDrive = () => {
   const { id: driveId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { eligibleDrives, myProfile, loading, applying } = useSelector(
-    (state) => state.placement,
-  );
+  const { eligibleDrives, myProfile, systemFields, loading, applying } =
+    useSelector((state) => state.placement);
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const drive = eligibleDrives.find((d) => d.id === driveId || d.id === String(driveId));
+  console.log(systemFields);
+  const drive = eligibleDrives.find(
+    (d) => d.id === driveId || d.id === String(driveId),
+  );
 
   useEffect(() => {
     if (eligibleDrives.length === 0) {
@@ -47,17 +52,34 @@ const ApplyDrive = () => {
     if (!myProfile) {
       dispatch(fetchMyProfile());
     }
-  }, [dispatch, eligibleDrives.length, myProfile]);
+    if (!systemFields) {
+      dispatch(fetchSystemFields());
+    }
+  }, [dispatch, eligibleDrives.length, myProfile, systemFields]);
 
   useEffect(() => {
     if (drive && drive.registration_form_fields) {
       const initialData = {};
       drive.registration_form_fields.forEach((field) => {
-        initialData[field.name] = "";
+        if (field.type === "system" && systemFields) {
+          const mapping = {
+            email: systemFields.email,
+            mobile: systemFields.mobile,
+            cgpa: systemFields.cgpa,
+            ten_percent: systemFields.ten_percent,
+            inter_percent: systemFields.inter_percent,
+            resume: systemFields.resume,
+          };
+          initialData[field.id] = mapping[field.systemField] || "";
+        } else {
+          initialData[field.id] = "";
+        }
       });
+      console.log("initial data", initialData);
       setFormData(initialData);
     }
-  }, [drive]);
+  }, [drive, systemFields]);
+  console.log("form data", formData);
 
   if (!drive) {
     return (
@@ -88,10 +110,24 @@ const ApplyDrive = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const isStepValid = () => {
+    if (step < 3) return true;
+    if (step === 3) {
+      const requiredFields =
+        drive?.registration_form_fields?.filter((f) => f.required) || [];
+      return requiredFields.every(
+        (f) => formData[f.id] && String(formData[f.id]).trim() !== "",
+      );
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await dispatch(applyToDrive({ driveId: drive.id, formData })).unwrap();
+      await dispatch(
+        applyToDrive({ driveId: drive.id, registrationFormData: formData }),
+      ).unwrap();
       toast.success("Application submitted successfully!");
       setStep(5); // Success step
     } catch (err) {
@@ -157,12 +193,13 @@ const ApplyDrive = () => {
                 {steps.map((s) => (
                   <div
                     key={s.id}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-500 ${step === s.id
-                      ? "bg-gray-950 text-white shadow-xl shadow-black/10"
-                      : step > s.id
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-300"
-                      }`}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-500 ${
+                      step === s.id
+                        ? "bg-gray-950 text-white shadow-xl shadow-black/10"
+                        : step > s.id
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-gray-300"
+                    }`}
                   >
                     <s.icon
                       className={`w-4 h-4 ${step === s.id ? "animate-pulse" : ""}`}
@@ -342,26 +379,65 @@ const ApplyDrive = () => {
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {drive.registration_form_fields?.map((field, index) => (
-                          <div key={field.name || index} className="flex flex-col gap-3">
+                          <div
+                            key={field.id || index}
+                            className={`flex flex-col gap-3 ${
+                              field.type === "system" &&
+                              field.systemField === "resume"
+                                ? "md:col-span-2"
+                                : ""
+                            }`}
+                          >
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">
                               {field.label}{" "}
                               {field.required && (
                                 <span className="text-red-500">*</span>
                               )}
                             </label>
-                            <div className="relative group">
-                              <input
-                                type={
-                                  field.type === "number" ? "number" : "text"
-                                }
-                                placeholder={`Enter your ${field.label.toLowerCase()}`}
-                                required={field.required}
-                                value={formData[field.name] || ""}
-                                onChange={(e) =>
-                                  handleFieldChange(field.name, e.target.value)
-                                }
-                                className="w-full px-8 py-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-black focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-gray-300"
-                              />
+                            <div className="relative flex group">
+                              {field.type === "system" &&
+                              field.systemField === "resume" ? (
+                                <div className="w-full mt-4">
+                                  <ResumeManager
+                                    onUploadSuccess={(url) =>
+                                      handleFieldChange(field.id, url)
+                                    }
+                                    className="!p-6 !rounded-2xl border-2 border-dashed border-gray-100 hover:border-blue-400/50"
+                                  />
+                                  <input
+                                    type="hidden"
+                                    required={field.required}
+                                    value={formData[field.id] || ""}
+                                  />
+                                </div>
+                              ) : (
+                                <>
+                                  <input
+                                    type={
+                                      field.type === "number"
+                                        ? "number"
+                                        : "text"
+                                    }
+                                    placeholder={`Enter your ${field.label.toLowerCase()}`}
+                                    required={field.required}
+                                    value={formData[field.id] || ""}
+                                    onChange={(e) =>
+                                      handleFieldChange(
+                                        field.id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    readOnly={field.type === "system"}
+                                    className={`w-full px-8 py-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-black focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-gray-300 ${field.type === "system" ? "opacity-60 cursor-not-allowed" : ""}`}
+                                  />
+                                  {field.type === "system" && (
+                                    <p className="mt-2 text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2 px-2">
+                                      <ShieldCheck className="w-3 h-3" />
+                                      Pre-filled from profile
+                                    </p>
+                                  )}
+                                </>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -394,10 +470,27 @@ const ApplyDrive = () => {
                                 className="flex justify-between items-center px-4"
                               >
                                 <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-                                  {key.replace(/_/g, " ")}
+                                  {drive.registration_form_fields?.find(
+                                    (f) => String(f.id) === String(key),
+                                  )?.label ||
+                                    key
+                                      .replace(/_/g, " ")
+                                      .replace(/\b\w/g, (l) => l.toUpperCase())}
                                 </span>
                                 <span className="text-sm font-black text-black">
-                                  {value || "N/A"}
+                                  {value && String(value).startsWith("http") ? (
+                                    <a
+                                      href={value}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:underline flex items-center gap-1"
+                                    >
+                                      View Document{" "}
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  ) : (
+                                    value || "N/A"
+                                  )}
                                 </span>
                               </div>
                             ))}
@@ -467,17 +560,18 @@ const ApplyDrive = () => {
 
                   {step < 4 ? (
                     <button
-                      onClick={handleNext}
-                      className="group flex items-center gap-3 px-10 py-5 bg-gray-950 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-black/10"
+                      onClick={() => isStepValid() && handleNext()}
+                      disabled={!isStepValid()}
+                      className="group flex items-center gap-3 px-10 py-5 bg-gray-950 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-black/10 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next Step
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
                   ) : (
                     <button
-                      onClick={handleSubmit}
-                      disabled={isSubmitting}
-                      className="group flex items-center gap-3 px-10 py-5 bg-blue-600 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/20 disabled:opacity-50"
+                      onClick={() => isStepValid() && handleSubmit()}
+                      disabled={isSubmitting || !isStepValid()}
+                      className="group flex items-center gap-3 px-10 py-5 bg-blue-600 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

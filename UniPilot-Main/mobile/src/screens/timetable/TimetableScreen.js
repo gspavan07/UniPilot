@@ -20,6 +20,8 @@ import {
   CalendarClock,
   Info,
   Gift,
+  Bell,
+  Menu,
 } from 'lucide-react-native';
 import {
   fetchMyTimetable,
@@ -28,11 +30,14 @@ import {
 } from '../../redux/slices/timetableSlice';
 import theme from '../../theme/theme';
 import LinearGradient from 'react-native-linear-gradient';
+import { useDrawer } from '../../context/DrawerContext';
 
 const { width } = Dimensions.get('window');
 
 const TimetableScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { toggleDrawer } = useDrawer();
+
   const { currentTimetable, holidays, isSatWorking, status } = useSelector(
     state => state.timetable,
   );
@@ -60,23 +65,25 @@ const TimetableScreen = ({ navigation }) => {
     currentTimetable?.slots?.filter(s => s.day_of_week === selectedDay) || [];
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-      >
-        <ChevronLeft size={24} color={theme.colors.text.primary} />
-      </TouchableOpacity>
-      <View style={styles.headerTitleContainer}>
-        <Text style={styles.headerTitle}>Weekly Schedule</Text>
-        <Text style={styles.headerSubtitle}>
-          {currentTimetable?.program?.name || 'Classes & Venues'}
-        </Text>
-      </View>
-      <View style={styles.headerIcon}>
-        <CalendarClock size={28} color={theme.colors.primary} />
-      </View>
-    </View>
+    <LinearGradient
+      colors={[theme.colors.primary, '#2563eb']}
+      style={styles.header}
+    >
+      <SafeAreaView edges={['top']}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={toggleDrawer} style={styles.menuButton}>
+            <Menu size={28} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Weekly Schedule</Text>
+
+          <TouchableOpacity style={styles.notificationButton}>
+            <Bell size={26} color="#fff" />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 
   const renderDayPicker = () => (
@@ -202,7 +209,7 @@ const TimetableScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {renderHeader()}
       {renderDayPicker()}
 
@@ -225,7 +232,7 @@ const TimetableScreen = ({ navigation }) => {
           filteredSlots.map(renderSlot)
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -246,35 +253,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  header: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
+    paddingTop: Platform.OS === 'ios' ? 0 : 20,
+    marginBottom: 10,
   },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
+  menuButton: {
+    padding: 5,
   },
-  headerTitleContainer: {
+  notificationButton: {
+    padding: 5,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  header: {
+    paddingBottom: 0,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: Platform.OS === 'ios' ? 0 : 20,
+  },
+  headerTextCol: {
     flex: 1,
-    marginLeft: 10,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1e293b',
+    color: '#fff',
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
-    fontWeight: '500',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
   },
-  headerIcon: {
-    padding: 10,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
+  historyBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayPickerContainer: {
     backgroundColor: '#fff',

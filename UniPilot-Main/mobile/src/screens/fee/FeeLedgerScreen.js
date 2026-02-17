@@ -83,6 +83,11 @@ const FeeLedgerScreen = ({ navigation }) => {
       fetchData();
     },
     onError: err => {
+      showAlert({
+        title: 'Payment Failed',
+        message: 'Payment Failed, Please Try Again',
+        type: 'error',
+      });
       console.error('Payment Error:', err);
     },
   });
@@ -184,7 +189,7 @@ const FeeLedgerScreen = ({ navigation }) => {
       } catch (err) {
         showAlert({
           title: 'Payment Failed',
-          message: err.toString(),
+          message: 'Payment Failed, Please Try Again',
           type: 'error',
         });
       }
@@ -225,7 +230,7 @@ const FeeLedgerScreen = ({ navigation }) => {
       {/* Header */}
       <SafeAreaView edges={['top']} style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.navigate('FeeDashboardScreen')}
+          onPress={() => navigation.navigate('Fees')}
           style={styles.backBtn}
         >
           <ChevronLeft size={24} color="#1e293b" />

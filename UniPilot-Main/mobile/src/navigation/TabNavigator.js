@@ -30,6 +30,18 @@ import FeeDashboardScreen from '../screens/fee/FeeDashboardScreen';
 import FeeLedgerScreen from '../screens/fee/FeeLedgerScreen';
 import TransactionHistoryScreen from '../screens/fee/TransactionHistoryScreen';
 import TimetableScreen from '../screens/timetable/TimetableScreen';
+import MyCoursesScreen from '../screens/courses/MyCoursesScreen';
+import PlacementDashboardScreen from '../screens/placement/PlacementDashboardScreen';
+import EligibleDrivesScreen from '../screens/placement/EligibleDrivesScreen';
+import ApplicationHistoryScreen from '../screens/placement/ApplicationHistoryScreen';
+import PlacementProfileScreen from '../screens/placement/PlacementProfileScreen';
+import DriveDetailScreen from '../screens/placement/DriveDetailScreen';
+import ApplyDriveScreen from '../screens/placement/ApplyDriveScreen';
+
+// Hostel Screens
+import HostelDashboardScreen from '../screens/hostel/HostelDashboardScreen';
+import RequestGatePassScreen from '../screens/hostel/RequestGatePassScreen';
+import ReportComplaintScreen from '../screens/hostel/ReportComplaintScreen';
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
@@ -200,6 +212,21 @@ const TabNavigator = () => {
         component={TransactionHistoryScreen}
       />
       <Tab.Screen name="Timetable" component={TimetableScreen} />
+      <Tab.Screen name="Courses" component={MyCoursesScreen} />
+      <Tab.Screen name="Placement" component={PlacementDashboardScreen} />
+      <Tab.Screen name="EligibleDrives" component={EligibleDrivesScreen} />
+      <Tab.Screen
+        name="ApplicationHistory"
+        component={ApplicationHistoryScreen}
+      />
+      <Tab.Screen name="PlacementProfile" component={PlacementProfileScreen} />
+      <Tab.Screen name="DriveDetail" component={DriveDetailScreen} />
+      <Tab.Screen name="ApplyDrive" component={ApplyDriveScreen} />
+
+      {/* Hostel Screens */}
+      <Tab.Screen name="Hostel" component={HostelDashboardScreen} />
+      <Tab.Screen name="RequestGatePass" component={RequestGatePassScreen} />
+      <Tab.Screen name="ReportComplaint" component={ReportComplaintScreen} />
     </Tab.Navigator>
   );
 };

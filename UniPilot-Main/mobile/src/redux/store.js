@@ -12,6 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer from './slices/authSlice';
 import timetableReducer from './slices/timetableSlice';
+import hostelReducer from './slices/hostelSlice';
 
 const authPersistConfig = {
   key: 'auth',
@@ -22,6 +23,7 @@ const authPersistConfig = {
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authReducer),
   timetable: timetableReducer,
+  hostel: hostelReducer,
 });
 
 const persistConfig = {

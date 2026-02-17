@@ -91,7 +91,10 @@ const CustomSidebar = ({ visible, onClose, navigation, user, onLogout }) => {
       icon: BedDouble,
       screen: 'Hostel',
     }, // Placeholder - not yet in navigator
-  ];
+  ].filter(item => {
+    if (item.id === 'hostel') return !!user?.is_hosteller;
+    return true;
+  });
 
   const handleNavigation = screen => {
     onClose();

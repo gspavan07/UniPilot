@@ -10,7 +10,7 @@ import {
 import { uploadResume } from "../../../store/slices/placementSlice";
 import toast from "react-hot-toast";
 
-const ResumeManager = () => {
+const ResumeManager = ({ onUploadSuccess, className = "" }) => {
   const dispatch = useDispatch();
   const fileInputRef = useRef(null);
   const { systemFields, loading } = useSelector((state) => state.placement);
@@ -40,14 +40,36 @@ const ResumeManager = () => {
       error: "Upload failed",
     });
 
+    try {
+      const result = await promise;
+      if (onUploadSuccess && result.resume_url) {
+        onUploadSuccess(result.resume_url);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
+
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const resumeUrl = systemFields?.resume;
+
+  const getFullUrl = (url) => {
+    if (!url) return "";
+    const baseUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace("/api", "")
+      : "";
+    const finalUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
+    const separator = finalUrl.includes("?") ? "&" : "?";
+    return `${finalUrl}${separator}t=${new Date().getTime()}`;
+  };
+
   const fileName = resumeUrl ? resumeUrl.split("/").pop() : "No file selected";
 
   return (
-    <div className="w-full bg-white rounded-3xl border border-gray-100 p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-500 overflow-hidden relative">
+    <div
+      className={`w-full bg-white rounded-3xl border border-gray-100 p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-500 overflow-hidden relative ${className}`}
+    >
       {/* Hidden Input */}
       <input
         type="file"
@@ -116,7 +138,7 @@ const ResumeManager = () => {
               {/* Actions */}
               <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
                 <a
-                  href={resumeUrl}
+                  href={getFullUrl(resumeUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 md:flex-none h-11 px-5 rounded-xl bg-white border border-gray-200 text-gray-600 font-bold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-all shadow-sm hover:shadow-md"

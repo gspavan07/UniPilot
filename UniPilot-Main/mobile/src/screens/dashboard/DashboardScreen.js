@@ -21,6 +21,7 @@ import {
   TrendingUp,
   CalendarClock,
   Banknote,
+  Home,
 } from 'lucide-react-native';
 import theme from '../../theme/theme';
 import PremiumCard from '../../components/common/PremiumCard';
@@ -54,15 +55,40 @@ const DashboardScreen = ({ navigation }) => {
       };
 
       // 2. Map Schedule (Filter for Today)
+      const formatTime = timeString => {
+        if (!timeString) return '';
+        const parts = timeString.split(':');
+        if (parts.length < 2) return timeString;
+        return `${parts[0]}:${parts[1]}`;
+      };
+
+      const getSlotStatus = (startTime, endTime) => {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        console.log(currentMinutes);
+        const [startHour, startMin] = startTime.split(':').map(Number);
+        const [endHour, endMin] = endTime.split(':').map(Number);
+
+        const startTotal = startHour * 60 + startMin;
+        const endTotal = endHour * 60 + endMin;
+        console.log(startTotal, endTotal);
+
+        if (currentMinutes < startTotal) return 'COMPLETED';
+        if (currentMinutes >= startTotal && currentMinutes <= endTotal)
+          return 'ON-GOING';
+        return 'UPCOMING';
+      };
+
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
       const schedule = (data.timetable?.slots || [])
         .filter(slot => slot.day_of_week === today)
         .map(slot => ({
           id: slot.id,
           subject: slot.course?.name || slot.activity_name || 'Self Study',
-          time: `${slot.start_time} - ${slot.end_time}`,
+          time: `${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}`,
           room: slot.room?.room_number || slot.room_number || 'TBD',
           faculty: slot.faculty?.name || 'N/A',
+          status: getSlotStatus(slot.start_time, slot.end_time),
         }));
 
       setDashboardData({ attendance, schedule });
@@ -123,7 +149,17 @@ const DashboardScreen = ({ navigation }) => {
       color: '#ef4444',
       screen: 'Fees',
     },
-  ];
+    {
+      id: 5,
+      name: 'Hostel',
+      icon: Home,
+      color: '#6366f1',
+      screen: 'Hostel',
+    },
+  ].filter(action => {
+    if (action.name === 'Hostel') return !!user?.is_hosteller;
+    return true;
+  });
 
   if (loading && !refreshing) {
     return (
@@ -268,7 +304,7 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeader}>Today's Schedule</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Schedule')}>
                 <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
@@ -281,7 +317,12 @@ const DashboardScreen = ({ navigation }) => {
                       style={[
                         styles.indicator,
                         {
-                          backgroundColor: index === 0 ? '#6366f1' : '#e2e8f0',
+                          backgroundColor:
+                            item.status === 'ON-GOING'
+                              ? '#10b981'
+                              : item.status === 'UPCOMING'
+                              ? '#6366f1'
+                              : '#94a3b8',
                         },
                       ]}
                     />
@@ -296,11 +337,35 @@ const DashboardScreen = ({ navigation }) => {
                         Room {item.room} • {item.faculty}
                       </Text>
                     </View>
-                    {index === 0 && (
-                      <View style={styles.nowBadge}>
-                        <Text style={styles.nowText}>UPCOMING</Text>
-                      </View>
-                    )}
+                    <View
+                      style={[
+                        styles.nowBadge,
+                        {
+                          backgroundColor:
+                            item.status === 'ON-GOING'
+                              ? '#ecfdf5'
+                              : item.status === 'UPCOMING'
+                              ? '#eef2ff'
+                              : '#f1f5f9',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.nowText,
+                          {
+                            color:
+                              item.status === 'ON-GOING'
+                                ? '#10b981'
+                                : item.status === 'UPCOMING'
+                                ? '#6366f1'
+                                : '#64748b',
+                          },
+                        ]}
+                      >
+                        {item.status}
+                      </Text>
+                    </View>
                   </View>
                 </PremiumCard>
               ))
