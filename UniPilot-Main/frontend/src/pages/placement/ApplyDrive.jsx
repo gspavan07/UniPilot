@@ -21,12 +21,13 @@ import {
   Rocket,
   ArrowRight,
   UserCheck,
+  Globe,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PlacementBreadcrumbs from "./components/PlacementBreadcrumbs";
 
 const ApplyDrive = () => {
-  const { driveId } = useParams();
+  const { id: driveId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { eligibleDrives, myProfile, loading, applying } = useSelector(
@@ -37,8 +38,8 @@ const ApplyDrive = () => {
   const [formData, setFormData] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const drive = eligibleDrives.find((d) => d.id === driveId);
-
+  const drive = eligibleDrives.find((d) => d.id === driveId || d.id === String(driveId));
+  console.log("Selected Drive:", { eligibleDrives, driveId, driveIdType: typeof driveId, drive, driveIds: eligibleDrives.map(d => ({ id: d.id, type: typeof d.id })) });
   useEffect(() => {
     if (eligibleDrives.length === 0) {
       dispatch(fetchEligibleDrives());

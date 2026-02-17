@@ -339,9 +339,9 @@ const DepartmentList = () => {
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={2.5} />
                     </button>
-                    <button className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                    {/* <button className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
                       <MoreVertical className="w-4 h-4" strokeWidth={2.5} />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

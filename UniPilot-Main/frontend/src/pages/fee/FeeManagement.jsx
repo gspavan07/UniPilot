@@ -3434,7 +3434,7 @@ const FeeManagement = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex overflow-x-auto gap-8 border-b border-gray-200 dark:border-gray-700 scrollbar-hide">
+        <div className="flex justify-between overflow-x-auto gap-8 border-b border-gray-200 dark:border-gray-700 scrollbar-hide">
           {[
             {
               id: "overview",
