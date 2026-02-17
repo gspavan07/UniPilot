@@ -5,8 +5,10 @@
 /* Global styles */
 @layer base {
   :root {
-    --color-primary: 59 130 246; /* primary-500 */
-    --color-secondary: 168 85 247; /* secondary-500 */
+    --color-primary: 59 130 246;
+    /* primary-500 */
+    --color-secondary: 168 85 247;
+    /* secondary-500 */
   }
 
   body {
@@ -80,6 +82,7 @@
       opacity: 0;
       transform: scale(0.95) translateY(10px);
     }
+
     to {
       opacity: 1;
       transform: scale(1) translateY(0);
@@ -90,19 +93,23 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
   }
 
   @keyframes shake {
+
     0%,
     100% {
       transform: translateX(0);
     }
+
     25% {
       transform: translateX(-5px);
     }
+
     75% {
       transform: translateX(5px);
     }
@@ -124,9 +131,11 @@
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-gray-200 dark:bg-gray-700 rounded-full;
   }
