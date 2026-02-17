@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUsers } from "../../store/slices/userSlice";
@@ -9,13 +9,7 @@ import {
   ArrowLeft,
   Loader2,
   SearchX,
-  Eye,
   Calendar,
-  Layers,
-  GraduationCap,
-  BookOpen,
-  Filter,
-  MoreVertical,
 } from "lucide-react";
 import StudentDetailModal from "./StudentDetailModal";
 import api from "../../utils/api";

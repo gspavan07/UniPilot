@@ -28,6 +28,7 @@ const RegulationList = () => {
   const { regulations, status } = useSelector((state) => state.regulations);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const user = useSelector((state) => state.auth.user);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -87,7 +88,7 @@ const RegulationList = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-6 lg:p-10">
       <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* Back Button */}
+        {user.role !== "hod" && (
         <button
           onClick={() => navigate("/academics")}
           className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-semibold"
@@ -98,6 +99,7 @@ const RegulationList = () => {
           />
           Back to Academic Management
         </button>
+        )}
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
           <div className="space-y-2">

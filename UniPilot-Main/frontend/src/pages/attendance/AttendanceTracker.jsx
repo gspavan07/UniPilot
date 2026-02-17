@@ -712,13 +712,13 @@ const AttendanceTracker = () => {
                       Student
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
+                      Registration No
+                    </th>
+                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
                       Batch info
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-center">
                       Health
-                    </th>
-                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">
-                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -745,11 +745,13 @@ const AttendanceTracker = () => {
                             <p className="font-bold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
                               {student.name}
                             </p>
-                            <p className="text-[10px] text-gray-400 font-mono uppercase tracking-tight">
-                              {student.student_id}
-                            </p>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <p className="text-sm text-gray-500 font-mono uppercase tracking-tight font-bold">
+                          {student.student_id}
+                        </p>
                       </td>
                       <td className="px-8 py-5 text-center">
                         <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide">
@@ -774,11 +776,6 @@ const AttendanceTracker = () => {
                             />
                           </div>
                         </div>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <button className="text-gray-300 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 rounded-lg">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
                       </td>
                     </tr>
                   ))}
