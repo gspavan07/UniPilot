@@ -711,7 +711,8 @@ const StaffProfile = ({ isSelf }) => {
   const [myAttendance, setMyAttendance] = useState([]);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [formData, setFormData] = useState({ leave_type: "", start_date: "", end_date: "", reason: "", is_half_day: false });
-
+  const user = useSelector((state) => state.auth.user);
+  
   const handleApply = async (e) => {
     e.preventDefault();
     try {
@@ -819,17 +820,17 @@ const StaffProfile = ({ isSelf }) => {
           </div>
         </div> */}
 <div className="relative bg-white rounded-3xl p-8 mb-8 border border-slate-200/60 shadow-sm overflow-hidden">
-  {/* Modernized Back Button - Relocated to top-right for a cleaner profile flow */}
-  <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
-    <button
-      onClick={() => window.history.back()}
-      className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 backdrop-blur-md border border-slate-200 text-slate-500 rounded-lg hover:bg-white hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition-all active:scale-95 group"
-    >
-      <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-      <span className="text-xs font-bold uppercase tracking-wider">Back</span>
-    </button>
-  </div>
-
+  {user.role !== "hod" && (
+    <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
+      <button
+        onClick={() => window.history.back()}
+        className="flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 backdrop-blur-md border border-slate-200 text-slate-500 rounded-lg hover:bg-white hover:text-slate-900 hover:border-slate-300 hover:shadow-sm transition-all active:scale-95 group"
+      >
+        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        <span className="text-xs font-bold uppercase tracking-wider">Back</span>
+      </button>
+    </div>
+)}
   {/* Soft ambient background accent */}
   <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-50/50 to-transparent -mr-20 -mt-20 rounded-full blur-3xl" />
 
