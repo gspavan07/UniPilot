@@ -1364,7 +1364,7 @@ const StaffProfile = ({ isSelf }) => {
 
         <div className="relative bg-white rounded-3xl p-8 mb-8 border border-slate-200/60 shadow-sm overflow-hidden">
           {/* Modernized Back Button - Relocated to top-right for a cleaner profile flow */}
-          {localUser.role === "super_admin" && (
+          {currentUser?.role === "super_admin" && (
             <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
               <button
                 onClick={() => window.history.back()}
