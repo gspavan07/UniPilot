@@ -101,3 +101,37 @@ exports.deleteAllNotifications = async (req, res) => {
         });
     }
 };
+// @desc    Create a new notification (For internal or faculty use)
+// @route   POST /api/notifications
+// @access  Private
+exports.createNotification = async (req, res) => {
+    try {
+        const { user_id, title, message, type, metadata } = req.body;
+
+        if (!user_id || !title || !message) {
+            return res.status(400).json({
+                success: false,
+                error: "Please provide user_id, title, and message"
+            });
+        }
+
+        const notification = await Notification.create({
+            user_id,
+            title,
+            message,
+            type: type || "INFO",
+            metadata: metadata || null,
+        });
+
+        res.status(201).json({
+            success: true,
+            data: notification
+        });
+    } catch (error) {
+        logger.error("Error in createNotification:", error);
+        res.status(500).json({
+            success: false,
+            error: "Server Error"
+        });
+    }
+};

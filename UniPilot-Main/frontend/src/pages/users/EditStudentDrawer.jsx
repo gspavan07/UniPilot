@@ -461,29 +461,8 @@ const EditStudentDrawer = ({
                         </p>
                       )}
                     </div>
+                    
                     <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
-                        Regulation
-                      </label>
-                      <select
-                        {...register("regulation_id")}
-                        className={`form-select ${getInputClass("regulation_id")}`}
-                      >
-                        <option value="">Select Regulation...</option>
-                        {regulations?.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} ({r.academic_year})
-                          </option>
-                        ))}
-                      </select>
-                      {errors.regulation_id && (
-                        <p className="text-xs text-error-500 mt-1 ml-1">
-                          {errors.regulation_id.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
                         Department
                       </label>
@@ -499,6 +478,31 @@ const EditStudentDrawer = ({
                         ))}
                       </select>
                     </div>
+
+
+                    <div className="col-span-1">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
+                        Regulation
+                      </label>
+                      <select
+                        {...register("regulation_id")}
+                        className={`form-select ${getInputClass("regulation_id")}`}
+                      >
+                        <option value="">Select Regulation...</option>
+                        {regulations?.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.regulation_id && (
+                        <p className="text-xs text-error-500 mt-1 ml-1">
+                          {errors.regulation_id.message}
+                        </p>
+                      )}
+                    </div>
+
+                    
 
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">

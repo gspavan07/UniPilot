@@ -478,6 +478,45 @@ const MyFees = () => {
 
           {activeSemester && semesterWise[activeSemester] && (
             <div className="border border-gray-100 rounded-3xl overflow-hidden shadow-sm bg-white">
+              {/* Select All/Clear All Controls */}
+              <div className="px-8 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  {selectedFees.size} item(s) selected
+                </span>
+                <button
+                  onClick={() => {
+                    const unpaidFees = semesterWise[activeSemester].fees.filter(f => f.due > 0);
+                    const hasFine = semesterWise[activeSemester].fine.due > 0;
+                    
+                    if (selectedFees.size > 0) {
+                      // Clear all
+                      setSelectedFees(new Set());
+                      setCustomAmounts({});
+                    } else {
+                      // Select all unpaid
+                      const newSelected = new Set();
+                      const newAmounts = {};
+                      
+                      unpaidFees.forEach(fee => {
+                        newSelected.add(fee.id);
+                        newAmounts[fee.id] = fee.due;
+                      });
+                      
+                      if (hasFine) {
+                        newSelected.add(`fine:${activeSemester}`);
+                        newAmounts[`fine:${activeSemester}`] = semesterWise[activeSemester].fine.due;
+                      }
+                      
+                      setSelectedFees(newSelected);
+                      setCustomAmounts(newAmounts);
+                    }
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all uppercase tracking-wider"
+                >
+                  {selectedFees.size > 0 ? 'Clear All' : 'Select All'}
+                </button>
+              </div>
+              
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
@@ -522,7 +561,7 @@ const MyFees = () => {
                               onChange={() =>
                                 toggleFeeSelection(fee.id, fee.due)
                               }
-                              className="w-5 h-5 rounded-md border-gray-300 text-black focus:ring-black cursor-pointer bg-gray-100"
+                              className="w-5 h-5 rounded-md border-gray-300 text-black focus:ring-black cursor-pointer bg-gray-300"
                             />
                           )}
                         </td>
