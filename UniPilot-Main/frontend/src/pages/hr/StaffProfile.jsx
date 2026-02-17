@@ -1457,12 +1457,12 @@ const StaffProfile = ({ isSelf }) => {
             </div>
 
             {/* Action Buttons - Pushed down slightly on desktop to align with profile content */}
-            <div className="flex flex-col gap-3 self-center lg:self-start lg:mt-14 shrink-0">
+            {/* <div className="flex flex-col gap-3 self-center lg:self-start lg:mt-14 shrink-0">
               <button className="flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95">
                 <Edit3 className="w-4 h-4" />
                 Edit Profile
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
 
