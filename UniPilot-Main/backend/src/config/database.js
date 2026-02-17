@@ -22,10 +22,31 @@ const config = {
     underscored: true,
     freezeTableName: true,
   },
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  }
 };
 
 // Create Sequelize instance
-const sequelize = new Sequelize(config);
+// Create Sequelize instance
+let sequelize;
+
+if (process.env.DATABASE_URL) {
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    ...config,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  });
+} else {
+  sequelize = new Sequelize(config);
+}
 
 module.exports = {
   sequelize,
