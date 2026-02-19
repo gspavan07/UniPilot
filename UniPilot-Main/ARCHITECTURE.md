@@ -154,7 +154,7 @@ graph TD
 
 ```mermaid
 graph LR
-    Root((UniPilot Ecosystem))
+    Root((UniPilot))
 
     Root --> Academic
     Root --> OBE
