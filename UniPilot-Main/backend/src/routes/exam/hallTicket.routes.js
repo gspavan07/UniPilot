@@ -1,14 +1,14 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
   getAllHallTickets,
   getHallTicketById,
   generateHallTickets,
   updateHallTicket,
   deleteHallTicket,
-} = require("../../controllers/exam/hallTicketController");
-const { auditMiddleware } = require("../../middleware/exam/auditMiddleware");
-const { authenticate } = require("../../middleware/auth");
+} from "../../controllers/exam/hallTicketController.js";
+import { auditMiddleware } from "../../middleware/exam/auditMiddleware.js";
+import { authenticate } from "../../middleware/auth.js";
 
 // Get all hall tickets (with filters)
 router.get("/", authenticate, getAllHallTickets);
@@ -40,4 +40,4 @@ router.delete(
   deleteHallTicket,
 );
 
-module.exports = router;
+export default router;

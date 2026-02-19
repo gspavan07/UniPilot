@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getHodFormattedPapers } from "../../services/hodService";
+import { getHodFormattedPapers } from "../../services/hodService.js";
 import {
     Layout,
     Eye,

@@ -5,8 +5,8 @@
  * Customize column order and format for your bank's requirements.
  */
 
-const config = require("../config/templateConfig");
-const { decrypt } = require("../../utils/encryption");
+import config from "../config/templateConfig.js";
+import { decrypt } from "../../utils/encryption.js";
 
 /**
  * Generate Bank Transfer CSV
@@ -61,4 +61,4 @@ function generateBankTransferCsv(payslips) {
   return csv;
 }
 
-module.exports = generateBankTransferCsv;
+export default generateBankTransferCsv;

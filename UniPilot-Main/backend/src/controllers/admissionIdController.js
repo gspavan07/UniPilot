@@ -1,6 +1,6 @@
-const { AdmissionConfig, User, Program, sequelize } = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+import { AdmissionConfig, User, Program, sequelize } from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // Helper to generate ID
 const generateId = (config, batchYear, program, sequence, isLateral) => {
@@ -44,7 +44,7 @@ const generateId = (config, batchYear, program, sequence, isLateral) => {
 // @desc    Preview Bulk ID Generation
 // @route   POST /api/admission/ids/preview
 // @access  Private (Admin)
-exports.previewBulkIds = async (req, res) => {
+export const previewBulkIds = async (req, res) => {
   try {
     const { batch_year, program_id, start_sequence } = req.body;
 
@@ -141,7 +141,7 @@ exports.previewBulkIds = async (req, res) => {
 // @desc    Commit Bulk ID Generation
 // @route   POST /api/admission/ids/commit
 // @access  Private (Admin)
-exports.commitBulkIds = async (req, res) => {
+export const commitBulkIds = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { batch_year, program_id, students } = req.body;
@@ -195,4 +195,9 @@ exports.commitBulkIds = async (req, res) => {
     logger.error("Error in commitBulkIds:", error);
     res.status(500).json({ success: false, error: "Server Error" });
   }
+};
+
+export default {
+  previewBulkIds,
+  commitBulkIds,
 };

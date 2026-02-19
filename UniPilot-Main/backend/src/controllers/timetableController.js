@@ -1,4 +1,4 @@
-const {
+import {
   Timetable,
   TimetableSlot,
   Course,
@@ -6,14 +6,14 @@ const {
   Program,
   Room,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Initialize a new timetable
 // @route   POST /api/timetable/init
 // @access  Private/Admin
-exports.createTimetable = async (req, res) => {
+export const createTimetable = async (req, res) => {
   try {
     const { program_id, semester, academic_year, section } = req.body;
 
@@ -46,7 +46,7 @@ exports.createTimetable = async (req, res) => {
 // @desc    Add a slot with CONFLICT DETECTION
 // @route   POST /api/timetable/slots
 // @access  Private/Admin
-exports.addSlot = async (req, res) => {
+export const addSlot = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const {
@@ -136,7 +136,7 @@ exports.addSlot = async (req, res) => {
 // @desc    Get Timetable by ID with full details
 // @route   GET /api/timetable/:id
 // @access  Private
-exports.getTimetable = async (req, res) => {
+export const getTimetable = async (req, res) => {
   try {
     const { id } = req.params;
     const timetable = await Timetable.findByPk(id, {
@@ -174,7 +174,7 @@ exports.getTimetable = async (req, res) => {
 // @desc    Get CURRENT USER's Timetable
 // @route   GET /api/timetable/my/view
 // @access  Private
-exports.getMyTimetable = async (req, res) => {
+export const getMyTimetable = async (req, res) => {
   try {
     const { userId, role } = req.user;
 
@@ -286,7 +286,7 @@ exports.getMyTimetable = async (req, res) => {
 // @desc    Find Timetable by specific criteria (Program, Sem, Year, Section)
 // @route   GET /api/timetable/find
 // @access  Private/Admin
-exports.getTimetableByCriteria = async (req, res) => {
+export const getTimetableByCriteria = async (req, res) => {
   try {
     const { program_id, semester, academic_year, section } = req.query;
 
@@ -361,7 +361,7 @@ exports.getTimetableByCriteria = async (req, res) => {
 // @desc    Delete a timetable slot
 // @route   DELETE /api/timetable/slots/:id
 // @access  Private/Admin
-exports.deleteSlot = async (req, res) => {
+export const deleteSlot = async (req, res) => {
   try {
     const { id } = req.params;
     const slot = await TimetableSlot.findByPk(id);

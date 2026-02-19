@@ -201,11 +201,10 @@ const CoordinatorManagement = () => {
                       <button
                         onClick={() => toggleCoordinatorStatus(user)}
                         disabled={processing === user.id}
-                        className={`inline-flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                          user.is_placement_coordinator
+                        className={`inline-flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${user.is_placement_coordinator
                             ? "bg-rose-50 text-rose-600 hover:bg-rose-100 active:scale-95"
                             : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-95"
-                        }`}
+                          }`}
                       >
                         {processing === user.id ? (
                           "Processing..."

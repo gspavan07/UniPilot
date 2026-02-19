@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
 const router = express.Router({ mergeParams: true });
-const { authenticate } = require("../../middleware/auth");
-const { auditMiddleware } = require("../../middleware/exam/auditMiddleware");
-const timetableController = require("../../controllers/exam/timetableController");
+import { authenticate } from "../../middleware/auth.js";
+import { auditMiddleware } from "../../middleware/exam/auditMiddleware.js";
+import timetableController from "../../controllers/exam/timetableController.js";
 
 // Apply authentication to all routes
 router.use(authenticate);
@@ -43,4 +43,4 @@ router.delete(
   timetableController.deleteTimetableEntry,
 );
 
-module.exports = router;
+export default router;

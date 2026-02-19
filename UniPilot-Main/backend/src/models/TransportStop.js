@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * TransportStop Model
@@ -78,4 +78,4 @@ TransportStop.associate = (models) => {
   });
 };
 
-module.exports = TransportStop;
+export default TransportStop;

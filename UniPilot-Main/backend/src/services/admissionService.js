@@ -1,12 +1,12 @@
-const { AdmissionConfig, Program, sequelize } = require("../models");
-const logger = require("../utils/logger");
+import { AdmissionConfig, Program, InstitutionSetting, sequelize } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Generates a unique student ID based on batch configuration
  * @param {Object} params - { batchYear, programId, isTemporary, isLateral }
  * @returns {Promise<string>}
  */
-const generateStudentId = async ({
+export const generateStudentId = async ({
   batchYear,
   programId,
   isTemporary = false,
@@ -106,8 +106,7 @@ const generateStudentId = async ({
  * Independent of batch or program.
  * @returns {Promise<string>}
  */
-const generateGlobalAdmissionNumber = async () => {
-  const { InstitutionSetting } = require("../models");
+export const generateGlobalAdmissionNumber = async () => {
   const transaction = await sequelize.transaction();
   try {
     // 1. Get Settings (Lock Row if possible, but for singleton row it's tricky without ID)
@@ -150,7 +149,3 @@ const generateGlobalAdmissionNumber = async () => {
   }
 };
 
-module.exports = {
-  generateStudentId,
-  generateGlobalAdmissionNumber,
-};

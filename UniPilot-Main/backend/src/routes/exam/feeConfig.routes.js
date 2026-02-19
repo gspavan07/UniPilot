@@ -1,9 +1,9 @@
-const express = require("express");
+import express from "express";
 const router = express.Router({ mergeParams: true });
-const { authenticate } = require("../../middleware/auth");
-const feeConfigController = require("../../controllers/exam/feeConfigController");
+import { authenticate } from "../../middleware/auth.js";
+import feeConfigController from "../../controllers/exam/feeConfigController.js";
 
-const { auditMiddleware } = require("../../middleware/exam/auditMiddleware");
+import { auditMiddleware } from "../../middleware/exam/auditMiddleware.js";
 
 // Apply authentication middleware
 router.use(authenticate);
@@ -47,4 +47,4 @@ router.delete(
 // Fee calculation
 router.post("/fee-config/calculate", feeConfigController.calculateFee);
 
-module.exports = router;
+export default router;

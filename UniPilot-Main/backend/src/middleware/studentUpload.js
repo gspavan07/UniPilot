@@ -1,6 +1,6 @@
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // Ensure upload directories exist
 const studentDocsDir = "uploads/student_docs";
@@ -24,7 +24,6 @@ const storage = multer.diskStorage({
 
         // Fallback for existing sessions without the 'name' claim in JWT
         if (!name) {
-          const { User } = require("../models");
           const user = await User.findByPk(req.user.userId, {
             attributes: ["first_name", "last_name"],
           });
@@ -80,4 +79,4 @@ const studentUpload = multer({
   },
 });
 
-module.exports = studentUpload;
+export default studentUpload;

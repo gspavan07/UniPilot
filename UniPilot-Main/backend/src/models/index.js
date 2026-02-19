@@ -1,97 +1,97 @@
-const { sequelize } = require("../config/database");
+import { sequelize } from "../config/database.js";
 
 // Import models
-const User = require("./User");
-const AuditLog = require("./AuditLog");
-const Department = require("./Department");
-const Program = require("./Program");
-const Course = require("./Course");
-const Regulation = require("./Regulation");
-const Role = require("./Role");
-const Permission = require("./Permission");
-const ProctorAssignment = require("./ProctorAssignment");
-const ProctorSession = require("./ProctorSession");
-const ProctorFeedback = require("./ProctorFeedback");
-const ProctorAlert = require("./ProctorAlert");
-const PromotionCriteria = require("./PromotionCriteria");
-const PromotionEvaluation = require("./PromotionEvaluation");
-const Graduation = require("./Graduation");
-const Attendance = require("./Attendance");
-const LeaveRequest = require("./LeaveRequest");
-const Holiday = require("./Holiday");
+import User from "./User.js";
+import AuditLog from "./AuditLog.js";
+import Department from "./Department.js";
+import Program from "./Program.js";
+import Course from "./Course.js";
+import Regulation from "./Regulation.js";
+import Role from "./Role.js";
+import Permission from "./Permission.js";
+import ProctorAssignment from "./ProctorAssignment.js";
+import ProctorSession from "./ProctorSession.js";
+import ProctorFeedback from "./ProctorFeedback.js";
+import ProctorAlert from "./ProctorAlert.js";
+import PromotionCriteria from "./PromotionCriteria.js";
+import PromotionEvaluation from "./PromotionEvaluation.js";
+import Graduation from "./Graduation.js";
+import Attendance from "./Attendance.js";
+import LeaveRequest from "./LeaveRequest.js";
+import Holiday from "./Holiday.js";
 
-const FeeCategory = require("./FeeCategory");
-const FeeStructure = require("./FeeStructure");
-const FeePayment = require("./FeePayment");
-const FeeWaiver = require("./FeeWaiver");
-const StudentFeeCharge = require("./StudentFeeCharge");
-const Book = require("./Book");
-const BookIssue = require("./BookIssue");
-const Timetable = require("./Timetable");
-const TimetableSlot = require("./TimetableSlot");
-const FeeSemesterConfig = require("./FeeSemesterConfig");
-const StudentDocument = require("./StudentDocument");
-const SectionIncharge = require("./SectionIncharge");
+import FeeCategory from "./FeeCategory.js";
+import FeeStructure from "./FeeStructure.js";
+import FeePayment from "./FeePayment.js";
+import FeeWaiver from "./FeeWaiver.js";
+import StudentFeeCharge from "./StudentFeeCharge.js";
+import Book from "./Book.js";
+import BookIssue from "./BookIssue.js";
+import Timetable from "./Timetable.js";
+import TimetableSlot from "./TimetableSlot.js";
+import FeeSemesterConfig from "./FeeSemesterConfig.js";
+import StudentDocument from "./StudentDocument.js";
+import SectionIncharge from "./SectionIncharge.js";
 
-const AcademicFeePayment = require("./AcademicFeePayment");
-const StudentChargePayment = require("./StudentChargePayment");
-const AdmissionConfig = require("./AdmissionConfig");
-const StaffAttendance = require("./StaffAttendance");
-const LeaveBalance = require("./LeaveBalance");
-const SalaryStructure = require("./SalaryStructure");
-const Payslip = require("./Payslip");
-const SalaryGrade = require("./SalaryGrade");
-const InstitutionSetting = require("./InstitutionSetting");
-const Block = require("./Block");
-const Room = require("./Room");
-const SemesterResult = require("./SemesterResult");
-const ProgramOutcome = require("./ProgramOutcome");
-const CourseOutcome = require("./CourseOutcome");
-const CoPoMap = require("./CoPoMap");
-const Notification = require("./Notification");
-const CourseFaculty = require("./CourseFaculty");
+import AcademicFeePayment from "./AcademicFeePayment.js";
+import StudentChargePayment from "./StudentChargePayment.js";
+import AdmissionConfig from "./AdmissionConfig.js";
+import StaffAttendance from "./StaffAttendance.js";
+import LeaveBalance from "./LeaveBalance.js";
+import SalaryStructure from "./SalaryStructure.js";
+import Payslip from "./Payslip.js";
+import SalaryGrade from "./SalaryGrade.js";
+import InstitutionSetting from "./InstitutionSetting.js";
+import Block from "./Block.js";
+import Room from "./Room.js";
+import SemesterResult from "./SemesterResult.js";
+import ProgramOutcome from "./ProgramOutcome.js";
+import CourseOutcome from "./CourseOutcome.js";
+import CoPoMap from "./CoPoMap.js";
+import Notification from "./Notification.js";
+import CourseFaculty from "./CourseFaculty.js";
 
 // Placement Module Models
-const Company = require("./Company");
-const CompanyContact = require("./CompanyContact");
-const JobPosting = require("./JobPosting");
-const PlacementDrive = require("./PlacementDrive");
-const DriveEligibility = require("./DriveEligibility");
-const DriveRound = require("./DriveRound");
-const StudentPlacementProfile = require("./StudentPlacementProfile");
-const StudentApplication = require("./StudentApplication");
-const RoundResult = require("./RoundResult");
-const Placement = require("./Placement");
-const PlacementPolicy = require("./PlacementPolicy");
-const PlacementNotification = require("./PlacementNotification");
-const PlacementDocument = require("./PlacementDocument");
+import Company from "./Company.js";
+import CompanyContact from "./CompanyContact.js";
+import JobPosting from "./JobPosting.js";
+import PlacementDrive from "./PlacementDrive.js";
+import DriveEligibility from "./DriveEligibility.js";
+import DriveRound from "./DriveRound.js";
+import StudentPlacementProfile from "./StudentPlacementProfile.js";
+import StudentApplication from "./StudentApplication.js";
+import RoundResult from "./RoundResult.js";
+import Placement from "./Placement.js";
+import PlacementPolicy from "./PlacementPolicy.js";
+import PlacementNotification from "./PlacementNotification.js";
+import PlacementDocument from "./PlacementDocument.js";
 
 // Transport Management Models
-const Route = require("./Route");
-const TransportStop = require("./TransportStop");
-const Vehicle = require("./Vehicle");
-const TransportDriver = require("./TransportDriver");
-const VehicleRouteAssignment = require("./VehicleRouteAssignment");
-const StudentRouteAllocation = require("./StudentRouteAllocation");
-const SpecialTrip = require("./SpecialTrip");
-const TripLog = require("./TripLog");
+import Route from "./Route.js";
+import TransportStop from "./TransportStop.js";
+import Vehicle from "./Vehicle.js";
+import TransportDriver from "./TransportDriver.js";
+import VehicleRouteAssignment from "./VehicleRouteAssignment.js";
+import StudentRouteAllocation from "./StudentRouteAllocation.js";
+import SpecialTrip from "./SpecialTrip.js";
+import TripLog from "./TripLog.js";
 
 // Hostel Management Models
-const HostelBuilding = require("./HostelBuilding");
-const HostelFloor = require("./HostelFloor");
-const HostelRoom = require("./HostelRoom");
-const HostelBed = require("./HostelBed");
-const HostelAllocation = require("./HostelAllocation");
-const HostelFeeStructure = require("./HostelFeeStructure");
-const HostelMessFeeStructure = require("./HostelMessFeeStructure");
-const HostelComplaint = require("./HostelComplaint");
-const HostelAttendance = require("./HostelAttendance");
-const HostelGatePass = require("./HostelGatePass");
-const HostelVisitor = require("./HostelVisitor");
-const HostelStayLog = require("./HostelStayLog");
-const HostelFine = require("./HostelFine");
-const HostelRoomBill = require("./HostelRoomBill");
-const HostelRoomBillDistribution = require("./HostelRoomBillDistribution");
+import HostelBuilding from "./HostelBuilding.js";
+import HostelFloor from "./HostelFloor.js";
+import HostelRoom from "./HostelRoom.js";
+import HostelBed from "./HostelBed.js";
+import HostelAllocation from "./HostelAllocation.js";
+import HostelFeeStructure from "./HostelFeeStructure.js";
+import HostelMessFeeStructure from "./HostelMessFeeStructure.js";
+import HostelComplaint from "./HostelComplaint.js";
+import HostelAttendance from "./HostelAttendance.js";
+import HostelGatePass from "./HostelGatePass.js";
+import HostelVisitor from "./HostelVisitor.js";
+import HostelStayLog from "./HostelStayLog.js";
+import HostelFine from "./HostelFine.js";
+import HostelRoomBill from "./HostelRoomBill.js";
+import HostelRoomBillDistribution from "./HostelRoomBillDistribution.js";
 
 const models = {
   User,
@@ -1149,7 +1149,94 @@ CoPoMap.belongsTo(ProgramOutcome, {
 });
 
 // Export models and sequelize instance
-module.exports = {
+export {
+  sequelize,
+  User,
+  AuditLog,
+  Department,
+  Program,
+  Course,
+  Role,
+  Permission,
+  ProctorAssignment,
+  ProctorSession,
+  ProctorFeedback,
+  ProctorAlert,
+  PromotionCriteria,
+  PromotionEvaluation,
+  Graduation,
+  Attendance,
+  LeaveRequest,
+  Holiday,
+  FeeCategory,
+  FeeStructure,
+  FeePayment,
+  FeeWaiver,
+  StudentFeeCharge,
+  Book,
+  BookIssue,
+  Timetable,
+  TimetableSlot,
+  FeeSemesterConfig,
+  StudentDocument,
+  AdmissionConfig,
+  StaffAttendance,
+  LeaveBalance,
+  SalaryStructure,
+  Payslip,
+  SalaryGrade,
+  InstitutionSetting,
+  Regulation,
+  Block,
+  Room,
+  SemesterResult,
+  SectionIncharge,
+  AcademicFeePayment,
+  StudentChargePayment,
+  Route,
+  TransportStop,
+  Vehicle,
+  TransportDriver,
+  VehicleRouteAssignment,
+  StudentRouteAllocation,
+  SpecialTrip,
+  TripLog,
+  HostelBuilding,
+  HostelFloor,
+  HostelRoom,
+  HostelBed,
+  HostelAllocation,
+  HostelFeeStructure,
+  HostelMessFeeStructure,
+  HostelComplaint,
+  HostelAttendance,
+  HostelGatePass,
+  HostelVisitor,
+  HostelStayLog,
+  HostelFine,
+  HostelRoomBill,
+  HostelRoomBillDistribution,
+  Company,
+  CompanyContact,
+  JobPosting,
+  PlacementDrive,
+  DriveEligibility,
+  DriveRound,
+  StudentPlacementProfile,
+  StudentApplication,
+  RoundResult,
+  Placement,
+  PlacementPolicy,
+  PlacementNotification,
+  PlacementDocument,
+  ProgramOutcome,
+  CourseOutcome,
+  CoPoMap,
+  Notification,
+  CourseFaculty,
+};
+
+export default {
   ...models,
   sequelize,
 };

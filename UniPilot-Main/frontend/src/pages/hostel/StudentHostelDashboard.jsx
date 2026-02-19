@@ -48,11 +48,10 @@ const StudentHostelDashboard = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === tab.id
+              className={`flex items-center px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab.id
                   ? "bg-gray-900 text-white dark:bg-gray-700 shadow-md transform scale-105"
                   : "text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-              }`}
+                }`}
             >
               <Icon
                 className={`w-4 h-4 mr-2 ${activeTab === tab.id ? "text-white" : "text-gray-400"}`}

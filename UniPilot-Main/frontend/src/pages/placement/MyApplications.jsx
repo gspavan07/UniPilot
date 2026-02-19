@@ -240,11 +240,10 @@ const MyApplications = () => {
                               className="flex flex-col items-center gap-4 group/step"
                             >
                               <div
-                                className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 ${
-                                  isCompleted
+                                className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 ${isCompleted
                                     ? "bg-white border-blue-600 shadow-xl shadow-blue-500/10"
                                     : "bg-gray-50 border-gray-100"
-                                }`}
+                                  }`}
                               >
                                 <stage.icon
                                   className={`w-4 h-4 ${isCompleted ? "text-blue-600" : "text-gray-300"}`}

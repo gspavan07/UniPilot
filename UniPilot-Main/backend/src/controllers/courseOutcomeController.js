@@ -1,10 +1,10 @@
-const { CourseOutcome, Course } = require("../models");
-const logger = require("../utils/logger");
+import { CourseOutcome, Course } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Get all course outcomes (optionally filtered by course_id)
 // @route   GET /api/course-outcomes
 // @access  Private
-exports.getAllCourseOutcomes = async (req, res) => {
+export const getAllCourseOutcomes = async (req, res) => {
     try {
         const { course_id } = req.query;
         const where = {};
@@ -42,7 +42,7 @@ exports.getAllCourseOutcomes = async (req, res) => {
 // @desc    Get single course outcome by ID
 // @route   GET /api/course-outcomes/:id
 // @access  Private
-exports.getCourseOutcomeById = async (req, res) => {
+export const getCourseOutcomeById = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -79,7 +79,7 @@ exports.getCourseOutcomeById = async (req, res) => {
 // @desc    Create a new course outcome
 // @route   POST /api/course-outcomes
 // @access  Private/Admin
-exports.createCourseOutcome = async (req, res) => {
+export const createCourseOutcome = async (req, res) => {
     try {
         const { course_id, co_code, description, target_attainment } = req.body;
 
@@ -135,7 +135,7 @@ exports.createCourseOutcome = async (req, res) => {
 // @desc    Bulk create course outcomes
 // @route   POST /api/course-outcomes/bulk
 // @access  Private/Admin
-exports.bulkCreateCourseOutcomes = async (req, res) => {
+export const bulkCreateCourseOutcomes = async (req, res) => {
     try {
         const { course_id, outcomes } = req.body;
 
@@ -195,7 +195,7 @@ exports.bulkCreateCourseOutcomes = async (req, res) => {
 // @desc    Update a course outcome
 // @route   PUT /api/course-outcomes/:id
 // @access  Private/Admin
-exports.updateCourseOutcome = async (req, res) => {
+export const updateCourseOutcome = async (req, res) => {
     try {
         const { id } = req.params;
         const { co_code, description, target_attainment } = req.body;
@@ -249,7 +249,7 @@ exports.updateCourseOutcome = async (req, res) => {
 // @desc    Delete a course outcome
 // @route   DELETE /api/course-outcomes/:id
 // @access  Private/Admin
-exports.deleteCourseOutcome = async (req, res) => {
+export const deleteCourseOutcome = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -280,7 +280,7 @@ exports.deleteCourseOutcome = async (req, res) => {
 // @desc    Delete all course outcomes for a course
 // @route   DELETE /api/course-outcomes/course/:course_id
 // @access  Private/Admin
-exports.deleteCourseOutcomesByCourse = async (req, res) => {
+export const deleteCourseOutcomesByCourse = async (req, res) => {
     try {
         const { course_id } = req.params;
 

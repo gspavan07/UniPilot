@@ -48,7 +48,7 @@ export default function Profile() {
           <div className="relative z-10 w-full flex flex-col items-center">
             {/* Avatar Section */}
             <div className="relative mb-6 group cursor-pointer">
-              <div className="w-40 h-40 rounded-full bg-gradient-to-tr from-blue-500 to-blue-400 p-1 shadow-2xl">
+              <div className="w-40 h-40 rounded-full bg-linear-to-tr from-blue-500 to-blue-400 p-1 shadow-2xl">
                 <div className="w-full h-full rounded-full bg-gray-800 flex items-center justify-center text-5xl font-bold text-white overflow-hidden border-4 border-gray-900 relative">
                   {user?.first_name?.[0]}
                   {user?.last_name?.[0]}

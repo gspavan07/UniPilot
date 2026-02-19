@@ -1,5 +1,5 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getAllUsers,
   getUser,
   createUser,
@@ -12,14 +12,15 @@ const {
   getAllBatches,
   getStudentSemesters,
   getBatchDetails,
-} = require("../controllers/userController");
-const upload = require("../middleware/upload");
-const studentUpload = require("../middleware/studentUpload");
-const {
+  getStudentSections,
+} from "../controllers/userController.js";
+import upload from "../middleware/upload.js";
+import studentUpload from "../middleware/studentUpload.js";
+import {
   authenticate,
   authorize,
   checkPermission,
-} = require("../middleware/auth");
+} from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -71,7 +72,7 @@ router.get("/stats", checkDynamicPermission("view"), getUserStats);
 router.get(
   "/sections",
   checkDynamicPermission("view"),
-  require("../controllers/userController").getStudentSections,
+  getStudentSections,
 );
 router.get("/batch-years", getAllBatches);
 
@@ -79,7 +80,6 @@ router.get("/batch-years", getAllBatches);
 router.get(
   "/semesters",
   checkDynamicPermission("view"),
-  getStudentSemesters,
   getStudentSemesters,
 );
 
@@ -125,4 +125,4 @@ router
   )
   .delete(checkDynamicPermission("manage"), deleteUser);
 
-module.exports = router;
+export default router;

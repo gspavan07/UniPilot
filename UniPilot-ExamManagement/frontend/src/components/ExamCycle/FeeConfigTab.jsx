@@ -7,7 +7,7 @@ import {
   updateLatFeeSlab,
   deleteLatFeeSlab,
   calculateFee,
-} from "../../services/examCycleService";
+} from "../../services/examCycleService.js";
 
 export default function FeeConfigTab({ cycleId }) {
   const [feeConfig, setFeeConfig] = useState(null);
@@ -321,8 +321,8 @@ export default function FeeConfigTab({ cycleId }) {
               <button
                 onClick={() => setShowAddSlab(!showAddSlab)}
                 className={`p-2 px-4 rounded-lg font-bold text-xs transition-all border uppercase tracking-wider ${showAddSlab
-                    ? "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"
-                    : "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100"
+                  ? "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"
+                  : "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100"
                   }`}
               >
                 {showAddSlab ? "Cancel" : "+ Add Slab"}
@@ -469,8 +469,8 @@ export default function FeeConfigTab({ cycleId }) {
               {feePreview && (
                 <div
                   className={`mt-6 p-6 rounded-2xl border-2 transition-all duration-500 ${feePreview.blocked
-                      ? "bg-rose-500/10 border-rose-500/30"
-                      : "bg-emerald-500/10 border-emerald-500/30"
+                    ? "bg-rose-500/10 border-rose-500/30"
+                    : "bg-emerald-500/10 border-emerald-500/30"
                     }`}
                 >
                   <div className="space-y-3">

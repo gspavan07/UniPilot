@@ -1,11 +1,11 @@
-const ExamCycle = require("./ExamCycle");
-const ExamTimetable = require("./ExamTimetable");
-const ExamFeeConfiguration = require("./ExamFeeConfiguration");
-const LateFeeSlab = require("./LateFeeSlab");
-const ExamAuditLog = require("./ExamAuditLog");
-const ExamFeePayment = require("./ExamFeePayment");
-const ExamStudentEligibility = require("./ExamStudentEligibility");
-const { sequelize } = require("../../config/database");
+import ExamCycle from "./ExamCycle.js";
+import ExamTimetable from "./ExamTimetable.js";
+import ExamFeeConfiguration from "./ExamFeeConfiguration.js";
+import LateFeeSlab from "./LateFeeSlab.js";
+import ExamAuditLog from "./ExamAuditLog.js";
+import ExamFeePayment from "./ExamFeePayment.js";
+import ExamStudentEligibility from "./ExamStudentEligibility.js";
+import { sequelize } from "../../config/database.js";
 
 // Define associations
 // 1. ExamCycle associations
@@ -107,7 +107,17 @@ if (sequelize.models.User) {
   });
 }
 
-module.exports = {
+export {
+  ExamCycle,
+  ExamTimetable,
+  ExamFeeConfiguration,
+  LateFeeSlab,
+  ExamAuditLog,
+  ExamFeePayment,
+  ExamStudentEligibility,
+};
+
+export default {
   ExamCycle,
   ExamTimetable,
   ExamFeeConfiguration,

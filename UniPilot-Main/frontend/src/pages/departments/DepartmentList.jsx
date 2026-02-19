@@ -169,21 +169,19 @@ const DepartmentList = () => {
             <div className="inline-flex bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl border-2 border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setFilterType("academic")}
-                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
-                  filterType === "academic"
+                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${filterType === "academic"
                     ? "bg-white dark:bg-gray-700 text-blue-600 shadow-md"
                     : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                }`}
+                  }`}
               >
                 Academic
               </button>
               <button
                 onClick={() => setFilterType("administrative")}
-                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
-                  filterType === "administrative"
+                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${filterType === "administrative"
                     ? "bg-white dark:bg-gray-700 text-blue-600 shadow-md"
                     : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                }`}
+                  }`}
               >
                 Administrative
               </button>
@@ -258,11 +256,10 @@ const DepartmentList = () => {
                     </div>
 
                     <span
-                      className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
-                        dept.is_active
+                      className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${dept.is_active
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                           : "bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400"
-                      }`}
+                        }`}
                     >
                       {dept.is_active ? "Active" : "Archived"}
                     </span>

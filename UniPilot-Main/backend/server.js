@@ -1,8 +1,12 @@
-require("dotenv").config();
-const app = require("./src/app");
-const { sequelize } = require("./src/config/database");
-const logger = require("./src/utils/logger");
-const redis = require("./src/config/redis");
+import 'dotenv/config';
+
+console.log('Database Host:', process.env.DB_HOST); 
+// console.log(process.env);
+
+import app from "./src/app.js";
+import { sequelize } from "./src/config/database.js";
+import logger from "./src/utils/logger.js";
+import redis from "./src/config/redis.js";
 
 const PORT = process.env.PORT || 3000;
 

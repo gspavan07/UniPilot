@@ -1,18 +1,19 @@
-const {
+import {
   User,
   Department,
   Program,
   Role,
   StudentDocument,
   AdmissionConfig,
+  InstitutionSetting,
   sequelize,
-} = require("../models");
-const { Op } = require("sequelize");
-const PDFDocument = require("pdfkit");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import { Op } from "sequelize";
+import PDFDocument from "pdfkit";
+import logger from "../utils/logger.js";
 
 // Template import
-const generateAdmissionLetterPdf = require("../templates/admission/admissionLetterPdf");
+import generateAdmissionLetterPdf from "../templates/admission/admissionLetterPdf.js";
 
 /**
  * Admission Controller
@@ -22,7 +23,7 @@ const generateAdmissionLetterPdf = require("../templates/admission/admissionLett
 // @desc    Get admission statistics (Batch-wise & Department-wise)
 // @route   GET /api/admission/stats
 // @access  Private (Admission Admin/Staff)
-exports.getAdmissionStats = async (req, res) => {
+export const getAdmissionStats = async (req, res) => {
   try {
     const { year } = req.query;
 
@@ -80,7 +81,7 @@ exports.getAdmissionStats = async (req, res) => {
 // @desc    Export admission data
 // @route   GET /api/admission/export
 // @access  Private (Admission Admin/Staff)
-exports.exportAdmissionData = async (req, res) => {
+export const exportAdmissionData = async (req, res) => {
   try {
     const { year, department_id } = req.query;
     const where = { role: "student" };
@@ -128,7 +129,7 @@ exports.exportAdmissionData = async (req, res) => {
 // @desc    Get Seat Matrix (Intake vs Filled)
 // @route   GET /api/admission/seat-matrix
 // @access  Private (Admission Admin/Staff)
-exports.getSeatMatrix = async (req, res) => {
+export const getSeatMatrix = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
@@ -185,7 +186,7 @@ exports.getSeatMatrix = async (req, res) => {
 // @desc    Get all documents for a student
 // @route   GET /api/admission/documents/:userId
 // @access  Private (Admission Admin/Staff/Student)
-exports.getStudentDocuments = async (req, res) => {
+export const getStudentDocuments = async (req, res) => {
   try {
     const documents = await StudentDocument.findAll({
       where: { user_id: req.params.userId },
@@ -215,7 +216,7 @@ exports.getStudentDocuments = async (req, res) => {
 // @desc    Update document verification status
 // @route   PUT /api/admission/documents/:id/status
 // @access  Private (Admission Admin/Staff)
-exports.updateDocumentStatus = async (req, res) => {
+export const updateDocumentStatus = async (req, res) => {
   try {
     const { status, remarks } = req.body;
     const document = await StudentDocument.findByPk(req.params.id);
@@ -255,7 +256,7 @@ exports.updateDocumentStatus = async (req, res) => {
 // @desc    Re-upload a rejected document
 // @route   POST /api/admission/documents/:documentId/reupload
 // @access  Private (Student/Admission Staff)
-exports.reuploadDocument = async (req, res) => {
+export const reuploadDocument = async (req, res) => {
   try {
     const document = await StudentDocument.findByPk(req.params.documentId);
 
@@ -298,7 +299,7 @@ exports.reuploadDocument = async (req, res) => {
 // @desc    Mark a student as verified
 // @route   POST /api/admission/verify-student/:userId
 // @access  Private (Admission Staff)
-exports.verifyStudent = async (req, res) => {
+export const verifyStudent = async (req, res) => {
   try {
     const student = await User.findByPk(req.params.userId);
 
@@ -332,7 +333,7 @@ exports.verifyStudent = async (req, res) => {
 // @desc    Generate and download admission letter PDF
 // @route   GET /api/admission/letter/:userId
 // @access  Private (Admission Admin/Staff/Student)
-exports.generateAdmissionLetter = async (req, res) => {
+export const generateAdmissionLetter = async (req, res) => {
   try {
     const student = await User.findByPk(req.params.userId, {
       include: [
@@ -377,7 +378,7 @@ exports.generateAdmissionLetter = async (req, res) => {
 // @desc    Get Admission Funnel Stats
 // @route   GET /api/admission/funnel
 // @access  Private (Admission Admin/Staff)
-exports.getFunnelStats = async (req, res) => {
+export const getFunnelStats = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
@@ -437,7 +438,7 @@ exports.getFunnelStats = async (req, res) => {
 // @desc    Get Geographic Distribution Stats
 // @route   GET /api/admission/geo-stats
 // @access  Private (Admission Admin/Staff)
-exports.getGeoStats = async (req, res) => {
+export const getGeoStats = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
@@ -467,7 +468,7 @@ exports.getGeoStats = async (req, res) => {
 // @desc    Get Gender Distribution Stats
 // @route   GET /api/admission/gender-stats
 // @access  Private (Admission Admin/Staff)
-exports.getGenderStats = async (req, res) => {
+export const getGenderStats = async (req, res) => {
   try {
     const { year } = req.query;
     const where = { role: "student" };
@@ -500,7 +501,7 @@ exports.getGenderStats = async (req, res) => {
 // @desc    Get preview of next Student ID and Admission Number
 // @route   GET /api/admission/id-previews
 // @access  Private (Admission Admin/Staff)
-exports.getIdPreviews = async (req, res) => {
+export const getIdPreviews = async (req, res) => {
   try {
     const { batch_year, program_id, is_temporary } = req.query;
 
@@ -511,11 +512,7 @@ exports.getIdPreviews = async (req, res) => {
       });
     }
 
-    const {
-      AdmissionConfig,
-      Program,
-      InstitutionSetting,
-    } = require("../models");
+
 
     // 1. Preview Student ID (Temp)
     let tempIdPreview = "N/A";
@@ -600,4 +597,19 @@ exports.getIdPreviews = async (req, res) => {
       error: "Server Error",
     });
   }
+};
+
+export default {
+  getAdmissionStats,
+  exportAdmissionData,
+  getSeatMatrix,
+  getStudentDocuments,
+  updateDocumentStatus,
+  reuploadDocument,
+  verifyStudent,
+  generateAdmissionLetter,
+  getFunnelStats,
+  getGeoStats,
+  getGenderStats,
+  getIdPreviews,
 };

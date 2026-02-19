@@ -1,11 +1,11 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     // Step 0: Clear any existing table with the same name to avoid schema mismatch
     await queryInterface
       .dropTable("exam_fee_payments", { cascade: true })
-      .catch(() => {});
+      .catch(() => { });
 
     await queryInterface.createTable("exam_fee_payments", {
       id: {

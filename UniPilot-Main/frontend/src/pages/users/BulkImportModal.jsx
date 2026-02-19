@@ -231,8 +231,8 @@ const BulkImportModal = ({
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 className={`relative border-2 border-dashed rounded-[2rem] p-10 transition-all flex flex-col items-center justify-center group ${dragActive
-                    ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/20"
-                    : "border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/20"
+                  : "border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
               >
                 <input

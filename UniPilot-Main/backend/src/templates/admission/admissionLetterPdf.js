@@ -5,8 +5,8 @@
  * Customize letterhead, content, and signature as needed.
  */
 
-const PDFDocument = require("pdfkit");
-const config = require("../config/templateConfig");
+import PDFDocument from "pdfkit";
+import config from "../config/templateConfig.js";
 
 /**
  * Generate Admission Letter PDF
@@ -77,7 +77,7 @@ async function generateAdmissionLetterPdf(student, stream) {
   if (config.admission.letter.includeWelcomeMessage) {
     doc.text(
       config.admission.letter.welcomeMessage ||
-        `Congratulations! We are pleased to inform you that you have been provisionally admitted to the ${student.program?.name} program at ${config.university.name} for the Batch of ${student.batch_year}.`,
+      `Congratulations! We are pleased to inform you that you have been provisionally admitted to the ${student.program?.name} program at ${config.university.name} for the Batch of ${student.batch_year}.`,
       { align: "justify" },
     );
   } else {
@@ -144,4 +144,4 @@ async function generateAdmissionLetterPdf(student, stream) {
   doc.end();
 }
 
-module.exports = generateAdmissionLetterPdf;
+export default generateAdmissionLetterPdf;

@@ -1,4 +1,4 @@
-const logger = require("../../utils/logger");
+import logger from "../../utils/logger.js";
 
 /**
  * Grade Entry Controller
@@ -146,11 +146,18 @@ class GradeEntryController {
 const controller = new GradeEntryController();
 
 // Export bound methods
-module.exports = {
-  getAllGrades: controller.getAllGrades.bind(controller),
-  getGradeById: controller.getGradeById.bind(controller),
-  submitGrade: controller.submitGrade.bind(controller),
-  updateGrade: controller.updateGrade.bind(controller),
-  deleteGrade: controller.deleteGrade.bind(controller),
-  publishGrades: controller.publishGrades.bind(controller),
+export const getAllGrades = controller.getAllGrades.bind(controller);
+export const getGradeById = controller.getGradeById.bind(controller);
+export const submitGrade = controller.submitGrade.bind(controller);
+export const updateGrade = controller.updateGrade.bind(controller);
+export const deleteGrade = controller.deleteGrade.bind(controller);
+export const publishGrades = controller.publishGrades.bind(controller);
+
+export default {
+  getAllGrades,
+  getGradeById,
+  submitGrade,
+  updateGrade,
+  deleteGrade,
+  publishGrades,
 };

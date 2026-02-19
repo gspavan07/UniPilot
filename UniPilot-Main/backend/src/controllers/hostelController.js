@@ -1,7 +1,7 @@
-const logger = require("../utils/logger");
-const { sequelize } = require("../config/database");
-const { Op } = require("sequelize");
-const {
+import logger from "../utils/logger.js";
+import { sequelize } from "../config/database.js";
+import { Op } from "sequelize";
+import {
   HostelBuilding,
   HostelFloor,
   HostelRoom,
@@ -20,7 +20,7 @@ const {
   Department,
   Program,
   StudentFeeCharge,
-} = require("../models");
+} from "../models/index.js";
 
 /**
  * Hostel Management Controller
@@ -34,7 +34,7 @@ const {
 // @desc    Get all hostel buildings
 // @route   GET /api/hostel/buildings
 // @access  hostel:read
-exports.getBuildings = async (req, res) => {
+export const getBuildings = async (req, res) => {
   try {
     const buildings = await HostelBuilding.findAll({
       include: [
@@ -55,7 +55,7 @@ exports.getBuildings = async (req, res) => {
 // @desc    Create new building
 // @route   POST /api/hostel/buildings
 // @access  hostel:write
-exports.createBuilding = async (req, res) => {
+export const createBuilding = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { total_floors, ...buildingData } = req.body;
@@ -93,7 +93,7 @@ exports.createBuilding = async (req, res) => {
 // @desc    Update building
 // @route   PUT /api/hostel/buildings/:id
 // @access  hostel:write
-exports.updateBuilding = async (req, res) => {
+export const updateBuilding = async (req, res) => {
   try {
     const { id } = req.params;
     const building = await HostelBuilding.findByPk(id);
@@ -111,7 +111,7 @@ exports.updateBuilding = async (req, res) => {
 // @desc    Delete building
 // @route   DELETE /api/hostel/buildings/:id
 // @access  hostel:delete
-exports.deleteBuilding = async (req, res) => {
+export const deleteBuilding = async (req, res) => {
   try {
     const { id } = req.params;
     const building = await HostelBuilding.findByPk(id);
@@ -133,7 +133,7 @@ exports.deleteBuilding = async (req, res) => {
 // @desc    Get all rooms with filters
 // @route   GET /api/hostel/rooms
 // @access  hostel:read
-exports.getRooms = async (req, res) => {
+export const getRooms = async (req, res) => {
   try {
     const { building_id, floor_id, status, room_type } = req.query;
     const where = {};
@@ -171,7 +171,7 @@ exports.getRooms = async (req, res) => {
 // @desc    Get available rooms
 // @route   GET /api/hostel/rooms/available
 // @access  hostel:read
-exports.getAvailableRooms = async (req, res) => {
+export const getAvailableRooms = async (req, res) => {
   try {
     const { building_id, room_type } = req.query;
     const where = {
@@ -211,7 +211,7 @@ exports.getAvailableRooms = async (req, res) => {
 // @desc    Create new room
 // @route   POST /api/hostel/rooms
 // @access  hostel:write
-exports.createRoom = async (req, res) => {
+export const createRoom = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { capacity, ...roomData } = req.body;
@@ -250,7 +250,7 @@ exports.createRoom = async (req, res) => {
 // @desc    Update room
 // @route   PUT /api/hostel/rooms/:id
 // @access  hostel:write
-exports.updateRoom = async (req, res) => {
+export const updateRoom = async (req, res) => {
   try {
     const { id } = req.params;
     const room = await HostelRoom.findByPk(id);
@@ -268,7 +268,7 @@ exports.updateRoom = async (req, res) => {
 // @desc    Update room status
 // @route   PUT /api/hostel/rooms/:id/status
 // @access  hostel:write
-exports.updateRoomStatus = async (req, res) => {
+export const updateRoomStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -289,7 +289,7 @@ exports.updateRoomStatus = async (req, res) => {
 // @desc    Delete room
 // @route   DELETE /api/hostel/rooms/:id
 // @access  hostel:delete
-exports.deleteRoom = async (req, res) => {
+export const deleteRoom = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -330,7 +330,7 @@ exports.deleteRoom = async (req, res) => {
 // @desc    Get all allocations
 // @route   GET /api/hostel/allocations
 // @access  hostel:read
-exports.getAllocations = async (req, res) => {
+export const getAllocations = async (req, res) => {
   try {
     const { status, building_id } = req.query;
     const where = {};
@@ -393,7 +393,7 @@ exports.getAllocations = async (req, res) => {
 // @desc    Allocate student to room
 // @route   POST /api/hostel/allocations
 // @access  hostel:write
-exports.allocateStudent = async (req, res) => {
+export const allocateStudent = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const {
@@ -623,7 +623,7 @@ exports.allocateStudent = async (req, res) => {
 // @desc    Check out student
 // @route   POST /api/hostel/allocations/:id/checkout
 // @access  hostel:write
-exports.checkoutStudent = async (req, res) => {
+export const checkoutStudent = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -762,7 +762,7 @@ exports.checkoutStudent = async (req, res) => {
 // @desc    Get student stay history
 // @route   GET /api/hostel/allocations/:id/history
 // @access  hostel:read
-exports.getStayHistory = async (req, res) => {
+export const getStayHistory = async (req, res) => {
   try {
     const { id } = req.params; // allocation_id
     const history = await HostelStayLog.findAll({
@@ -783,7 +783,7 @@ exports.getStayHistory = async (req, res) => {
 // @desc    Update student allocation
 // @route   PUT /api/hostel/allocations/:id
 // @access  hostel:write
-exports.updateAllocation = async (req, res) => {
+export const updateAllocation = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -900,7 +900,7 @@ exports.updateAllocation = async (req, res) => {
 // @desc    Delete student allocation
 // @route   DELETE /api/hostel/allocations/:id
 // @access  hostel:delete
-exports.deleteAllocation = async (req, res) => {
+export const deleteAllocation = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -965,7 +965,7 @@ exports.deleteAllocation = async (req, res) => {
 // @desc    Get fee structures
 // @route   GET /api/hostel/fee-structures
 // @access  hostel:read
-exports.getFeeStructures = async (req, res) => {
+export const getFeeStructures = async (req, res) => {
   try {
     const { is_active } = req.query;
     const where = {};
@@ -986,7 +986,7 @@ exports.getFeeStructures = async (req, res) => {
 // @desc    Create fee structure
 // @route   POST /api/hostel/fee-structures
 // @access  hostel:write
-exports.createFeeStructure = async (req, res) => {
+export const createFeeStructure = async (req, res) => {
   try {
     const feeStructure = await HostelFeeStructure.create(req.body);
     res.status(201).json({ success: true, data: feeStructure });
@@ -999,7 +999,7 @@ exports.createFeeStructure = async (req, res) => {
 // @desc    Update fee structure
 // @route   PUT /api/hostel/fee-structures/:id
 // @access  hostel:write
-exports.updateFeeStructure = async (req, res) => {
+export const updateFeeStructure = async (req, res) => {
   try {
     const { id } = req.params;
     const feeStructure = await HostelFeeStructure.findByPk(id);
@@ -1017,7 +1017,7 @@ exports.updateFeeStructure = async (req, res) => {
 // @desc    Delete fee structure
 // @route   DELETE /api/hostel/fee-structures/:id
 // @access  hostel:write
-exports.deleteFeeStructure = async (req, res) => {
+export const deleteFeeStructure = async (req, res) => {
   try {
     const { id } = req.params;
     const feeStructure = await HostelFeeStructure.findByPk(id);
@@ -1045,7 +1045,7 @@ exports.deleteFeeStructure = async (req, res) => {
 // @desc    Get mess fee structures
 // @route   GET /api/hostel/mess-fee-structures
 // @access  hostel:read
-exports.getMessFeeStructures = async (req, res) => {
+export const getMessFeeStructures = async (req, res) => {
   try {
     const { is_active } = req.query;
     const where = {};
@@ -1066,7 +1066,7 @@ exports.getMessFeeStructures = async (req, res) => {
 // @desc    Create mess fee structure
 // @route   POST /api/hostel/mess-fee-structures
 // @access  hostel:write
-exports.createMessFeeStructure = async (req, res) => {
+export const createMessFeeStructure = async (req, res) => {
   try {
     const messFeeStructure = await HostelMessFeeStructure.create(req.body);
     res.status(201).json({ success: true, data: messFeeStructure });
@@ -1079,7 +1079,7 @@ exports.createMessFeeStructure = async (req, res) => {
 // @desc    Update mess fee structure
 // @route   PUT /api/hostel/mess-fee-structures/:id
 // @access  hostel:write
-exports.updateMessFeeStructure = async (req, res) => {
+export const updateMessFeeStructure = async (req, res) => {
   try {
     const { id } = req.params;
     const messFeeStructure = await HostelMessFeeStructure.findByPk(id);
@@ -1097,7 +1097,7 @@ exports.updateMessFeeStructure = async (req, res) => {
 // @desc    Delete mess fee structure
 // @route   DELETE /api/hostel/mess-fee-structures/:id
 // @access  hostel:write
-exports.deleteMessFeeStructure = async (req, res) => {
+export const deleteMessFeeStructure = async (req, res) => {
   try {
     const { id } = req.params;
     const messFeeStructure = await HostelMessFeeStructure.findByPk(id);
@@ -1129,7 +1129,7 @@ exports.deleteMessFeeStructure = async (req, res) => {
 // @desc    Get complaints
 // @route   GET /api/hostel/complaints
 // @access  hostel:read
-exports.getComplaints = async (req, res) => {
+export const getComplaints = async (req, res) => {
   try {
     const { status, priority, month, year } = req.query;
     const where = {};
@@ -1193,7 +1193,7 @@ exports.getComplaints = async (req, res) => {
 // @desc    Create complaint
 // @route   POST /api/hostel/complaints
 // @access  hostel:write
-exports.createComplaint = async (req, res) => {
+export const createComplaint = async (req, res) => {
   try {
     // 1. Get student ID from authenticated user
     const student_id = req.user.userId;
@@ -1223,7 +1223,7 @@ exports.createComplaint = async (req, res) => {
 // @desc    Update complaint
 // @route   PUT /api/hostel/complaints/:id
 // @access  hostel:write
-exports.updateComplaint = async (req, res) => {
+export const updateComplaint = async (req, res) => {
   try {
     const { id } = req.params;
     const complaint = await HostelComplaint.findByPk(id);
@@ -1252,7 +1252,7 @@ exports.updateComplaint = async (req, res) => {
 // @desc    Get attendance
 // @route   GET /api/hostel/attendance
 // @access  hostel:read
-exports.getAttendance = async (req, res) => {
+export const getAttendance = async (req, res) => {
   try {
     const { date, student_id } = req.query;
     const where = {};
@@ -1281,7 +1281,7 @@ exports.getAttendance = async (req, res) => {
 // @desc    Mark attendance
 // @route   POST /api/hostel/attendance
 // @access  hostel:write
-exports.markAttendance = async (req, res) => {
+export const markAttendance = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { attendance_records } = req.body;
@@ -1346,7 +1346,7 @@ exports.markAttendance = async (req, res) => {
 // @desc    Get gate passes
 // @route   GET /api/hostel/gate-passes
 // @access  hostel:read
-exports.getGatePasses = async (req, res) => {
+export const getGatePasses = async (req, res) => {
   try {
     const { status, student_id } = req.query;
     const where = {};
@@ -1375,7 +1375,7 @@ exports.getGatePasses = async (req, res) => {
 // @desc    Create gate pass
 // @route   POST /api/hostel/gate-passes
 // @access  hostel:write
-exports.createGatePass = async (req, res) => {
+export const createGatePass = async (req, res) => {
   try {
     const gatePass = await HostelGatePass.create(req.body);
     res.status(201).json({ success: true, data: gatePass });
@@ -1388,7 +1388,7 @@ exports.createGatePass = async (req, res) => {
 // @desc    Mark gate pass return
 // @route   PUT /api/hostel/gate-passes/:id/return
 // @access  hostel:write
-exports.markGatePassReturn = async (req, res) => {
+export const markGatePassReturn = async (req, res) => {
   try {
     const { id } = req.params;
     const gatePass = await HostelGatePass.findByPk(id);
@@ -1421,7 +1421,7 @@ exports.markGatePassReturn = async (req, res) => {
 // @desc    Get occupancy report
 // @route   GET /api/hostel/reports/occupancy
 // @access  hostel:read
-exports.getOccupancyReport = async (req, res) => {
+export const getOccupancyReport = async (req, res) => {
   try {
     const buildings = await HostelBuilding.findAll({
       include: [
@@ -1473,7 +1473,7 @@ exports.getOccupancyReport = async (req, res) => {
 // @desc    Get dashboard stats
 // @route   GET /api/hostel/dashboard/stats
 // @access  hostel:read
-exports.getDashboardStats = async (req, res) => {
+export const getDashboardStats = async (req, res) => {
   try {
     const [
       totalBuildings,
@@ -1514,4 +1514,37 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-module.exports = exports;
+export default {
+  getBuildings,
+  createBuilding,
+  updateBuilding,
+  deleteBuilding,
+  getRooms,
+  getAvailableRooms,
+  createRoom,
+  updateRoom,
+  updateRoomStatus,
+  deleteRoom,
+  getAllocations,
+  allocateStudent,
+  checkoutStudent,
+  getStayHistory,
+  updateAllocation,
+  deleteAllocation,
+  getFeeStructures,
+  createFeeStructure,
+  updateFeeStructure,
+  deleteFeeStructure,
+  getMessFeeStructures,
+  createMessFeeStructure,
+  updateMessFeeStructure,
+  deleteMessFeeStructure,
+  getComplaints,
+  createComplaint,
+  updateComplaint,
+  getAttendance,
+  markAttendance,
+  markGatePassReturn,
+  getOccupancyReport,
+  getDashboardStats,
+};

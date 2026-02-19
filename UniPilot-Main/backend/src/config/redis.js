@@ -1,5 +1,5 @@
-const redis = require('redis');
-const logger = require('../utils/logger');
+import redis from 'redis';
+import logger from '../utils/logger.js';
 
 // Create Redis client
 const client = redis.createClient({
@@ -30,4 +30,4 @@ client.connect().catch((err) => {
   logger.error('Failed to connect to Redis:', err);
 });
 
-module.exports = client;
+export default client;

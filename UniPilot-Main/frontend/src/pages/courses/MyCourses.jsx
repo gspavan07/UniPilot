@@ -127,10 +127,9 @@ const MyCourses = () => {
                 onClick={() => setSelectedSemester(sem)}
                 className={`
                   px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300
-                  ${
-                    selectedSemester === sem
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                      : "bg-gray-50 text-gray-400 border border-gray-100 hover:bg-white hover:text-black hover:shadow-md"
+                  ${selectedSemester === sem
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                    : "bg-gray-50 text-gray-400 border border-gray-100 hover:bg-white hover:text-black hover:shadow-md"
                   }
                 `}
               >
@@ -301,7 +300,7 @@ const MyCourses = () => {
                   </div>
 
                   {selectedCourse.syllabus_data &&
-                  selectedCourse.syllabus_data.length > 0 ? (
+                    selectedCourse.syllabus_data.length > 0 ? (
                     <div className="space-y-4">
                       {selectedCourse.syllabus_data.map((unit, idx) => (
                         <div
@@ -450,15 +449,14 @@ const MyCourses = () => {
                                         <div
                                           className={`
                                           w-8 h-8 mx-auto flex items-center justify-center rounded-lg text-xs font-black transition-all
-                                          ${
-                                            weightage === 3
+                                          ${weightage === 3
                                               ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
                                               : weightage === 2
                                                 ? "bg-blue-100 text-blue-600"
                                                 : weightage === 1
                                                   ? "bg-gray-100 text-gray-400"
                                                   : "text-gray-200"
-                                          }
+                                            }
                                         `}
                                         >
                                           {weightage > 0 ? weightage : "·"}

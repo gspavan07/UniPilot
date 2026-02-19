@@ -1,4 +1,4 @@
-const {
+import {
   HostelBuilding,
   HostelRoom,
   HostelAllocation,
@@ -6,10 +6,10 @@ const {
   HostelGatePass,
   HostelAttendance,
   User,
-} = require("../models");
-const xlsx = require("xlsx");
-const { Op } = require("sequelize");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import xlsx from "xlsx";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
 
 /**
  * Generate Excel Buffer from Data
@@ -26,7 +26,7 @@ const generateExcelBuffer = (data, sheetName) => {
 // @desc    Download Occupancy Report
 // @route   GET /api/hostel/reports/download/occupancy
 // @access  hostel:read
-exports.downloadOccupancyReport = async (req, res) => {
+export const downloadOccupancyReport = async (req, res) => {
   try {
     const allocations = await HostelAllocation.findAll({
       where: { status: "active" },
@@ -80,7 +80,7 @@ exports.downloadOccupancyReport = async (req, res) => {
 // @desc    Download Attendance Report
 // @route   GET /api/hostel/reports/download/attendance
 // @access  hostel:read
-exports.downloadAttendanceReport = async (req, res) => {
+export const downloadAttendanceReport = async (req, res) => {
   try {
     const { month, year } = req.query;
     const where = {};
@@ -132,7 +132,7 @@ exports.downloadAttendanceReport = async (req, res) => {
 // @desc    Download Complaint Report
 // @route   GET /api/hostel/reports/download/complaints
 // @access  hostel:read
-exports.downloadComplaintReport = async (req, res) => {
+export const downloadComplaintReport = async (req, res) => {
   try {
     const { status, month, year } = req.query;
     const where = {};
@@ -199,7 +199,7 @@ exports.downloadComplaintReport = async (req, res) => {
 // @desc    Download Gate Pass Report
 // @route   GET /api/hostel/reports/download/gate-passes
 // @access  hostel:read
-exports.downloadGatePassReport = async (req, res) => {
+export const downloadGatePassReport = async (req, res) => {
   try {
     const { month, year } = req.query;
     const where = {};
@@ -250,4 +250,11 @@ exports.downloadGatePassReport = async (req, res) => {
     logger.error("Error generating gate pass report:", error);
     res.status(500).json({ error: "Failed to generate report" });
   }
+};
+
+export default {
+  downloadOccupancyReport,
+  downloadAttendanceReport,
+  downloadComplaintReport,
+  downloadGatePassReport,
 };

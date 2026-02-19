@@ -1,4 +1,4 @@
-const {
+import {
   StudentPlacementProfile,
   PlacementDrive,
   DriveEligibility,
@@ -7,13 +7,13 @@ const {
   PlacementPolicy,
   Graduation,
   SemesterResult,
-} = require("../models");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Check if a student is eligible for a specific drive
  */
-exports.isStudentEligible = async (studentId, driveId) => {
+export const isStudentEligible = async (studentId, driveId) => {
   try {
     const drive = await PlacementDrive.findByPk(driveId, {
       include: [{ model: DriveEligibility, as: "eligibility" }],
@@ -115,4 +115,8 @@ exports.isStudentEligible = async (studentId, driveId) => {
     logger.error("Eligibility check error:", error);
     throw error;
   }
+};
+
+export default {
+  isStudentEligible,
 };

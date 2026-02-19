@@ -1,6 +1,6 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
     getAllCourseOutcomes,
     getCourseOutcomeById,
     createCourseOutcome,
@@ -8,8 +8,8 @@ const {
     updateCourseOutcome,
     deleteCourseOutcome,
     deleteCourseOutcomesByCourse,
-} = require("../controllers/courseOutcomeController");
-const { authenticate } = require("../middleware/auth");
+} from "../controllers/courseOutcomeController.js";
+import { authenticate } from "../middleware/auth.js";
 
 // Apply authentication to all routes
 router.use(authenticate);
@@ -33,4 +33,4 @@ router
     .put(updateCourseOutcome)
     .delete(deleteCourseOutcome);
 
-module.exports = router;
+export default router;

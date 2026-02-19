@@ -45,8 +45,8 @@ export const findTimetable = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          error.response?.data?.error ||
-          "Failed to find timetable",
+        error.response?.data?.error ||
+        "Failed to find timetable",
       );
     }
   },

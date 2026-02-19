@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     // Step 1: Add temporary column for array of program IDs
     await queryInterface.addColumn("exam_timetables", "program_ids_temp", {

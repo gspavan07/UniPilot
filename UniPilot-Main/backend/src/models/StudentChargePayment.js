@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const StudentChargePayment = sequelize.define(
     "StudentChargePayment",
@@ -44,4 +44,4 @@ const StudentChargePayment = sequelize.define(
     },
 );
 
-module.exports = StudentChargePayment;
+export default StudentChargePayment;

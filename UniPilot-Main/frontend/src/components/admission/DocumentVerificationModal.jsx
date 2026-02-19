@@ -162,10 +162,10 @@ const DocumentVerificationModal = ({
 
                       <div
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center ${doc.status === "approved"
-                            ? "bg-success-100 text-success-700"
-                            : doc.status === "rejected"
-                              ? "bg-error-100 text-error-700"
-                              : "bg-warning-100 text-warning-700"
+                          ? "bg-success-100 text-success-700"
+                          : doc.status === "rejected"
+                            ? "bg-error-100 text-error-700"
+                            : "bg-warning-100 text-warning-700"
                           }`}
                       >
                         {doc.status === "approved" ? (

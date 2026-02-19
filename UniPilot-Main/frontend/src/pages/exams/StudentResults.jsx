@@ -229,7 +229,7 @@ const StudentResults = () => {
                     {Math.round(
                       (myResults?.totalGainedCredits /
                         myResults?.totalPossibleCredits) *
-                        100 || 0,
+                      100 || 0,
                     )}
                     %
                   </span>
@@ -265,11 +265,10 @@ const StudentResults = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    activeTab === tab.id
+                  className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
                       ? "bg-blue-600 text-white shadow-lg shadow-black/10"
                       : "text-gray-400 hover:text-blue-600 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <tab.icon className="w-3.5 h-3.5" />
                   {tab.label}
@@ -287,11 +286,10 @@ const StudentResults = () => {
                   <button
                     key={inst}
                     onClick={() => setSelectedMidInstance(inst)}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                      selectedMidInstance === inst
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedMidInstance === inst
                         ? "bg-blue-50 text-blue-600"
                         : "text-gray-400 hover:text-black"
-                    }`}
+                      }`}
                   >
                     Mid {inst}
                   </button>
@@ -348,9 +346,9 @@ const StudentResults = () => {
                     const totalCredits = res.schedule?.course?.credits || 3;
                     const earnedCredits =
                       res.grade &&
-                      !["F", "Ab", "Absent", "MP", "NA"].includes(
-                        res.grade.toUpperCase(),
-                      )
+                        !["F", "Ab", "Absent", "MP", "NA"].includes(
+                          res.grade.toUpperCase(),
+                        )
                         ? totalCredits
                         : 0;
                     const scores = res.component_scores || {};

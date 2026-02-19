@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const sectionInchargeController = require("../controllers/sectionInchargeController");
-const { authenticate, authorize } = require("../middleware/auth");
+import sectionInchargeController from "../controllers/sectionInchargeController.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 router.use(authenticate);
 
@@ -20,4 +20,4 @@ router
     sectionInchargeController.removeSectionIncharge,
   );
 
-module.exports = router;
+export default router;

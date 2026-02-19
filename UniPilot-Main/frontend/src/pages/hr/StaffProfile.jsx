@@ -1473,11 +1473,10 @@ const StaffProfile = ({ isSelf }) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-sm font-bold capitalize transition-all whitespace-nowrap relative ${
-                  activeTab === tab
+                className={`pb-4 text-sm font-bold capitalize transition-all whitespace-nowrap relative ${activeTab === tab
                     ? "text-blue-600"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 {tab.replace("-", " ")}
                 {activeTab === tab && (

@@ -1,10 +1,10 @@
-const { ProgramOutcome, Program } = require("../models");
-const logger = require("../utils/logger");
+import { ProgramOutcome, Program } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Get all program outcomes (optionally filtered by program_id)
 // @route   GET /api/program-outcomes
 // @access  Private
-exports.getAllProgramOutcomes = async (req, res) => {
+export const getAllProgramOutcomes = async (req, res) => {
     try {
         const { program_id } = req.query;
         const where = {};
@@ -42,7 +42,7 @@ exports.getAllProgramOutcomes = async (req, res) => {
 // @desc    Get single program outcome by ID
 // @route   GET /api/program-outcomes/:id
 // @access  Private
-exports.getProgramOutcomeById = async (req, res) => {
+export const getProgramOutcomeById = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -79,7 +79,7 @@ exports.getProgramOutcomeById = async (req, res) => {
 // @desc    Create a new program outcome
 // @route   POST /api/program-outcomes
 // @access  Private/Admin
-exports.createProgramOutcome = async (req, res) => {
+export const createProgramOutcome = async (req, res) => {
     try {
         const { program_id, po_code, description } = req.body;
 
@@ -134,7 +134,7 @@ exports.createProgramOutcome = async (req, res) => {
 // @desc    Bulk create program outcomes
 // @route   POST /api/program-outcomes/bulk
 // @access  Private/Admin
-exports.bulkCreateProgramOutcomes = async (req, res) => {
+export const bulkCreateProgramOutcomes = async (req, res) => {
     try {
         const { program_id, outcomes } = req.body;
 
@@ -193,7 +193,7 @@ exports.bulkCreateProgramOutcomes = async (req, res) => {
 // @desc    Update a program outcome
 // @route   PUT /api/program-outcomes/:id
 // @access  Private/Admin
-exports.updateProgramOutcome = async (req, res) => {
+export const updateProgramOutcome = async (req, res) => {
     try {
         const { id } = req.params;
         const { po_code, description } = req.body;
@@ -246,7 +246,7 @@ exports.updateProgramOutcome = async (req, res) => {
 // @desc    Delete a program outcome
 // @route   DELETE /api/program-outcomes/:id
 // @access  Private/Admin
-exports.deleteProgramOutcome = async (req, res) => {
+export const deleteProgramOutcome = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -277,7 +277,7 @@ exports.deleteProgramOutcome = async (req, res) => {
 // @desc    Delete all program outcomes for a program
 // @route   DELETE /api/program-outcomes/program/:program_id
 // @access  Private/Admin
-exports.deleteProgramOutcomesByProgram = async (req, res) => {
+export const deleteProgramOutcomesByProgram = async (req, res) => {
     try {
         const { program_id } = req.params;
 

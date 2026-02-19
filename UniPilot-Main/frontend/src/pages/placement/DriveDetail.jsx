@@ -94,10 +94,10 @@ const DriveDetail = () => {
                 </h1>
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${drive.status === "scheduled"
-                      ? "bg-blue-100 text-blue-700"
-                      : drive.status === "ongoing"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-green-100 text-green-700"
+                    ? "bg-blue-100 text-blue-700"
+                    : drive.status === "ongoing"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-green-100 text-green-700"
                     }`}
                 >
                   {drive.status}
@@ -147,8 +147,8 @@ const DriveDetail = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`px-8 py-4 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
-                ? "border-indigo-600 text-indigo-600 active-tab"
-                : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              ? "border-indigo-600 text-indigo-600 active-tab"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
           >
             {tab.name}

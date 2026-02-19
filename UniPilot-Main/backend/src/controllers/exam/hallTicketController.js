@@ -1,4 +1,4 @@
-const logger = require("../../utils/logger");
+import logger from "../../utils/logger.js";
 
 /**
  * Hall Ticket Controller
@@ -124,10 +124,16 @@ class HallTicketController {
 const controller = new HallTicketController();
 
 // Export bound methods
-module.exports = {
-  getAllHallTickets: controller.getAllHallTickets.bind(controller),
-  getHallTicketById: controller.getHallTicketById.bind(controller),
-  generateHallTickets: controller.generateHallTickets.bind(controller),
-  updateHallTicket: controller.updateHallTicket.bind(controller),
-  deleteHallTicket: controller.deleteHallTicket.bind(controller),
+export const getAllHallTickets = controller.getAllHallTickets.bind(controller);
+export const getHallTicketById = controller.getHallTicketById.bind(controller);
+export const generateHallTickets = controller.generateHallTickets.bind(controller);
+export const updateHallTicket = controller.updateHallTicket.bind(controller);
+export const deleteHallTicket = controller.deleteHallTicket.bind(controller);
+
+export default {
+  getAllHallTickets,
+  getHallTicketById,
+  generateHallTickets,
+  updateHallTicket,
+  deleteHallTicket,
 };

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const ProctorFeedback = sequelize.define(
   "ProctorFeedback",
@@ -50,4 +50,4 @@ const ProctorFeedback = sequelize.define(
   }
 );
 
-module.exports = ProctorFeedback;
+export default ProctorFeedback;

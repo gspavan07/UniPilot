@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const PromotionCriteria = sequelize.define(
   "PromotionCriteria",
@@ -53,4 +53,4 @@ const PromotionCriteria = sequelize.define(
   }
 );
 
-module.exports = PromotionCriteria;
+export default PromotionCriteria;

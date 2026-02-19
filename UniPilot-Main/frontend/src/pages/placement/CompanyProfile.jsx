@@ -102,13 +102,12 @@ const CompanyProfile = () => {
                   {company.name}
                 </h1>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    company.company_tier === "super_dream"
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${company.company_tier === "super_dream"
                       ? "bg-purple-100 text-purple-700"
                       : company.company_tier === "dream"
                         ? "bg-indigo-100 text-indigo-700"
                         : "bg-blue-100 text-blue-700"
-                  }`}
+                    }`}
                 >
                   {company.company_tier} Tier
                 </span>
@@ -233,11 +232,10 @@ const CompanyProfile = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === tab.id
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none"
                     : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-750"
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 <span className="hidden md:inline">{tab.label}</span>
@@ -359,13 +357,12 @@ const CompanyProfile = () => {
                             </td>
                             <td className="px-6 py-4">
                               <span
-                                className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${
-                                  drive.status === "scheduled"
+                                className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${drive.status === "scheduled"
                                     ? "bg-blue-100 text-blue-600"
                                     : drive.status === "ongoing"
                                       ? "bg-amber-100 text-amber-600"
                                       : "bg-green-100 text-green-600"
-                                }`}
+                                  }`}
                               >
                                 {drive.status}
                               </span>

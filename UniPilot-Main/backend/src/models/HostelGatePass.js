@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const HostelGatePass = sequelize.define(
   "HostelGatePass",
@@ -89,4 +89,4 @@ const HostelGatePass = sequelize.define(
   },
 );
 
-module.exports = HostelGatePass;
+export default HostelGatePass;

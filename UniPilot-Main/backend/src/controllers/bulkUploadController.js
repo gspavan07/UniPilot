@@ -1,12 +1,12 @@
-const { User, sequelize } = require("../models");
-const path = require("path");
-const fs = require("fs");
-const logger = require("../utils/logger");
+import { User, sequelize } from "../models/index.js";
+import path from "path";
+import fs from "fs";
+import logger from "../utils/logger.js";
 
 // @desc    Bulk Upload Student Photos
 // @route   POST /api/admission/photos/bulk
 // @access  Private (Admissions)
-exports.uploadStudentPhotos = async (req, res) => {
+export const uploadStudentPhotos = async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res
@@ -88,4 +88,8 @@ exports.uploadStudentPhotos = async (req, res) => {
     logger.error("Bulk Photo Upload Error:", error);
     res.status(500).json({ success: false, error: "Server Error" });
   }
+};
+
+export default {
+  uploadStudentPhotos,
 };

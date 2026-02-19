@@ -11,9 +11,9 @@ import {
   getCurrentSemester,
   getProgramsByDegree,
   getAllDegrees,
-} from "../../services/examCycleService";
+} from "../../services/examCycleService.js";
 
-import { DEGREE_LABELS } from "../../utils/degreeLabels";
+import { DEGREE_LABELS } from "../../utils/degreeLabels.js";
 
 const MONTHS = [
   "Jan",

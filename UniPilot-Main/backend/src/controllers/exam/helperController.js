@@ -1,6 +1,6 @@
-const { User, Regulation, Program } = require("../../models");
-const { sequelize } = require("../../config/database");
-const logger = require("../../utils/logger");
+import { User, Regulation, Program } from "../../models/index.js";
+import { sequelize } from "../../config/database.js";
+import logger from "../../utils/logger.js";
 
 /**
  * Get all available regulations
@@ -173,7 +173,7 @@ async function getProgramsByDegree(req, res) {
   }
 }
 
-module.exports = {
+export default {
   getAllRegulations,
   getAllBatches,
   getCourseTypes,

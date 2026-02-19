@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../../config/database.js";
 
 /**
  * ExamTimetable Model
@@ -90,4 +90,4 @@ const ExamTimetable = sequelize.define(
   },
 );
 
-module.exports = ExamTimetable;
+export default ExamTimetable;

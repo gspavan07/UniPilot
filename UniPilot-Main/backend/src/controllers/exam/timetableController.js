@@ -1,7 +1,7 @@
-const { ExamCycle, ExamTimetable } = require("../../models/exam/associations");
-const { sequelize } = require("../../config/database");
-const logger = require("../../utils/logger");
-const { Op } = require("sequelize");
+import { ExamCycle, ExamTimetable } from "../../models/exam/associations.js";
+import { sequelize } from "../../config/database.js";
+import logger from "../../utils/logger.js";
+import { Op } from "sequelize";
 
 /**
  * Get all timetables for a cycle with optional program filter
@@ -570,7 +570,7 @@ async function updateCycleStatus(cycleId) {
   }
 }
 
-module.exports = {
+export default {
   getTimetablesByCycle,
   addTimetableEntry,
   updateTimetableEntry,

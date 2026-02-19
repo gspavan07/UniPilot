@@ -1,5 +1,5 @@
-const { SalaryGrade, sequelize } = require("../src/models");
-const leaveService = require("../src/services/leaveService");
+import { SalaryGrade, sequelize } from "../src/models/index.js";
+import leaveService from "../src/services/leaveService.js";
 
 async function run() {
   try {

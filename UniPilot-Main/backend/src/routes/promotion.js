@@ -1,11 +1,11 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   upsertCriteria,
   evaluatePromotion,
   processBulkPromotion,
   applyForGraduation,
-} = require("../controllers/promotionController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/promotionController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -31,4 +31,4 @@ router.post(
 // Student routes
 router.post("/graduation/apply", applyForGraduation);
 
-module.exports = router;
+export default router;

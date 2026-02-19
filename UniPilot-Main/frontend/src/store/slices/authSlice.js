@@ -34,7 +34,7 @@ export const login = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error ||
-          "Login failed. Please check your credentials."
+        "Login failed. Please check your credentials."
       );
     }
   }

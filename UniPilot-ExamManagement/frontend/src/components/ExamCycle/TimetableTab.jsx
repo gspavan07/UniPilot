@@ -6,7 +6,7 @@ import {
   updateTimetableEntry,
   deleteTimetableEntry,
   deleteAllTimetables,
-} from "../../services/examCycleService";
+} from "../../services/examCycleService.js";
 import {
   Calendar,
   Clock,

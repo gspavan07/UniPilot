@@ -1,10 +1,10 @@
-const { CourseFaculty, Notification, User, Course, Department } = require("../models");
-const logger = require("../utils/logger");
+import { CourseFaculty, Notification, User, Course, Department } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Get assignments for a specific batch and semester
 // @route   GET /api/academic/faculty-assignments
 // @access  HOD, Admin
-exports.getAssignments = async (req, res) => {
+export const getAssignments = async (req, res) => {
     try {
         const { batch_year, semester, program_id, section } = req.query;
 
@@ -54,7 +54,7 @@ exports.getAssignments = async (req, res) => {
 // @desc    Assign faculty to a course
 // @route   POST /api/academic/faculty-assignments
 // @access  HOD, Admin
-exports.assignFaculty = async (req, res) => {
+export const assignFaculty = async (req, res) => {
     try {
         const {
             course_id,
@@ -143,7 +143,7 @@ exports.assignFaculty = async (req, res) => {
 // @desc    Remove faculty assignment
 // @route   DELETE /api/academic/faculty-assignments/:id
 // @access  HOD, Admin
-exports.removeAssignment = async (req, res) => {
+export const removeAssignment = async (req, res) => {
     try {
         const { id } = req.params;
         const assignment = await CourseFaculty.findByPk(id);
@@ -168,4 +168,10 @@ exports.removeAssignment = async (req, res) => {
             error: 'Server Error'
         });
     }
+};
+
+export default {
+    getAssignments,
+    assignFaculty,
+    removeAssignment,
 };

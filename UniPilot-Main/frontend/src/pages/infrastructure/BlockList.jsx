@@ -100,7 +100,7 @@ const BlockList = () => {
           {[
             {
               label: "Total Blocks",
-              value: blocks.length,
+              value: blocks.filter((b) => b.type === "academic").length + blocks.filter((b) => b.type === "hostel").length + hostelCount,
               icon: Building,
               color: "from-blue-500 to-indigo-600",
             },

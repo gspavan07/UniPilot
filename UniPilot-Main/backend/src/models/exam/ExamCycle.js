@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../../config/database.js";
 
 /**
  * ExamCycle Model
@@ -102,4 +102,4 @@ const ExamCycle = sequelize.define(
   },
 );
 
-module.exports = ExamCycle;
+export default ExamCycle;

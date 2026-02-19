@@ -14,4 +14,4 @@ const nullifyEmptyStrings = (req, res, next) => {
   next();
 };
 
-module.exports = nullifyEmptyStrings;
+export default nullifyEmptyStrings;

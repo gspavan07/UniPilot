@@ -1,4 +1,4 @@
-const crypto = require("crypto");
+import crypto from "crypto";
 
 const ALGORITHM = "aes-256-cbc";
 // Ensure key is 32 bytes (256 bits)
@@ -7,7 +7,7 @@ const SECRET_KEY =
   process.env.ENCRYPTION_KEY || "12345678901234567890123456789012";
 const IV_LENGTH = 16;
 
-exports.encrypt = (text) => {
+export const encrypt = (text) => {
   if (!text) return text;
   try {
     const iv = crypto.randomBytes(IV_LENGTH);
@@ -25,7 +25,7 @@ exports.encrypt = (text) => {
   }
 };
 
-exports.decrypt = (text) => {
+export const decrypt = (text) => {
   if (!text || typeof text !== "string" || !text.includes(":")) return text;
   try {
     const textParts = text.split(":");

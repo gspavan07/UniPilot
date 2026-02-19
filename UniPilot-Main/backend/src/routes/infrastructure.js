@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const { authenticate } = require("../middleware/auth");
-const {
+import { authenticate } from "../middleware/auth.js";
+import {
   getAllBlocks,
   createBlock,
   getBlockDetails,
@@ -12,7 +12,7 @@ const {
   updateRoom,
   deleteRoom,
   getAllRooms,
-} = require("../controllers/infrastructureController");
+} from "../controllers/infrastructureController.js";
 
 // Base path: /api/infrastructure
 
@@ -29,4 +29,4 @@ router.get("/rooms", authenticate, getAllRooms);
 router.put("/rooms/:id", authenticate, updateRoom);
 router.delete("/rooms/:id", authenticate, deleteRoom);
 
-module.exports = router;
+export default router;

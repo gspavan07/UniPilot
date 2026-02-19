@@ -1,11 +1,11 @@
-const {
+import {
     ExamTimetable,
     ExamCycle,
-} = require("../../models/exam/associations");
-const { sequelize } = require("../../config/database");
-const logger = require("../../utils/logger");
-const Notification = require("../../models/Notification");
-const { Op } = require("sequelize");
+} from "../../models/exam/associations.js";
+import { sequelize } from "../../config/database.js";
+import logger from "../../utils/logger.js";
+import Notification from "../../models/Notification.js";
+import { Op } from "sequelize";
 
 /**
  * Get formatted papers for HOD's department
@@ -214,7 +214,7 @@ async function freezePaperFormat(req, res) {
     }
 }
 
-module.exports = {
+export default {
     getDepartmentFormattedPapers,
     updatePaperFormat,
     freezePaperFormat,

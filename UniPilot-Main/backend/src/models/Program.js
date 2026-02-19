@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * Program Model
@@ -96,4 +96,4 @@ const Program = sequelize.define(
   }
 );
 
-module.exports = Program;
+export default Program;

@@ -123,3 +123,5 @@ yarn-error.log
 .github/
 .agent/
 .amazonq/
+Unipilot-Main/frontend/.vite
+Unipilot-ExamManagement/frontend/.vite

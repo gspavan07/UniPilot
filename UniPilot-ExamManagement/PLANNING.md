@@ -964,9 +964,9 @@ await sendNotification(
 **Backend Implementation**:
 
 ```javascript
-const Tesseract = require('tesseract.js');
-const JsBarcode = require('jsbarcode');
-const PDFParser = require('pdf-parse');
+import Tesseract  from 'tesseract.js';
+import JsBarcode  from 'jsbarcode';
+import PDFParser  from 'pdf-parse';
 
 async function uploadScript(file) {
   // Step 1: Extract first page as image

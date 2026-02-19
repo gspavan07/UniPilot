@@ -1,4 +1,4 @@
-import api from "../utils/api";
+import api from "../utils/api.js";
 
 export const authService = {
   async login(email, password) {

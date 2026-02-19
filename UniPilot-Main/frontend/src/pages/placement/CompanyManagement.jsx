@@ -92,13 +92,12 @@ const CompanyManagement = () => {
 
               <div className="flex items-center gap-2 mb-4">
                 <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    company.company_tier === "super_dream"
+                  className={`px-2 py-0.5 rounded-full text-xs font-semibold ${company.company_tier === "super_dream"
                       ? "bg-purple-100 text-purple-700"
                       : company.company_tier === "dream"
                         ? "bg-indigo-100 text-indigo-700"
                         : "bg-blue-100 text-blue-700"
-                  }`}
+                    }`}
                 >
                   {company.company_tier.toUpperCase().replace("_", " ")}
                 </span>

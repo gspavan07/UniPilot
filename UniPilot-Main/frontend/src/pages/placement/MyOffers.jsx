@@ -161,13 +161,13 @@ const MyOffers = () => {
                           <p className="text-xs font-black text-black">
                             {offer.joining_date
                               ? new Date(offer.joining_date).toLocaleDateString(
-                                  undefined,
-                                  {
-                                    month: "long",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )
+                                undefined,
+                                {
+                                  month: "long",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )
                               : "To be decided"}
                           </p>
                         </div>

@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getAllRegulations,
   getRegulationById,
   createRegulation,
   updateRegulation,
   deleteRegulation,
-} = require("../controllers/regulationController");
-const { authenticate, authorize } = require("../middleware/auth");
+} from "../controllers/regulationController.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -36,4 +36,4 @@ router.delete(
 
 
 
-module.exports = router;
+export default router;

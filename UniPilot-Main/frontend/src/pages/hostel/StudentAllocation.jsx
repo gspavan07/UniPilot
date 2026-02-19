@@ -396,11 +396,10 @@ const StudentAllocation = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase w-fit border ${
-                              allocation.status === "active"
+                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase w-fit border ${allocation.status === "active"
                                 ? "bg-green-50 text-green-700 border-green-200"
                                 : "bg-gray-100 text-gray-600 border-gray-200"
-                            }`}
+                              }`}
                           >
                             {allocation.status === "active" ? (
                               <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
@@ -767,13 +766,12 @@ const StudentAllocation = () => {
                                         bed_id: bed.id,
                                       })
                                     }
-                                    className={`p-3 rounded-lg border text-center transition-all ${
-                                      formData.bed_id === bed.id
+                                    className={`p-3 rounded-lg border text-center transition-all ${formData.bed_id === bed.id
                                         ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-200"
                                         : bed.status !== "available"
                                           ? "bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed"
                                           : "bg-white border-gray-200 hover:border-blue-400 text-gray-700"
-                                    }`}
+                                      }`}
                                   >
                                     <Bed className="w-5 h-5 mx-auto mb-1" />
                                     <span className="text-[10px] font-bold block">
@@ -838,11 +836,10 @@ const StudentAllocation = () => {
                   onClick={() =>
                     setCheckoutData({ ...checkoutData, type: "current" })
                   }
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
-                    checkoutData.type === "current"
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${checkoutData.type === "current"
                       ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
                       : "bg-white border-gray-200 hover:border-blue-300"
-                  }`}
+                    }`}
                 >
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                     <Calendar className="w-5 h-5" />
@@ -861,11 +858,10 @@ const StudentAllocation = () => {
                   onClick={() =>
                     setCheckoutData({ ...checkoutData, type: "next" })
                   }
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
-                    checkoutData.type === "next"
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${checkoutData.type === "next"
                       ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
                       : "bg-white border-gray-200 hover:border-blue-300"
-                  }`}
+                    }`}
                 >
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                     <ArrowRight className="w-5 h-5" />

@@ -1,10 +1,10 @@
-const { InstitutionSetting } = require("../models");
-const logger = require("../utils/logger");
+import { InstitutionSetting } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Get matching settings
 // @route   GET /api/settings
 // @access  Private
-exports.getSettings = async (req, res) => {
+export const getSettings = async (req, res) => {
   try {
     const { keys } = req.query; // Expecting comma separated keys
     let where = {};
@@ -30,7 +30,7 @@ exports.getSettings = async (req, res) => {
 // @desc    Update or create settings
 // @route   POST /api/settings
 // @access  Private/Admin
-exports.updateSettings = async (req, res) => {
+export const updateSettings = async (req, res) => {
   try {
     const { settings } = req.body; // Expecting { key1: value1, key2: value2 }
 
@@ -54,4 +54,9 @@ exports.updateSettings = async (req, res) => {
     logger.error("Error updating settings:", error);
     res.status(500).json({ error: "Failed to update settings" });
   }
+};
+
+export default {
+  getSettings,
+  updateSettings,
 };

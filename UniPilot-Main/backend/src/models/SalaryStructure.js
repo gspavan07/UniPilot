@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const SalaryStructure = sequelize.define(
   "SalaryStructure",
@@ -65,4 +65,4 @@ SalaryStructure.associate = (models) => {
   });
 };
 
-module.exports = SalaryStructure;
+export default SalaryStructure;

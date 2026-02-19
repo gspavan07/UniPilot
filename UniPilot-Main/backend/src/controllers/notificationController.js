@@ -1,10 +1,10 @@
-const { Notification } = require("../models");
-const logger = require("../utils/logger");
+import { Notification } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Get my notifications
 // @route   GET /api/notifications
 // @access  Private
-exports.getMyNotifications = async (req, res) => {
+export const getMyNotifications = async (req, res) => {
     try {
         const notifications = await Notification.findAll({
             where: { user_id: req.user.userId },
@@ -28,7 +28,7 @@ exports.getMyNotifications = async (req, res) => {
 // @desc    Mark notification as read
 // @route   PUT /api/notifications/:id/read
 // @access  Private
-exports.markAsRead = async (req, res) => {
+export const markAsRead = async (req, res) => {
     try {
         const { id } = req.params;
         const notification = await Notification.findOne({
@@ -61,7 +61,7 @@ exports.markAsRead = async (req, res) => {
 // @desc    Mark all notifications as read
 // @route   PUT /api/notifications/read-all
 // @access  Private
-exports.markAllAsRead = async (req, res) => {
+export const markAllAsRead = async (req, res) => {
     try {
         await Notification.update(
             { is_read: true },
@@ -83,7 +83,7 @@ exports.markAllAsRead = async (req, res) => {
 // @desc    Delete all notifications
 // @route   DELETE /api/notifications/delete-all
 // @access  Private
-exports.deleteAllNotifications = async (req, res) => {
+export const deleteAllNotifications = async (req, res) => {
     try {
         await Notification.destroy({
             where: { user_id: req.user.userId }
@@ -104,7 +104,7 @@ exports.deleteAllNotifications = async (req, res) => {
 // @desc    Create a new notification (For internal or faculty use)
 // @route   POST /api/notifications
 // @access  Private
-exports.createNotification = async (req, res) => {
+export const createNotification = async (req, res) => {
     try {
         const { user_id, title, message, type, metadata } = req.body;
 

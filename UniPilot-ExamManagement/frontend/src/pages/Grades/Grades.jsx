@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAllRegulations } from "../../services/examCycleService";
+import { getAllRegulations } from "../../services/examCycleService.js";
 import { FileText, ChevronRight, GraduationCap, ArrowRight } from "lucide-react";
 
 export default function Grades() {

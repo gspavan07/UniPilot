@@ -70,16 +70,16 @@ const PromotionManager = () => {
 
   return (
     <div className="space-y-6 animate-fade-in text-gray-900 dark:text-white p-6">
-       <button
-          onClick={() => window.history.back()}
-          className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
-        >
-          <ArrowLeft
-            className="w-5 h-5 group-hover:-translate-x-1 transition-transform"
-            strokeWidth={2.5}
-          />
-          Back
-        </button>
+      <button
+        onClick={() => window.history.back()}
+        className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
+      >
+        <ArrowLeft
+          className="w-5 h-5 group-hover:-translate-x-1 transition-transform"
+          strokeWidth={2.5}
+        />
+        Back
+      </button>
       {/* Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="flex items-center space-x-4">

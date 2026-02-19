@@ -1,15 +1,15 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
   getAllSchedules,
   getScheduleById,
   createSchedule,
   updateSchedule,
   deleteSchedule,
   getSchedulesByRegulation,
-} = require("../../controllers/exam/examScheduleController");
-const { auditMiddleware } = require("../../middleware/exam/auditMiddleware");
-const { authenticate } = require("../../middleware/auth");
+} from "../../controllers/exam/examScheduleController.js";
+import { auditMiddleware } from "../../middleware/exam/auditMiddleware.js";
+import { authenticate } from "../../middleware/auth.js";
 
 // Get all exam schedules
 router.get("/", authenticate, getAllSchedules);
@@ -44,4 +44,4 @@ router.delete(
   deleteSchedule,
 );
 
-module.exports = router;
+export default router;

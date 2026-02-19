@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const StaffAttendance = sequelize.define(
   "StaffAttendance",
@@ -56,4 +56,4 @@ StaffAttendance.associate = (models) => {
   });
 };
 
-module.exports = StaffAttendance;
+export default StaffAttendance;

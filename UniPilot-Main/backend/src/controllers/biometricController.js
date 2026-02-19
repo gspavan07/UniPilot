@@ -1,5 +1,5 @@
-const { User, StaffAttendance } = require("../models");
-const { Op } = require("sequelize");
+import { User, StaffAttendance } from "../models/index.js";
+import { Op } from "sequelize";
 
 const isEnabled = process.env.BIOMETRIC_INTEGRATION_ENABLED === "true";
 
@@ -9,7 +9,7 @@ const determineStatus = (timestamp) => {
   return "present";
 };
 
-exports.syncBiometricData = async (req, res) => {
+export const syncBiometricData = async (req, res) => {
   if (!isEnabled) {
     return res.status(403).json({
       success: false,
@@ -114,7 +114,7 @@ exports.syncBiometricData = async (req, res) => {
   }
 };
 
-exports.mapUserToDevice = async (req, res) => {
+export const mapUserToDevice = async (req, res) => {
   if (!isEnabled) {
     return res.status(403).json({
       success: false,
@@ -142,4 +142,9 @@ exports.mapUserToDevice = async (req, res) => {
     console.error("Mapping Error:", error);
     return res.status(500).json({ success: false, error: "Mapping failed" });
   }
+};
+
+export default {
+  syncBiometricData,
+  mapUserToDevice,
 };

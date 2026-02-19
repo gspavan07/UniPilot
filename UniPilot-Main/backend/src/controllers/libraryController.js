@@ -1,11 +1,11 @@
-const { Book, BookIssue, User, sequelize } = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+import { Book, BookIssue, User, sequelize } from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Add a new book
 // @route   POST /api/library/books
 // @access  Private/Librarian
-exports.addBook = async (req, res) => {
+export const addBook = async (req, res) => {
   try {
     const book = await Book.create(req.body);
     res.status(201).json({ success: true, data: book });
@@ -18,7 +18,7 @@ exports.addBook = async (req, res) => {
 // @desc    Get all books
 // @route   GET /api/library/books
 // @access  Private/Student/Librarian
-exports.getBooks = async (req, res) => {
+export const getBooks = async (req, res) => {
   try {
     const { search } = req.query;
     const whereClause = {};
@@ -42,7 +42,7 @@ exports.getBooks = async (req, res) => {
 // @desc    Issue a book
 // @route   POST /api/library/issue
 // @access  Private/Librarian
-exports.issueBook = async (req, res) => {
+export const issueBook = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { book_id, student_id, days = 14 } = req.body;
@@ -88,7 +88,7 @@ exports.issueBook = async (req, res) => {
 // @desc    Return a book
 // @route   POST /api/library/return
 // @access  Private/Librarian
-exports.returnBook = async (req, res) => {
+export const returnBook = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { issue_id } = req.body;
@@ -142,7 +142,7 @@ exports.returnBook = async (req, res) => {
 // @desc    Get my books
 // @route   GET /api/library/my-books
 // @access  Private/Student
-exports.getMyBooks = async (req, res) => {
+export const getMyBooks = async (req, res) => {
   try {
     const issues = await BookIssue.findAll({
       where: { student_id: req.user.userId },
@@ -154,4 +154,12 @@ exports.getMyBooks = async (req, res) => {
     logger.error("Error fetching my books:", error);
     res.status(500).json({ error: "Failed to fetch my books" });
   }
+};
+
+export default {
+  addBook,
+  getBooks,
+  issueBook,
+  returnBook,
+  getMyBooks,
 };

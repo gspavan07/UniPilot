@@ -220,8 +220,8 @@ const HostelFeeManagement = () => {
             <button
               onClick={() => setActiveTab("rent")}
               className={`px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-wide transition-all ${activeTab === "rent"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
             >
               <Home className="w-3.5 h-3.5 inline mr-2" />
@@ -230,8 +230,8 @@ const HostelFeeManagement = () => {
             <button
               onClick={() => setActiveTab("mess")}
               className={`px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-wide transition-all ${activeTab === "mess"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
             >
               <Coins className="w-3.5 h-3.5 inline mr-2" />
@@ -274,8 +274,8 @@ const HostelFeeManagement = () => {
                       <div className="flex-1">
                         <span
                           className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase border ${fee.room_type === "ac"
-                              ? "bg-blue-50 text-blue-700 border-blue-100"
-                              : "bg-indigo-50 text-indigo-700 border-indigo-100"
+                            ? "bg-blue-50 text-blue-700 border-blue-100"
+                            : "bg-indigo-50 text-indigo-700 border-indigo-100"
                             }`}
                         >
                           {fee.room_type.replace("_", " ")}
@@ -347,8 +347,8 @@ const HostelFeeManagement = () => {
                     <div className="flex-1">
                       <span
                         className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase border ${fee.mess_type === "veg"
-                            ? "bg-green-50 text-green-700 border-green-100"
-                            : "bg-red-50 text-red-700 border-red-100"
+                          ? "bg-green-50 text-green-700 border-green-100"
+                          : "bg-red-50 text-red-700 border-red-100"
                           }`}
                       >
                         {fee.mess_type}

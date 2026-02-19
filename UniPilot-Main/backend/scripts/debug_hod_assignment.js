@@ -1,7 +1,8 @@
-const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
-const { User, Department } = require("../src/models");
-const { Op } = require("sequelize");
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.join(__dirname, "../.env") });
+import { User, Department } from "../src/models/index.js";
+import { Op } from "sequelize";
 
 async function debug() {
   try {

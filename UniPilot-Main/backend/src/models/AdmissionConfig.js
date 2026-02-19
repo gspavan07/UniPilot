@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * AdmissionConfig Model
@@ -90,4 +90,4 @@ const AdmissionConfig = sequelize.define(
   }
 );
 
-module.exports = AdmissionConfig;
+export default AdmissionConfig;

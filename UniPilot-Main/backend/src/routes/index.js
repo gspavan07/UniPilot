@@ -1,49 +1,49 @@
-const express = require("express");
-const authRoutes = require("./auth");
-const departmentRoutes = require("./department");
-const programRoutes = require("./program");
-const courseRoutes = require("./course");
-const userRoutes = require("./user");
-const roleRoutes = require("./role");
-const proctorRoutes = require("./proctor");
-const promotionRoutes = require("./promotion");
-const hrRoutes = require("./hr"); // New HR Routes
-const attendanceRoutes = require("./attendance");
-const feeRoutes = require("./fee");
-const libraryRoutes = require("./library");
-const timetableRoutes = require("./timetable");
-const admissionRoutes = require("./admission");
-const biometricRoutes = require("./biometricRoutes");
-const holidayRoutes = require("./holidayRoutes");
-const settingRoutes = require("./settingRoutes");
-const infrastructureRoutes = require("./infrastructure"); // Infrastructure Management
-const regulationRoutes = require("./regulations");
-const examConfigRoutes = require("./exam-config.routes");
-const gradeScaleRoutes = require("./grade-scale.routes");
-const sectionInchargeRoutes = require("./sectionInchargeRoutes");
-const transportRoutes = require("./transport"); // Transport Management
-const hostelRoutes = require("./hostel"); // Hostel Management
-const dashboardRoutes = require("./dashboard");
-const placementRoutes = require("./placement"); // Placement Module
-const programOutcomeRoutes = require("./programOutcome"); // OBE: Program Outcomes
-const courseOutcomeRoutes = require("./courseOutcome"); // OBE: Course Outcomes
-const coPoMapRoutes = require("./coPoMap"); // OBE: CO-PO Mapping
+import express from "express";
+import authRoutes from "./auth.js";
+import departmentRoutes from "./department.js";
+import programRoutes from "./program.js";
+import courseRoutes from "./course.js";
+import userRoutes from "./user.js";
+import roleRoutes from "./role.js";
+import proctorRoutes from "./proctor.js";
+import promotionRoutes from "./promotion.js";
+import hrRoutes from "./hr.js"; // New HR Routes
+import attendanceRoutes from "./attendance.js";
+import feeRoutes from "./fee.js";
+import libraryRoutes from "./library.js";
+import timetableRoutes from "./timetable.js";
+import admissionRoutes from "./admission.js";
+import biometricRoutes from "./biometricRoutes.js";
+import holidayRoutes from "./holidayRoutes.js";
+import settingRoutes from "./settingRoutes.js";
+import infrastructureRoutes from "./infrastructure.js"; // Infrastructure Management
+import regulationRoutes from "./regulations.js";
+import examConfigRoutes from "./exam-config.routes.js";
+import gradeScaleRoutes from "./grade-scale.routes.js";
+import sectionInchargeRoutes from "./sectionInchargeRoutes.js";
+import transportRoutes from "./transport.js"; // Transport Management
+import hostelRoutes from "./hostel.js"; // Hostel Management
+import dashboardRoutes from "./dashboard.js";
+import placementRoutes from "./placement.js"; // Placement Module
+import programOutcomeRoutes from "./programOutcome.js"; // OBE: Program Outcomes
+import courseOutcomeRoutes from "./courseOutcome.js"; // OBE: Course Outcomes
+import coPoMapRoutes from "./coPoMap.js"; // OBE: CO-PO Mapping
 
 // Exam Management Routes
 // IMPORTANT: Import associations first to set up model relationships
-require("../models/exam/associations");
+import "../models/exam/associations.js";
 
-const examCycleRoutes = require("./exam/examCycle.routes");
-const examHallTicketRoutes = require("./exam/hallTicket.routes");
-const examScheduleRoutes = require("./exam/examSchedule.routes");
-const examSeatingRoutes = require("./exam/seatingArrangement.routes");
+import examCycleRoutes from "./exam/examCycle.routes.js";
+import examHallTicketRoutes from "./exam/hallTicket.routes.js";
+import examScheduleRoutes from "./exam/examSchedule.routes.js";
+import examSeatingRoutes from "./exam/seatingArrangement.routes.js";
 
-const examGradeRoutes = require("./exam/gradeEntry.routes");
-const facultyExamRoutes = require("./exam/facultyExam.routes");
-const hodExamRoutes = require("./exam/hod.routes");
+import examGradeRoutes from "./exam/gradeEntry.routes.js";
+import facultyExamRoutes from "./exam/facultyExam.routes.js";
+import hodExamRoutes from "./exam/hod.routes.js";
 
-const notificationRoutes = require("./notifications");
-const academicRoutes = require("./academic");
+import notificationRoutes from "./notifications.js";
+import academicRoutes from "./academic.js";
 
 const router = express.Router();
 
@@ -104,4 +104,4 @@ router.use("/exam/hod", hodExamRoutes);
 router.use("/exam/seating", examSeatingRoutes);
 router.use("/exam/grades", examGradeRoutes);
 
-module.exports = router;
+export default router;

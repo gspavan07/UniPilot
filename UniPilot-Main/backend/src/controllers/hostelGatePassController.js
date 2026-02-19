@@ -1,16 +1,16 @@
-const logger = require("../utils/logger");
-const {
+import logger from "../utils/logger.js";
+import {
   HostelGatePass,
   User,
   HostelAttendance,
   sequelize,
-} = require("../models");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import { Op } from "sequelize";
 
 // @desc    Request gate pass (Student)
 // @route   POST /api/hostel/gate-passes
 // @access  Private/Student
-exports.requestGatePass = async (req, res) => {
+export const requestGatePass = async (req, res) => {
   try {
     const {
       going_date,
@@ -66,7 +66,7 @@ exports.requestGatePass = async (req, res) => {
 // @desc    Verify OTP and Approve Gate Pass (Warden)
 // @route   PUT /api/hostel/gate-passes/:id/verify
 // @access  Private/Hostel:Warden
-exports.verifyOtpAndApprove = async (req, res) => {
+export const verifyOtpAndApprove = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -172,7 +172,7 @@ exports.verifyOtpAndApprove = async (req, res) => {
 // @desc    Get all gate passes with filters
 // @route   GET /api/hostel/gate-passes
 // @access  Private
-exports.getGatePasses = async (req, res) => {
+export const getGatePasses = async (req, res) => {
   try {
     const { status, student_id, month, year } = req.query;
     const { role, userId } = req.user;
@@ -244,7 +244,7 @@ exports.getGatePasses = async (req, res) => {
 // @desc    Reject Gate Pass
 // @route   PUT /api/hostel/gate-passes/:id/reject
 // @access  Private/Hostel:Warden
-exports.rejectGatePass = async (req, res) => {
+export const rejectGatePass = async (req, res) => {
   try {
     const { id } = req.params;
     const { remarks } = req.body;
@@ -265,4 +265,11 @@ exports.rejectGatePass = async (req, res) => {
     logger.error("Error rejecting gate pass:", error);
     res.status(500).json({ error: "Failed to reject gate pass" });
   }
+};
+
+export default {
+  requestGatePass,
+  verifyOtpAndApprove,
+  getGatePasses,
+  rejectGatePass,
 };

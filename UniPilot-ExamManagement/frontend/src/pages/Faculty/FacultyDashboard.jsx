@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getAssignedExams } from "../../services/examCycleService";
+import { getAssignedExams } from "../../services/examCycleService.js";
 import { FileText, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function FacultyDashboard() {

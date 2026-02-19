@@ -1,12 +1,12 @@
-const jwt = require("jsonwebtoken");
-const logger = require("../utils/logger");
+import jwt from "jsonwebtoken";
+import logger from "../utils/logger.js";
 
 /**
  * Generate JWT access token
  * @param {Object} payload - Token payload (userId, role, tenantId)
  * @returns {string} JWT token
  */
-const generateAccessToken = (payload, expiresIn) => {
+export const generateAccessToken = (payload, expiresIn) => {
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: expiresIn || process.env.JWT_EXPIRY || "1h",
   });
@@ -17,7 +17,7 @@ const generateAccessToken = (payload, expiresIn) => {
  * @param {Object} payload - Token payload
  * @returns {string} Refresh token
  */
-const generateRefreshToken = (payload) => {
+export const generateRefreshToken = (payload) => {
   return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d",
   });
@@ -28,7 +28,7 @@ const generateRefreshToken = (payload) => {
  * @param {string} token - JWT token
  * @returns {Object} Decoded payload
  */
-const verifyToken = (token) => {
+export const verifyToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
@@ -42,7 +42,7 @@ const verifyToken = (token) => {
  * @param {string} token - Refresh token
  * @returns {Object} Decoded payload
  */
-const verifyRefreshToken = (token) => {
+export const verifyRefreshToken = (token) => {
   try {
     return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
   } catch (error) {
@@ -51,9 +51,3 @@ const verifyRefreshToken = (token) => {
   }
 };
 
-module.exports = {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyToken,
-  verifyRefreshToken,
-};

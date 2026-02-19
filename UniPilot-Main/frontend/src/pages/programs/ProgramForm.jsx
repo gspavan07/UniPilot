@@ -251,8 +251,8 @@ const ProgramForm = ({
                       <input
                         {...register("name")}
                         className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.name
-                            ? "border-red-300 focus:border-red-500"
-                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                           }`}
                         placeholder="e.g. B.Tech in Computer Science"
                       />
@@ -274,8 +274,8 @@ const ProgramForm = ({
                       <input
                         {...register("code")}
                         className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.code
-                            ? "border-red-300 focus:border-red-500"
-                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                           }`}
                         placeholder="e.g. BTECH-CSE"
                       />
@@ -314,8 +314,8 @@ const ProgramForm = ({
                       <select
                         {...register("department_id")}
                         className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.department_id
-                            ? "border-red-300 focus:border-red-500"
-                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                           }`}
                       >
                         <option value="">Select Department...</option>
@@ -373,8 +373,8 @@ const ProgramForm = ({
                           {...register("duration_years")}
                           type="number"
                           className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.duration_years
-                              ? "border-red-300 focus:border-red-500"
-                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                             }`}
                         />
                       </div>
@@ -397,8 +397,8 @@ const ProgramForm = ({
                           {...register("total_semesters")}
                           type="number"
                           className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.total_semesters
-                              ? "border-red-300 focus:border-red-500"
-                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                             }`}
                         />
                       </div>

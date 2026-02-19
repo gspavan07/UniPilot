@@ -1,5 +1,5 @@
 require("dotenv").config();
-const axios = require("axios");
+import axios from "axios";
 
 async function testApi() {
   const cycleId = "57d05886-7859-4a09-b886-058a13d52473"; // From my check_db_raw.js output
@@ -11,9 +11,9 @@ async function testApi() {
     // For now, let's try to find how a token is generated or if we can bypass
     // Alternatively, I can just call the controller function manually in a script
 
-    const {
+    import {
       getCycleById,
-    } = require("./src/controllers/exam/examCycleController");
+    } from "./src/controllers/exam/examCycleController.js";
     const mockReq = { params: { id: cycleId } };
     const mockRes = {
       json: (data) =>

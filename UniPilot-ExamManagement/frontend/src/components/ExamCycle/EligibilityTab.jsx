@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import api from "../../utils/api";
+import api from "../../utils/api.js";
 import {
   Users,
   Search,
@@ -260,7 +260,7 @@ export default function EligibilityTab({
     <div className="space-y-8 animate-fadeIn font-sans text-gray-900 pb-12">
       {/* Config Modal */}
       {showConfig && (
-        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 animate-scaleIn">
             <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
               <div>
@@ -518,8 +518,8 @@ export default function EligibilityTab({
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Attd:</span>
                             <span className={`text-sm font-bold ${parseFloat(el.attendance_percentage) < parseFloat(cycle.attendance_threshold_condonation) ? "text-red-500" :
-                                parseFloat(el.attendance_percentage) < parseFloat(cycle.attendance_threshold_eligible) ? "text-amber-500" :
-                                  "text-green-600"
+                              parseFloat(el.attendance_percentage) < parseFloat(cycle.attendance_threshold_eligible) ? "text-amber-500" :
+                                "text-green-600"
                               }`}>
                               {el.attendance_percentage ? `${el.attendance_percentage}%` : "0.00%"}
                             </span>

@@ -1,7 +1,7 @@
-const logger = require("../utils/logger");
-const { sequelize } = require("../config/database");
-const { Op } = require("sequelize");
-const {
+import logger from "../utils/logger.js";
+import { sequelize } from "../config/database.js";
+import { Op } from "sequelize";
+import {
   Route,
   TransportStop,
   Vehicle,
@@ -16,7 +16,7 @@ const {
   StudentFeeCharge,
   Department,
   Program,
-} = require("../models");
+} from "../models/index.js";
 
 /**
  * Transport Management Controller
@@ -30,7 +30,7 @@ const {
 // @desc    Get all routes
 // @route   GET /api/transport/routes
 // @access  transport:read
-exports.getRoutes = async (req, res) => {
+export const getRoutes = async (req, res) => {
   try {
     const routes = await Route.findAll({
       include: [
@@ -54,7 +54,7 @@ exports.getRoutes = async (req, res) => {
 // @desc    Create new route
 // @route   POST /api/transport/routes
 // @access  transport:write
-exports.createRoute = async (req, res) => {
+export const createRoute = async (req, res) => {
   try {
     const route = await Route.create(req.body);
     res.status(201).json({ success: true, data: route });
@@ -67,7 +67,7 @@ exports.createRoute = async (req, res) => {
 // @desc    Update route
 // @route   PUT /api/transport/routes/:id
 // @access  transport:write
-exports.updateRoute = async (req, res) => {
+export const updateRoute = async (req, res) => {
   try {
     const { id } = req.params;
     const route = await Route.findByPk(id);
@@ -85,7 +85,7 @@ exports.updateRoute = async (req, res) => {
 // @desc    Delete route
 // @route   DELETE /api/transport/routes/:id
 // @access  transport:admin
-exports.deleteRoute = async (req, res) => {
+export const deleteRoute = async (req, res) => {
   try {
     const { id } = req.params;
     const route = await Route.findByPk(id);
@@ -107,7 +107,7 @@ exports.deleteRoute = async (req, res) => {
 // @desc    Add stop to route
 // @route   POST /api/transport/stops
 // @access  transport:write
-exports.createStop = async (req, res) => {
+export const createStop = async (req, res) => {
   try {
     const stop = await TransportStop.create(req.body);
     res.status(201).json({ success: true, data: stop });
@@ -120,7 +120,7 @@ exports.createStop = async (req, res) => {
 // @desc    Update stop
 // @route   PUT /api/transport/stops/:id
 // @access  transport:write
-exports.updateStop = async (req, res) => {
+export const updateStop = async (req, res) => {
   try {
     const { id } = req.params;
     const stop = await TransportStop.findByPk(id);
@@ -138,7 +138,7 @@ exports.updateStop = async (req, res) => {
 // @desc    Delete stop
 // @route   DELETE /api/transport/stops/:id
 // @access  transport:admin
-exports.deleteStop = async (req, res) => {
+export const deleteStop = async (req, res) => {
   try {
     const { id } = req.params;
     const stop = await TransportStop.findByPk(id);
@@ -160,7 +160,7 @@ exports.deleteStop = async (req, res) => {
 // @desc    Get all vehicles
 // @route   GET /api/transport/vehicles
 // @access  transport:read
-exports.getVehicles = async (req, res) => {
+export const getVehicles = async (req, res) => {
   try {
     const vehicles = await Vehicle.findAll({
       order: [["registration_number", "ASC"]],
@@ -175,7 +175,7 @@ exports.getVehicles = async (req, res) => {
 // @desc    Create vehicle
 // @route   POST /api/transport/vehicles
 // @access  transport:write
-exports.createVehicle = async (req, res) => {
+export const createVehicle = async (req, res) => {
   try {
     const vehicle = await Vehicle.create(req.body);
     res.status(201).json({ success: true, data: vehicle });
@@ -188,7 +188,7 @@ exports.createVehicle = async (req, res) => {
 // @desc    Update vehicle
 // @route   PUT /api/transport/vehicles/:id
 // @access  transport:write
-exports.updateVehicle = async (req, res) => {
+export const updateVehicle = async (req, res) => {
   try {
     const { id } = req.params;
     const vehicle = await Vehicle.findByPk(id);
@@ -206,7 +206,7 @@ exports.updateVehicle = async (req, res) => {
 // @desc    Delete vehicle
 // @route   DELETE /api/transport/vehicles/:id
 // @access  transport:admin
-exports.deleteVehicle = async (req, res) => {
+export const deleteVehicle = async (req, res) => {
   try {
     const { id } = req.params;
     const vehicle = await Vehicle.findByPk(id);
@@ -224,7 +224,7 @@ exports.deleteVehicle = async (req, res) => {
 // @desc    Get vehicles with expiring documents
 // @route   GET /api/transport/vehicles/expiring
 // @access  transport:read
-exports.getExpiringVehicles = async (req, res) => {
+export const getExpiringVehicles = async (req, res) => {
   try {
     const today = new Date();
     const thirtyDaysLater = new Date();
@@ -261,7 +261,7 @@ exports.getExpiringVehicles = async (req, res) => {
 // @desc    Get all drivers
 // @route   GET /api/transport/drivers
 // @access  transport:read
-exports.getDrivers = async (req, res) => {
+export const getDrivers = async (req, res) => {
   try {
     const drivers = await TransportDriver.findAll({
       order: [["first_name", "ASC"]],
@@ -276,7 +276,7 @@ exports.getDrivers = async (req, res) => {
 // @desc    Create driver
 // @route   POST /api/transport/drivers
 // @access  transport:write
-exports.createDriver = async (req, res) => {
+export const createDriver = async (req, res) => {
   try {
     const driver = await TransportDriver.create(req.body);
     res.status(201).json({ success: true, data: driver });
@@ -289,7 +289,7 @@ exports.createDriver = async (req, res) => {
 // @desc    Update driver
 // @route   PUT /api/transport/drivers/:id
 // @access  transport:write
-exports.updateDriver = async (req, res) => {
+export const updateDriver = async (req, res) => {
   try {
     const { id } = req.params;
     const driver = await TransportDriver.findByPk(id);
@@ -307,7 +307,7 @@ exports.updateDriver = async (req, res) => {
 // @desc    Delete driver
 // @route   DELETE /api/transport/drivers/:id
 // @access  transport:admin
-exports.deleteDriver = async (req, res) => {
+export const deleteDriver = async (req, res) => {
   try {
     const { id } = req.params;
     const driver = await TransportDriver.findByPk(id);
@@ -325,7 +325,7 @@ exports.deleteDriver = async (req, res) => {
 // @desc    Get drivers with expiring licenses
 // @route   GET /api/transport/drivers/expiring-license
 // @access  transport:read
-exports.getExpiringDriverLicenses = async (req, res) => {
+export const getExpiringDriverLicenses = async (req, res) => {
   try {
     const today = new Date();
     const thirtyDaysLater = new Date();
@@ -353,7 +353,7 @@ exports.getExpiringDriverLicenses = async (req, res) => {
 // @desc    Get all assignments
 // @route   GET /api/transport/assignments
 // @access  transport:read
-exports.getAssignments = async (req, res) => {
+export const getAssignments = async (req, res) => {
   try {
     const assignments = await VehicleRouteAssignment.findAll({
       where: { is_active: true },
@@ -374,7 +374,7 @@ exports.getAssignments = async (req, res) => {
 // @desc    Create assignment
 // @route   POST /api/transport/assignments
 // @access  transport:write
-exports.createAssignment = async (req, res) => {
+export const createAssignment = async (req, res) => {
   try {
     const assignment = await VehicleRouteAssignment.create(req.body);
     const fullAssignment = await VehicleRouteAssignment.findByPk(
@@ -398,7 +398,7 @@ exports.createAssignment = async (req, res) => {
 // @desc    Update assignment
 // @route   PUT /api/transport/assignments/:id
 // @access  transport:write
-exports.updateAssignment = async (req, res) => {
+export const updateAssignment = async (req, res) => {
   try {
     const { id } = req.params;
     const assignment = await VehicleRouteAssignment.findByPk(id);
@@ -424,7 +424,7 @@ exports.updateAssignment = async (req, res) => {
 // @desc    Delete assignment
 // @route   DELETE /api/transport/assignments/:id
 // @access  transport:admin
-exports.deleteAssignment = async (req, res) => {
+export const deleteAssignment = async (req, res) => {
   try {
     const { id } = req.params;
     const assignment = await VehicleRouteAssignment.findByPk(id);
@@ -446,7 +446,7 @@ exports.deleteAssignment = async (req, res) => {
 // @desc    Get all allocations
 // @route   GET /api/transport/allocations
 // @access  transport:read
-exports.getAllocations = async (req, res) => {
+export const getAllocations = async (req, res) => {
   try {
     const { route_id, status, academic_year } = req.query;
     const where = {};
@@ -489,7 +489,7 @@ exports.getAllocations = async (req, res) => {
 // @desc    Create student allocation with automatic fee integration
 // @route   POST /api/transport/allocations
 // @access  transport:write
-exports.createAllocation = async (req, res) => {
+export const createAllocation = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { student_id, route_id, stop_id } = req.body;
@@ -586,7 +586,7 @@ exports.createAllocation = async (req, res) => {
 // @desc    Update allocation
 // @route   PUT /api/transport/allocations/:id
 // @access  transport:write
-exports.updateAllocation = async (req, res) => {
+export const updateAllocation = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -632,7 +632,7 @@ exports.updateAllocation = async (req, res) => {
 // @desc    Cancel/Deactivate allocation
 // @route   DELETE /api/transport/allocations/:id
 // @access  transport:write
-exports.deleteAllocation = async (req, res) => {
+export const deleteAllocation = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -692,7 +692,7 @@ exports.deleteAllocation = async (req, res) => {
 // @desc    Sync fees for all active transport students for a specific semester
 // @route   POST /api/transport/sync-fees
 // @access  transport:admin
-exports.syncSemesterFees = async (req, res) => {
+export const syncSemesterFees = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { batch_year, semester } = req.body;
@@ -799,7 +799,7 @@ exports.syncSemesterFees = async (req, res) => {
 // @desc    Get all special trips
 // @route   GET /api/transport/special-trips
 // @access  transport:read
-exports.getSpecialTrips = async (req, res) => {
+export const getSpecialTrips = async (req, res) => {
   try {
     const { status } = req.query;
     const where = status ? { status } : {};
@@ -832,7 +832,7 @@ exports.getSpecialTrips = async (req, res) => {
 // @desc    Create special trip
 // @route   POST /api/transport/special-trips
 // @access  transport:write
-exports.createSpecialTrip = async (req, res) => {
+export const createSpecialTrip = async (req, res) => {
   try {
     const trip = await SpecialTrip.create(req.body);
     res.status(201).json({ success: true, data: trip });
@@ -845,7 +845,7 @@ exports.createSpecialTrip = async (req, res) => {
 // @desc    Update special trip
 // @route   PUT /api/transport/special-trips/:id
 // @access  transport:write
-exports.updateSpecialTrip = async (req, res) => {
+export const updateSpecialTrip = async (req, res) => {
   try {
     const { id } = req.params;
     const trip = await SpecialTrip.findByPk(id);
@@ -863,7 +863,7 @@ exports.updateSpecialTrip = async (req, res) => {
 // @desc    Approve special trip
 // @route   PUT /api/transport/special-trips/:id/approve
 // @access  transport:admin
-exports.approveSpecialTrip = async (req, res) => {
+export const approveSpecialTrip = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
@@ -888,7 +888,7 @@ exports.approveSpecialTrip = async (req, res) => {
 // @desc    Delete special trip
 // @route   DELETE /api/transport/special-trips/:id
 // @access  transport:admin
-exports.deleteSpecialTrip = async (req, res) => {
+export const deleteSpecialTrip = async (req, res) => {
   try {
     const { id } = req.params;
     const trip = await SpecialTrip.findByPk(id);
@@ -910,7 +910,7 @@ exports.deleteSpecialTrip = async (req, res) => {
 // @desc    Get trip logs
 // @route   GET /api/transport/trip-logs
 // @access  transport:read
-exports.getTripLogs = async (req, res) => {
+export const getTripLogs = async (req, res) => {
   try {
     const { start_date, end_date, vehicle_id, route_id } = req.query;
     const where = {};
@@ -945,7 +945,7 @@ exports.getTripLogs = async (req, res) => {
 // @desc    Create trip log
 // @route   POST /api/transport/trip-logs
 // @access  transport:write
-exports.createTripLog = async (req, res) => {
+export const createTripLog = async (req, res) => {
   try {
     const userId = req.user.userId;
     const logData = { ...req.body, logged_by: userId };
@@ -966,7 +966,7 @@ exports.createTripLog = async (req, res) => {
 // @desc    Update trip log
 // @route   PUT /api/transport/trip-logs/:id
 // @access  transport:write
-exports.updateTripLog = async (req, res) => {
+export const updateTripLog = async (req, res) => {
   try {
     const { id } = req.params;
     const log = await TripLog.findByPk(id);
@@ -995,7 +995,7 @@ exports.updateTripLog = async (req, res) => {
 // @desc    Get route utilization analytics
 // @route   GET /api/transport/analytics/route-utilization
 // @access  transport:read
-exports.getRouteUtilization = async (req, res) => {
+export const getRouteUtilization = async (req, res) => {
   try {
     const routes = await Route.findAll({
       attributes: [
@@ -1031,7 +1031,7 @@ exports.getRouteUtilization = async (req, res) => {
 // @desc   Get zone-wise revenue
 // @route   GET /api/transport/analytics/zone-revenue
 // @access  transport:read
-exports.getZoneRevenue = async (req, res) => {
+export const getZoneRevenue = async (req, res) => {
   try {
     const zoneRevenue = await TransportStop.findAll({
       attributes: [
@@ -1071,7 +1071,7 @@ exports.getZoneRevenue = async (req, res) => {
 // @desc    Get trip statistics
 // @route   GET /api/transport/analytics/trip-stats
 // @access  transport:read
-exports.getTripStats = async (req, res) => {
+export const getTripStats = async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const where = {};
@@ -1106,7 +1106,7 @@ exports.getTripStats = async (req, res) => {
 // @desc    Get dashboard overview
 // @route   GET /api/transport/analytics/dashboard
 // @access  transport:read
-exports.getDashboardOverview = async (req, res) => {
+export const getDashboardOverview = async (req, res) => {
   try {
     const [
       totalRoutes,
@@ -1165,4 +1165,43 @@ exports.getDashboardOverview = async (req, res) => {
   }
 };
 
-module.exports = exports;
+export default {
+  getRoutes,
+  createRoute,
+  updateRoute,
+  deleteRoute,
+  createStop,
+  updateStop,
+  deleteStop,
+  getVehicles,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+  getExpiringVehicles,
+  getDrivers,
+  createDriver,
+  updateDriver,
+  deleteDriver,
+  getExpiringDriverLicenses,
+  getAssignments,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment,
+  getAllocations,
+  createAllocation,
+  updateAllocation,
+  deleteAllocation,
+  syncSemesterFees,
+  getSpecialTrips,
+  createSpecialTrip,
+  updateSpecialTrip,
+  approveSpecialTrip,
+  deleteSpecialTrip,
+  getTripLogs,
+  createTripLog,
+  updateTripLog,
+  getRouteUtilization,
+  getZoneRevenue,
+  getTripStats,
+  getDashboardOverview,
+};

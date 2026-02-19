@@ -1,4 +1,4 @@
-const {
+import {
   User,
   FeePayment,
   Attendance,
@@ -11,9 +11,9 @@ const {
   StaffAttendance,
   FeeSemesterConfig,
   FeeStructure,
-} = require("../models");
-const { Op, fn, col, literal } = require("sequelize");
-const os = require("os");
+} from "../models/index.js";
+import { Op, fn, col, literal } from "sequelize";
+import os from "os";
 
 /**
  * Get Super Admin Dashboard Statistics (Live)
@@ -146,13 +146,13 @@ const getSuperAdminStats = async (req, res) => {
       include:
         batch && batch !== "all"
           ? [
-              {
-                model: User,
-                as: "student",
-                attributes: [],
-                required: true,
-              },
-            ]
+            {
+              model: User,
+              as: "student",
+              attributes: [],
+              required: true,
+            },
+          ]
           : [],
       group: [fn("date_trunc", "month", col("payment_date"))],
       order: [[fn("date_trunc", "month", col("payment_date")), "ASC"]],
@@ -217,6 +217,6 @@ const getSuperAdminStats = async (req, res) => {
   }
 };
 
-module.exports = {
+export default {
   getSuperAdminStats,
 };

@@ -1,4 +1,4 @@
-const {
+import {
   FeeCategory,
   FeeStructure,
   FeePayment,
@@ -11,31 +11,41 @@ const {
   Program,
   Department,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
+import XLSX from "xlsx";
 
 // Template import
-const generateDefaultersCsv = require("../templates/fee/defaultersCsv");
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 // Initialize Razorpay
 // Prioritize RAZORPAY_MODE env var, otherwise fallback to NODE_ENV
 const isLive =
   process.env.RAZORPAY_MODE === "live" || process.env.NODE_ENV === "production";
 
-const razorpay = new Razorpay({
-  key_id: isLive
-    ? process.env.RAZORPAY_KEY_ID_LIVE
-    : process.env.RAZORPAY_KEY_ID,
-  key_secret: isLive
-    ? process.env.RAZORPAY_KEY_SECRET_LIVE
-    : process.env.RAZORPAY_KEY_SECRET,
-});
+const razorpayKeyId = isLive
+  ? process.env.RAZORPAY_KEY_ID_LIVE
+  : process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = isLive
+  ? process.env.RAZORPAY_KEY_SECRET_LIVE
+  : process.env.RAZORPAY_KEY_SECRET;
+
+let razorpay = null;
+if (razorpayKeyId && razorpayKeySecret) {
+  razorpay = new Razorpay({
+    key_id: razorpayKeyId,
+    key_secret: razorpayKeySecret,
+  });
+} else {
+  logger.warn(
+    "Razorpay keys missing. Payment functionality will be disabled.",
+  );
+}
 
 // @desc    Create a fee category
-exports.createCategory = async (req, res) => {
+export const createCategory = async (req, res) => {
   try {
     const category = await FeeCategory.create(req.body);
     res.status(201).json({ success: true, data: category });
@@ -46,7 +56,7 @@ exports.createCategory = async (req, res) => {
 };
 
 // @desc    Get all fee categories
-exports.getCategories = async (req, res) => {
+export const getCategories = async (req, res) => {
   try {
     const categories = await FeeCategory.findAll();
     res.status(200).json({ success: true, data: categories });
@@ -57,7 +67,7 @@ exports.getCategories = async (req, res) => {
 };
 
 // @desc    Get all fee structures
-exports.getStructures = async (req, res) => {
+export const getStructures = async (req, res) => {
   try {
     const { batch_year, program_id } = req.query;
     const where = {};
@@ -80,7 +90,7 @@ exports.getStructures = async (req, res) => {
 };
 
 // @desc    Clone a fee structure from one batch to another
-exports.cloneFeeStructure = async (req, res) => {
+export const cloneFeeStructure = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { fromBatch, toBatch, program_id } = req.body;
@@ -154,7 +164,7 @@ exports.cloneFeeStructure = async (req, res) => {
 };
 
 // @desc    Create a fee structure
-exports.createStructure = async (req, res) => {
+export const createStructure = async (req, res) => {
   try {
     const { apply_to_all_semesters, ...data } = req.body;
 
@@ -182,7 +192,7 @@ exports.createStructure = async (req, res) => {
 };
 
 // @desc    Update a fee structure
-exports.updateStructure = async (req, res) => {
+export const updateStructure = async (req, res) => {
   try {
     const { id } = req.params;
     const structure = await FeeStructure.findByPk(id);
@@ -198,7 +208,7 @@ exports.updateStructure = async (req, res) => {
 };
 
 // @desc    Delete a fee structure
-exports.deleteStructure = async (req, res) => {
+export const deleteStructure = async (req, res) => {
   try {
     const { id } = req.params;
     const structure = await FeeStructure.findByPk(id);
@@ -215,7 +225,7 @@ exports.deleteStructure = async (req, res) => {
 
 // @desc    Collect a fee payment
 // @desc    Collect a fee payment
-exports.collectPayment = async (req, res) => {
+export const collectPayment = async (req, res) => {
   const transaction = await sequelize.transaction();
   let createdParentPayments = [];
 
@@ -482,7 +492,7 @@ exports.collectPayment = async (req, res) => {
 };
 
 // @desc    Pay my own fees (Student)
-exports.payMyFees = async (req, res) => {
+export const payMyFees = async (req, res) => {
   const transaction = await sequelize.transaction();
   let createdPayments = [];
   try {
@@ -733,7 +743,7 @@ exports.payMyFees = async (req, res) => {
   }
 };
 
-exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
+export const calculateFeeStatus = async (studentId) => {
   const student = await User.findByPk(studentId, {
     include: [
       { model: Program, as: "program" },
@@ -1061,7 +1071,7 @@ exports.calculateFeeStatus = calculateFeeStatus = async (studentId) => {
 };
 
 // @desc    Get student's fee details (Self)
-exports.getMyFeeStatus = async (req, res) => {
+export const getMyFeeStatus = async (req, res) => {
   try {
     const studentId = req.user.userId || req.user.id;
     const data = await calculateFeeStatus(studentId);
@@ -1075,7 +1085,7 @@ exports.getMyFeeStatus = async (req, res) => {
 };
 
 // @desc    Get any student's fee details (Admin)
-exports.getStudentFeeStatus = async (req, res) => {
+export const getStudentFeeStatus = async (req, res) => {
   try {
     const { studentId } = req.params;
     const data = await calculateFeeStatus(studentId);
@@ -1089,7 +1099,7 @@ exports.getStudentFeeStatus = async (req, res) => {
 };
 
 // @desc    Get semester configs
-exports.getSemesterConfigs = async (req, res) => {
+export const getSemesterConfigs = async (req, res) => {
   try {
     const { program_id, batch_year } = req.query;
     const where = {};
@@ -1105,7 +1115,7 @@ exports.getSemesterConfigs = async (req, res) => {
 };
 
 // @desc    Create Razorpay Order
-exports.createPaymentOrder = async (req, res) => {
+export const createPaymentOrder = async (req, res) => {
   try {
     const { amount, currency = "INR" } = req.body;
 
@@ -1133,7 +1143,7 @@ exports.createPaymentOrder = async (req, res) => {
 };
 
 // @desc    Update or create semester config
-exports.updateSemesterConfig = async (req, res) => {
+export const updateSemesterConfig = async (req, res) => {
   try {
     const {
       program_id,
@@ -1158,7 +1168,7 @@ exports.updateSemesterConfig = async (req, res) => {
 };
 
 // @desc    Get dashboard statistics for admins
-exports.getCollectionStats = async (req, res) => {
+export const getCollectionStats = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1226,7 +1236,7 @@ exports.getCollectionStats = async (req, res) => {
 };
 
 // @desc    Get all transactions (Paginated)
-exports.getTransactions = async (req, res) => {
+export const getTransactions = async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
     const offset = (page - 1) * limit;
@@ -1316,7 +1326,7 @@ exports.getTransactions = async (req, res) => {
   }
 };
 // @desc    Get all available admission batches
-exports.getBatches = async (req, res) => {
+export const getBatches = async (req, res) => {
   try {
     // Get unique batches from FeeStructure
     const structureBatches = await FeeStructure.findAll({
@@ -1356,7 +1366,7 @@ exports.getBatches = async (req, res) => {
   }
 };
 // @desc    Apply a waiver or scholarship to a student
-exports.applyWaiver = async (req, res) => {
+export const applyWaiver = async (req, res) => {
   try {
     const {
       student_id,
@@ -1392,7 +1402,7 @@ exports.applyWaiver = async (req, res) => {
 };
 
 // @desc    Get all waivers with filtering
-exports.getWaivers = async (req, res) => {
+export const getWaivers = async (req, res) => {
   try {
     const { student_id, is_approved } = req.query;
     const where = {};
@@ -1420,7 +1430,7 @@ exports.getWaivers = async (req, res) => {
 };
 
 // @desc    Approve a pending waiver
-exports.approveWaiver = async (req, res) => {
+export const approveWaiver = async (req, res) => {
   try {
     const { id } = req.params;
     const waiver = await FeeWaiver.findByPk(id);
@@ -1443,7 +1453,7 @@ exports.approveWaiver = async (req, res) => {
 };
 
 // @desc    Update a waiver record (Edit or Toggle Status)
-exports.updateWaiver = async (req, res) => {
+export const updateWaiver = async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -1492,7 +1502,7 @@ exports.updateWaiver = async (req, res) => {
 };
 
 // @desc    Delete a waiver record
-exports.deleteWaiver = async (req, res) => {
+export const deleteWaiver = async (req, res) => {
   try {
     const { id } = req.params;
     const waiver = await FeeWaiver.findByPk(id);
@@ -1509,13 +1519,12 @@ exports.deleteWaiver = async (req, res) => {
   }
 };
 // @desc    Validate scholarship import file and return preview
-exports.validateScholarshipImport = async (req, res) => {
+export const validateScholarshipImport = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const XLSX = require("xlsx");
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
@@ -1618,7 +1627,7 @@ exports.validateScholarshipImport = async (req, res) => {
 };
 
 // @desc    Finalize bulk scholarship import
-exports.finalizeScholarshipImport = async (req, res) => {
+export const finalizeScholarshipImport = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { records } = req.body; // Array of valid records from frontend preview
@@ -1662,7 +1671,7 @@ exports.finalizeScholarshipImport = async (req, res) => {
 };
 
 // @desc    Get defaulters list with filters
-exports.getDefaulters = async (req, res) => {
+export const getDefaulters = async (req, res) => {
   try {
     const {
       batch_year,
@@ -1870,7 +1879,7 @@ exports.getDefaulters = async (req, res) => {
 };
 
 // @desc    Send bulk reminders (Mock)
-exports.sendBulkReminders = async (req, res) => {
+export const sendBulkReminders = async (req, res) => {
   try {
     const { student_ids, mode = "email" } = req.body;
 
@@ -1893,7 +1902,7 @@ exports.sendBulkReminders = async (req, res) => {
 };
 
 // @desc    Get unique sections
-exports.getSections = async (req, res) => {
+export const getSections = async (req, res) => {
   try {
     const { batch_year, program_id, department_id, semester } = req.query;
     const where = {};
@@ -1925,8 +1934,8 @@ exports.getSections = async (req, res) => {
   }
 };
 
-// @desc    Export defaulters to CSV
-exports.exportDefaulters = async (req, res) => {
+// @desc    export default ers to CSV
+export const exportDefaulters = async (req, res) => {
   try {
     const {
       batch_year,
@@ -2010,10 +2019,10 @@ exports.exportDefaulters = async (req, res) => {
           (semester ? s.semester === parseInt(semester) : true) &&
           javascript(
             s.applies_to === "all" ||
-              (s.applies_to === "convener" &&
-                student.admission_type === "convener") ||
-              (s.applies_to === "management" &&
-                student.admission_type === "management"),
+            (s.applies_to === "convener" &&
+              student.admission_type === "convener") ||
+            (s.applies_to === "management" &&
+              student.admission_type === "management"),
           ),
       );
 
@@ -2091,8 +2100,8 @@ exports.exportDefaulters = async (req, res) => {
           maxOverdueDays,
           student.phone || "",
           student.parent_details?.father_mobile ||
-            student.parent_details?.mother_mobile ||
-            "",
+          student.parent_details?.mother_mobile ||
+          "",
         ].join(",");
         csvContent += row + "\n";
       }
@@ -2106,12 +2115,12 @@ exports.exportDefaulters = async (req, res) => {
     res.send(csvContent);
   } catch (error) {
     logger.error("Error exporting defaulters:", error);
-    res.status(500).json({ error: "Failed to export defaulters" });
+    res.status(500).json({ error: "Failed to export default ers" });
   }
-  res.status(500).json({ error: "Failed to export defaulters" });
+  res.status(500).json({ error: "Failed to export default ers" });
 };
 
-exports.addStudentFine = async (req, res) => {
+export const addStudentFine = async (req, res) => {
   try {
     const { student_id, category_id, amount, semester, remarks } = req.body;
 
@@ -2136,7 +2145,7 @@ exports.addStudentFine = async (req, res) => {
   }
 };
 
-exports.deleteStudentFine = async (req, res) => {
+export const deleteStudentFine = async (req, res) => {
   try {
     const { id } = req.params;
     const charge = await StudentFeeCharge.findByPk(id);
@@ -2169,7 +2178,7 @@ exports.deleteStudentFine = async (req, res) => {
 };
 
 // @desc    Get Daily Collection Report (with Audit Reconciliation)
-exports.getDailyCollection = async (req, res) => {
+export const getDailyCollection = async (req, res) => {
   try {
     const {
       date,
@@ -2304,4 +2313,38 @@ exports.getDailyCollection = async (req, res) => {
     logger.error("Error fetching daily report:", error);
     res.status(500).json({ error: "Failed to fetch daily report" });
   }
+};
+
+export default {
+  createCategory,
+  getCategories,
+  getStructures,
+  cloneFeeStructure,
+  createStructure,
+  updateStructure,
+  deleteStructure,
+  collectPayment,
+  payMyFees,
+  getMyFeeStatus,
+  getStudentFeeStatus,
+  getSemesterConfigs,
+  createPaymentOrder,
+  updateSemesterConfig,
+  getCollectionStats,
+  getTransactions,
+  getBatches,
+  applyWaiver,
+  getWaivers,
+  approveWaiver,
+  updateWaiver,
+  deleteWaiver,
+  validateScholarshipImport,
+  finalizeScholarshipImport,
+  getDefaulters,
+  sendBulkReminders,
+  getSections,
+  exportDefaulters,
+  addStudentFine,
+  deleteStudentFine,
+  getDailyCollection,
 };

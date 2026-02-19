@@ -1,7 +1,7 @@
-const csv = require("csv-parser");
-const fs = require("fs");
-const xlsx = require("xlsx");
-const logger = require("./logger");
+import csv from "csv-parser";
+import fs from "fs";
+import xlsx from "xlsx";
+import logger from "./logger.js";
 
 /**
  * File Importer Utility
@@ -62,4 +62,4 @@ class Importer {
   }
 }
 
-module.exports = Importer;
+export default Importer;

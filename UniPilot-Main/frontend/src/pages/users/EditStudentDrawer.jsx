@@ -392,12 +392,11 @@ const EditStudentDrawer = ({
                   onClick={() => setActiveTab(tab.id)}
                   className={`
                     relative group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                    ${
-                      isActive
-                        ? "text-secondary-600 bg-secondary-50 dark:bg-secondary-900/20 dark:text-secondary-400 ring-1 ring-secondary-500/10"
-                        : tab.hasError
-                          ? "text-error-600 bg-error-50 dark:bg-error-900/10 dark:text-error-400 ring-1 ring-error-500/10"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+                    ${isActive
+                      ? "text-secondary-600 bg-secondary-50 dark:bg-secondary-900/20 dark:text-secondary-400 ring-1 ring-secondary-500/10"
+                      : tab.hasError
+                        ? "text-error-600 bg-error-50 dark:bg-error-900/10 dark:text-error-400 ring-1 ring-error-500/10"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
                     }
                   `}
                 >
@@ -461,7 +460,7 @@ const EditStudentDrawer = ({
                         </p>
                       )}
                     </div>
-                    
+
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
                         Department
@@ -502,7 +501,7 @@ const EditStudentDrawer = ({
                       )}
                     </div>
 
-                    
+
 
                     <div className="col-span-1">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">
@@ -980,13 +979,13 @@ const EditStudentDrawer = ({
                           </select>
                           {errors.previous_academics?.[index]
                             ?.qualification && (
-                            <p className="text-[10px] text-error-500 mt-1 ml-1">
-                              {
-                                errors.previous_academics[index].qualification
-                                  .message
-                              }
-                            </p>
-                          )}
+                              <p className="text-[10px] text-error-500 mt-1 ml-1">
+                                {
+                                  errors.previous_academics[index].qualification
+                                    .message
+                                }
+                              </p>
+                            )}
                         </div>
                         <div className="col-span-2">
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">

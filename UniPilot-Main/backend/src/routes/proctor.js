@@ -1,13 +1,13 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   assignProctors,
   autoAssignProctors,
   getMyStudents,
   addFeedback,
   createSession,
   getMyProctor,
-} = require("../controllers/proctorController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/proctorController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -29,4 +29,4 @@ router.post("/sessions", checkPermission("proctoring:mentor"), createSession);
 // Student routes
 router.get("/my-proctor", getMyProctor);
 
-module.exports = router;
+export default router;

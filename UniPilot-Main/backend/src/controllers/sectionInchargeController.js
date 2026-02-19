@@ -1,12 +1,12 @@
-const {
+import {
   SectionIncharge,
   User,
   Department,
   Program,
   Role,
-} = require("../models");
-const { Op } = require("sequelize");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
 
 /**
  * Section Incharge Controller
@@ -15,7 +15,7 @@ const logger = require("../utils/logger");
 // @desc    Assign faculty as incharge for a section
 // @route   POST /api/section-incharges
 // @access  Private/Admin/HOD
-exports.assignSectionIncharge = async (req, res) => {
+export const assignSectionIncharge = async (req, res) => {
   try {
     const {
       faculty_id,
@@ -129,7 +129,7 @@ exports.assignSectionIncharge = async (req, res) => {
 // @desc    Get all section incharges
 // @route   GET /api/section-incharges
 // @access  Private
-exports.getSectionIncharges = async (req, res) => {
+export const getSectionIncharges = async (req, res) => {
   try {
     const { department_id, program_id, batch_year, academic_year, faculty_id } =
       req.query;
@@ -183,7 +183,7 @@ exports.getSectionIncharges = async (req, res) => {
 // @desc    Remove a section incharge assignment
 // @route   DELETE /api/section-incharges/:id
 // @access  Private/Admin/HOD
-exports.removeSectionIncharge = async (req, res) => {
+export const removeSectionIncharge = async (req, res) => {
   try {
     const incharge = await SectionIncharge.findByPk(req.params.id);
 
@@ -231,4 +231,10 @@ exports.removeSectionIncharge = async (req, res) => {
       error: "Server Error",
     });
   }
+};
+
+export default {
+  assignSectionIncharge,
+  getSectionIncharges,
+  removeSectionIncharge,
 };

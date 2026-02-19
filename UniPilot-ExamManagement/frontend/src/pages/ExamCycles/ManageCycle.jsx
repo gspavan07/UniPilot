@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCycleById, deleteCycle } from "../../services/examCycleService";
+import { getCycleById, deleteCycle } from "../../services/examCycleService.js";
 import {
   Edit,
   Trash2,
@@ -172,8 +172,8 @@ export default function ManageCycle() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${isActive
-                      ? "bg-gray-900 text-white border-gray-900 shadow-md transform -translate-y-0.5"
-                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                    ? "bg-gray-900 text-white border-gray-900 shadow-md transform -translate-y-0.5"
+                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                     }`}
                 >
                   <Icon size={16} className={isActive ? "text-blue-300" : "text-gray-400"} />

@@ -1,6 +1,6 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
     getAllProgramOutcomes,
     getProgramOutcomeById,
     createProgramOutcome,
@@ -8,8 +8,8 @@ const {
     updateProgramOutcome,
     deleteProgramOutcome,
     deleteProgramOutcomesByProgram,
-} = require("../controllers/programOutcomeController");
-const { authenticate } = require("../middleware/auth");
+} from "../controllers/programOutcomeController.js";
+import { authenticate } from "../middleware/auth.js";
 
 // Apply authentication to all routes
 router.use(authenticate);
@@ -33,4 +33,4 @@ router
     .put(updateProgramOutcome)
     .delete(deleteProgramOutcome);
 
-module.exports = router;
+export default router;

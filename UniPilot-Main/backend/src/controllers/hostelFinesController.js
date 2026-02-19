@@ -1,15 +1,15 @@
-const { sequelize } = require("../config/database");
-const HostelFine = require("../models/HostelFine");
-const User = require("../models/User");
-const HostelAllocation = require("../models/HostelAllocation");
-const FeeStructure = require("../models/FeeStructure");
-const FeeCategory = require("../models/FeeCategory");
-const StudentFeeCharge = require("../models/StudentFeeCharge");
+import { sequelize } from "../config/database.js";
+import HostelFine from "../models/HostelFine.js";
+import User from "../models/User.js";
+import HostelAllocation from "../models/HostelAllocation.js";
+import FeeStructure from "../models/FeeStructure.js";
+import FeeCategory from "../models/FeeCategory.js";
+import StudentFeeCharge from "../models/StudentFeeCharge.js";
 
 // @desc    Issue a fine to a hostel student
 // @route   POST /api/hostel/fines
 // @access  hostel:manage
-exports.issueFine = async (req, res) => {
+export const issueFine = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -112,7 +112,7 @@ exports.issueFine = async (req, res) => {
 // @desc    Get all fines with filters
 // @route   GET /api/hostel/fines
 // @access  hostel:manage
-exports.getAllFines = async (req, res) => {
+export const getAllFines = async (req, res) => {
   try {
     const { student_id, status, fine_type, page = 1, limit = 50 } = req.query;
 
@@ -159,7 +159,7 @@ exports.getAllFines = async (req, res) => {
 // @desc    Get student's fines
 // @route   GET /api/hostel/students/:studentId/fines
 // @access  hostel:manage or own student
-exports.getStudentFines = async (req, res) => {
+export const getStudentFines = async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -185,7 +185,7 @@ exports.getStudentFines = async (req, res) => {
 // @desc    Update fine (waive, modify amount, cancel)
 // @route   PUT /api/hostel/fines/:id
 // @access  hostel:manage
-exports.updateFine = async (req, res) => {
+export const updateFine = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -232,7 +232,7 @@ exports.updateFine = async (req, res) => {
 // @desc    Delete fine
 // @route   DELETE /api/hostel/fines/:id
 // @access  hostel:manage
-exports.deleteFine = async (req, res) => {
+export const deleteFine = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -261,4 +261,12 @@ exports.deleteFine = async (req, res) => {
     console.error("Error deleting fine:", error);
     res.status(500).json({ error: "Failed to delete fine" });
   }
+};
+
+export default {
+  issueFine,
+  getAllFines,
+  getStudentFines,
+  updateFine,
+  deleteFine,
 };

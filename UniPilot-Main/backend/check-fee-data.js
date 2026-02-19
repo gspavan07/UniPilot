@@ -1,4 +1,4 @@
-const { sequelize, FeeStructure, User, AcademicFeePayment, StudentChargePayment } = require('./src/models');
+import { sequelize, FeeStructure, User, AcademicFeePayment, StudentChargePayment } from './src/models/index.js';
 
 async function checkData() {
     try {

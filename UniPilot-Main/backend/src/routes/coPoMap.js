@@ -1,14 +1,14 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
     getCoPoMappings,
     getCoPoMatrix,
     createOrUpdateMapping,
     bulkUpdateMappings,
     deleteMapping,
     getMappingStats,
-} = require("../controllers/coPoMapController");
-const { authenticate } = require("../middleware/auth");
+} from "../controllers/coPoMapController.js";
+import { authenticate } from "../middleware/auth.js";
 
 // Apply authentication to all routes
 router.use(authenticate);
@@ -31,4 +31,4 @@ router.post("/bulk", bulkUpdateMappings);
 // @route   DELETE /api/co-po-maps/:id
 router.delete("/:id", deleteMapping);
 
-module.exports = router;
+export default router;

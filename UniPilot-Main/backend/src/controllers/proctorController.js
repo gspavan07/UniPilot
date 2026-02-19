@@ -1,4 +1,4 @@
-const {
+import {
   ProctorAssignment,
   ProctorSession,
   ProctorFeedback,
@@ -6,14 +6,14 @@ const {
   User,
   Department,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Assign students to a proctor
 // @route   POST /api/proctor/assign
 // @access  Private/Admin
-exports.assignProctors = async (req, res) => {
+export const assignProctors = async (req, res) => {
   try {
     const { proctor_id, student_ids, department_id, assignment_type } =
       req.body;
@@ -71,7 +71,7 @@ exports.assignProctors = async (req, res) => {
 // @desc    Auto-assign proctors based on department load
 // @route   POST /api/proctor/auto-assign
 // @access  Private/Admin
-exports.autoAssignProctors = async (req, res) => {
+export const autoAssignProctors = async (req, res) => {
   try {
     const { department_id, batch_year } = req.body;
 
@@ -168,7 +168,7 @@ exports.autoAssignProctors = async (req, res) => {
 // @desc    Get students assigned to current proctor
 // @route   GET /api/proctor/my-students
 // @access  Private (Faculty/HOD)
-exports.getMyStudents = async (req, res) => {
+export const getMyStudents = async (req, res) => {
   try {
     const assignments = await ProctorAssignment.findAll({
       where: { proctor_id: req.user.userId, is_active: true },
@@ -206,7 +206,7 @@ exports.getMyStudents = async (req, res) => {
 // @desc    Post a feedback for a student
 // @route   POST /api/proctor/feedback
 // @access  Private (Faculty/Admin)
-exports.addFeedback = async (req, res) => {
+export const addFeedback = async (req, res) => {
   try {
     const { student_id, feedback_text, category, severity, is_visible } =
       req.body;
@@ -247,7 +247,7 @@ exports.addFeedback = async (req, res) => {
 // @desc    Schedule/Record a proctoring session
 // @route   POST /api/proctor/sessions
 // @access  Private (Faculty)
-exports.createSession = async (req, res) => {
+export const createSession = async (req, res) => {
   try {
     const { student_id, session_date, type, agenda, location } = req.body;
 
@@ -287,7 +287,7 @@ exports.createSession = async (req, res) => {
 // @desc    Get proctor details for a student
 // @route   GET /api/proctor/my-proctor
 // @access  Private (Student)
-exports.getMyProctor = async (req, res) => {
+export const getMyProctor = async (req, res) => {
   try {
     const assignment = await ProctorAssignment.findOne({
       where: { student_id: req.user.userId, is_active: true },

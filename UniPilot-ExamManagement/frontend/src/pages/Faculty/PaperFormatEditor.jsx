@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
     getAssignedExams,
     updatePaperFormat,
-} from "../../services/examCycleService";
-import { getCourseOutcomes } from "../../services/courseOutcomeService";
+} from "../../services/examCycleService.js";
+import { getCourseOutcomes } from "../../services/courseOutcomeService.js";
 import {
     ArrowLeft,
     Save,

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const PlacementNotification = sequelize.define(
   "PlacementNotification",
@@ -50,4 +50,4 @@ const PlacementNotification = sequelize.define(
   },
 );
 
-module.exports = PlacementNotification;
+export default PlacementNotification;

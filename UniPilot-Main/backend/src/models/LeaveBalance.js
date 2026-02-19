@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const LeaveBalance = sequelize.define(
   "LeaveBalance",
@@ -55,4 +55,4 @@ LeaveBalance.associate = (models) => {
   });
 };
 
-module.exports = LeaveBalance;
+export default LeaveBalance;

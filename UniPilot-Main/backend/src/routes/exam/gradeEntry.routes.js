@@ -1,15 +1,15 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
   getAllGrades,
   getGradeById,
   submitGrade,
   updateGrade,
   deleteGrade,
   publishGrades,
-} = require("../../controllers/exam/gradeEntryController");
-const { auditMiddleware } = require("../../middleware/exam/auditMiddleware");
-const { authenticate } = require("../../middleware/auth");
+} from "../../controllers/exam/gradeEntryController.js";
+import { auditMiddleware } from "../../middleware/exam/auditMiddleware.js";
+import { authenticate } from "../../middleware/auth.js";
 
 // Get all grades (with filters)
 router.get("/", authenticate, getAllGrades);
@@ -44,4 +44,4 @@ router.post(
   publishGrades,
 );
 
-module.exports = router;
+export default router;

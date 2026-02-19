@@ -314,21 +314,19 @@ const GatePassManagement = () => {
           <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
             <button
               onClick={() => setActiveTab("requests")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === "requests"
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === "requests"
                   ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
                   : "text-gray-400 hover:text-gray-600"
-              }`}
+                }`}
             >
               My Requests
             </button>
             <button
               onClick={() => setActiveTab("passes")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === "passes"
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === "passes"
                   ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm"
                   : "text-gray-400 hover:text-gray-600"
-              }`}
+                }`}
             >
               Outing Pass
             </button>
@@ -437,16 +435,16 @@ const GatePassManagement = () => {
                 />
               )
             ) : /* Approved - Digital Pass View */
-            gatePasses?.filter((p) => p.status === "approved").length > 0 ? (
-              gatePasses
-                .filter((p) => p.status === "approved")
-                .map((pass) => <DigitalPass key={pass.id} pass={pass} />)
-            ) : (
-              <EmptyState
-                icon={ShieldCheck}
-                message="No active outing passes found."
-              />
-            )}
+              gatePasses?.filter((p) => p.status === "approved").length > 0 ? (
+                gatePasses
+                  .filter((p) => p.status === "approved")
+                  .map((pass) => <DigitalPass key={pass.id} pass={pass} />)
+              ) : (
+                <EmptyState
+                  icon={ShieldCheck}
+                  message="No active outing passes found."
+                />
+              )}
           </div>
         ) : (
           /* Management View - Table */
@@ -628,11 +626,10 @@ const GatePassManagement = () => {
                     onClick={() =>
                       setFormData({ ...formData, pass_type: "day" })
                     }
-                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                      formData.pass_type === "day"
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${formData.pass_type === "day"
                         ? "bg-white dark:bg-gray-600 text-indigo-600 shadow-sm"
                         : "text-gray-400 hover:text-gray-600"
-                    }`}
+                      }`}
                   >
                     Day Outing
                   </button>
@@ -641,11 +638,10 @@ const GatePassManagement = () => {
                     onClick={() =>
                       setFormData({ ...formData, pass_type: "long" })
                     }
-                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                      formData.pass_type === "long"
+                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${formData.pass_type === "long"
                         ? "bg-white dark:bg-gray-600 text-indigo-600 shadow-sm"
                         : "text-gray-400 hover:text-gray-600"
-                    }`}
+                      }`}
                   >
                     Long Leave
                   </button>

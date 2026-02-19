@@ -1,5 +1,5 @@
-const { Role, Permission } = require("../models");
-const logger = require("../utils/logger");
+import { Role, Permission } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Role Controller
@@ -9,7 +9,7 @@ const logger = require("../utils/logger");
 // @desc    Get all roles
 // @route   GET /api/roles
 // @access  Private/Admin
-exports.getAllRoles = async (req, res) => {
+export const getAllRoles = async (req, res) => {
   try {
     const roles = await Role.findAll({
       include: [
@@ -39,7 +39,7 @@ exports.getAllRoles = async (req, res) => {
 // @desc    Get all permissions
 // @route   GET /api/roles/permissions
 // @access  Private/Admin
-exports.getAllPermissions = async (req, res) => {
+export const getAllPermissions = async (req, res) => {
   try {
     const permissions = await Permission.findAll({
       order: [
@@ -64,7 +64,7 @@ exports.getAllPermissions = async (req, res) => {
 // @desc    Create new role
 // @route   POST /api/roles
 // @access  Private/Admin
-exports.createRole = async (req, res) => {
+export const createRole = async (req, res) => {
   try {
     const { name, description, permissions, field_config } = req.body;
 
@@ -103,7 +103,7 @@ exports.createRole = async (req, res) => {
 // @desc    Update role
 // @route   PUT /api/roles/:id
 // @access  Private/Admin
-exports.updateRole = async (req, res) => {
+export const updateRole = async (req, res) => {
   try {
     const { name, description, permissions, field_config } = req.body;
     const role = await Role.findByPk(req.params.id);

@@ -220,7 +220,7 @@ const MyFees = () => {
         // Load Razorpay Script
         const res = await new Promise((resolve) => {
           const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.src = "https://checkout.razorpay.com/v1/checkout";
           script.onload = () => resolve(true);
           script.onerror = () => resolve(false);
           document.body.appendChild(script);
@@ -464,11 +464,10 @@ const MyFees = () => {
                 <button
                   key={sem}
                   onClick={() => setActiveSemester(sem)}
-                  className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    activeSemester === sem
+                  className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSemester === sem
                       ? "bg-blue-600 text-white shadow-xl shadow-blue-500/20"
                       : "text-gray-400 hover:text-blue-600 hover:bg-white"
-                  }`}
+                    }`}
                 >
                   Semester {sem}
                 </button>
@@ -487,7 +486,7 @@ const MyFees = () => {
                   onClick={() => {
                     const unpaidFees = semesterWise[activeSemester].fees.filter(f => f.due > 0);
                     const hasFine = semesterWise[activeSemester].fine.due > 0;
-                    
+
                     if (selectedFees.size > 0) {
                       // Clear all
                       setSelectedFees(new Set());
@@ -496,17 +495,17 @@ const MyFees = () => {
                       // Select all unpaid
                       const newSelected = new Set();
                       const newAmounts = {};
-                      
+
                       unpaidFees.forEach(fee => {
                         newSelected.add(fee.id);
                         newAmounts[fee.id] = fee.due;
                       });
-                      
+
                       if (hasFine) {
                         newSelected.add(`fine:${activeSemester}`);
                         newAmounts[`fine:${activeSemester}`] = semesterWise[activeSemester].fine.due;
                       }
-                      
+
                       setSelectedFees(newSelected);
                       setCustomAmounts(newAmounts);
                     }
@@ -516,7 +515,7 @@ const MyFees = () => {
                   {selectedFees.size > 0 ? 'Clear All' : 'Select All'}
                 </button>
               </div>
-              
+
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
@@ -587,11 +586,10 @@ const MyFees = () => {
                         </td>
                         <td className="px-8 py-5 text-center">
                           <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                              isFullyPaid
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${isFullyPaid
                                 ? "bg-emerald-50 text-emerald-700"
                                 : "bg-red-50 text-red-700"
-                            }`}
+                              }`}
                           >
                             {fee.due > 0 ? "Due" : "Paid"}
                           </span>

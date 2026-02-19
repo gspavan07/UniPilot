@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllCycles, deleteCycle } from "../../services/examCycleService";
+import { getAllCycles, deleteCycle } from "../../services/examCycleService.js";
 import {
   Edit,
   Trash2,

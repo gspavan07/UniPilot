@@ -4,8 +4,8 @@ import {
     getHodFormattedPapers,
     updateHodPaperFormat,
     freezeHodPaperFormat
-} from "../../services/hodService";
-import { getCourseOutcomes } from "../../services/courseOutcomeService";
+} from "../../services/hodService.js";
+import { getCourseOutcomes } from "../../services/courseOutcomeService.js";
 import {
     ArrowLeft,
     Save,

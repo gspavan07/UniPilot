@@ -1,5 +1,5 @@
-const nodemailer = require("nodemailer");
-const logger = require("../utils/logger");
+import nodemailer from "nodemailer";
+import logger from "../utils/logger.js";
 
 /**
  * Mail Service for digital notifications
@@ -197,4 +197,4 @@ class MailService {
   }
 }
 
-module.exports = new MailService();
+export default new MailService();

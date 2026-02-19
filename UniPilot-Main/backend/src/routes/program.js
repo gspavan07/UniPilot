@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getAllPrograms,
   getProgram,
   createProgram,
   updateProgram,
   deleteProgram,
-} = require("../controllers/programController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/programController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -24,4 +24,4 @@ router
   .put(checkPermission("academics:manage"), updateProgram)
   .delete(checkPermission("academics:manage"), deleteProgram);
 
-module.exports = router;
+export default router;

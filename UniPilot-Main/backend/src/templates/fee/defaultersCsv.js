@@ -5,7 +5,7 @@
  * Customize columns and sorting as needed.
  */
 
-const config = require("../config/templateConfig");
+import config from "../config/templateConfig.js";
 
 /**
  * Generate Fee Defaulters CSV
@@ -60,4 +60,4 @@ function generateDefaultersCsv(defaulters) {
   return csv;
 }
 
-module.exports = generateDefaultersCsv;
+export default generateDefaultersCsv;

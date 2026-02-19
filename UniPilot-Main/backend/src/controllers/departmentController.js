@@ -1,5 +1,6 @@
-const { Department, User, Role } = require("../models");
-const logger = require("../utils/logger");
+import { Department, User, Role } from "../models/index.js";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
 
 /**
  * Department Controller
@@ -9,7 +10,7 @@ const logger = require("../utils/logger");
 // @desc    Get all departments
 // @route   GET /api/departments
 // @access  Private/Admin/Faculty
-exports.getAllDepartments = async (req, res) => {
+export const getAllDepartments = async (req, res) => {
   try {
     const { type } = req.query;
     const where = {};
@@ -55,7 +56,7 @@ exports.getAllDepartments = async (req, res) => {
 // @desc    Get single department
 // @route   GET /api/departments/:id
 // @access  Private
-exports.getDepartment = async (req, res) => {
+export const getDepartment = async (req, res) => {
   try {
     const department = await Department.findByPk(req.params.id, {
       include: [
@@ -101,7 +102,7 @@ exports.getDepartment = async (req, res) => {
 // @desc    Create new department
 // @route   POST /api/departments
 // @access  Private/Admin
-exports.createDepartment = async (req, res) => {
+export const createDepartment = async (req, res) => {
   try {
     const department = await Department.create(req.body);
 
@@ -146,7 +147,7 @@ exports.createDepartment = async (req, res) => {
 // @desc    Update department
 // @route   PUT /api/departments/:id
 // @access  Private/Admin
-exports.updateDepartment = async (req, res) => {
+export const updateDepartment = async (req, res) => {
   try {
     let department = await Department.findByPk(req.params.id);
 
@@ -179,7 +180,7 @@ exports.updateDepartment = async (req, res) => {
           const otherDepts = await Department.count({
             where: {
               hod_id: previousHodId,
-              id: { [require("sequelize").Op.ne]: department.id },
+              id: { [Op.ne]: department.id },
             },
           });
 
@@ -230,7 +231,7 @@ exports.updateDepartment = async (req, res) => {
 // @desc    Delete department
 // @route   DELETE /api/departments/:id
 // @access  Private/Admin
-exports.deleteDepartment = async (req, res) => {
+export const deleteDepartment = async (req, res) => {
   try {
     const department = await Department.findByPk(req.params.id);
 

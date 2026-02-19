@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { getCycleStudents } from "../../services/examCycleService";
+import { getCycleStudents } from "../../services/examCycleService.js";
 import {
   Users,
   Search,

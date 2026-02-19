@@ -1,33 +1,43 @@
-const {
+import {
   ExamCycle,
   ExamTimetable,
   ExamFeeConfiguration,
   LateFeeSlab,
   ExamFeePayment,
   ExamStudentEligibility,
-} = require("../../models/exam/associations");
-const { FeePayment } = require("../../models");
-const User = require("../../models/User");
-const { sequelize } = require("../../config/database");
-const logger = require("../../utils/logger");
-const { Op } = require("sequelize");
-const { calculateEligibility } = require("./examEligibilityController");
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
+} from "../../models/exam/associations.js";
+import { FeePayment } from "../../models/index.js";
+import User from "../../models/User.js";
+import { sequelize } from "../../config/database.js";
+import logger from "../../utils/logger.js";
+import { Op } from "sequelize";
+import { calculateEligibility } from "./examEligibilityController.js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 // Initialize Razorpay
 // Prioritize RAZORPAY_MODE env var, otherwise fallback to NODE_ENV
 const isLive =
   process.env.RAZORPAY_MODE === "live" || process.env.NODE_ENV === "production";
 
-const razorpay = new Razorpay({
-  key_id: isLive
-    ? process.env.RAZORPAY_KEY_ID_LIVE
-    : process.env.RAZORPAY_KEY_ID,
-  key_secret: isLive
-    ? process.env.RAZORPAY_KEY_SECRET_LIVE
-    : process.env.RAZORPAY_KEY_SECRET,
-});
+const razorpayKeyId = isLive
+  ? process.env.RAZORPAY_KEY_ID_LIVE
+  : process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = isLive
+  ? process.env.RAZORPAY_KEY_SECRET_LIVE
+  : process.env.RAZORPAY_KEY_SECRET;
+
+let razorpay = null;
+if (razorpayKeyId && razorpayKeySecret) {
+  razorpay = new Razorpay({
+    key_id: razorpayKeyId,
+    key_secret: razorpayKeySecret,
+  });
+} else {
+  logger.warn(
+    "Razorpay keys missing in examCycleController. Payment functionality will be disabled.",
+  );
+}
 
 /**
  * Helper function to convert number to Roman numerals
@@ -776,7 +786,7 @@ async function getCycleStudents(req, res) {
   }
 }
 
-module.exports = {
+export default {
   getAllCycles,
   getCycleById,
   createCycle,

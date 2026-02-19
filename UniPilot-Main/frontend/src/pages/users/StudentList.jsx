@@ -344,8 +344,8 @@ const StudentList = () => {
                     </p>
                   </div>
                 )) || (
-                <div className="h-10 w-24 bg-gray-50 animate-pulse rounded" />
-              )}
+                  <div className="h-10 w-24 bg-gray-50 animate-pulse rounded" />
+                )}
             </div>
 
             {/* Action Toolbar */}
@@ -353,67 +353,67 @@ const StudentList = () => {
               (currentUser?.role_data?.slug || "").includes("admission") ||
               currentUser?.role === "super_admin" ||
               hasPermission("students:manage")) && (
-              <div className="flex flex-wrap justify-end gap-2">
-                {((currentUser?.role_data?.slug || "").includes("admission") ||
-                  currentUser?.role === "super_admin") && (
-                  <button
-                    onClick={handleExport}
-                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                  >
-                    <Download className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                    Export
-                  </button>
-                )}
-                {((currentUser?.role_data?.slug || "").includes("admission") ||
-                  currentUser?.role === "super_admin") && (
-                  <button
-                    onClick={() => setIsBulkNotifOpen(true)}
-                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                  >
-                    <Mail className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                    Message
-                  </button>
-                )}
+                <div className="flex flex-wrap justify-end gap-2">
+                  {((currentUser?.role_data?.slug || "").includes("admission") ||
+                    currentUser?.role === "super_admin") && (
+                      <button
+                        onClick={handleExport}
+                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                      >
+                        <Download className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                        Export
+                      </button>
+                    )}
+                  {((currentUser?.role_data?.slug || "").includes("admission") ||
+                    currentUser?.role === "super_admin") && (
+                      <button
+                        onClick={() => setIsBulkNotifOpen(true)}
+                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                      >
+                        <Mail className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                        Message
+                      </button>
+                    )}
 
-                {hasPermission("admissions:manage") && (
-                  <button
-                    onClick={() => setIsBulkPhotoOpen(true)}
-                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                  >
-                    <Upload className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                    Photos
-                  </button>
-                )}
-
-                {canCreate && (
-                  <>
+                  {hasPermission("admissions:manage") && (
                     <button
-                      onClick={() => setIsImportOpen(true)}
+                      onClick={() => setIsBulkPhotoOpen(true)}
                       className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
                     >
-                      <Plus className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                      Import
+                      <Upload className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                      Photos
                     </button>
+                  )}
+
+                  {canCreate && (
+                    <>
+                      <button
+                        onClick={() => setIsImportOpen(true)}
+                        className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
+                      >
+                        <Plus className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                        Import
+                      </button>
+                      <button
+                        onClick={() => navigate("/student/register")}
+                        className="flex items-center px-5 py-2 text-sm font-bold text-white bg-black border border-black rounded-full hover:bg-blue-700 hover:border-blue-700 transition-all shadow-xl shadow-blue-900/10"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Student
+                      </button>
+                    </>
+                  )}
+                  {hasPermission("admissions:generate_ids") && (
                     <button
-                      onClick={() => navigate("/student/register")}
-                      className="flex items-center px-5 py-2 text-sm font-bold text-white bg-black border border-black rounded-full hover:bg-blue-700 hover:border-blue-700 transition-all shadow-xl shadow-blue-900/10"
+                      onClick={() => setIsGenerateIdOpen(true)}
+                      className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Student
+                      <Wand2 className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
+                      IDs
                     </button>
-                  </>
-                )}
-                {hasPermission("admissions:generate_ids") && (
-                  <button
-                    onClick={() => setIsGenerateIdOpen(true)}
-                    className="group flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-blue-600 hover:text-blue-600 transition-all"
-                  >
-                    <Wand2 className="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-600" />
-                    IDs
-                  </button>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
           </div>
         </div>
 
@@ -621,53 +621,53 @@ const StudentList = () => {
                         >
                           {(canManageUser(user) ||
                             currentUser?.role === "super_admin") && (
-                            <>
-                              {((currentUser?.role_data?.slug || "").includes(
-                                "admission",
-                              ) ||
-                                currentUser?.role === "super_admin") && (
-                                <>
-                                  <button
-                                    onClick={() =>
-                                      setDetailModal({
-                                        isOpen: true,
-                                        student: user,
-                                      })
-                                    }
-                                    className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                    title="View Details"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setDocModal({
-                                        isOpen: true,
-                                        studentId: user.id,
-                                        studentName: `${user.first_name} ${user.last_name}`,
-                                      })
-                                    }
-                                    className="p-2 hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                                    title="Verify Documents"
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                onClick={() => openEditForm(user)}
-                                className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
+                              <>
+                                {((currentUser?.role_data?.slug || "").includes(
+                                  "admission",
+                                ) ||
+                                  currentUser?.role === "super_admin") && (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          setDetailModal({
+                                            isOpen: true,
+                                            student: user,
+                                          })
+                                        }
+                                        className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                        title="View Details"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          setDocModal({
+                                            isOpen: true,
+                                            studentId: user.id,
+                                            studentName: `${user.first_name} ${user.last_name}`,
+                                          })
+                                        }
+                                        className="p-2 hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                        title="Verify Documents"
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                <button
+                                  onClick={() => openEditForm(user)}
+                                  className="p-2 hover:bg-gray-100 text-gray-400 hover:text-black rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                         </div>
                       </td>
                     </tr>

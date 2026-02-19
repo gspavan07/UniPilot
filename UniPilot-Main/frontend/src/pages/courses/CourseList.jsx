@@ -167,11 +167,10 @@ const CourseList = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              showFilters
+            className={`px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${showFilters
                 ? "bg-blue-600 hover:bg-blue-700 text-white"
                 : "bg-gray-100 dark:bg-gray-800 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+              }`}
           >
             <Filter className="w-4 h-4" />
             {showFilters ? "Hide Filters" : "Filters"}
@@ -182,13 +181,13 @@ const CourseList = () => {
             filters.semester ||
             filters.course_type ||
             searchTerm) && (
-            <button
-              onClick={resetFilters}
-              className="px-4 py-2.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-medium transition-colors"
-            >
-              Reset
-            </button>
-          )}
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-medium transition-colors"
+              >
+                Reset
+              </button>
+            )}
         </div>
 
         {/* Filter Panel */}

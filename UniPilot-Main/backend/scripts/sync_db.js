@@ -1,7 +1,8 @@
-const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-const { sequelize } = require("../src/models");
-const logger = require("../src/utils/logger");
+import path from "path";
+import dotenv from "dotenv"
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+import { sequelize } from "../src/models/index.js";
+import logger from "../src/utils/logger.js";
 
 const syncDatabase = async () => {
   try {
