@@ -1,5 +1,5 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getAdmissionStats,
   exportAdmissionData,
   getSeatMatrix,
@@ -12,29 +12,29 @@ const {
   verifyStudent,
   getGenderStats,
   getIdPreviews,
-} = require("../controllers/admissionController");
-const {
+} from "../controllers/admissionController.js";
+import {
   getAdmissionConfigs,
   saveAdmissionConfig,
   deleteAdmissionConfig,
-} = require("../controllers/admissionConfigController");
-const {
+} from "../controllers/admissionConfigController.js";
+import {
   previewBulkIds,
   commitBulkIds,
-} = require("../controllers/admissionIdController");
-const {
+} from "../controllers/admissionIdController.js";
+import {
   getAdmissionAnalytics,
-} = require("../controllers/admissionAnalyticsController");
+} from "../controllers/admissionAnalyticsController.js";
 
 // Correction: I added the function to admissionController.js (file viewed above).
 // But 'previewBulkIds' is in 'admissionIdController'.
 // I need to import getIdPreviews from 'admissionController'
 // Let me verify where I added it. I added it to 'admissionController.js' in the previous step.
 // So I should import it from there.
-const bulkUploadController = require("../controllers/bulkUploadController");
-const profileUpload = require("../middleware/profileUpload");
-const studentUpload = require("../middleware/studentUpload");
-const { authenticate, checkPermission } = require("../middleware/auth");
+import * as bulkUploadController from "../controllers/bulkUploadController.js";
+import profileUpload from "../middleware/profileUpload.js";
+import studentUpload from "../middleware/studentUpload.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -111,4 +111,4 @@ router.post(
   bulkUploadController.uploadStudentPhotos
 );
 
-module.exports = router;
+export default router;

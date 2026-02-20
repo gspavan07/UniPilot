@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   addBook,
   getBooks,
   issueBook,
   returnBook,
   getMyBooks,
-} = require("../controllers/libraryController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/libraryController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -21,4 +21,4 @@ router.post("/books", checkPermission("library:books:manage"), addBook);
 router.post("/issue", checkPermission("library:issue"), issueBook);
 router.post("/return", checkPermission("library:issue"), returnBook);
 
-module.exports = router;
+export default router;

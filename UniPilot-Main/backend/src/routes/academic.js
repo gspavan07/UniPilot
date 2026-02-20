@@ -1,10 +1,10 @@
-const express = require("express");
-const {
+import express from "express";
+import {
     getAssignments,
     assignFaculty,
     removeAssignment,
-} = require("../controllers/facultyAssignmentController");
-const { authenticate, authorize } = require("../middleware/auth");
+} from "../controllers/facultyAssignmentController.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -15,4 +15,4 @@ router.get("/faculty-assignments", getAssignments);
 router.post("/faculty-assignments", authorize("admin", "faculty", "hod"), assignFaculty);
 router.delete("/faculty-assignments/:id", authorize("admin", "faculty", "hod"), removeAssignment);
 
-module.exports = router;
+export default router;

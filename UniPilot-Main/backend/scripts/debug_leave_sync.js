@@ -1,11 +1,11 @@
-const {
+import {
   User,
   SalaryGrade,
   SalaryStructure,
   LeaveBalance,
   sequelize,
-} = require("../src/models");
-const leaveService = require("../src/services/leaveService");
+} from "../src/models/index.js";
+import leaveService from "../src/services/leaveService.js";
 
 async function debug() {
   try {

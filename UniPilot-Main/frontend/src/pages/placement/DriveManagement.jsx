@@ -64,13 +64,12 @@ const DriveManagement = () => {
                     {drive.drive_name}
                   </h3>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      drive.status === "scheduled"
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${drive.status === "scheduled"
                         ? "bg-blue-100 text-blue-700"
                         : drive.status === "ongoing"
                           ? "bg-amber-100 text-amber-700"
                           : "bg-gray-100 text-gray-700"
-                    }`}
+                      }`}
                   >
                     {drive.status}
                   </span>

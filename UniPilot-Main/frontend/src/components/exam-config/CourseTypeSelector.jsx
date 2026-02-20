@@ -75,8 +75,8 @@ const CourseTypeSelector = ({
             <div
               key={type.id}
               className={`group flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${selectedCourseType?.id === type.id
-                  ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
-                  : "border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                : "border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 }`}
               onClick={() => onSelectCourseType(type)}
             >

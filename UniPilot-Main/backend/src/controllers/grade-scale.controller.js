@@ -1,9 +1,9 @@
-const Regulation = require("../models/Regulation");
+import Regulation from "../models/Regulation.js";
 
 /**
  * Get grade scale for a specific regulation
  */
-const getGradeScale = async (req, res) => {
+export const getGradeScale = async (req, res) => {
   try {
     const { regulationId } = req.params;
 
@@ -24,7 +24,7 @@ const getGradeScale = async (req, res) => {
 /**
  * Update entire grade scale for a regulation
  */
-const updateGradeScale = async (req, res) => {
+export const updateGradeScale = async (req, res) => {
   try {
     const { regulationId } = req.params;
     const { grade_scale } = req.body;
@@ -98,7 +98,7 @@ const updateGradeScale = async (req, res) => {
 /**
  * Add a new grade to the grade scale
  */
-const addGrade = async (req, res) => {
+export const addGrade = async (req, res) => {
   try {
     const { regulationId } = req.params;
     const { grade } = req.body;
@@ -168,7 +168,7 @@ const addGrade = async (req, res) => {
 /**
  * Update a specific grade
  */
-const updateGrade = async (req, res) => {
+export const updateGrade = async (req, res) => {
   try {
     const { regulationId, gradeId } = req.params;
     const { grade } = req.body;
@@ -227,7 +227,7 @@ const updateGrade = async (req, res) => {
 /**
  * Delete a grade
  */
-const deleteGrade = async (req, res) => {
+export const deleteGrade = async (req, res) => {
   try {
     const { regulationId, gradeId } = req.params;
 
@@ -257,7 +257,7 @@ const deleteGrade = async (req, res) => {
   }
 };
 
-module.exports = {
+export default {
   getGradeScale,
   updateGradeScale,
   addGrade,

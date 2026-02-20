@@ -1,7 +1,11 @@
-const { User, Role, Permission } = require("../models");
-const { hashPassword, comparePassword } = require("../utils/bcrypt");
-const { generateAccessToken, generateRefreshToken } = require("../utils/jwt");
-const logger = require("../utils/logger");
+import { User, Role, Permission } from "../models/index.js";
+import { hashPassword, comparePassword } from "../utils/bcrypt.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
+import logger from "../utils/logger.js";
+import crypto from "crypto";
+import { Op } from "sequelize";
+
+
 
 /**
  * Authentication Service
@@ -136,7 +140,6 @@ class AuthService {
           program: user.program,
           regulation: user.regulation,
           is_placement_coordinator: user.is_placement_coordinator,
-          // Add missing student/employee fields
           current_semester: user.current_semester,
           student_id: user.student_id,
           employee_id: user.employee_id,
@@ -232,7 +235,6 @@ class AuthService {
       }
 
       // Generate reset token (random hex string)
-      const crypto = require("crypto");
       const resetToken = crypto.randomBytes(32).toString("hex");
       const passwordResetToken = crypto
         .createHash("sha256")
@@ -271,13 +273,11 @@ class AuthService {
    */
   async resetPassword(token, newPassword) {
     try {
-      const crypto = require("crypto");
-      const hashedToken = crypto
+        const hashedToken = crypto
         .createHash("sha256")
         .update(token)
         .digest("hex");
 
-      const { Op } = require("sequelize");
       const user = await User.findOne({
         where: {
           password_reset_token: hashedToken,
@@ -307,4 +307,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

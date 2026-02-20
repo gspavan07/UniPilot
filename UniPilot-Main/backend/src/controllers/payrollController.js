@@ -1,4 +1,4 @@
-const {
+import {
   SalaryStructure,
   Payslip,
   User,
@@ -6,21 +6,21 @@ const {
   Department,
   StaffAttendance,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const mailService = require("../services/mailService");
-const auditService = require("../services/auditService");
-const leaveService = require("../services/leaveService");
-const { decrypt } = require("../utils/encryption");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import mailService from "../services/mailService.js";
+import auditService from "../services/auditService.js";
+import leaveService from "../services/leaveService.js";
+import { Op } from "sequelize";
 
 // Template imports
-const generatePayslipPdf = require("../templates/hr/payslipPdf");
-const generateBankTransferCsv = require("../templates/hr/bankTransferCsv");
+import generatePayslipPdf from "../templates/hr/payslipPdf.js";
+import generateBankTransferCsv from "../templates/hr/bankTransferCsv.js";
 
 // @desc    Get Salary Structure for a Staff
 // @route   GET /api/hr/payroll/structure/:user_id
 // @access  Private/Admin
-exports.getSalaryStructure = async (req, res) => {
+export const getSalaryStructure = async (req, res) => {
   try {
     const { user_id } = req.params;
     const requesterId = req.user.userId;
@@ -58,7 +58,7 @@ exports.getSalaryStructure = async (req, res) => {
 // @desc    Create/Update Salary Structure
 // @route   POST /api/hr/payroll/structure
 // @access  Private/Admin
-exports.upsertSalaryStructure = async (req, res) => {
+export const upsertSalaryStructure = async (req, res) => {
   try {
     const { user_id, basic_salary, grade_id, allowances, deductions } =
       req.body;
@@ -105,7 +105,7 @@ exports.upsertSalaryStructure = async (req, res) => {
 // @desc    Generate Payslip
 // @route   POST /api/hr/payroll/generate
 // @access  Private/Admin
-exports.generatePayslip = async (req, res) => {
+export const generatePayslip = async (req, res) => {
   // Transactional generation
   const t = await sequelize.transaction();
   try {
@@ -192,7 +192,7 @@ exports.generatePayslip = async (req, res) => {
 // @desc    Get Bulk Payroll Preview
 // @route   GET /api/hr/payroll/preview-bulk
 // @access  Private/Admin
-exports.getBulkPayrollPreview = async (req, res) => {
+export const getBulkPayrollPreview = async (req, res) => {
   try {
     const { department_id, month, year } = req.query;
 
@@ -201,7 +201,7 @@ exports.getBulkPayrollPreview = async (req, res) => {
     }
 
     const whereUser = {
-      role: { [require("sequelize").Op.ne]: "student" },
+      role: { [Op.ne]: "student" },
       is_active: true,
     };
     if (department_id && department_id !== "all") {
@@ -266,7 +266,7 @@ exports.getBulkPayrollPreview = async (req, res) => {
 // @desc    Bulk Generate Payslips
 // @route   POST /api/hr/payroll/bulk-generate
 // @access  Private/Admin
-exports.bulkGeneratePayslips = async (req, res) => {
+export const bulkGeneratePayslips = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { department_id } = req.body; // Remove month/year destructuring here to parse them
@@ -282,7 +282,6 @@ exports.bulkGeneratePayslips = async (req, res) => {
         .json({ error: "Valid Month and Year are required" });
     }
 
-    const { Op } = require("sequelize");
 
     // LOP Date Range (Format as YYYY-MM-DD for DATEONLY consistency)
     // Javascript months are 0-indexed for Date constructor
@@ -518,7 +517,7 @@ exports.bulkGeneratePayslips = async (req, res) => {
 // @desc    Get Payslips (My Payslips or Admin View)
 // @route   GET /api/hr/payroll/payslips
 // @access  Private
-exports.getPayslips = async (req, res) => {
+export const getPayslips = async (req, res) => {
   try {
     const { user_id, year, month, department_id, status } = req.query;
     const requesterRole = req.user.role;
@@ -586,7 +585,7 @@ exports.getPayslips = async (req, res) => {
 // @desc    Get all salary grades
 // @route   GET /api/hr/payroll/grades
 // @access  Private/Admin
-exports.getSalaryGrades = async (req, res) => {
+export const getSalaryGrades = async (req, res) => {
   try {
     const grades = await SalaryGrade.findAll();
     res.status(200).json({ success: true, data: grades });
@@ -599,7 +598,7 @@ exports.getSalaryGrades = async (req, res) => {
 // @desc    Create/Update salary grade
 // @route   POST /api/hr/payroll/grades
 // @access  Private/Admin
-exports.upsertSalaryGrade = async (req, res) => {
+export const upsertSalaryGrade = async (req, res) => {
   try {
     const {
       id,
@@ -641,10 +640,9 @@ exports.upsertSalaryGrade = async (req, res) => {
 // @desc    Get Payroll Statistics
 // @route   GET /api/hr/payroll/stats
 // @access  Private/Admin
-exports.getPayrollStats = async (req, res) => {
+export const getPayrollStats = async (req, res) => {
   try {
     // 1. Total Active Staff (Everyone except students)
-    const { Op } = require("sequelize");
     const staffCount = await User.count({
       where: {
         role: { [Op.ne]: "student" },
@@ -679,7 +677,7 @@ exports.getPayrollStats = async (req, res) => {
 // @desc    Export Bank Transfer File (CSV)
 // @route   GET /api/hr/payroll/export-bank-file
 // @access  Private/Admin
-exports.exportBankTransferFile = async (req, res) => {
+export const exportBankTransferFile = async (req, res) => {
   try {
     const { department_id, month, year } = req.query;
 
@@ -738,7 +736,7 @@ exports.exportBankTransferFile = async (req, res) => {
 // @desc    Confirm Batch Payout
 // @route   POST /api/hr/payroll/confirm-payout
 // @access  Private/Admin
-exports.confirmPayment = async (req, res) => {
+export const confirmPayment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const {
@@ -844,7 +842,7 @@ exports.confirmPayment = async (req, res) => {
 // @desc    Get Publish Stats (Preview)
 // @route   GET /api/hr/payroll/publish/stats
 // @access  Private/Admin
-exports.getPublishStats = async (req, res) => {
+export const getPublishStats = async (req, res) => {
   try {
     const { month, year, department_id } = req.query;
 
@@ -931,7 +929,7 @@ exports.getPublishStats = async (req, res) => {
 // @desc    Publish Payslips
 // @route   POST /api/hr/payroll/publish
 // @access  Private/Admin
-exports.publishPayslips = async (req, res) => {
+export const publishPayslips = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { month, year, department_id } = req.body;
@@ -1046,10 +1044,9 @@ exports.publishPayslips = async (req, res) => {
 // @desc    Download Payslip PDF
 // @route   GET /api/hr/payroll/payslip/:id/download
 // @access  Private
-exports.downloadPayslipPdf = async (req, res) => {
+export const downloadPayslipPdf = async (req, res) => {
   try {
     const { id } = req.params;
-    const PDFDocument = require("pdfkit");
 
     // 1. Fetch Payslip with details
     const payslip = await Payslip.findByPk(id, {
@@ -1093,4 +1090,21 @@ exports.downloadPayslipPdf = async (req, res) => {
       res.status(500).json({ error: "PDF Generation failed" });
     }
   }
+};
+
+export default {
+  getSalaryStructure,
+  upsertSalaryStructure,
+  generatePayslip,
+  getBulkPayrollPreview,
+  bulkGeneratePayslips,
+  getPayslips,
+  getSalaryGrades,
+  upsertSalaryGrade,
+  getPayrollStats,
+  exportBankTransferFile,
+  confirmPayment,
+  getPublishStats,
+  publishPayslips,
+  downloadPayslipPdf,
 };

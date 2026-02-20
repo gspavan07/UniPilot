@@ -451,8 +451,8 @@ const DepartmentPlacementDashboard = () => {
               <button
                 onClick={() => setActiveTab("drives")}
                 className={`flex items-center gap-2 px-6 py-3 rounded-[1.2rem] font-black text-xs uppercase tracking-widest transition-all duration-300 ${activeTab === "drives"
-                    ? "bg-white text-blue-600 shadow-lg shadow-gray-200/50 scale-100"
-                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-200/50"
+                  ? "bg-white text-blue-600 shadow-lg shadow-gray-200/50 scale-100"
+                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-200/50"
                   }`}
               >
                 <Calendar className="w-4 h-4" /> Drives
@@ -460,8 +460,8 @@ const DepartmentPlacementDashboard = () => {
               <button
                 onClick={() => setActiveTab("students")}
                 className={`flex items-center gap-2 px-6 py-3 rounded-[1.2rem] font-black text-xs uppercase tracking-widest transition-all duration-300 ${activeTab === "students"
-                    ? "bg-white text-blue-600 shadow-lg shadow-gray-200/50 scale-100"
-                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-200/50"
+                  ? "bg-white text-blue-600 shadow-lg shadow-gray-200/50 scale-100"
+                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-200/50"
                   }`}
               >
                 <Users className="w-4 h-4" /> Students
@@ -595,8 +595,8 @@ const DepartmentPlacementDashboard = () => {
                             <button
                               onClick={() => toggleDriveExpansion(drive.id)}
                               className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all w-full flex items-center justify-center gap-2 ${expandedDrive === drive.id
-                                  ? "bg-black text-white"
-                                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-500/20"
+                                ? "bg-black text-white"
+                                : "bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-500/20"
                                 }`}
                             >
                               {expandedDrive === drive.id ? (
@@ -786,8 +786,8 @@ const DepartmentPlacementDashboard = () => {
                               <td className="px-8 py-5 text-center">
                                 <div className="flex justify-center">
                                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] ${placement
-                                      ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                                      : "bg-gray-50 text-gray-500 border border-gray-100"
+                                    ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                    : "bg-gray-50 text-gray-500 border border-gray-100"
                                     }`}>
                                     {placement ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                     {placement ? "Placed" : "Open"}

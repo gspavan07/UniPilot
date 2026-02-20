@@ -1,5 +1,5 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createCategory,
   getCategories,
   getStructures,
@@ -23,19 +23,17 @@ const {
   validateScholarshipImport,
   finalizeScholarshipImport,
   getDefaulters,
-  sendReminders,
   addStudentFine,
   deleteStudentFine,
-  imposeFine,
   getDailyCollection,
   getSections,
   createPaymentOrder,
   payMyFees,
-} = require("../controllers/feeController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/feeController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
-const multer = require("multer");
+import multer from "multer";
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authenticate);
@@ -167,4 +165,4 @@ router.delete(
   deleteStudentFine,
 );
 
-module.exports = router;
+export default router;

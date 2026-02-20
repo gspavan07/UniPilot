@@ -1,6 +1,8 @@
-const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "./.env") });
-const { SalaryStructure } = require("./src/models");
+import path from "path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.resolve(__dirname, "./.env") });
+import { SalaryStructure } from "./src/models/index.js";
 
 const debug = async () => {
   try {

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const DriveRound = sequelize.define(
   "DriveRound",
@@ -58,4 +58,4 @@ const DriveRound = sequelize.define(
   },
 );
 
-module.exports = DriveRound;
+export default DriveRound;

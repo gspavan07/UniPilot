@@ -1,9 +1,9 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const { authenticate, checkPermission } = require("../middleware/auth");
-const staffAttendanceController = require("../controllers/staffAttendanceController");
-const payrollController = require("../controllers/payrollController");
-const hrDashboardController = require("../controllers/hrDashboardController");
+import { authenticate, checkPermission } from "../middleware/auth.js";
+import staffAttendanceController from "../controllers/staffAttendanceController.js";
+import payrollController from "../controllers/payrollController.js";
+import hrDashboardController from "../controllers/hrDashboardController.js";
 
 // Staff Attendance Routes
 router.post(
@@ -155,4 +155,4 @@ router.post(
   payrollController.upsertSalaryGrade,
 );
 
-module.exports = router;
+export default router;

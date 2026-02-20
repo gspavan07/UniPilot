@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     // 1. Update exam_cycles table
     await queryInterface.addColumn("exam_cycles", "check_attendance", {

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * SpecialTrip Model
@@ -115,4 +115,4 @@ SpecialTrip.associate = (models) => {
   });
 };
 
-module.exports = SpecialTrip;
+export default SpecialTrip;

@@ -1,16 +1,16 @@
-const {
+import {
   Placement,
   PlacementDrive,
   JobPosting,
   PlacementPolicy,
-} = require("../models");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Check if placement policies allow student to apply
  * (e.g. Dream Company Restriction)
  */
-exports.validatePolicyRestrictions = async (studentId, driveId) => {
+export const validatePolicyRestrictions = async (studentId, driveId) => {
   try {
     const drive = await PlacementDrive.findByPk(driveId, {
       include: [{ model: JobPosting, as: "job_posting" }],
@@ -53,4 +53,8 @@ exports.validatePolicyRestrictions = async (studentId, driveId) => {
     logger.error("Policy check error:", error);
     throw error;
   }
+};
+
+export default {
+  validatePolicyRestrictions,
 };

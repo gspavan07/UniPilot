@@ -37,7 +37,6 @@ const AcademicCalendar = ({ target = "staff" }) => {
     date: "",
     type: "Public Holiday",
     description: "",
-    description: "",
     duration: 1,
   });
 

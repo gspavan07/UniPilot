@@ -1,9 +1,9 @@
-const Regulation = require("../models/Regulation");
+import Regulation from "../models/Regulation.js";
 
 /**
  * Get exam configuration for a specific regulation
  */
-const getExamConfig = async (req, res) => {
+export const getExamConfig = async (req, res) => {
   try {
     const { regulationId } = req.params;
 
@@ -24,7 +24,7 @@ const getExamConfig = async (req, res) => {
 /**
  * Update exam configuration for a specific regulation
  */
-const updateExamConfig = async (req, res) => {
+export const updateExamConfig = async (req, res) => {
   try {
     const { regulationId } = req.params;
     const { exam_configuration } = req.body;
@@ -83,7 +83,7 @@ const updateExamConfig = async (req, res) => {
 /**
  * Add a new course type to exam configuration
  */
-const addCourseType = async (req, res) => {
+export const addCourseType = async (req, res) => {
   try {
     const { regulationId } = req.params;
     const { courseType } = req.body;
@@ -139,7 +139,7 @@ const addCourseType = async (req, res) => {
 /**
  * Update a specific course type
  */
-const updateCourseType = async (req, res) => {
+export const updateCourseType = async (req, res) => {
   try {
     const { regulationId, courseTypeId } = req.params;
     const { courseType } = req.body;
@@ -183,7 +183,7 @@ const updateCourseType = async (req, res) => {
 /**
  * Delete a course type
  */
-const deleteCourseType = async (req, res) => {
+export const deleteCourseType = async (req, res) => {
   try {
     const { regulationId, courseTypeId } = req.params;
 
@@ -216,7 +216,7 @@ const deleteCourseType = async (req, res) => {
   }
 };
 
-module.exports = {
+export default {
   getExamConfig,
   updateExamConfig,
   addCourseType,

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const Payslip = sequelize.define(
   "Payslip",
@@ -79,4 +79,4 @@ Payslip.associate = (models) => {
   });
 };
 
-module.exports = Payslip;
+export default Payslip;

@@ -255,13 +255,13 @@ const HostelRoomBills = () => {
   // Get unique floors from filtered building
   const availableFloors = buildingFilter
     ? [
-        ...new Set(
-          roomsForBilling
-            .filter((r) => r.building?.id === buildingFilter)
-            .map((r) => r.floor?.id)
-            .filter(Boolean),
-        ),
-      ]
+      ...new Set(
+        roomsForBilling
+          .filter((r) => r.building?.id === buildingFilter)
+          .map((r) => r.floor?.id)
+          .filter(Boolean),
+      ),
+    ]
     : [];
 
   // Filter rooms

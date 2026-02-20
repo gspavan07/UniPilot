@@ -1,11 +1,13 @@
-const { verifyToken } = require("../utils/jwt");
-const logger = require("../utils/logger");
+import { verifyToken } from "../utils/jwt.js";
+import logger from "../utils/logger.js";
+import { User, Role, Permission } from "../models/index.js";
+
 
 /**
  * Authentication Middleware
  * Verifies JWT token and attaches user to request
  */
-const authenticate = async (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
@@ -35,13 +37,12 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-const { User, Role, Permission } = require("../models");
 
 /**
  * Authorization Middleware
  * Checks if user has required role(s)
  */
-const authorize = (...allowedRoles) => {
+export const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -65,7 +66,7 @@ const authorize = (...allowedRoles) => {
  * Permission Middleware
  * Checks if user has specific permission slug
  */
-const checkPermission = (requiredPermission) => {
+export const checkPermission = (requiredPermission) => {
   return async (req, res, next) => {
     try {
       if (!req.user) {
@@ -134,7 +135,7 @@ const checkPermission = (requiredPermission) => {
   };
 };
 
-module.exports = {
+export default {
   authenticate,
   authorize,
   checkPermission,

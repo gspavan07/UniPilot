@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const DriveEligibility = sequelize.define(
   "DriveEligibility",
@@ -59,4 +59,4 @@ const DriveEligibility = sequelize.define(
   },
 );
 
-module.exports = DriveEligibility;
+export default DriveEligibility;

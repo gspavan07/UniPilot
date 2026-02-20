@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const holidayController = require("../controllers/holidayController");
-const { authenticate, authorize } = require("../middleware/auth");
+import holidayController from "../controllers/holidayController.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 router.get("/", authenticate, holidayController.getHolidays);
 router.post(
@@ -23,4 +23,4 @@ router.delete(
   holidayController.deleteHoliday
 );
 
-module.exports = router;
+export default router;

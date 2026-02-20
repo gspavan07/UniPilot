@@ -1,10 +1,10 @@
-const {
+import {
     ExamTimetable,
     ExamCycle,
-} = require("../../models/exam/associations");
-const { sequelize } = require("../../config/database");
-const logger = require("../../utils/logger");
-const { Op } = require("sequelize");
+} from "../../models/exam/associations.js";
+import { sequelize } from "../../config/database.js";
+import logger from "../../utils/logger.js";
+import { Op } from "sequelize";
 
 /**
  * Get assigned exams for the logged-in faculty
@@ -117,7 +117,7 @@ async function updatePaperFormat(req, res) {
     }
 }
 
-module.exports = {
+export default {
     getAssignedExams,
     updatePaperFormat,
 };

@@ -1,18 +1,18 @@
-const {
+import {
   PromotionCriteria,
   PromotionEvaluation,
   Graduation,
   User,
   Program,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Create or update promotion criteria
 // @route   POST /api/promotion/criteria
 // @access  Private/Admin
-exports.upsertCriteria = async (req, res) => {
+export const upsertCriteria = async (req, res) => {
   try {
     const {
       program_id,
@@ -56,7 +56,7 @@ exports.upsertCriteria = async (req, res) => {
 // @desc    Evaluate students for promotion
 // @route   POST /api/promotion/evaluate
 // @access  Private/Admin
-exports.evaluatePromotion = async (req, res) => {
+export const evaluatePromotion = async (req, res) => {
   try {
     const { program_id, current_semester } = req.body;
 
@@ -137,7 +137,7 @@ exports.evaluatePromotion = async (req, res) => {
 // @desc    Process bulk promotion
 // @route   POST /api/promotion/process
 // @access  Private/Admin
-exports.processBulkPromotion = async (req, res) => {
+export const processBulkPromotion = async (req, res) => {
   try {
     const { student_ids, to_semester } = req.body;
 
@@ -191,7 +191,7 @@ exports.processBulkPromotion = async (req, res) => {
 // @desc    Student applies for graduation
 // @route   POST /api/promotion/graduation/apply
 // @access  Private (Student)
-exports.applyForGraduation = async (req, res) => {
+export const applyForGraduation = async (req, res) => {
   try {
     const student_id = req.user.userId;
 

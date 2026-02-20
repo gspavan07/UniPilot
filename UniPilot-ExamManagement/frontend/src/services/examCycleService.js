@@ -1,4 +1,4 @@
-import api from "../utils/api";
+import api from "../utils/api.js";
 
 // Exam Cycle APIs
 export const getAllCycles = (params = {}) =>

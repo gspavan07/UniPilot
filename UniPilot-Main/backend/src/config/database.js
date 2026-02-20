@@ -1,5 +1,5 @@
-const { Sequelize } = require('sequelize');
-const logger = require('../utils/logger');
+import { Sequelize } from 'sequelize';
+import logger from '../utils/logger.js';
 
 // Database configuration
 const config = {
@@ -31,7 +31,6 @@ const config = {
 };
 
 // Create Sequelize instance
-// Create Sequelize instance
 let sequelize;
 
 if (process.env.DATABASE_URL) {
@@ -48,6 +47,5 @@ if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(config);
 }
 
-module.exports = {
-  sequelize,
-};
+
+export { sequelize }; 

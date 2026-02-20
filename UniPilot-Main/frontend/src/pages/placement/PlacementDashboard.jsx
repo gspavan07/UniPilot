@@ -80,7 +80,7 @@ const PlacementDashboard = () => {
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          { stats.map((stat, idx) => (
+          {stats.map((stat, idx) => (
             <Link
               key={stat.name}
               to={stat.link}
@@ -107,11 +107,11 @@ const PlacementDashboard = () => {
                     <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 animate-pulse mb-4"></span>
                   )}
                 </div>
-                 {stat.name !== "Students Placed" && stat.name !== "Total Offers" && (
-          <div className="absolute right-0 -bottom-4 w-10 h-10 rounded-full bg-gray-50 border border-blue-200 flex items-center justify-center group-hover:bg-blue-600 transition-all duration-500">
-            <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-white group-hover:-rotate-45 transition-colors" />
-          </div>
-        )}
+                {stat.name !== "Students Placed" && stat.name !== "Total Offers" && (
+                  <div className="absolute right-0 -bottom-4 w-10 h-10 rounded-full bg-gray-50 border border-blue-200 flex items-center justify-center group-hover:bg-blue-600 transition-all duration-500">
+                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-white group-hover:-rotate-45 transition-colors" />
+                  </div>
+                )}
               </div>
             </Link>
           ))}
@@ -204,11 +204,10 @@ const PlacementDashboard = () => {
                       <span
                         className={`
                         px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
-                        ${
-                          drive.status === "scheduled"
+                        ${drive.status === "scheduled"
                             ? "bg-black text-white"
                             : "bg-gray-100 text-gray-500"
-                        }
+                          }
                       `}
                       >
                         {drive.status}

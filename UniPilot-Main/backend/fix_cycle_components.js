@@ -1,6 +1,6 @@
 
-const { ExamSchedule, ExamCycle, Regulation } = require("./src/models");
-const { sequelize } = require("./src/config/database");
+import { ExamSchedule, ExamCycle, Regulation } from "./src/models/index.js";
+import { sequelize } from "./src/config/database.js";
 
 async function fixCycle() {
     try {

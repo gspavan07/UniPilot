@@ -1,12 +1,13 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createTimetable,
   addSlot,
   getTimetable,
   getMyTimetable,
   getTimetableByCriteria,
-} = require("../controllers/timetableController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+  deleteSlot,
+} from "../controllers/timetableController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.post("/slots", checkPermission("academics:timetable:manage"), addSlot);
 router.delete(
   "/slots/:id",
   checkPermission("academics:timetable:manage"),
-  require("../controllers/timetableController").deleteSlot,
+  deleteSlot,
 );
 router.get(
   "/find",
@@ -34,4 +35,4 @@ router.get(
 router.get("/my/view", getMyTimetable);
 router.get("/:id", checkPermission("academics:timetable:view"), getTimetable);
 
-module.exports = router;
+export default router;

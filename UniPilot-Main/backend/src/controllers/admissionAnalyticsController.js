@@ -1,12 +1,12 @@
-const {
+import {
   User,
   Department,
   Program,
   AdmissionConfig,
   sequelize,
-} = require("../models");
-const { Op } = require("sequelize");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
 
 /**
  * Admission Analytics Controller
@@ -16,7 +16,7 @@ const logger = require("../utils/logger");
 // @desc    Get comprehensive admission analytics
 // @route   GET /api/admission/analytics
 // @access  Private (Admission Admin/Staff)
-exports.getAdmissionAnalytics = async (req, res) => {
+export const getAdmissionAnalytics = async (req, res) => {
   try {
     const { batch } = req.query;
 
@@ -297,4 +297,8 @@ exports.getAdmissionAnalytics = async (req, res) => {
       message: error.message,
     });
   }
+};
+
+export default {
+  getAdmissionAnalytics,
 };

@@ -1,6 +1,11 @@
-const express = require("express");
-const roleController = require("../controllers/roleController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+import {
+  getAllRoles,
+  getAllPermissions,
+  createRole,
+  updateRole,
+} from "../controllers/roleController.js";
+import express from "express";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -10,22 +15,14 @@ router.use(authenticate);
 router.get(
   "/",
   checkPermission(["settings:roles:manage", "settings:roles:view"]),
-  roleController.getAllRoles
+  getAllRoles
 );
 router.get(
   "/permissions",
   checkPermission(["settings:roles:manage", "settings:roles:view"]),
-  roleController.getAllPermissions
+  getAllPermissions
 );
-router.post(
-  "/",
-  checkPermission("settings:roles:manage"),
-  roleController.createRole
-);
-router.put(
-  "/:id",
-  checkPermission("settings:roles:manage"),
-  roleController.updateRole
-);
+router.post("/", checkPermission("settings:roles:manage"), createRole);
+router.put("/:id", checkPermission("settings:roles:manage"), updateRole);
 
-module.exports = router;
+export default router;

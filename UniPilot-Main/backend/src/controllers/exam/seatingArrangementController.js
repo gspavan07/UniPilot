@@ -1,4 +1,4 @@
-const logger = require("../../utils/logger");
+import logger from "../../utils/logger.js";
 
 /**
  * Seating Arrangement Controller
@@ -124,10 +124,16 @@ class SeatingArrangementController {
 const controller = new SeatingArrangementController();
 
 // Export bound methods
-module.exports = {
-  getAllSeatingPlans: controller.getAllSeatingPlans.bind(controller),
-  getSeatingPlanById: controller.getSeatingPlanById.bind(controller),
-  generateSeatingPlan: controller.generateSeatingPlan.bind(controller),
-  updateSeatingPlan: controller.updateSeatingPlan.bind(controller),
-  deleteSeatingPlan: controller.deleteSeatingPlan.bind(controller),
+export const getAllSeatingPlans = controller.getAllSeatingPlans.bind(controller);
+export const getSeatingPlanById = controller.getSeatingPlanById.bind(controller);
+export const generateSeatingPlan = controller.generateSeatingPlan.bind(controller);
+export const updateSeatingPlan = controller.updateSeatingPlan.bind(controller);
+export const deleteSeatingPlan = controller.deleteSeatingPlan.bind(controller);
+
+export default {
+  getAllSeatingPlans,
+  getSeatingPlanById,
+  generateSeatingPlan,
+  updateSeatingPlan,
+  deleteSeatingPlan,
 };

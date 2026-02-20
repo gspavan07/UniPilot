@@ -1,15 +1,15 @@
-const { Holiday } = require("../models");
-const logger = require("../utils/logger");
+import { Holiday } from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Get all holidays
 // @route   GET /api/holidays
 // @access  Private
-exports.getHolidays = async (req, res) => {
+export const getHolidays = async (req, res) => {
   try {
     const { target } = req.query;
     const whereClause = {};
     if (target) {
-      const { Op } = require("sequelize");
       whereClause.target = { [Op.in]: [target, "both"] };
     }
 
@@ -27,7 +27,7 @@ exports.getHolidays = async (req, res) => {
 // @desc    Create a holiday (supports bunch holidays via duration)
 // @route   POST /api/holidays
 // @access  Private/Admin
-exports.createHoliday = async (req, res) => {
+export const createHoliday = async (req, res) => {
   try {
     const {
       name,
@@ -78,7 +78,7 @@ exports.createHoliday = async (req, res) => {
 // @desc    Update a holiday
 // @route   PUT /api/holidays/:id
 // @access  Private/Admin
-exports.updateHoliday = async (req, res) => {
+export const updateHoliday = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, date, type, description, duration = 1, target } = req.body;
@@ -137,7 +137,7 @@ exports.updateHoliday = async (req, res) => {
 // @desc    Delete a holiday
 // @route   DELETE /api/holidays/:id
 // @access  Private/Admin
-exports.deleteHoliday = async (req, res) => {
+export const deleteHoliday = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -155,4 +155,11 @@ exports.deleteHoliday = async (req, res) => {
     logger.error("Error deleting holiday:", error);
     res.status(500).json({ error: "Failed to delete holiday" });
   }
+};
+
+export default {
+  getHolidays,
+  createHoliday,
+  updateHoliday,
+  deleteHoliday,
 };

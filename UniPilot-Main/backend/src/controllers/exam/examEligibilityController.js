@@ -1,18 +1,18 @@
-const { Attendance, User, Regulation, sequelize } = require("../../models");
-const {
+import { Attendance, User, Regulation, sequelize } from "../../models/index.js";
+import {
   ExamCycle,
   ExamStudentEligibility,
-} = require("../../models/exam/associations");
-const feeController = require("../feeController");
-const logger = require("../../utils/logger");
-const { Op } = require("sequelize");
+} from "../../models/exam/associations.js";
+import feeController from "../feeController.js";
+import logger from "../../utils/logger.js";
+import { Op } from "sequelize";
 
 /**
  * Calculate eligibility for a student in a specific exam cycle
  * Returns flags-based eligibility (fee_clear_permission, hod_permission, has_condonation)
  * Status is calculated dynamically from these flags
  */
-async function calculateEligibility(studentId, cycleId) {
+export async function calculateEligibility(studentId, cycleId) {
   try {
     const cycle = await ExamCycle.findByPk(cycleId);
     if (!cycle) throw new Error("Exam cycle not found");
@@ -162,7 +162,7 @@ async function calculateEligibility(studentId, cycleId) {
 /**
  * Controller: Get student eligibility for a cycle
  */
-async function getStudentEligibility(req, res) {
+export async function getStudentEligibility(req, res) {
   try {
     const studentId = req.user.userId;
     const { cycle_id } = req.query;
@@ -180,7 +180,7 @@ async function getStudentEligibility(req, res) {
 /**
  * Controller: Exam Cell Update Bypass / Permissions
  */
-async function updateBypass(req, res) {
+export async function updateBypass(req, res) {
   try {
     const {
       student_id,
@@ -236,7 +236,7 @@ async function updateBypass(req, res) {
 /**
  * Controller: Get all student eligibilities for a cycle (Exam Cell)
  */
-async function getCycleEligibilities(req, res) {
+export async function getCycleEligibilities(req, res) {
   try {
     const { cycle_id } = req.params;
     const { department_id, batch, program_id } = req.query;
@@ -304,7 +304,7 @@ async function getCycleEligibilities(req, res) {
 /**
  * Controller: Bulk recalculate all eligibilities for a cycle
  */
-async function recalculateAllEligibilities(req, res) {
+export async function recalculateAllEligibilities(req, res) {
   try {
     const { cycle_id } = req.params;
 
@@ -358,7 +358,7 @@ async function recalculateAllEligibilities(req, res) {
   }
 }
 
-module.exports = {
+export default {
   calculateEligibility,
   getStudentEligibility,
   updateBypass,

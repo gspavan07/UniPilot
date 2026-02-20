@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const settingController = require("../controllers/settingController");
-const { authenticate, authorize } = require("../middleware/auth");
+import settingController from "../controllers/settingController.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 router.use(authenticate);
 
@@ -13,4 +13,4 @@ router.post(
   settingController.updateSettings
 );
 
-module.exports = router;
+export default router;

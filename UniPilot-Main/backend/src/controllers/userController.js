@@ -1,4 +1,4 @@
-const {
+import {
   User,
   Department,
   Program,
@@ -6,13 +6,19 @@ const {
   SalaryStructure,
   SalaryGrade,
   Regulation,
-} = require("../models");
-const { Op } = require("sequelize");
-const logger = require("../utils/logger");
-const { hashPassword } = require("../utils/bcrypt");
-const Importer = require("../utils/importer");
-const fs = require("fs");
-const { sequelize } = require("../config/database");
+} from "../models/index.js";
+import { encrypt } from "../utils/encryption.js";
+import {
+  generateStudentId,
+  generateGlobalAdmissionNumber,
+} from "../services/admissionService.js";
+import { StudentDocument } from "../models/index.js";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
+import { hashPassword } from "../utils/bcrypt.js";
+import Importer from "../utils/importer.js";
+import fs from "fs";
+import { sequelize } from "../config/database.js";
 
 /**
  * User Controller
@@ -22,7 +28,7 @@ const { sequelize } = require("../config/database");
 // @desc    Get all users with filtering
 // @route   GET /api/users
 // @access  Private/Admin
-exports.getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
     const { role, role_id, department_id, search } = req.query;
 
@@ -188,7 +194,7 @@ exports.getAllUsers = async (req, res) => {
 // @desc    Get counts of users by role
 // @route   GET /api/users/stats
 // @access  Private/Admin
-exports.getUserStats = async (req, res) => {
+export const getUserStats = async (req, res) => {
   try {
     // 1. Determine Scope based on Requester
     let roleScopeFilter = {};
@@ -263,7 +269,7 @@ exports.getUserStats = async (req, res) => {
 // @desc    Get distinct sections for students based on filters
 // @route   GET /api/users/sections
 // @access  Private
-exports.getStudentSections = async (req, res) => {
+export const getStudentSections = async (req, res) => {
   try {
     const { department_id, program_id, batch_year, semester } = req.query;
     const where = {
@@ -308,7 +314,7 @@ exports.getStudentSections = async (req, res) => {
 // @desc    Get distinct semesters for students based on filters
 // @route   GET /api/users/semesters
 // @access  Private
-exports.getStudentSemesters = async (req, res) => {
+export const getStudentSemesters = async (req, res) => {
   try {
     const { department_id, program_id, batch_year } = req.query;
     const where = {
@@ -352,7 +358,7 @@ exports.getStudentSemesters = async (req, res) => {
 // @desc    Get distinct batch years for students
 // @route   GET /api/users/batches
 // @access  Private
-exports.getAllBatches = async (req, res) => {
+export const getAllBatches = async (req, res) => {
   try {
     const { department_id } = req.query;
     const where = {
@@ -393,7 +399,7 @@ exports.getAllBatches = async (req, res) => {
 // @desc    Get batch details (semesters and sections)
 // @route   GET /api/users/batch-details
 // @access  Private
-exports.getBatchDetails = async (req, res) => {
+export const getBatchDetails = async (req, res) => {
   try {
     const { department_id, batch_year, program_id } = req.query;
     const where = {
@@ -450,7 +456,7 @@ exports.getBatchDetails = async (req, res) => {
   }
 };
 
-exports.getUser = async (req, res) => {
+export const getUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id, {
       include: [
@@ -501,7 +507,7 @@ exports.getUser = async (req, res) => {
 // @desc    Create new user
 // @route   POST /api/users
 // @access  Private/Admin
-exports.createUser = async (req, res) => {
+export const createUser = async (req, res) => {
   console.log(req.body);
   try {
     const {
@@ -645,10 +651,7 @@ exports.createUser = async (req, res) => {
 
     // Auto-generate Student ID/Admission Number if not provided for students
     if (role === "student" && (!student_id || !admission_number)) {
-      const {
-        generateStudentId,
-        generateGlobalAdmissionNumber,
-      } = require("../services/admissionService");
+
       try {
         const batchYear = userData.batch_year || new Date().getFullYear();
         if (!userData.admission_date) {
@@ -684,7 +687,6 @@ exports.createUser = async (req, res) => {
         `Document Types received: ${JSON.stringify(req.body.document_types)}`,
       );
 
-      const { StudentDocument } = require("../models");
       const documentTypes = Array.isArray(req.body.document_types)
         ? req.body.document_types
         : [req.body.document_types];
@@ -754,7 +756,7 @@ exports.createUser = async (req, res) => {
 // @desc    Update user
 // @route   PUT /api/users/:id
 // @access  Private/Admin
-exports.updateUser = async (req, res) => {
+export const updateUser = async (req, res) => {
   try {
     let user = await User.findByPk(req.params.id);
 
@@ -796,7 +798,6 @@ exports.updateUser = async (req, res) => {
       logger.info(
         `Processing ${req.files.length} documents for user update ${user.id}`,
       );
-      const { StudentDocument } = require("../models");
       const documentTypes = Array.isArray(req.body.document_types)
         ? req.body.document_types
         : [req.body.document_types];
@@ -839,7 +840,7 @@ exports.updateUser = async (req, res) => {
 // @desc    Delete user
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
-exports.deleteUser = async (req, res) => {
+export const deleteUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
 
@@ -885,7 +886,7 @@ exports.deleteUser = async (req, res) => {
 // @desc    Bulk import users from file
 // @route   POST /api/users/bulk-import
 // @access  Private/Admin
-exports.bulkImportUsers = async (req, res) => {
+export const bulkImportUsers = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({
       success: false,
@@ -1034,7 +1035,7 @@ exports.bulkImportUsers = async (req, res) => {
 // @desc    Update user bank details
 // @route   PUT /api/users/:id/bank-details
 // @access  Private (Self or HR)
-exports.updateBankDetails = async (req, res) => {
+export const updateBankDetails = async (req, res) => {
   try {
     const { id } = req.params;
     const { bank_name, account_number, ifsc_code, branch_name, holder_name } =
@@ -1089,7 +1090,6 @@ exports.updateBankDetails = async (req, res) => {
     }
 
     // Encrypt Account Number
-    const { encrypt } = require("../utils/encryption");
     let finalAccountNumber = user.bank_details?.account_number || "";
     if (account_number) {
       finalAccountNumber = encrypt(account_number);
@@ -1125,7 +1125,7 @@ exports.updateBankDetails = async (req, res) => {
 // @desc    Bulk update student sections
 // @route   POST /api/users/bulk-update-sections
 // @access  Private/Admin/HOD
-exports.bulkUpdateSections = async (req, res) => {
+export const bulkUpdateSections = async (req, res) => {
   try {
     const { userIds, section } = req.body;
 
@@ -1193,4 +1193,20 @@ exports.bulkUpdateSections = async (req, res) => {
       error: "Server Error",
     });
   }
+};
+
+export default {
+  getAllUsers,
+  getUserStats,
+  getStudentSections,
+  getStudentSemesters,
+  getAllBatches,
+  getBatchDetails,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser,
+  bulkImportUsers,
+  updateBankDetails,
+  bulkUpdateSections,
 };

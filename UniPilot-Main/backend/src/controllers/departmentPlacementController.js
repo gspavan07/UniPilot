@@ -1,4 +1,4 @@
-const {
+import {
   User,
   StudentApplication,
   Placement,
@@ -7,15 +7,15 @@ const {
   Company,
   DriveEligibility,
   DriveRound,
-} = require("../models");
-const { Op } = require("sequelize");
-const { sequelize } = require("../config/database");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import { Op } from "sequelize";
+import { sequelize } from "../config/database.js";
+import logger from "../utils/logger.js";
 
 /**
  * Get overall placement stats for a department
  */
-exports.getDepartmentStats = async (req, res) => {
+export const getDepartmentStats = async (req, res) => {
   try {
     const { departmentId } = req.params;
     const { batch_year, section } = req.query;
@@ -89,7 +89,7 @@ exports.getDepartmentStats = async (req, res) => {
 /**
  * Get list of students in department with their placement status
  */
-exports.getDepartmentStudentList = async (req, res) => {
+export const getDepartmentStudentList = async (req, res) => {
   try {
     const { departmentId } = req.params;
     const { batch_year, section } = req.query;
@@ -155,7 +155,7 @@ exports.getDepartmentStudentList = async (req, res) => {
 /**
  * Get drives eligible for a department with application counts
  */
-exports.getDepartmentDrives = async (req, res) => {
+export const getDepartmentDrives = async (req, res) => {
   try {
     const { departmentId } = req.params;
 
@@ -247,7 +247,7 @@ exports.getDepartmentDrives = async (req, res) => {
 /**
  * Get detailed student application matrix for a specific drive in a department
  */
-exports.getDriveStudentMatrix = async (req, res) => {
+export const getDriveStudentMatrix = async (req, res) => {
   try {
     const { departmentId, driveId } = req.params;
 
@@ -335,7 +335,7 @@ exports.getDriveStudentMatrix = async (req, res) => {
 /**
  * Get single drive details for coordinator (simple view)
  */
-exports.getDepartmentDriveDetail = async (req, res) => {
+export const getDepartmentDriveDetail = async (req, res) => {
   try {
     const { departmentId, driveId } = req.params;
 
@@ -397,4 +397,12 @@ exports.getDepartmentDriveDetail = async (req, res) => {
     logger.error("Error fetching department drive detail:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
+};
+
+export default {
+  getDepartmentStats,
+  getDepartmentStudentList,
+  getDepartmentDrives,
+  getDriveStudentMatrix,
+  getDepartmentDriveDetail,
 };

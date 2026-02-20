@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const ProctorSession = sequelize.define(
   "ProctorSession",
@@ -50,4 +50,4 @@ const ProctorSession = sequelize.define(
   }
 );
 
-module.exports = ProctorSession;
+export default ProctorSession;

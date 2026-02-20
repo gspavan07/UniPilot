@@ -1,5 +1,5 @@
-const { JobPosting, Company } = require("../models");
-const logger = require("../utils/logger");
+import { JobPosting, Company, PlacementDrive } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Job Posting Controller
@@ -9,7 +9,7 @@ const logger = require("../utils/logger");
 // @desc    Get all job postings
 // @route   GET /api/placement/job-postings
 // @access  Private
-exports.getJobPostings = async (req, res) => {
+export const getJobPostings = async (req, res) => {
   try {
     const { company_id, active } = req.query;
     const where = {};
@@ -46,7 +46,7 @@ exports.getJobPostings = async (req, res) => {
 // @desc    Get single job posting
 // @route   GET /api/placement/job-postings/:id
 // @access  Private
-exports.getJobPostingById = async (req, res) => {
+export const getJobPostingById = async (req, res) => {
   try {
     const posting = await JobPosting.findByPk(req.params.id, {
       include: [
@@ -55,7 +55,7 @@ exports.getJobPostingById = async (req, res) => {
           as: "company",
         },
         {
-          model: require("../models").PlacementDrive,
+          model: PlacementDrive,
           as: "drives",
         },
       ],
@@ -84,7 +84,7 @@ exports.getJobPostingById = async (req, res) => {
 // @desc    Create new job posting
 // @route   POST /api/placement/job-postings
 // @access  Private/TPO
-exports.createJobPosting = async (req, res) => {
+export const createJobPosting = async (req, res) => {
   try {
     const posting = await JobPosting.create(req.body);
 
@@ -104,7 +104,7 @@ exports.createJobPosting = async (req, res) => {
 // @desc    Update job posting
 // @route   PUT /api/placement/job-postings/:id
 // @access  Private/TPO
-exports.updateJobPosting = async (req, res) => {
+export const updateJobPosting = async (req, res) => {
   try {
     let posting = await JobPosting.findByPk(req.params.id);
 
@@ -133,7 +133,7 @@ exports.updateJobPosting = async (req, res) => {
 // @desc    Delete job posting
 // @route   DELETE /api/placement/job-postings/:id
 // @access  Private/TPO
-exports.deleteJobPosting = async (req, res) => {
+export const deleteJobPosting = async (req, res) => {
   try {
     const posting = await JobPosting.findByPk(req.params.id);
 
@@ -157,4 +157,12 @@ exports.deleteJobPosting = async (req, res) => {
       error: "Server Error",
     });
   }
+};
+
+export default {
+  getJobPostings,
+  getJobPostingById,
+  createJobPosting,
+  updateJobPosting,
+  deleteJobPosting,
 };

@@ -5,7 +5,7 @@
  * Customize this file for college-specific branding and layouts.
  */
 
-module.exports = {
+export default {
   // University/College Information
   university: {
     name: process.env.UNIVERSITY_NAME || "UniPilot University",

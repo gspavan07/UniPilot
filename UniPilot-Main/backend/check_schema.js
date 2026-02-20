@@ -1,4 +1,4 @@
-const { sequelize } = require('./src/config/database');
+import { sequelize } from './src/config/database.js';
 
 async function checkSchema() {
     try {

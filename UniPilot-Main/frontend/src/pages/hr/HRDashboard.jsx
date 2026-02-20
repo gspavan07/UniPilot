@@ -190,13 +190,12 @@ const HRDashboard = () => {
                   <stat.icon className="w-6 h-6 text-white" />
                 </div>
                 <div
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest shadow-sm ${
-                    stat.changeType === "increase"
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest shadow-sm ${stat.changeType === "increase"
                       ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30"
                       : stat.changeType === "decrease"
                         ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30"
                         : "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30"
-                  }`}
+                    }`}
                 >
                   {stat.change}
                 </div>

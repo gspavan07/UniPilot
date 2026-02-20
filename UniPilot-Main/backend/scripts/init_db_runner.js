@@ -1,6 +1,6 @@
-const { Client } = require('pg');
-const fs = require('fs');
-const path = require('path');
+import { Client } from 'pg';
+import fs from 'fs';
+import path from 'path';
 require('dotenv').config(); // Load .env if present
 
 const client = new Client({

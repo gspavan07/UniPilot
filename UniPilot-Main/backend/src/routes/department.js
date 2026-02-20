@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   getAllDepartments,
   getDepartment,
   createDepartment,
   updateDepartment,
   deleteDepartment,
-} = require("../controllers/departmentController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/departmentController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -24,4 +24,4 @@ router
   .put(checkPermission("academics:manage"), updateDepartment)
   .delete(checkPermission("academics:manage"), deleteDepartment);
 
-module.exports = router;
+export default router;

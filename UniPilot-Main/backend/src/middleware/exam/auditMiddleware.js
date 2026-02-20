@@ -1,4 +1,4 @@
-const auditLogger = require("../../utils/exam/auditLogger");
+import auditLogger from "../../utils/exam/auditLogger.js";
 
 /**
  * Audit Middleware for Exam Routes
@@ -7,7 +7,7 @@ const auditLogger = require("../../utils/exam/auditLogger");
  * Usage:
  *   router.post('/generate', auditMiddleware('GENERATE', 'HALL_TICKET'), controller)
  */
-const auditMiddleware = (action, module) => {
+export const auditMiddleware = (action, module) => {
   return async (req, res, next) => {
     // Store original res.json to intercept successful responses
     const originalJson = res.json.bind(res);
@@ -66,7 +66,7 @@ const auditMiddleware = (action, module) => {
  * Manual audit log helper
  * Use this in controllers for complex scenarios
  */
-const logAudit = async (
+export const logAudit = async (
   req,
   {
     action,
@@ -95,7 +95,7 @@ const logAudit = async (
   });
 };
 
-module.exports = {
+export default {
   auditMiddleware,
   logAudit,
 };

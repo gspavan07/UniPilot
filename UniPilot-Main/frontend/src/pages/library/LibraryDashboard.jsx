@@ -118,11 +118,10 @@ const LibraryDashboard = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab.id
+            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
                 ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white"
                 : "text-gray-500 hover:text-gray-700"
-            }`}
+              }`}
           >
             <tab.icon className="w-4 h-4 mr-2" />
             {tab.label}
@@ -195,11 +194,10 @@ const LibraryDashboard = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span
-                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${
-                          book.status === "available"
+                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${book.status === "available"
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-red-100 text-red-700"
-                        }`}
+                          }`}
                       >
                         {book.status.replace("_", " ")}
                       </span>

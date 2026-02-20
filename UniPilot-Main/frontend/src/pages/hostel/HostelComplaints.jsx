@@ -123,10 +123,10 @@ const HostelComplaints = () => {
   const filteredComplaints =
     user?.role === "student"
       ? complaints?.filter((c) => {
-          if (activeTab === "active")
-            return ["pending", "in_progress"].includes(c.status);
-          return ["resolved", "cancelled"].includes(c.status);
-        })
+        if (activeTab === "active")
+          return ["pending", "in_progress"].includes(c.status);
+        return ["resolved", "cancelled"].includes(c.status);
+      })
       : complaints;
 
   return (
@@ -163,21 +163,19 @@ const HostelComplaints = () => {
           <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
             <button
               onClick={() => setActiveTab("active")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === "active"
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === "active"
                   ? "bg-white dark:bg-gray-700 text-error-600 shadow-sm"
                   : "text-gray-400 hover:text-gray-600"
-              }`}
+                }`}
             >
               Active Issues
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === "history"
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === "history"
                   ? "bg-white dark:bg-gray-700 text-error-600 shadow-sm"
                   : "text-gray-400 hover:text-gray-600"
-              }`}
+                }`}
             >
               History
             </button>
@@ -475,11 +473,10 @@ const HostelComplaints = () => {
                         onClick={() =>
                           setFormData({ ...formData, priority: p })
                         }
-                        className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
-                          formData.priority === p
+                        className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${formData.priority === p
                             ? "bg-gray-900 text-white border-gray-900"
                             : "bg-white text-gray-400 border-gray-100"
-                        }`}
+                          }`}
                       >
                         {p}
                       </button>

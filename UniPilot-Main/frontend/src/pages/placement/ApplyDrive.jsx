@@ -193,13 +193,12 @@ const ApplyDrive = () => {
                 {steps.map((s) => (
                   <div
                     key={s.id}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-500 ${
-                      step === s.id
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-500 ${step === s.id
                         ? "bg-gray-950 text-white shadow-xl shadow-black/10"
                         : step > s.id
                           ? "text-blue-600 bg-blue-50"
                           : "text-gray-300"
-                    }`}
+                      }`}
                   >
                     <s.icon
                       className={`w-4 h-4 ${step === s.id ? "animate-pulse" : ""}`}
@@ -381,12 +380,11 @@ const ApplyDrive = () => {
                         {drive.registration_form_fields?.map((field, index) => (
                           <div
                             key={field.id || index}
-                            className={`flex flex-col gap-3 ${
-                              field.type === "system" &&
-                              field.systemField === "resume"
+                            className={`flex flex-col gap-3 ${field.type === "system" &&
+                                field.systemField === "resume"
                                 ? "md:col-span-2"
                                 : ""
-                            }`}
+                              }`}
                           >
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">
                               {field.label}{" "}
@@ -396,7 +394,7 @@ const ApplyDrive = () => {
                             </label>
                             <div className="relative flex group">
                               {field.type === "system" &&
-                              field.systemField === "resume" ? (
+                                field.systemField === "resume" ? (
                                 <div className="w-full mt-4">
                                   <ResumeManager
                                     onUploadSuccess={(url) =>

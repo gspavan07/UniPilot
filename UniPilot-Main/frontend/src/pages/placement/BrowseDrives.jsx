@@ -85,11 +85,10 @@ const BrowseDrives = () => {
                   <button
                     key={mode}
                     onClick={() => setFilterMode(mode)}
-                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                      filterMode === mode
+                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === mode
                         ? "bg-gray-950 text-white shadow-lg shadow-black/10"
                         : "text-gray-400 hover:text-black hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     {mode === "all" ? "All Modes" : mode}
                   </button>
@@ -148,13 +147,12 @@ const BrowseDrives = () => {
                       )}
                     </div>
                     <span
-                      className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
-                        drive.job_posting?.tier === "Super Dream"
+                      className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${drive.job_posting?.tier === "Super Dream"
                           ? "bg-purple-600 text-white shadow-purple-200"
                           : drive.job_posting?.tier === "Dream"
                             ? "bg-indigo-600 text-white shadow-indigo-200"
                             : "bg-gray-950 text-white shadow-gray-200"
-                      }`}
+                        }`}
                     >
                       {drive.job_posting?.tier || "Regular"}
                     </span>
@@ -218,8 +216,8 @@ const BrowseDrives = () => {
                     </div>
                     {new Date(drive.registration_end) <
                       new Date(Date.now() + 86400000 * 2) && (
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
-                    )}
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                      )}
                   </div>
                 </div>
 

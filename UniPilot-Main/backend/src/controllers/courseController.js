@@ -1,5 +1,7 @@
-const { Course, Department, Program, User } = require("../models");
-const logger = require("../utils/logger");
+import { Course, Department, Program, User } from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Regulation } from "../models/index.js";
+import { Op } from "sequelize";
 
 /**
  * Course Controller
@@ -9,7 +11,7 @@ const logger = require("../utils/logger");
 // @desc    Get all courses
 // @route   GET /api/courses
 // @access  Private
-exports.getAllCourses = async (req, res) => {
+export const getAllCourses = async (req, res) => {
   try {
     const {
       regulation_id,
@@ -20,8 +22,7 @@ exports.getAllCourses = async (req, res) => {
       batch_year,
     } = req.query;
     const whereClause = {};
-    const { Regulation } = require("../models");
-    const { Op } = require("sequelize");
+
 
     // 1. Basic Filters (Columns that exist)
     if (department_id) {
@@ -126,7 +127,7 @@ exports.getAllCourses = async (req, res) => {
 // @desc    Get single course
 // @route   GET /api/courses/:id
 // @access  Private
-exports.getCourse = async (req, res) => {
+export const getCourse = async (req, res) => {
   try {
     const course = await Course.findByPk(req.params.id, {
       include: [
@@ -161,7 +162,7 @@ exports.getCourse = async (req, res) => {
 // @desc    Create new course
 // @route   POST /api/courses
 // @access  Private/Admin
-exports.createCourse = async (req, res) => {
+export const createCourse = async (req, res) => {
   try {
     const course = await Course.create(req.body);
 
@@ -187,7 +188,7 @@ exports.createCourse = async (req, res) => {
 // @desc    Update course
 // @route   PUT /api/courses/:id
 // @access  Private/Admin
-exports.updateCourse = async (req, res) => {
+export const updateCourse = async (req, res) => {
   try {
     let course = await Course.findByPk(req.params.id);
 
@@ -222,7 +223,7 @@ exports.updateCourse = async (req, res) => {
 // @desc    Delete course
 // @route   DELETE /api/courses/:id
 // @access  Private/Admin
-exports.deleteCourse = async (req, res) => {
+export const deleteCourse = async (req, res) => {
   try {
     const course = await Course.findByPk(req.params.id);
 
@@ -250,7 +251,7 @@ exports.deleteCourse = async (req, res) => {
 // @desc    Get CURRENT STUDENT's courses
 // @route   GET /api/courses/my-courses
 // @access  Private
-exports.getMyCourses = async (req, res) => {
+export const getMyCourses = async (req, res) => {
   try {
     const studentId = req.user.userId;
 
@@ -270,8 +271,7 @@ exports.getMyCourses = async (req, res) => {
         .json({ error: "Student has no regulation assigned" });
     }
 
-    const { Regulation } = require("../models");
-    const { Op } = require("sequelize");
+
     const regulation = await Regulation.findByPk(student.regulation_id);
 
     if (!regulation || !regulation.courses_list) {

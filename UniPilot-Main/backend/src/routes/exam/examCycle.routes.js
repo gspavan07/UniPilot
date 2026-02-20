@@ -1,12 +1,12 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const { authenticate } = require("../../middleware/auth");
-const { auditMiddleware } = require("../../middleware/exam/auditMiddleware");
-const cycleController = require("../../controllers/exam/examCycleController");
-const eligibilityController = require("../../controllers/exam/examEligibilityController");
-const helperController = require("../../controllers/exam/helperController");
-const timetableRoutes = require("./timetable.routes");
-const feeConfigRoutes = require("./feeConfig.routes");
+import { authenticate } from "../../middleware/auth.js";
+import { auditMiddleware } from "../../middleware/exam/auditMiddleware.js";
+import cycleController from "../../controllers/exam/examCycleController.js";
+import eligibilityController from "../../controllers/exam/examEligibilityController.js";
+import helperController from "../../controllers/exam/helperController.js";
+import timetableRoutes from "./timetable.routes.js";
+import feeConfigRoutes from "./feeConfig.routes.js";
 
 // Apply authentication to all routes
 router.use(authenticate);
@@ -54,4 +54,4 @@ router.get("/helpers/programs/:degree", helperController.getProgramsByDegree);
 router.use("/", timetableRoutes);
 router.use("/", feeConfigRoutes);
 
-module.exports = router;
+export default router;

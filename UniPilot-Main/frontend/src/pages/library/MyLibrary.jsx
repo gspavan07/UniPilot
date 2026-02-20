@@ -57,11 +57,10 @@ const MyLibrary = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab.id
+            className={`flex items-center px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
                 ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-white"
                 : "text-gray-500 hover:text-gray-700"
-            }`}
+              }`}
           >
             <tab.icon className="w-4 h-4 mr-2" />
             {tab.label}
@@ -118,11 +117,10 @@ const MyLibrary = () => {
                       </p>
                     </div>
                     <div
-                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center ${
-                        isOverdue
+                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center ${isOverdue
                           ? "bg-red-100 text-red-700"
                           : "bg-emerald-100 text-emerald-700"
-                      }`}
+                        }`}
                     >
                       {isOverdue ? (
                         <AlertCircle className="w-4 h-4 mr-1" />

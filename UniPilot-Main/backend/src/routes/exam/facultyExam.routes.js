@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const facultyExamController = require("../../controllers/exam/facultyExamController");
-const { authenticate, authorize } = require("../../middleware/auth");
+import facultyExamController from "../../controllers/exam/facultyExamController.js";
+import { authenticate, authorize } from "../../middleware/auth.js";
 
 // All routes are protected and require 'faculty' role
 router.use(authenticate);
@@ -13,4 +13,4 @@ router.get("/assigned-exams", facultyExamController.getAssignedExams);
 // Update paper format
 router.put("/paper-format/:timetableId", facultyExamController.updatePaperFormat);
 
-module.exports = router;
+export default router;

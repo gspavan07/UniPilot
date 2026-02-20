@@ -119,25 +119,25 @@ const MySections = () => {
               <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-300 shadow-sm">
                 <Filter className="w-4 h-4 text-gray-400" />
                 <div className="flex flex-col">
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
-                  Batch Year
-                </label>
-                {/* Wrap in a relative container */}
-                <div className="relative inline-block">
-                  <select
-                    value={batchFilter}
-                    onChange={(e) => setBatchFilter(e.target.value)}
-                    className="appearance-none bg-transparent font-black text-sm text-blue-600 border-none outline-none focus:outline-none focus:ring-0 cursor-pointer pr-5 leading-none"
-                  >
-                    <option value="">All Years</option>
-                    {uniqueBatches.map((b) => (
-                      <option key={b} value={b}>
-                        {b} Batch
-                      </option>
-                    ))}
-                  </select>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
+                    Batch Year
+                  </label>
+                  {/* Wrap in a relative container */}
+                  <div className="relative inline-block">
+                    <select
+                      value={batchFilter}
+                      onChange={(e) => setBatchFilter(e.target.value)}
+                      className="appearance-none bg-transparent font-black text-sm text-blue-600 border-none outline-none focus:outline-none focus:ring-0 cursor-pointer pr-5 leading-none"
+                    >
+                      <option value="">All Years</option>
+                      {uniqueBatches.map((b) => (
+                        <option key={b} value={b}>
+                          {b} Batch
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
 
               </div>
 
@@ -148,18 +148,18 @@ const MySections = () => {
                     Section
                   </label>
                   <div className="relative inline-block">
-                  <select
-                    value={sectionFilter}
-                    onChange={(e) => setSectionFilter(e.target.value)}
-                    className="appearance-none bg-transparent font-black text-sm text-blue-600 border-none outline-none focus:outline-none focus:ring-0 cursor-pointer pr-8 leading-none"
-                  >
-                    <option value="">All Sections</option>
-                    {uniqueSectionNames.map((s) => (
-                      <option key={s} value={s}>
-                        Section {s}
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      value={sectionFilter}
+                      onChange={(e) => setSectionFilter(e.target.value)}
+                      className="appearance-none bg-transparent font-black text-sm text-blue-600 border-none outline-none focus:outline-none focus:ring-0 cursor-pointer pr-8 leading-none"
+                    >
+                      <option value="">All Sections</option>
+                      {uniqueSectionNames.map((s) => (
+                        <option key={s} value={s}>
+                          Section {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

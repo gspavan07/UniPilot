@@ -1,5 +1,6 @@
-const { Company, CompanyContact } = require("../models");
-const logger = require("../utils/logger");
+import { Company, CompanyContact, JobPosting, PlacementDrive } from "../models/index.js";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
 
 /**
  * Company Controller
@@ -9,7 +10,7 @@ const logger = require("../utils/logger");
 // @desc    Get all companies
 // @route   GET /api/placement/companies
 // @access  Private/TPO
-exports.getCompanies = async (req, res) => {
+export const getCompanies = async (req, res) => {
   try {
     const { tier, industry, search } = req.query;
     const where = { is_active: true };
@@ -17,7 +18,7 @@ exports.getCompanies = async (req, res) => {
     if (tier) where.company_tier = tier;
     if (industry) where.industry = industry;
     if (search) {
-      where.name = { [require("sequelize").Op.iLike]: `%${search}%` };
+      where.name = { [Op.iLike]: `%${search}%` };
     }
 
     const companies = await Company.findAll({
@@ -48,7 +49,7 @@ exports.getCompanies = async (req, res) => {
 // @desc    Get single company
 // @route   GET /api/placement/companies/:id
 // @access  Private
-exports.getCompanyById = async (req, res) => {
+export const getCompanyById = async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.id, {
       include: [
@@ -57,11 +58,11 @@ exports.getCompanyById = async (req, res) => {
           as: "contacts",
         },
         {
-          model: require("../models").JobPosting,
+          model: JobPosting,
           as: "job_postings",
           include: [
             {
-              model: require("../models").PlacementDrive,
+              model: PlacementDrive,
               as: "drives",
             },
           ],
@@ -92,7 +93,7 @@ exports.getCompanyById = async (req, res) => {
 // @desc    Create new company
 // @route   POST /api/placement/companies
 // @access  Private/TPO
-exports.createCompany = async (req, res) => {
+export const createCompany = async (req, res) => {
   try {
     const { contacts, ...companyData } = req.body;
     const company = await Company.create(companyData);
@@ -127,7 +128,7 @@ exports.createCompany = async (req, res) => {
 // @desc    Update company
 // @route   PUT /api/placement/companies/:id
 // @access  Private/TPO
-exports.updateCompany = async (req, res) => {
+export const updateCompany = async (req, res) => {
   try {
     let company = await Company.findByPk(req.params.id);
 
@@ -175,7 +176,7 @@ exports.updateCompany = async (req, res) => {
 // @desc    Delete company (soft delete)
 // @route   DELETE /api/placement/companies/:id
 // @access  Private/TPO
-exports.deleteCompany = async (req, res) => {
+export const deleteCompany = async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
 
@@ -204,7 +205,7 @@ exports.deleteCompany = async (req, res) => {
 // @desc    Add company contact
 // @route   POST /api/placement/companies/:id/contacts
 // @access  Private/TPO
-exports.addCompanyContact = async (req, res) => {
+export const addCompanyContact = async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
 
@@ -236,7 +237,7 @@ exports.addCompanyContact = async (req, res) => {
 // @desc    Update company contact
 // @route   PUT /api/placement/contacts/:id
 // @access  Private/TPO
-exports.updateCompanyContact = async (req, res) => {
+export const updateCompanyContact = async (req, res) => {
   try {
     let contact = await CompanyContact.findByPk(req.params.id);
 
@@ -265,7 +266,7 @@ exports.updateCompanyContact = async (req, res) => {
 // @desc    Delete company contact
 // @route   DELETE /api/placement/contacts/:id
 // @access  Private/TPO
-exports.deleteCompanyContact = async (req, res) => {
+export const deleteCompanyContact = async (req, res) => {
   try {
     const contact = await CompanyContact.findByPk(req.params.id);
 
@@ -289,4 +290,15 @@ exports.deleteCompanyContact = async (req, res) => {
       error: "Server Error",
     });
   }
+};
+
+export default {
+  getCompanies,
+  getCompanyById,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  addCompanyContact,
+  updateCompanyContact,
+  deleteCompanyContact,
 };

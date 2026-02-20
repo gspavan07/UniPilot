@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+import { Sequelize } from 'sequelize';
 
 const sequelize = new Sequelize('unipilot', 'postgres', 'postgres', {
     host: '100.116.183.49',

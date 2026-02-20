@@ -1,5 +1,5 @@
-const { DataTypes, Op } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes, Op } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * User Model
@@ -371,4 +371,4 @@ User.prototype.isAdmin = function () {
   return this.role_data?.slug === "admin" || this.role === "admin";
 };
 
-module.exports = User;
+export default User;

@@ -270,7 +270,7 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
     nextTargetRoundId === "selected"
       ? "Final Selection"
       : rounds.find((r) => r.id === nextTargetRoundId)?.round_name ||
-        "Next Round";
+      "Next Round";
 
   return (
     <div
@@ -328,18 +328,16 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                 <React.Fragment key={round.id}>
                   <button
                     onClick={() => setFilterRound(round.id)}
-                    className={`flex items-center gap-3 px-5 py-3 rounded-xl transition-all relative ${
-                      isActive
+                    className={`flex items-center gap-3 px-5 py-3 rounded-xl transition-all relative ${isActive
                         ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none font-bold"
                         : "text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                        isActive
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isActive
                           ? "bg-white/20"
                           : "bg-gray-100 dark:bg-gray-700"
-                      }`}
+                        }`}
                     >
                       {idx + 1}
                     </div>
@@ -418,11 +416,10 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                 {filteredCandidates.map((candidate) => (
                   <tr
                     key={candidate.id}
-                    className={`group hover:bg-indigo-50/30 dark:hover:bg-indigo-900/5 transition-all duration-200 ${
-                      selectedIds.has(candidate.id)
+                    className={`group hover:bg-indigo-50/30 dark:hover:bg-indigo-900/5 transition-all duration-200 ${selectedIds.has(candidate.id)
                         ? "bg-indigo-50/50 dark:bg-indigo-900/10"
                         : ""
-                    }`}
+                      }`}
                   >
                     <td className="px-6 py-5">
                       <input
@@ -456,15 +453,14 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                     <td className="px-6 py-5">
                       <span
                         className={`inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter border-2
-                        ${
-                          candidate.status === "placed"
+                        ${candidate.status === "placed"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900"
                             : candidate.status === "rejected"
                               ? "bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:border-red-900"
                               : candidate.status === "shortlisted"
                                 ? "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:border-blue-900"
                                 : "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
-                        }
+                          }
                       `}
                       >
                         {candidate.status === "placed" && (
@@ -480,7 +476,7 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                       <>
                         <td className="px-6 py-5">
                           {editingPlacement?.id ===
-                          candidate.placement_records?.[0]?.id ? (
+                            candidate.placement_records?.[0]?.id ? (
                             <input
                               type="date"
                               value={editingPlacement.joining_date}
@@ -502,7 +498,7 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                         </td>
                         <td className="px-6 py-5">
                           {editingPlacement?.id ===
-                          candidate.placement_records?.[0]?.id ? (
+                            candidate.placement_records?.[0]?.id ? (
                             <input
                               type="url"
                               value={editingPlacement.offer_letter_url}
@@ -516,7 +512,7 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                               className="bg-white border rounded px-2 py-1 text-xs w-32"
                             />
                           ) : candidate.placement_records?.[0]
-                              ?.offer_letter_url ? (
+                            ?.offer_letter_url ? (
                             <a
                               href={
                                 candidate.placement_records[0].offer_letter_url
@@ -537,9 +533,9 @@ const SelectionPipeline = ({ driveId: propDriveId }) => {
                     )}
                     <td className="px-6 py-5 text-right">
                       {filterRound === "selected" &&
-                      candidate.placement_records?.[0] ? (
+                        candidate.placement_records?.[0] ? (
                         editingPlacement?.id ===
-                        candidate.placement_records[0].id ? (
+                          candidate.placement_records[0].id ? (
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => setEditingPlacement(null)}

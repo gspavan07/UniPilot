@@ -3,7 +3,7 @@ import {
     getTimetablesByCycle,
     getFacultyList,
     bulkUpdateTimetables,
-} from "../../services/examCycleService";
+} from "../../services/examCycleService.js";
 import { Loader2, Save, UserCheck, AlertCircle } from "lucide-react";
 
 export default function FacultyAssignmentTab({ cycleId }) {

@@ -1,12 +1,12 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
   getExamConfig,
   updateExamConfig,
   addCourseType,
   updateCourseType,
   deleteCourseType,
-} = require("../controllers/exam-config.controller");
+} from "../controllers/exam-config.controller.js";
 
 // Get exam configuration for a regulation
 router.get("/:regulationId", getExamConfig);
@@ -23,4 +23,4 @@ router.put("/:regulationId/course-types/:courseTypeId", updateCourseType);
 // Delete a course type
 router.delete("/:regulationId/course-types/:courseTypeId", deleteCourseType);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * AuditLog Model
@@ -50,4 +50,4 @@ AuditLog.associate = (models) => {
   AuditLog.belongsTo(models.User, { foreignKey: "user_id", as: "actor" });
 };
 
-module.exports = AuditLog;
+export default AuditLog;

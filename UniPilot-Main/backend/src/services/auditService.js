@@ -1,5 +1,5 @@
-const { AuditLog } = require("../models");
-const logger = require("../utils/logger");
+import { AuditLog } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Audit Service for tracking critical actions
@@ -50,4 +50,4 @@ class AuditService {
   }
 }
 
-module.exports = new AuditService();
+export default new AuditService();

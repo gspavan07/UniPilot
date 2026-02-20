@@ -206,8 +206,8 @@ const ProgramList = () => {
 
                     <span
                       className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${prog.is_active
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          : "bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400"
                         }`}
                     >
                       {prog.is_active ? "Active" : "Inactive"}

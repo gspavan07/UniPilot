@@ -74,7 +74,7 @@ Each template module exports a function that:
 
 ```javascript
 // In controller
-const generateHallTicketPdf = require('../templates/exam/hallTicketPdf');
+import generateHallTicketPdf  from '../templates/exam/hallTicketPdf.js';
 
 // Generate PDF
 const stream = res;

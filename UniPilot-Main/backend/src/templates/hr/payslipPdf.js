@@ -5,9 +5,9 @@
  * Customize layout, company branding, and salary breakdown display.
  */
 
-const PDFDocument = require("pdfkit");
-const config = require("../config/templateConfig");
-const { decrypt } = require("../../utils/encryption");
+import PDFDocument from "pdfkit";
+import config from "../config/templateConfig.js";
+import { decrypt } from "../../utils/encryption.js";
 
 /**
  * Generate Payslip PDF
@@ -301,4 +301,4 @@ async function generatePayslipPdf(payslip, staff, stream) {
   doc.end();
 }
 
-module.exports = generatePayslipPdf;
+export default generatePayslipPdf;

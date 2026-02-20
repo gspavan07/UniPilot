@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const dashboardController = require("../controllers/dashboardController");
-const { authenticate, authorize } = require("../middleware/auth"); // Assuming middleware location
+import dashboardController from "../controllers/dashboardController.js";
+import { authenticate, authorize } from "../middleware/auth.js"; // Assuming middleware location
 
 // All routes here require super_admin role
 router.get(
@@ -11,4 +11,4 @@ router.get(
   dashboardController.getSuperAdminStats,
 );
 
-module.exports = router;
+export default router;

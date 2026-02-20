@@ -1,4 +1,4 @@
-const {
+import {
   StudentPlacementProfile,
   PlacementDrive,
   StudentApplication,
@@ -10,15 +10,15 @@ const {
   SemesterResult,
   Graduation,
   Placement,
-} = require("../models");
-const eligibilityService = require("../services/eligibilityService");
-const policyService = require("../services/placementPolicyService");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import eligibilityService from "../services/eligibilityService.js";
+import policyService from "../services/placementPolicyService.js";
+import logger from "../utils/logger.js";
 
 /**
  * Get system-mapped fields for student (CGPA, 10th%, email, mobile)
  */
-exports.getStudentSystemFields = async (req, res) => {
+export const getStudentSystemFields = async (req, res) => {
   try {
     const student = await User.findByPk(req.user.userId, {
       attributes: ["email", "phone", "previous_academics"],
@@ -87,7 +87,7 @@ exports.getStudentSystemFields = async (req, res) => {
 /**
  * Get student's placement profile
  */
-exports.getMyProfile = async (req, res) => {
+export const getMyProfile = async (req, res) => {
   try {
     const profile = await StudentPlacementProfile.findOne({
       where: { student_id: req.user.userId },
@@ -114,7 +114,7 @@ exports.getMyProfile = async (req, res) => {
 /**
  * Update student's placement profile
  */
-exports.updateMyProfile = async (req, res) => {
+export const updateMyProfile = async (req, res) => {
   try {
     const [profile, created] = await StudentPlacementProfile.findOrCreate({
       where: { student_id: req.user.userId },
@@ -139,7 +139,7 @@ exports.updateMyProfile = async (req, res) => {
 /**
  * Upload master resume
  */
-exports.uploadMasterResume = async (req, res) => {
+export const uploadMasterResume = async (req, res) => {
   try {
     if (!req.file) {
       return res
@@ -172,7 +172,7 @@ exports.uploadMasterResume = async (req, res) => {
 /**
  * Get eligible drives for the student
  */
-exports.getEligibleDrives = async (req, res) => {
+export const getEligibleDrives = async (req, res) => {
   try {
     // 1. Fetch student data (CGPA, backlogs, department)
     const student = await User.findByPk(req.user.userId, {
@@ -239,7 +239,7 @@ exports.getEligibleDrives = async (req, res) => {
 /**
  * Apply for a placement drive
  */
-exports.applyToDrive = async (req, res) => {
+export const applyToDrive = async (req, res) => {
   try {
     const { driveId, registrationFormData } = req.body;
 
@@ -329,7 +329,7 @@ exports.applyToDrive = async (req, res) => {
 /**
  * Get my applications
  */
-exports.getMyApplications = async (req, res) => {
+export const getMyApplications = async (req, res) => {
   try {
     const applications = await StudentApplication.findAll({
       where: { student_id: req.user.userId },
@@ -370,7 +370,7 @@ exports.getMyApplications = async (req, res) => {
 /**
  * Get student's placement offers
  */
-exports.getMyOffers = async (req, res) => {
+export const getMyOffers = async (req, res) => {
   try {
     const placements = await Placement.findAll({
       where: { student_id: req.user.userId },
@@ -398,4 +398,15 @@ exports.getMyOffers = async (req, res) => {
     logger.error("Error fetching student offers:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
+};
+
+export default {
+  getStudentSystemFields,
+  getMyProfile,
+  updateMyProfile,
+  uploadMasterResume,
+  getEligibleDrives,
+  applyToDrive,
+  getMyApplications,
+  getMyOffers,
 };

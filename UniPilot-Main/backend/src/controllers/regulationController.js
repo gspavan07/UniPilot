@@ -1,12 +1,12 @@
-const Regulation = require("../models/Regulation");
-const logger = require("../utils/logger");
+import Regulation from "../models/Regulation.js";
+import logger from "../utils/logger.js";
 
 /**
  * @desc    Get all regulations
  * @route   GET /api/regulations
  * @access  Private
  */
-exports.getAllRegulations = async (req, res) => {
+export const getAllRegulations = async (req, res) => {
   try {
     const regulations = await Regulation.findAll({
       order: [["academic_year", "DESC"]],
@@ -23,7 +23,7 @@ exports.getAllRegulations = async (req, res) => {
  * @route   GET /api/regulations/:id
  * @access  Private
  */
-exports.getRegulationById = async (req, res) => {
+export const getRegulationById = async (req, res) => {
   try {
     const regulation = await Regulation.findByPk(req.params.id);
     if (!regulation) {
@@ -41,7 +41,7 @@ exports.getRegulationById = async (req, res) => {
  * @route   POST /api/regulations
  * @access  Private/Admin
  */
-exports.createRegulation = async (req, res) => {
+export const createRegulation = async (req, res) => {
   try {
     const regulation = await Regulation.create(req.body);
     res.status(201).json({ success: true, data: regulation });
@@ -58,7 +58,7 @@ exports.createRegulation = async (req, res) => {
  * @route   PUT /api/regulations/:id
  * @access  Private/Admin
  */
-exports.updateRegulation = async (req, res) => {
+export const updateRegulation = async (req, res) => {
   try {
     const regulation = await Regulation.findByPk(req.params.id);
     if (!regulation) {
@@ -78,7 +78,7 @@ exports.updateRegulation = async (req, res) => {
  * @route   DELETE /api/regulations/:id
  * @access  Private/Admin
  */
-exports.deleteRegulation = async (req, res) => {
+export const deleteRegulation = async (req, res) => {
   try {
     const regulation = await Regulation.findByPk(req.params.id);
     if (!regulation) {

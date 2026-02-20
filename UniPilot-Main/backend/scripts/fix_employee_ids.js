@@ -1,5 +1,5 @@
-const { Sequelize, Op } = require("sequelize");
-const { User, sequelize } = require("../src/models");
+import { Sequelize, Op } from "sequelize";
+import { User, sequelize } from "../src/models/index.js";
 
 async function fixEmployeeIds() {
   try {

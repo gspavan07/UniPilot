@@ -184,8 +184,8 @@ const EmployeeForm = ({
       : errors[name];
 
     return `input transition-all duration-200 ${hasError
-        ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
-        : "focus:border-primary-500 focus:ring-primary-500/20"
+      ? "border-error-500 focus:border-error-500 focus:ring-error-500/20 bg-error-50/10"
+      : "focus:border-primary-500 focus:ring-primary-500/20"
       }`;
   };
 
@@ -231,8 +231,8 @@ const EmployeeForm = ({
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`pb-3 px-4 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab
-                  ? "border-b-2 border-primary-500 text-primary-600"
-                  : "text-gray-400"
+                ? "border-b-2 border-primary-500 text-primary-600"
+                : "text-gray-400"
                 }`}
             >
               {tab === "personal"

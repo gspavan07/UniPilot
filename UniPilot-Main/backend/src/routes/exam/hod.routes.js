@@ -1,7 +1,7 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const hodExamController = require("../../controllers/exam/hodExamController");
-const { authenticate, authorize } = require("../../middleware/auth");
+import hodExamController from "../../controllers/exam/hodExamController.js";
+import { authenticate, authorize } from "../../middleware/auth.js";
 
 // All routes are protected and require 'hod' role
 // Assuming 'faculty' includes HOD or explicitly 'hod'
@@ -20,4 +20,4 @@ router.put("/paper/:timetableId", hodExamController.updatePaperFormat);
 // Freeze paper format
 router.put("/freeze/:timetableId", hodExamController.freezePaperFormat);
 
-module.exports = router;
+export default router;

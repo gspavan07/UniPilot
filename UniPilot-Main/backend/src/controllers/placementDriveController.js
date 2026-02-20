@@ -1,4 +1,4 @@
-const {
+import {
   PlacementDrive,
   StudentApplication,
   JobPosting,
@@ -8,9 +8,9 @@ const {
   User,
   Placement,
   sequelize,
-} = require("../models");
-const eligibilityService = require("../services/eligibilityService");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import eligibilityService from "../services/eligibilityService.js";
+import logger from "../utils/logger.js";
 
 /**
  * Placement Drive Controller
@@ -20,7 +20,7 @@ const logger = require("../utils/logger");
 // @desc    Get all placement drives
 // @route   GET /api/placement/drives
 // @access  Private
-exports.getDrives = async (req, res) => {
+export const getDrives = async (req, res) => {
   try {
     const { status, type, academic_year } = req.query;
     const where = {};
@@ -86,7 +86,7 @@ exports.getDrives = async (req, res) => {
 // @desc    Get single placement drive
 // @route   GET /api/placement/drives/:id
 // @access  Private
-exports.getDriveById = async (req, res) => {
+export const getDriveById = async (req, res) => {
   try {
     const drive = await PlacementDrive.findByPk(req.params.id, {
       include: [
@@ -161,7 +161,7 @@ exports.getDriveById = async (req, res) => {
 // @desc    Create new placement drive
 // @route   POST /api/placement/drives
 // @access  Private/TPO
-exports.createDrive = async (req, res) => {
+export const createDrive = async (req, res) => {
   try {
     const { eligibility, rounds, ...driveData } = req.body;
 
@@ -208,7 +208,7 @@ exports.createDrive = async (req, res) => {
 // @desc    Update placement drive
 // @route   PUT /api/placement/drives/:id
 // @access  Private/TPO
-exports.updateDrive = async (req, res) => {
+export const updateDrive = async (req, res) => {
   try {
     let drive = await PlacementDrive.findByPk(req.params.id);
 
@@ -290,7 +290,7 @@ exports.updateDrive = async (req, res) => {
 // @desc    Manage Drive Eligibility
 // @route   PUT /api/placement/drives/:id/eligibility
 // @access  Private/TPO
-exports.updateDriveEligibility = async (req, res) => {
+export const updateDriveEligibility = async (req, res) => {
   try {
     const drive = await PlacementDrive.findByPk(req.params.id);
 
@@ -330,7 +330,7 @@ exports.updateDriveEligibility = async (req, res) => {
 // @desc    Add Drive Round
 // @route   POST /api/placement/drives/:id/rounds
 // @access  Private/TPO
-exports.addDriveRound = async (req, res) => {
+export const addDriveRound = async (req, res) => {
   try {
     const drive = await PlacementDrive.findByPk(req.params.id);
 
@@ -362,7 +362,7 @@ exports.addDriveRound = async (req, res) => {
 // @desc    Update Drive Round
 // @route   PUT /api/placement/rounds/:id
 // @access  Private/TPO
-exports.updateDriveRound = async (req, res) => {
+export const updateDriveRound = async (req, res) => {
   try {
     let round = await DriveRound.findByPk(req.params.id);
 
@@ -391,7 +391,7 @@ exports.updateDriveRound = async (req, res) => {
 // @desc    Delete Drive Round
 // @route   DELETE /api/placement/rounds/:id
 // @access  Private/TPO
-exports.deleteDriveRound = async (req, res) => {
+export const deleteDriveRound = async (req, res) => {
   try {
     const round = await DriveRound.findByPk(req.params.id);
 
@@ -420,7 +420,7 @@ exports.deleteDriveRound = async (req, res) => {
 /**
  * Get all applications for a drive (for TPO pipeline)
  */
-exports.getDriveApplications = async (req, res) => {
+export const getDriveApplications = async (req, res) => {
   try {
     const { id } = req.params;
     const applications = await StudentApplication.findAll({
@@ -452,7 +452,7 @@ exports.getDriveApplications = async (req, res) => {
 /**
  * Update student application status (Shortlist/Reject/Place)
  */
-exports.updateApplicationStatus = async (req, res) => {
+export const updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params; // application id
     const { status, roundId, joining_date, offer_letter_url } = req.body;
@@ -508,7 +508,7 @@ exports.updateApplicationStatus = async (req, res) => {
 // @desc    Delete placement drive
 // @route   DELETE /api/placement/drives/:id
 // @access  Private/TPO
-exports.deleteDrive = async (req, res) => {
+export const deleteDrive = async (req, res) => {
   try {
     const drive = await PlacementDrive.findByPk(req.params.id);
 
@@ -541,7 +541,7 @@ exports.deleteDrive = async (req, res) => {
 /**
  * Bulk update application status
  */
-exports.bulkUpdateApplicationStatus = async (req, res) => {
+export const bulkUpdateApplicationStatus = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { applicationIds, status, roundId, joining_date, offer_letter_url } =
@@ -624,7 +624,7 @@ exports.bulkUpdateApplicationStatus = async (req, res) => {
 /**
  * Get all placement records for a drive
  */
-exports.getPlacementRecords = async (req, res) => {
+export const getPlacementRecords = async (req, res) => {
   try {
     const { id } = req.params; // drive id
     const placements = await Placement.findAll({
@@ -648,7 +648,7 @@ exports.getPlacementRecords = async (req, res) => {
 /**
  * Update an individual placement record (offer letter, joining date)
  */
-exports.updatePlacementRecord = async (req, res) => {
+export const updatePlacementRecord = async (req, res) => {
   try {
     const { id } = req.params; // placement record id
     const { joining_date, offer_letter_url, package_lpa, status } = req.body;
@@ -676,4 +676,21 @@ exports.updatePlacementRecord = async (req, res) => {
     logger.error("Error updating placement record:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
+};
+
+export default {
+  getDrives,
+  getDriveById,
+  createDrive,
+  updateDrive,
+  updateDriveEligibility,
+  addDriveRound,
+  updateDriveRound,
+  deleteDriveRound,
+  getDriveApplications,
+  updateApplicationStatus,
+  deleteDrive,
+  bulkUpdateApplicationStatus,
+  getPlacementRecords,
+  updatePlacementRecord,
 };

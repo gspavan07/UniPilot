@@ -267,8 +267,8 @@ const DepartmentForm = ({
                       <input
                         {...register("name")}
                         className={`w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.name
-                            ? "border-red-300 focus:border-red-500"
-                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                           }`}
                         placeholder="e.g. Computer Science and Engineering"
                       />
@@ -294,8 +294,8 @@ const DepartmentForm = ({
                         <input
                           {...register("code")}
                           className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white uppercase font-mono text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.code
-                              ? "border-red-300 focus:border-red-500"
-                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                             }`}
                           placeholder="CSE"
                         />
@@ -331,8 +331,8 @@ const DepartmentForm = ({
                         <div className="grid grid-cols-2 gap-3 p-2 bg-gray-100 dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700">
                           <label
                             className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${watch("type") === "academic"
-                                ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
-                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+                              ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
+                              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
                               }`}
                           >
                             <input
@@ -345,8 +345,8 @@ const DepartmentForm = ({
                           </label>
                           <label
                             className={`flex items-center justify-center py-3 px-4 rounded-lg text-sm font-bold cursor-pointer transition-all duration-200 ${watch("type") === "administrative"
-                                ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
-                                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+                              ? "bg-white dark:bg-gray-900 text-blue-600 shadow-md"
+                              : "text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
                               }`}
                           >
                             <input
@@ -406,8 +406,8 @@ const DepartmentForm = ({
                           {...register("email")}
                           type="email"
                           className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-900 text-black dark:text-white font-medium focus:ring-4 focus:ring-blue-500/10 outline-none transition-all ${errors.email
-                              ? "border-red-300 focus:border-red-500"
-                              : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
+                            ? "border-red-300 focus:border-red-500"
+                            : "border-gray-200 dark:border-gray-800 focus:border-blue-500"
                             }`}
                           placeholder="head.cse@university.edu"
                         />

@@ -587,15 +587,15 @@ const SectionManager = () => {
                           (!progFilter || idx.program_id === progFilter) &&
                           (!batchFilter || idx.batch_year === batchFilter),
                       ).length === 0 && (
-                        <tr>
-                          <td
-                            colSpan="4"
-                            className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
-                          >
-                            No faculty incharges assigned for this criteria
-                          </td>
-                        </tr>
-                      )}
+                          <tr>
+                            <td
+                              colSpan="4"
+                              className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                            >
+                              No faculty incharges assigned for this criteria
+                            </td>
+                          </tr>
+                        )}
                     </tbody>
                   </table>
                 </div>

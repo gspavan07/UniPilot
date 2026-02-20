@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const Role = sequelize.define(
   "Role",
@@ -49,4 +49,4 @@ Role.associate = (models) => {
   });
 };
 
-module.exports = Role;
+export default Role;

@@ -584,8 +584,8 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
                       <input
                         {...register("employee_id")}
                         className={`form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white font-mono ${errors.employee_id
-                            ? "border-error-500 focus:border-error-500 focus:ring-error-500/10"
-                            : ""
+                          ? "border-error-500 focus:border-error-500 focus:ring-error-500/10"
+                          : ""
                           }`}
                       />
                       {errors.employee_id && (
@@ -617,8 +617,8 @@ const EditEmployeeDrawer = ({ isOpen, onClose, user, departmentList = [] }) => {
                         {...register("designation")}
                         placeholder="e.g. Senior Lecturer, Lab Technician"
                         className={`form-input w-full rounded-xl bg-gray-50 border-gray-100 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-white ${errors.designation
-                            ? "border-error-500 focus:border-error-500 focus:ring-error-500/10"
-                            : ""
+                          ? "border-error-500 focus:border-error-500 focus:ring-error-500/10"
+                          : ""
                           }`}
                       />
                       {errors.designation && (

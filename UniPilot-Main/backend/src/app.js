@@ -1,18 +1,23 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
-const routes = require("./routes");
-const errorHandler = require("./middleware/errorHandler");
-const nullifyEmptyStrings = require("./middleware/nullifyEmptyStrings");
-const logger = require("./utils/logger");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import routes from "./routes/index.js";
+import errorHandler from "./middleware/errorHandler.js";
+import nullifyEmptyStrings from "./middleware/nullifyEmptyStrings.js";
+import logger from "./utils/logger.js";
+import 'dotenv/config'; 
 
-const path = require("path");
+
+import path from "path";
+
+const __filename = import.meta.filename;
+const __dirname = import.meta.dirname;
 
 const app = express();
 
-const fileController = require("./controllers/fileController");
+import fileController from "./controllers/fileController.js";
 
 // Serve Profile Images Securely
 app.get("/uploads/profiles/:filename", fileController.serveProfileImage);
@@ -29,14 +34,23 @@ app.use(
 // Security middleware
 app.use(helmet());
 
+// Serve static frontend files
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
+
+
+
+
 // CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3001",
+  "http://localhost:3001", // Explicitly allow localhost:3001
   "http://localhost:5174", // Exam Management Frontend
   "http://localhost:8086", // Exam Management Docker
   "http://localhost:8085", // Docker Frontend
   "http://localhost:3000", // Backend local
   "http://localhost:3100", // Docker Backend external
+  "http://localhost:5173", // Frontend local
 ];
 
 app.use(
@@ -100,15 +114,21 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api", routes);
 
-// 404 handler
+// Custom 404/SPA Handler
 app.use((req, res) => {
-  res.status(404).json({
-    error: "Not Found",
-    message: `Cannot ${req.method} ${req.originalUrl}`,
-  });
+  // If the request is for an API endpoint, return JSON 404
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(404).json({
+      error: "Not Found",
+      message: `Cannot ${req.method} ${req.originalUrl}`,
+    });
+  }
+
+  // For all other requests (SPA client-side routing), serve index.html
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Global error handler
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

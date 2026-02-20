@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../../config/database.js";
 
 /**
  * ExamFeeConfiguration Model
@@ -53,4 +53,4 @@ const ExamFeeConfiguration = sequelize.define(
   },
 );
 
-module.exports = ExamFeeConfiguration;
+export default ExamFeeConfiguration;

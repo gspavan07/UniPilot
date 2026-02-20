@@ -1,4 +1,4 @@
-const {
+import {
   Attendance,
   LeaveRequest,
   User,
@@ -9,14 +9,14 @@ const {
   Program,
   Regulation,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Mark attendance for multiple students
 // @route   POST /api/attendance/mark
 // @access  Private/Faculty
-exports.markAttendance = async (req, res) => {
+export const markAttendance = async (req, res) => {
   try {
     const { course_id, timetable_slot_id, date, attendance_data } = req.body;
     // attendance_data: [{student_id, status, remarks}]
@@ -112,7 +112,7 @@ exports.markAttendance = async (req, res) => {
 // @desc    Get attendance for a student
 // @route   GET /api/attendance/my-attendance
 // @access  Private/Student
-exports.getMyAttendance = async (req, res) => {
+export const getMyAttendance = async (req, res) => {
   try {
     const student_id = req.user.userId;
     const { course_id, start_date, end_date, semester } = req.query;
@@ -266,7 +266,7 @@ exports.getMyAttendance = async (req, res) => {
 // @desc    Apply for leave
 // @route   POST /api/attendance/leave/apply
 // @access  Private/Student
-exports.applyLeave = async (req, res) => {
+export const applyLeave = async (req, res) => {
   try {
     const { leave_type, start_date, end_date, reason, attachment_url } =
       req.body;
@@ -295,7 +295,7 @@ exports.applyLeave = async (req, res) => {
 // @desc    Get leave requests for review
 // @route   GET /api/attendance/leave/requests
 // @access  Private/Faculty/Admin
-exports.getLeaveRequests = async (req, res) => {
+export const getLeaveRequests = async (req, res) => {
   try {
     const requests = await LeaveRequest.findAll({
       where: { status: "pending" },
@@ -322,7 +322,7 @@ exports.getLeaveRequests = async (req, res) => {
 // @desc    Approve or Reject leave
 // @route   PUT /api/attendance/leave/:id
 // @access  Private/Admin
-exports.updateLeaveStatus = async (req, res) => {
+export const updateLeaveStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
@@ -351,7 +351,7 @@ exports.updateLeaveStatus = async (req, res) => {
 // @desc    Get faculty's classes for today
 // @route   GET /api/attendance/faculty/today
 // @access  Private/Faculty
-exports.getTodayClasses = async (req, res) => {
+export const getTodayClasses = async (req, res) => {
   try {
     const { role, userId, department_id: userDeptId } = req.user;
     const { department_id, batch_year, semester, section } = req.query;
@@ -477,7 +477,7 @@ exports.getTodayClasses = async (req, res) => {
 // @desc    Get attendance analytics for HOD/Admin
 // @route   GET /api/attendance/stats
 // @access  Private/Admin/HOD
-exports.getAttendanceStats = async (req, res) => {
+export const getAttendanceStats = async (req, res) => {
   try {
     const { department_id, batch_year, semester, section } = req.query;
     const { role, department_id: userDeptId } = req.user;
@@ -568,7 +568,7 @@ exports.getAttendanceStats = async (req, res) => {
 // @desc    Get attendance for a specific session (for editing)
 // @route   GET /api/attendance/session/:id
 // @access  Private/Faculty/Admin
-exports.getSessionAttendance = async (req, res) => {
+export const getSessionAttendance = async (req, res) => {
   try {
     const { id } = req.params; // timetable_slot_id
     const { date } = req.query;
@@ -593,4 +593,15 @@ exports.getSessionAttendance = async (req, res) => {
     logger.error("Error fetching session attendance:", error);
     res.status(500).json({ error: "Failed to fetch session attendance" });
   }
+};
+
+export default {
+  markAttendance,
+  getMyAttendance,
+  applyLeave,
+  getLeaveRequests,
+  updateLeaveStatus,
+  getTodayClasses,
+  getAttendanceStats,
+  getSessionAttendance,
 };

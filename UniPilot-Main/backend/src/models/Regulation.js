@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * Regulation Model
@@ -75,4 +75,4 @@ const Regulation = sequelize.define(
   },
 );
 
-module.exports = Regulation;
+export default Regulation;

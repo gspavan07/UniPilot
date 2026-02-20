@@ -1,10 +1,10 @@
-const { AdmissionConfig } = require("../models");
-const logger = require("../utils/logger");
+import { AdmissionConfig } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Get all admission configurations
 // @route   GET /api/admission/configs
 // @access  Private (Admin/Admission Admin)
-exports.getAdmissionConfigs = async (req, res) => {
+export const getAdmissionConfigs = async (req, res) => {
   try {
     const configs = await AdmissionConfig.findAll({
       order: [["batch_year", "DESC"]],
@@ -19,7 +19,7 @@ exports.getAdmissionConfigs = async (req, res) => {
 // @desc    Create or update admission configuration
 // @route   POST /api/admission/configs
 // @access  Private (Admin/Admission Admin)
-exports.saveAdmissionConfig = async (req, res) => {
+export const saveAdmissionConfig = async (req, res) => {
   try {
     const {
       batch_year,
@@ -75,7 +75,7 @@ exports.saveAdmissionConfig = async (req, res) => {
 // @desc    Delete admission configuration
 // @route   DELETE /api/admission/configs/:id
 // @access  Private (Admin/Admission Admin)
-exports.deleteAdmissionConfig = async (req, res) => {
+export const deleteAdmissionConfig = async (req, res) => {
   try {
     const config = await AdmissionConfig.findByPk(req.params.id);
 
@@ -97,4 +97,10 @@ exports.deleteAdmissionConfig = async (req, res) => {
     logger.error("Error in deleteAdmissionConfig:", error);
     res.status(500).json({ success: false, error: "Server Error" });
   }
+};
+
+export default {
+  getAdmissionConfigs,
+  saveAdmissionConfig,
+  deleteAdmissionConfig,
 };

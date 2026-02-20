@@ -1,7 +1,7 @@
 "use strict";
 
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     // Step 1: Add new columns with defaults
     await queryInterface.addColumn(

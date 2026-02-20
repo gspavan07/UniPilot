@@ -1,11 +1,11 @@
-const { CoPoMap, CourseOutcome, ProgramOutcome, Course, Program } = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+import { CoPoMap, CourseOutcome, ProgramOutcome, Course, Program } from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Get CO-PO mappings (filtered by course_id and/or program_id)
 // @route   GET /api/co-po-maps
 // @access  Private
-exports.getCoPoMappings = async (req, res) => {
+export const getCoPoMappings = async (req, res) => {
     try {
         const { course_id, program_id } = req.query;
 
@@ -72,7 +72,7 @@ exports.getCoPoMappings = async (req, res) => {
 // @desc    Get CO-PO mapping matrix (for visual representation)
 // @route   GET /api/co-po-maps/matrix
 // @access  Private
-exports.getCoPoMatrix = async (req, res) => {
+export const getCoPoMatrix = async (req, res) => {
     try {
         const { course_id, program_id } = req.query;
 
@@ -157,7 +157,7 @@ exports.getCoPoMatrix = async (req, res) => {
 // @desc    Create or update a CO-PO mapping (upsert)
 // @route   POST /api/co-po-maps
 // @access  Private/Admin
-exports.createOrUpdateMapping = async (req, res) => {
+export const createOrUpdateMapping = async (req, res) => {
     try {
         const { course_outcome_id, program_outcome_id, weightage } = req.body;
 
@@ -243,7 +243,7 @@ exports.createOrUpdateMapping = async (req, res) => {
 // @desc    Bulk update CO-PO mappings (for entire matrix update)
 // @route   POST /api/co-po-maps/bulk
 // @access  Private/Admin
-exports.bulkUpdateMappings = async (req, res) => {
+export const bulkUpdateMappings = async (req, res) => {
     try {
         const { course_id, program_id, mappings } = req.body;
 
@@ -323,7 +323,7 @@ exports.bulkUpdateMappings = async (req, res) => {
 // @desc    Delete a CO-PO mapping
 // @route   DELETE /api/co-po-maps/:id
 // @access  Private/Admin
-exports.deleteMapping = async (req, res) => {
+export const deleteMapping = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -354,7 +354,7 @@ exports.deleteMapping = async (req, res) => {
 // @desc    Get mapping statistics (for analytics)
 // @route   GET /api/co-po-maps/stats
 // @access  Private
-exports.getMappingStats = async (req, res) => {
+export const getMappingStats = async (req, res) => {
     try {
         const { course_id, program_id } = req.query;
 

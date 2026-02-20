@@ -394,8 +394,8 @@ const RegulationViewer = () => {
                   //   {d.name}
                   // </option>
                   <option key={d.id} value={d.id} title={d.name}>
-  {d.name.length > 40 ? `${d.name.slice(0, 40)}...` : d.name}
-</option>
+                    {d.name.length > 40 ? `${d.name.slice(0, 40)}...` : d.name}
+                  </option>
                 ))}
               </select>
               <ChevronRight className="w-4 h-4 text-gray-300 hidden sm:block" />
@@ -413,8 +413,8 @@ const RegulationViewer = () => {
                   //   {p.name}
                   // </option>
                   <option key={p.id} value={p.id} title={p.name}>
-  {p.name.length > 40 ? `${p.name.slice(0, 40)}...` : p.name}
-</option>
+                    {p.name.length > 40 ? `${p.name.slice(0, 40)}...` : p.name}
+                  </option>
                 ))}
               </select>
 

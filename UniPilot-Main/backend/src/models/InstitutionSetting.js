@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const InstitutionSetting = sequelize.define(
   "InstitutionSetting",
@@ -39,4 +39,4 @@ const InstitutionSetting = sequelize.define(
   }
 );
 
-module.exports = InstitutionSetting;
+export default InstitutionSetting;

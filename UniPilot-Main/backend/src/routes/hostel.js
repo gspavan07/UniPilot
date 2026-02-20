@@ -1,14 +1,14 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const hostelController = require("../controllers/hostelController");
-const finesController = require("../controllers/hostelFinesController");
-const roomBillsController = require("../controllers/hostelRoomBillsController");
-const gatePassController = require("../controllers/hostelGatePassController");
-const reportController = require("../controllers/hostelReportController");
-const {
+import hostelController from "../controllers/hostelController.js";
+import finesController from "../controllers/hostelFinesController.js";
+import roomBillsController from "../controllers/hostelRoomBillsController.js";
+import gatePassController from "../controllers/hostelGatePassController.js";
+import reportController from "../controllers/hostelReportController.js";
+import {
   authenticate,
-  checkPermission: authorize,
-} = require("../middleware/auth");
+  checkPermission as authorize,
+} from "../middleware/auth.js";
 
 // All routes require authentication
 router.use(authenticate);
@@ -295,4 +295,4 @@ router.get(
   reportController.downloadGatePassReport,
 );
 
-module.exports = router;
+export default router;

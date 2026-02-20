@@ -1,11 +1,11 @@
-const { Block, Room } = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+import { Block, Room } from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Get all blocks
 // @route   GET /api/infrastructure/blocks
 // @access  Private
-exports.getAllBlocks = async (req, res) => {
+export const getAllBlocks = async (req, res) => {
   try {
     const blocks = await Block.findAll({
       include: [
@@ -41,7 +41,7 @@ exports.getAllBlocks = async (req, res) => {
 // @desc    Create a new block
 // @route   POST /api/infrastructure/blocks
 // @access  Private/Admin
-exports.createBlock = async (req, res) => {
+export const createBlock = async (req, res) => {
   try {
     const block = await Block.create(req.body);
     res.status(201).json({
@@ -66,7 +66,7 @@ exports.createBlock = async (req, res) => {
 // @desc    Get block details with rooms
 // @route   GET /api/infrastructure/blocks/:id
 // @access  Private
-exports.getBlockDetails = async (req, res) => {
+export const getBlockDetails = async (req, res) => {
   try {
     const block = await Block.findByPk(req.params.id, {
       include: [
@@ -104,7 +104,7 @@ exports.getBlockDetails = async (req, res) => {
 // @desc    Add a room to a block
 // @route   POST /api/infrastructure/blocks/:id/rooms
 // @access  Private/Admin
-exports.addRoom = async (req, res) => {
+export const addRoom = async (req, res) => {
   try {
     const block = await Block.findByPk(req.params.id);
     if (!block) {
@@ -141,7 +141,7 @@ exports.addRoom = async (req, res) => {
 // @desc    Update a block
 // @route   PUT /api/infrastructure/blocks/:id
 // @access  Private/Admin
-exports.updateBlock = async (req, res) => {
+export const updateBlock = async (req, res) => {
   try {
     let block = await Block.findByPk(req.params.id);
     if (!block) {
@@ -159,7 +159,7 @@ exports.updateBlock = async (req, res) => {
 // @desc    Delete a block
 // @route   DELETE /api/infrastructure/blocks/:id
 // @access  Private/Admin
-exports.deleteBlock = async (req, res) => {
+export const deleteBlock = async (req, res) => {
   try {
     const block = await Block.findByPk(req.params.id);
     if (!block) {
@@ -177,7 +177,7 @@ exports.deleteBlock = async (req, res) => {
 // @desc    Update a room
 // @route   PUT /api/infrastructure/rooms/:id
 // @access  Private/Admin
-exports.updateRoom = async (req, res) => {
+export const updateRoom = async (req, res) => {
   try {
     let room = await Room.findByPk(req.params.id);
     if (!room) {
@@ -195,7 +195,7 @@ exports.updateRoom = async (req, res) => {
 // @desc    Delete a room
 // @route   DELETE /api/infrastructure/rooms/:id
 // @access  Private/Admin
-exports.deleteRoom = async (req, res) => {
+export const deleteRoom = async (req, res) => {
   try {
     const room = await Room.findByPk(req.params.id);
     if (!room) {
@@ -213,7 +213,7 @@ exports.deleteRoom = async (req, res) => {
 // @desc    Bulk Generate Rooms (Auto-Generate)
 // @route   POST /api/infrastructure/blocks/:id/generate
 // @access  Private/Admin
-exports.generateRooms = async (req, res) => {
+export const generateRooms = async (req, res) => {
   try {
     const {
       floors_start,
@@ -270,7 +270,7 @@ exports.generateRooms = async (req, res) => {
 // @desc    Get all rooms (with optional block filter)
 // @route   GET /api/infrastructure/rooms?block_id=xxx
 // @access  Private
-exports.getAllRooms = async (req, res) => {
+export const getAllRooms = async (req, res) => {
   try {
     const where = {};
     if (req.query.block_id) {

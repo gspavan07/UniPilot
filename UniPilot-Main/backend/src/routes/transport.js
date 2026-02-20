@@ -1,10 +1,10 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const transportController = require("../controllers/transportController");
-const {
-  authenticate: protect,
-  checkPermission: authorize,
-} = require("../middleware/auth");
+import transportController from "../controllers/transportController.js";
+import {
+  authenticate as protect,
+  checkPermission as authorize,
+} from "../middleware/auth.js";
 
 // ============================================
 // ROUTE MANAGEMENT
@@ -308,4 +308,4 @@ router.get(
   transportController.getDashboardOverview,
 );
 
-module.exports = router;
+export default router;

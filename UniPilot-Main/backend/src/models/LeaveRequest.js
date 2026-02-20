@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const LeaveRequest = sequelize.define(
   "LeaveRequest",
@@ -60,4 +60,4 @@ const LeaveRequest = sequelize.define(
   }
 );
 
-module.exports = LeaveRequest;
+export default LeaveRequest;

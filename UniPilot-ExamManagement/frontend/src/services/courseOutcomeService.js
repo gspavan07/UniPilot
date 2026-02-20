@@ -1,4 +1,4 @@
-import api from "../utils/api";
+import api from "../utils/api.js";
 
 // Fetch all course outcomes for a specific course
 export const getCourseOutcomes = (courseId) =>

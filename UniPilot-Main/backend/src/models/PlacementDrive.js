@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const PlacementDrive = sequelize.define(
   "PlacementDrive",
@@ -58,4 +58,4 @@ const PlacementDrive = sequelize.define(
   },
 );
 
-module.exports = PlacementDrive;
+export default PlacementDrive;

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 /**
  * TransportDriver Model
@@ -110,4 +110,4 @@ TransportDriver.prototype.getFullName = function () {
   return `${this.first_name} ${this.last_name}`;
 };
 
-module.exports = TransportDriver;
+export default TransportDriver;

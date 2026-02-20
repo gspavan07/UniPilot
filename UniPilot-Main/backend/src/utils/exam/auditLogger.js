@@ -1,5 +1,5 @@
-const ExamAuditLog = require("../../models/exam/ExamAuditLog");
-const logger = require("../../utils/logger");
+import ExamAuditLog from "../../models/exam/ExamAuditLog.js";
+import logger from "../../utils/logger.js";
 
 /**
  * Audit Logger Utility
@@ -116,4 +116,4 @@ class AuditLogger {
   }
 }
 
-module.exports = new AuditLogger();
+export default new AuditLogger();

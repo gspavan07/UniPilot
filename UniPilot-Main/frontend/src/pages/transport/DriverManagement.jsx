@@ -180,13 +180,12 @@ const DriverManagement = () => {
             <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${
-                    driver.staff_type === "driver"
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${driver.staff_type === "driver"
                       ? "bg-blue-100 text-blue-800 border-blue-200"
                       : driver.staff_type === "conductor"
                         ? "bg-indigo-100 text-indigo-800 border-indigo-200"
                         : "bg-gray-100 text-gray-800 border-gray-200"
-                  }`}
+                    }`}
                 >
                   {driver.staff_type}
                 </span>

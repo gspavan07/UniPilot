@@ -148,8 +148,8 @@ const AdmissionSettings = () => {
                     </div>
                   </div>
                   <div className={`px-3 py-1 text-[10px] tracking-widest font-medium ${config.is_active
-                      ? "bg-blue-50 text-blue-700"
-                      : "bg-gray-100 text-gray-500"
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-gray-100 text-gray-500"
                     }`}>
                     {config.is_active ? "ACTIVE" : "INACTIVE"}
                   </div>
@@ -215,8 +215,8 @@ const AdmissionSettings = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-6 py-4 text-xs tracking-widest font-medium transition-colors border-b-2 ${activeTab === tab.id
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-400 hover:text-black"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-400 hover:text-black"
                     }`}
                 >
                   <tab.icon className="w-4 h-4" />

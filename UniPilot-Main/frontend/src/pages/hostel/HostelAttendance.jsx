@@ -303,11 +303,10 @@ const HostelAttendance = () => {
                             onClick={() =>
                               handleStatusChange(a.student_id, opt.val)
                             }
-                            className={`flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                              attendanceData[a.student_id] === opt.val
+                            className={`flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceData[a.student_id] === opt.val
                                 ? `${opt.color} text-white shadow-lg scale-105 z-10`
                                 : "text-gray-400 hover:text-gray-600 hover:bg-white dark:hover:bg-gray-700"
-                            }`}
+                              }`}
                           >
                             <opt.icon
                               className={`w-3.5 h-3.5 mr-1.5 ${attendanceData[a.student_id] === opt.val ? "text-white" : ""}`}

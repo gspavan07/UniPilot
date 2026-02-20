@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const Holiday = sequelize.define(
   "Holiday",
@@ -39,4 +39,4 @@ const Holiday = sequelize.define(
   }
 );
 
-module.exports = Holiday;
+export default Holiday;

@@ -1,4 +1,4 @@
-const {
+import {
   User,
   StaffAttendance,
   LeaveRequest,
@@ -11,14 +11,14 @@ const {
   Timetable,
   TimetableSlot,
   sequelize,
-} = require("../models");
-const { Op } = require("sequelize");
-const logger = require("../utils/logger");
+} from "../models/index.js";
+import { Op } from "sequelize";
+import logger from "../utils/logger.js";
 
 // @desc    Get All HR Dashboard Stats (Admin/HR only)
 // @route   GET /api/hr/dashboard/stats
 // @access  Private/Admin/HR
-exports.getDashboardStats = async (req, res) => {
+export const getDashboardStats = async (req, res) => {
   try {
     const today = new Date().toLocaleDateString("en-CA");
 
@@ -206,7 +206,7 @@ exports.getDashboardStats = async (req, res) => {
 // @desc    Get HOD Dashboard Stats (Department specific)
 // @route   GET /api/hr/hod/dashboard-stats
 // @access  Private/HOD
-exports.getHodDashboardStats = async (req, res) => {
+export const getHodDashboardStats = async (req, res) => {
   try {
     const { userId } = req.user;
 
@@ -317,4 +317,9 @@ exports.getHodDashboardStats = async (req, res) => {
     logger.error("Error in HOD Dashboard Stats:", error);
     res.status(500).json({ error: "Failed to compile HOD dashboard metrics" });
   }
+};
+
+export default {
+  getDashboardStats,
+  getHodDashboardStats,
 };

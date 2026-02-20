@@ -70,12 +70,12 @@ const UserProfile = () => {
     { id: "overview", label: "Overview", icon: Info },
     ...(isStudent
       ? [
-          { id: "academic", label: "Academic", icon: GraduationCap },
-          { id: "personal", label: "Personal", icon: User },
-          { id: "family", label: "Family", icon: Users },
-          { id: "history", label: "Education", icon: History },
-          { id: "documents", label: "Documents", icon: FileText },
-        ]
+        { id: "academic", label: "Academic", icon: GraduationCap },
+        { id: "personal", label: "Personal", icon: User },
+        { id: "family", label: "Family", icon: Users },
+        { id: "history", label: "Education", icon: History },
+        { id: "documents", label: "Documents", icon: FileText },
+      ]
       : [{ id: "details", label: "Profile Details", icon: User }]),
     { id: "security", label: "Security", icon: Shield },
   ];
@@ -116,8 +116,8 @@ const UserProfile = () => {
                   ? user.profile_picture.startsWith("http")
                     ? user.profile_picture
                     : `${user.profile_picture}?token=${localStorage.getItem(
-                        "accessToken",
-                      )}`
+                      "accessToken",
+                    )}`
                   : `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=6366f1&color=fff&size=128`
               }
               alt="Profile"
@@ -170,11 +170,10 @@ const UserProfile = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center px-5 py-2.5 font-bold text-xs transition-all rounded-xl ${
-              activeTab === tab.id
+            className={`flex items-center px-5 py-2.5 font-bold text-xs transition-all rounded-xl ${activeTab === tab.id
                 ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
                 : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
+              }`}
           >
             <tab.icon
               className={`w-3.5 h-3.5 mr-2 ${activeTab === tab.id ? "animate-pulse" : ""}`}
@@ -480,13 +479,12 @@ const UserProfile = () => {
                         <FileText className="w-6 h-6" />
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${
-                          doc.status === "approved"
+                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${doc.status === "approved"
                             ? "bg-success-50 text-success-600"
                             : doc.status === "rejected"
                               ? "bg-error-50 text-error-600"
                               : "bg-warning-50 text-warning-600"
-                        }`}
+                          }`}
                       >
                         {doc.status}
                       </span>

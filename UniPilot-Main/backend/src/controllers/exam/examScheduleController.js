@@ -1,4 +1,4 @@
-const logger = require("../../utils/logger");
+import logger from "../../utils/logger.js";
 
 /**
  * Exam Schedule Controller
@@ -145,12 +145,18 @@ class ExamScheduleController {
 const controller = new ExamScheduleController();
 
 // Export bound methods
-module.exports = {
-  getAllSchedules: controller.getAllSchedules.bind(controller),
-  getSchedulesByRegulation:
-    controller.getSchedulesByRegulation.bind(controller),
-  getScheduleById: controller.getScheduleById.bind(controller),
-  createSchedule: controller.createSchedule.bind(controller),
-  updateSchedule: controller.updateSchedule.bind(controller),
-  deleteSchedule: controller.deleteSchedule.bind(controller),
+export const getAllSchedules = controller.getAllSchedules.bind(controller);
+export const getSchedulesByRegulation = controller.getSchedulesByRegulation.bind(controller);
+export const getScheduleById = controller.getScheduleById.bind(controller);
+export const createSchedule = controller.createSchedule.bind(controller);
+export const updateSchedule = controller.updateSchedule.bind(controller);
+export const deleteSchedule = controller.deleteSchedule.bind(controller);
+
+export default {
+  getAllSchedules,
+  getSchedulesByRegulation,
+  getScheduleById,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
 };

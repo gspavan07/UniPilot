@@ -1,4 +1,4 @@
-const {
+import {
   StaffAttendance,
   LeaveBalance,
   LeaveRequest,
@@ -6,14 +6,14 @@ const {
   Holiday,
   InstitutionSetting,
   sequelize,
-} = require("../models");
-const logger = require("../utils/logger");
-const { Op } = require("sequelize");
+} from "../models/index.js";
+import logger from "../utils/logger.js";
+import { Op } from "sequelize";
 
 // @desc    Mark staff attendance (Admin/Manager)
 // @route   POST /api/hr/attendance/mark
 // @access  Private/Admin
-exports.markAttendance = async (req, res) => {
+export const markAttendance = async (req, res) => {
   try {
     const { date, attendance_data } = req.body; // [{ user_id, status, check_in_time, check_out_time, remarks }]
 
@@ -65,7 +65,7 @@ exports.markAttendance = async (req, res) => {
 // @desc    Get Daily Attendance View (Users + Attendance + Leaves)
 // @route   GET /api/hr/attendance/daily-view
 // @access  Private/Admin/HOD
-exports.getDailyAttendanceView = async (req, res) => {
+export const getDailyAttendanceView = async (req, res) => {
   try {
     const { date, department_id } = req.query;
     if (!date) {
@@ -195,7 +195,7 @@ exports.getDailyAttendanceView = async (req, res) => {
 // @desc    Get Staff Attendance Report
 // @route   GET /api/hr/attendance
 // @access  Private/Admin/Staff
-exports.getStats = async (req, res) => {
+export const getStats = async (req, res) => {
   try {
     const { start_date, end_date, user_id, department_id } = req.query;
 
@@ -240,7 +240,7 @@ exports.getStats = async (req, res) => {
 // @desc    Get My Attendance (Staff Perspective)
 // @route   GET /api/hr/my-attendance
 // @access  Private/Staff
-exports.getMyAttendance = async (req, res) => {
+export const getMyAttendance = async (req, res) => {
   try {
     const user_id = req.user.userId;
     const { start_date, end_date } = req.query;
@@ -268,7 +268,7 @@ exports.getMyAttendance = async (req, res) => {
 // @desc    Get My Leave Requests
 // @route   GET /api/hr/leave/my-requests
 // @access  Private/Staff
-exports.getMyLeaveRequests = async (req, res) => {
+export const getMyLeaveRequests = async (req, res) => {
   try {
     const requests = await LeaveRequest.findAll({
       where: { student_id: req.user.userId }, // Reuse student_id as user_id
@@ -291,7 +291,7 @@ exports.getMyLeaveRequests = async (req, res) => {
 // @desc    Get Specific User's Leave Requests (Admin/HR)
 // @route   GET /api/hr/leave/requests/:user_id
 // @access  Private/Admin/HR
-exports.getUserLeaveRequests = async (req, res) => {
+export const getUserLeaveRequests = async (req, res) => {
   try {
     const { user_id } = req.params;
 
@@ -316,7 +316,7 @@ exports.getUserLeaveRequests = async (req, res) => {
 // @desc    Apply for Leave (Staff)
 // @route   POST /api/hr/leave/apply
 // @access  Private/Staff
-exports.applyLeave = async (req, res) => {
+export const applyLeave = async (req, res) => {
   try {
     const {
       leave_type,
@@ -422,7 +422,7 @@ exports.applyLeave = async (req, res) => {
 // @desc    Admin: Update Leave Status (Approve/Reject)
 // @route   PUT /api/hr/leave/:id
 // @access  Private/Admin
-exports.updateLeaveStatus = async (req, res) => {
+export const updateLeaveStatus = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -505,7 +505,7 @@ exports.updateLeaveStatus = async (req, res) => {
 
 // @descGet Leave Balances
 // @route GET /api/hr/leave/balances
-exports.getLeaveBalances = async (req, res) => {
+export const getLeaveBalances = async (req, res) => {
   try {
     const user_id = req.query.user_id || req.user.userId;
     const year = req.query.year || new Date().getFullYear();
@@ -522,7 +522,7 @@ exports.getLeaveBalances = async (req, res) => {
 
 // @desc    Get Pending Approvals (For Manager/HOD/Admin)
 // @route   GET /api/hr/leave/approvals
-exports.getPendingApprovals = async (req, res) => {
+export const getPendingApprovals = async (req, res) => {
   try {
     const { role, userId } = req.user;
 
@@ -549,7 +549,7 @@ exports.getPendingApprovals = async (req, res) => {
             "role",
           ],
           include: [
-            { model: require("../models").Department, as: "department" },
+            { model: Department, as: "department" },
           ],
         },
       ],
@@ -567,4 +567,17 @@ exports.getPendingApprovals = async (req, res) => {
     logger.error("Error fetching approvals:", error);
     res.status(500).json({ error: "Fetch failed" });
   }
+};
+
+export default {
+  markAttendance,
+  getDailyAttendanceView,
+  getStats,
+  getMyAttendance,
+  getMyLeaveRequests,
+  getUserLeaveRequests,
+  applyLeave,
+  updateLeaveStatus,
+  getLeaveBalances,
+  getPendingApprovals,
 };

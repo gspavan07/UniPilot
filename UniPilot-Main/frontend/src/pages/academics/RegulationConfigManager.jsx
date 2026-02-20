@@ -51,21 +51,19 @@ const RegulationConfigManager = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-lg font-medium transition-all ${
-                  activeTab === tab.id
+                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-lg font-medium transition-all ${activeTab === tab.id
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <tab.icon className="w-5 h-5" />
                 <div className="text-left">
                   <div className="font-semibold">{tab.label}</div>
                   <div
-                    className={`text-xs ${
-                      activeTab === tab.id
+                    className={`text-xs ${activeTab === tab.id
                         ? "text-blue-100"
                         : "text-gray-500 dark:text-gray-500"
-                    }`}
+                      }`}
                   >
                     {tab.description}
                   </div>

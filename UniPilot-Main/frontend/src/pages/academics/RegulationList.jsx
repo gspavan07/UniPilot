@@ -89,16 +89,16 @@ const RegulationList = () => {
     <div className="min-h-screen bg-white dark:bg-gray-900 p-6 lg:p-10">
       <div className="max-w-[1600px] mx-auto space-y-6">
         {user.role !== "hod" && (
-        <button
-          onClick={() => navigate("/academics")}
-          className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-semibold"
-        >
-          <ArrowLeft
-            className="w-5 h-5 group-hover:-translate-x-1 transition-transform"
-            strokeWidth={2.5}
-          />
-          Back to Academic Management
-        </button>
+          <button
+            onClick={() => navigate("/academics")}
+            className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-semibold"
+          >
+            <ArrowLeft
+              className="w-5 h-5 group-hover:-translate-x-1 transition-transform"
+              strokeWidth={2.5}
+            />
+            Back to Academic Management
+          </button>
         )}
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">

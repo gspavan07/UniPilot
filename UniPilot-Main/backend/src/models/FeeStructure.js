@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const FeeStructure = sequelize.define(
   "FeeStructure",
@@ -62,4 +62,4 @@ const FeeStructure = sequelize.define(
   },
 );
 
-module.exports = FeeStructure;
+export default FeeStructure;

@@ -123,17 +123,16 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                     ? student.profile_picture.startsWith("http")
                       ? student.profile_picture
                       : `${student.profile_picture}?token=${localStorage.getItem(
-                          "accessToken",
-                        )}`
+                        "accessToken",
+                      )}`
                     : `https://ui-avatars.com/api/?name=${student.first_name}+${student.last_name}&background=random&size=128`
                 }
                 className="w-24 h-24 rounded-2xl object-cover shadow-lg mb-4 mx-auto"
                 alt="Profile"
               />
               <div
-                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-4 border-white dark:border-gray-900 ${
-                  student.is_active ? "bg-success-500" : "bg-gray-400"
-                }`}
+                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-4 border-white dark:border-gray-900 ${student.is_active ? "bg-success-500" : "bg-gray-400"
+                  }`}
               />
             </div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -152,11 +151,10 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
-                    activeTab === tab.id
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id
                       ? "bg-white dark:bg-gray-800 text-primary-600 shadow-sm font-bold"
                       : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{tab.label}</span>
@@ -663,15 +661,14 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                                     </p>
                                   </div>
                                   <div
-                                    className={`px-3 py-1 rounded-xl text-xs font-black shadow-sm ${
-                                      endSem?.grade === "F"
+                                    className={`px-3 py-1 rounded-xl text-xs font-black shadow-sm ${endSem?.grade === "F"
                                         ? "bg-rose-100 text-rose-600"
                                         : ["O", "A+", "A"].includes(
-                                              endSem?.grade,
-                                            )
+                                          endSem?.grade,
+                                        )
                                           ? "bg-emerald-100 text-emerald-600"
                                           : "bg-gray-100 text-gray-700"
-                                    }`}
+                                      }`}
                                   >
                                     {endSem?.grade || "PND"}
                                   </div>
@@ -784,13 +781,12 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                               {doc.type}
                             </p>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-                                doc.status === "approved"
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${doc.status === "approved"
                                   ? "bg-success-50 text-success-700"
                                   : doc.status === "rejected"
                                     ? "bg-error-50 text-error-700"
                                     : "bg-warning-50 text-warning-700"
-                              }`}
+                                }`}
                             >
                               {doc.status}
                             </span>

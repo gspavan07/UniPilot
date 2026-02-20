@@ -1,11 +1,11 @@
-const { LeaveBalance, SalaryGrade, SalaryStructure } = require("../models");
+import { LeaveBalance, SalaryGrade, SalaryStructure } from "../models/index.js";
 
 /**
  * Syncs User's Leave Balances with their Grade Policy
  * @param {string} userId - The user ID
  * @param {string} gradeId - The Salary Grade ID
  */
-exports.syncBalances = async (userId, gradeId) => {
+export const syncBalances = async (userId, gradeId) => {
   try {
     const grade = await SalaryGrade.findByPk(gradeId);
     if (!grade || !grade.leave_policy || !Array.isArray(grade.leave_policy)) {
@@ -61,7 +61,7 @@ exports.syncBalances = async (userId, gradeId) => {
  * Syncs Balances for ALL users with a specific Grade
  * @param {string} gradeId
  */
-exports.syncAllUsersForGrade = async (gradeId) => {
+export const syncAllUsersForGrade = async (gradeId) => {
   try {
     const structures = await SalaryStructure.findAll({
       where: { grade_id: gradeId },
@@ -73,10 +73,15 @@ exports.syncAllUsersForGrade = async (gradeId) => {
 
     for (const struct of structures) {
       if (struct.user_id) {
-        await exports.syncBalances(struct.user_id, gradeId);
+        await syncBalances(struct.user_id, gradeId);
       }
     }
   } catch (error) {
     console.error("Error bulk syncing balances:", error);
   }
+};
+
+export default {
+  syncBalances,
+  syncAllUsersForGrade,
 };

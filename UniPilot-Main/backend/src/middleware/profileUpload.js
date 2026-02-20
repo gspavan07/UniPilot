@@ -1,6 +1,6 @@
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // Ensure upload directory exists
 const uploadDir = "uploads/profiles";
@@ -43,4 +43,4 @@ const profileUpload = multer({
   },
 });
 
-module.exports = profileUpload;
+export default profileUpload;

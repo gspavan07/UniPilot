@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const RoundResult = sequelize.define(
   "RoundResult",
@@ -46,4 +46,4 @@ const RoundResult = sequelize.define(
   },
 );
 
-module.exports = RoundResult;
+export default RoundResult;

@@ -1,12 +1,12 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const {
+import {
   getGradeScale,
   updateGradeScale,
   addGrade,
   updateGrade,
   deleteGrade,
-} = require("../controllers/grade-scale.controller");
+} from "../controllers/grade-scale.controller.js";
 
 // Get grade scale for a regulation
 router.get("/:regulationId", getGradeScale);
@@ -23,4 +23,4 @@ router.put("/:regulationId/grades/:gradeId", updateGrade);
 // Delete a grade
 router.delete("/:regulationId/grades/:gradeId", deleteGrade);
 
-module.exports = router;
+export default router;

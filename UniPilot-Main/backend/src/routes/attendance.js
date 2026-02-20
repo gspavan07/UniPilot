@@ -1,5 +1,5 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   markAttendance,
   getMyAttendance,
   applyLeave,
@@ -8,8 +8,8 @@ const {
   getTodayClasses,
   getAttendanceStats,
   getSessionAttendance,
-} = require("../controllers/attendanceController");
-const { authenticate, checkPermission } = require("../middleware/auth");
+} from "../controllers/attendanceController.js";
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -53,4 +53,4 @@ router.get(
   getAttendanceStats,
 );
 
-module.exports = router;
+export default router;

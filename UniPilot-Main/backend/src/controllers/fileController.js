@@ -1,13 +1,17 @@
-const path = require("path");
-const fs = require("fs");
-const jwt = require("jsonwebtoken");
-const { User, Role } = require("../models");
-const logger = require("../utils/logger");
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+import fs from "fs";
+import jwt from "jsonwebtoken";
+import { User, Role } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 // @desc    Serve Profile Image securely
 // @route   GET /uploads/profiles/:filename
 // @access  Protected
-exports.serveProfileImage = async (req, res) => {
+export const serveProfileImage = async (req, res) => {
   const { filename } = req.params;
   const filePath = path.join(__dirname, "../../uploads/profiles", filename);
 
@@ -87,4 +91,8 @@ exports.serveProfileImage = async (req, res) => {
         `Invalid Token: ${error.message} (Secret: ${!!process.env.JWT_SECRET})`
       );
   }
+};
+
+export default {
+  serveProfileImage,
 };

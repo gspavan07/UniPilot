@@ -1,5 +1,5 @@
-const { Program, Department, User } = require("../models");
-const logger = require("../utils/logger");
+import { Program, Department, User } from "../models/index.js";
+import logger from "../utils/logger.js";
 
 /**
  * Program Controller
@@ -9,7 +9,7 @@ const logger = require("../utils/logger");
 // @desc    Get all programs
 // @route   GET /api/programs
 // @access  Private
-exports.getAllPrograms = async (req, res) => {
+export const getAllPrograms = async (req, res) => {
   try {
     let { department_id } = req.query;
 
@@ -61,7 +61,7 @@ exports.getAllPrograms = async (req, res) => {
 // @desc    Get single program
 // @route   GET /api/programs/:id
 // @access  Private
-exports.getProgram = async (req, res) => {
+export const getProgram = async (req, res) => {
   try {
     const program = await Program.findByPk(req.params.id, {
       include: [
@@ -96,7 +96,7 @@ exports.getProgram = async (req, res) => {
 // @desc    Create new program
 // @route   POST /api/programs
 // @access  Private/Admin
-exports.createProgram = async (req, res) => {
+export const createProgram = async (req, res) => {
   try {
     const program = await Program.create(req.body);
 
@@ -122,7 +122,7 @@ exports.createProgram = async (req, res) => {
 // @desc    Update program
 // @route   PUT /api/programs/:id
 // @access  Private/Admin
-exports.updateProgram = async (req, res) => {
+export const updateProgram = async (req, res) => {
   try {
     let program = await Program.findByPk(req.params.id);
 
@@ -157,7 +157,7 @@ exports.updateProgram = async (req, res) => {
 // @desc    Delete program
 // @route   DELETE /api/programs/:id
 // @access  Private/Admin
-exports.deleteProgram = async (req, res) => {
+export const deleteProgram = async (req, res) => {
   try {
     const program = await Program.findByPk(req.params.id);
 

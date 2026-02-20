@@ -1,10 +1,10 @@
-const {
+import {
   ExamFeeConfiguration,
   LateFeeSlab,
   ExamCycle,
-} = require("../../models/exam/associations");
-const { sequelize } = require("../../config/database");
-const logger = require("../../utils/logger");
+} from "../../models/exam/associations.js";
+import { sequelize } from "../../config/database.js";
+import logger from "../../utils/logger.js";
 
 /**
  * Get fee configuration for a cycle
@@ -416,7 +416,7 @@ async function logFeeConfigChange(
   }
 }
 
-module.exports = {
+export default {
   getFeeConfigByCycle,
   createFeeConfig,
   updateFeeConfig,

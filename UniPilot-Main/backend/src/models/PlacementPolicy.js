@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const PlacementPolicy = sequelize.define(
   "PlacementPolicy",
@@ -35,4 +35,4 @@ const PlacementPolicy = sequelize.define(
   },
 );
 
-module.exports = PlacementPolicy;
+export default PlacementPolicy;

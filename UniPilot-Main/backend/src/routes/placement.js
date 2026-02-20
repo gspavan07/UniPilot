@@ -1,13 +1,13 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const { authenticate, checkPermission } = require("../middleware/auth");
+import { authenticate, checkPermission } from "../middleware/auth.js";
 
-const companyController = require("../controllers/companyController");
-const jobPostingController = require("../controllers/jobPostingController");
-const placementDriveController = require("../controllers/placementDriveController");
-const studentPlacementController = require("../controllers/studentPlacementController");
-const departmentPlacementController = require("../controllers/departmentPlacementController");
-const studentUpload = require("../middleware/studentUpload");
+import companyController from "../controllers/companyController.js";
+import jobPostingController from "../controllers/jobPostingController.js";
+import placementDriveController from "../controllers/placementDriveController.js";
+import studentPlacementController from "../controllers/studentPlacementController.js";
+import departmentPlacementController from "../controllers/departmentPlacementController.js";
+import studentUpload from "../middleware/studentUpload.js";
 
 // ============================================
 // COMPANY ROUTES
@@ -251,7 +251,7 @@ router.get(
   departmentPlacementController.getDepartmentDriveDetail,
 );
 
-module.exports = router;
+export default router;
 
 // ============================================
 // STUDENT PLACEMENT ROUTES

@@ -1,5 +1,5 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/database");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.js";
 
 const HostelMessFeeStructure = sequelize.define(
   "HostelMessFeeStructure",
@@ -37,4 +37,4 @@ const HostelMessFeeStructure = sequelize.define(
   },
 );
 
-module.exports = HostelMessFeeStructure;
+export default HostelMessFeeStructure;

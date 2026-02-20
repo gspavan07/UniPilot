@@ -1,18 +1,17 @@
-const { sequelize } = require("../config/database");
-const { Op } = require("sequelize");
-const HostelRoomBill = require("../models/HostelRoomBill");
-const HostelRoomBillDistribution = require("../models/HostelRoomBillDistribution");
-const HostelRoom = require("../models/HostelRoom");
-const HostelAllocation = require("../models/HostelAllocation");
-const User = require("../models/User");
-const FeeStructure = require("../models/FeeStructure");
-const FeeCategory = require("../models/FeeCategory");
-const StudentFeeCharge = require("../models/StudentFeeCharge");
+import { sequelize } from "../config/database.js";
+import { Op } from "sequelize";
+import HostelRoomBill from "../models/HostelRoomBill.js";
+import HostelRoomBillDistribution from "../models/HostelRoomBillDistribution.js";
+import HostelAllocation from "../models/HostelAllocation.js";
+import User from "../models/User.js";
+import FeeCategory from "../models/FeeCategory.js";
+import StudentFeeCharge from "../models/StudentFeeCharge.js";
+import { HostelBuilding, HostelFloor, HostelRoom } from "../models/index.js";
 
 // @desc    Create a room bill
 // @route   POST /api/hostel/room-bills
 // @access  hostel:manage
-exports.createRoomBill = async (req, res) => {
+export const createRoomBill = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -210,7 +209,7 @@ async function distributeBillToStudents(bill, transaction, req = null) {
 // @desc    Distribute room bill to occupants
 // @route   POST /api/hostel/room-bills/:id/distribute
 // @access  hostel:manage
-exports.distributeRoomBill = async (req, res) => {
+export const distributeRoomBill = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -252,7 +251,7 @@ exports.distributeRoomBill = async (req, res) => {
 // @desc    Get all room bills
 // @route   GET /api/hostel/room-bills
 // @access  hostel:manage
-exports.getAllRoomBills = async (req, res) => {
+export const getAllRoomBills = async (req, res) => {
   try {
     const { room_id, status, bill_type, page = 1, limit = 50 } = req.query;
 
@@ -297,7 +296,7 @@ exports.getAllRoomBills = async (req, res) => {
 // @desc    Get room's billing history
 // @route   GET /api/hostel/rooms/:roomId/bills
 // @access  hostel:manage
-exports.getRoomBills = async (req, res) => {
+export const getRoomBills = async (req, res) => {
   try {
     const { roomId } = req.params;
 
@@ -332,7 +331,7 @@ exports.getRoomBills = async (req, res) => {
 // @desc    Update room bill
 // @route   PUT /api/hostel/room-bills/:id
 // @access  hostel:manage
-exports.updateRoomBill = async (req, res) => {
+export const updateRoomBill = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -444,7 +443,7 @@ exports.updateRoomBill = async (req, res) => {
 // @desc    Delete room bill
 // @route   DELETE /api/hostel/room-bills/:id
 // @access  hostel:manage
-exports.deleteRoomBill = async (req, res) => {
+export const deleteRoomBill = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -518,17 +517,15 @@ exports.deleteRoomBill = async (req, res) => {
 // @desc    Get all rooms for billing view
 // @route   GET /api/hostel/rooms/billing-view
 // @access  hostel:manage
-exports.getRoomsForBilling = async (req, res) => {
+export const getRoomsForBilling = async (req, res) => {
   try {
     const { building_id, floor_id, search } = req.query;
-    const HostelBuilding = require("../models/HostelBuilding");
-    const HostelFloor = require("../models/HostelFloor");
 
     const where = {};
     if (building_id) where.building_id = building_id;
     if (floor_id) where.floor_id = floor_id;
     if (search)
-      where.room_number = { [require("sequelize").Op.iLike]: `%${search}%` };
+      where.room_number = { [Op.iLike]: `%${search}%` };
 
     const rooms = await HostelRoom.findAll({
       where,
@@ -581,7 +578,7 @@ exports.getRoomsForBilling = async (req, res) => {
 // @desc    Bulk create room bills from CSV
 // @route   POST /api/hostel/room-bills/bulk-create
 // @access  hostel:manage
-exports.bulkCreateBills = async (req, res) => {
+export const bulkCreateBills = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -673,12 +670,9 @@ exports.bulkCreateBills = async (req, res) => {
 // @desc    Download billing template CSV
 // @route   GET /api/hostel/rooms/billing-template
 // @access  hostel:manage
-exports.downloadBillingTemplate = async (req, res) => {
+export const downloadBillingTemplate = async (req, res) => {
   try {
     const { building_id, floor_id } = req.query;
-    const HostelBuilding = require("../models/HostelBuilding");
-    const HostelFloor = require("../models/HostelFloor");
-
     const where = {};
     if (building_id) where.building_id = building_id;
     if (floor_id) where.floor_id = floor_id;
@@ -739,3 +733,15 @@ function getMonthName(monthIndex) {
   ];
   return months[parseInt(monthIndex) - 1] || "Unknown";
 }
+
+export default {
+  createRoomBill,
+  distributeRoomBill,
+  getAllRoomBills,
+  getRoomBills,
+  updateRoomBill,
+  deleteRoomBill,
+  getRoomsForBilling,
+  bulkCreateBills,
+  downloadBillingTemplate,
+};
