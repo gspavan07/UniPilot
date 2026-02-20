@@ -310,6 +310,8 @@ const DepartmentPlacementDashboard = () => {
   useEffect(() => {
     if (departmentId) {
       fetchData();
+    } else {
+      setLoading(false);
     }
   }, [departmentId, selectedBatch, selectedSection]);
 

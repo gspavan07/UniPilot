@@ -20,12 +20,14 @@ import {
   Building,
   History,
 } from "lucide-react";
-import { changePassword, clearError } from "../../store/slices/authSlice";
+import { changePassword, clearError, logoutAllSessions } from "../../store/slices/authSlice";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
   const { user, status, error } = useSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(
+    user?.must_change_password ? "security" : "overview"
+  );
 
   // Password Change State
   const [passwords, setPasswords] = useState({
@@ -34,6 +36,17 @@ const UserProfile = () => {
     confirmPassword: "",
   });
   const [passwordMessage, setPasswordMessage] = useState(null);
+  const [logoutAllMessage, setLogoutAllMessage] = useState(null);
+
+  const handleLogoutAll = async () => {
+    setLogoutAllMessage(null);
+    const resultAction = await dispatch(logoutAllSessions());
+    if (logoutAllSessions.fulfilled.match(resultAction)) {
+      setLogoutAllMessage({ type: "success", text: resultAction.payload || "All other sessions have been revoked." });
+    } else {
+      setLogoutAllMessage({ type: "error", text: resultAction.payload || "Failed to revoke sessions" });
+    }
+  };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -171,8 +184,8 @@ const UserProfile = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center px-5 py-2.5 font-bold text-xs transition-all rounded-xl ${activeTab === tab.id
-                ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              ? "bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm"
+              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
           >
             <tab.icon
@@ -480,10 +493,10 @@ const UserProfile = () => {
                       </div>
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${doc.status === "approved"
-                            ? "bg-success-50 text-success-600"
-                            : doc.status === "rejected"
-                              ? "bg-error-50 text-error-600"
-                              : "bg-warning-50 text-warning-600"
+                          ? "bg-success-50 text-success-600"
+                          : doc.status === "rejected"
+                            ? "bg-error-50 text-error-600"
+                            : "bg-warning-50 text-warning-600"
                           }`}
                       >
                         {doc.status}
@@ -520,9 +533,113 @@ const UserProfile = () => {
           </div>
         )}
 
+        {/* PROFILE DETAILS TAB (Non-Student) */}
+        {activeTab === "details" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 animate-fade-in">
+            <div className="space-y-8">
+              <SectionTitle title="Personal Information" icon={User} />
+              <div className="space-y-4">
+                <DetailItem
+                  label="Full Name"
+                  value={`${user?.first_name} ${user?.last_name}`}
+                  icon={User}
+                />
+                <DetailItem
+                  label="Email Address"
+                  value={user?.email}
+                  icon={Mail}
+                />
+                <DetailItem
+                  label="Phone Number"
+                  value={user?.phone}
+                  icon={Phone}
+                />
+                <DetailItem
+                  label="Gender"
+                  value={user?.gender?.toUpperCase()}
+                  icon={User}
+                />
+                <DetailItem
+                  label="Date of Birth"
+                  value={user?.date_of_birth}
+                  icon={Calendar}
+                />
+              </div>
+            </div>
+            <div className="space-y-8">
+              <SectionTitle title="Employment Details" icon={Briefcase} />
+              <div className="space-y-4">
+                <DetailItem
+                  label="Role"
+                  value={user?.role?.toUpperCase()}
+                  icon={Shield}
+                />
+                <DetailItem
+                  label="Designation"
+                  value={user?.designation}
+                  icon={Award}
+                />
+                <DetailItem
+                  label="Department"
+                  value={user?.department?.name}
+                  icon={Building}
+                />
+                <DetailItem
+                  label="Employee ID"
+                  value={user?.employee_id}
+                  icon={CreditCard}
+                />
+                <DetailItem
+                  label="Joining Date"
+                  value={user?.joining_date}
+                  icon={Calendar}
+                />
+              </div>
+
+              <SectionTitle title="Address" icon={MapPin} />
+              <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl space-y-4">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                    Location
+                  </p>
+                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    {[user?.city, user?.state, user?.zip_code]
+                      .filter(Boolean)
+                      .join(", ") || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                    Full Address
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {user?.address || "No address provided."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* SECURITY TAB */}
         {activeTab === "security" && (
           <div className="max-w-md mx-auto animate-fade-in py-10">
+            {/* Must-Change-Password Banner */}
+            {user?.must_change_password && (
+              <div className="mb-8 p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-amber-800 dark:text-amber-300 text-sm">
+                    Password Change Required
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-400 text-xs mt-1">
+                    Your administrator has assigned you a temporary password.
+                    You must change it before you can access any other features.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
                 <Key className="w-8 h-8" />
@@ -604,6 +721,49 @@ const UserProfile = () => {
                 {status === "loading" ? "Processing..." : "Secure Account"}
               </button>
             </form>
+
+            {/* Divider */}
+            <div className="my-10 flex items-center gap-4">
+              <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Session Management
+              </span>
+              <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+            </div>
+
+            {/* Logout All Other Sessions */}
+            <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center shrink-0">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                    Logout from all other devices
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    If you logged in from a shared computer or suspect
+                    unauthorized access, revoke all other active sessions.
+                  </p>
+                  {logoutAllMessage && (
+                    <p
+                      className={`text-xs font-medium mt-2 ${logoutAllMessage.type === "success" ? "text-green-600" : "text-red-600"}`}
+                    >
+                      {logoutAllMessage.text}
+                    </p>
+                  )}
+                  <button
+                    onClick={handleLogoutAll}
+                    disabled={status === "loading"}
+                    className="mt-4 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-95 shadow-lg shadow-red-500/20"
+                  >
+                    {status === "loading"
+                      ? "Processing..."
+                      : "Revoke All Other Sessions"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

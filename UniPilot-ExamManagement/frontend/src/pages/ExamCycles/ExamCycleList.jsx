@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllCycles, deleteCycle } from "../../services/examCycleService.js";
+import { getAllCycles, deleteCycle, getAllDegrees } from "../../services/examCycleService.js";
 import {
   Edit,
   Trash2,
@@ -13,11 +13,13 @@ import {
   Search,
   MoreHorizontal
 } from "lucide-react";
+import { DEGREE_LABELS } from "../../utils/degreeLabels.js";
 
 export default function ExamCycleList() {
   const navigate = useNavigate();
 
   const [cycles, setCycles] = useState([]);
+  const [degrees, setDegrees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -29,8 +31,21 @@ export default function ExamCycleList() {
   });
 
   useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
     loadCycles();
   }, [filters]);
+
+  const loadInitialData = async () => {
+    try {
+      const response = await getAllDegrees();
+      setDegrees(response.data.data || []);
+    } catch (err) {
+      console.error("Failed to load degrees", err);
+    }
+  };
 
   const loadCycles = async () => {
     setLoading(true);
@@ -98,6 +113,7 @@ export default function ExamCycleList() {
           </button>
         </div>
 
+
         {/* Filters & Controls */}
         <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
           <div className="flex items-center gap-3 text-gray-400 px-2">
@@ -109,13 +125,14 @@ export default function ExamCycleList() {
             <select
               value={filters.degree}
               onChange={(e) => setFilters({ ...filters, degree: e.target.value })}
-              className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold py-2.5 pl-4 pr-10 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer hover:bg-gray-100"
+              className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold py-2.5 pl-4 pr-10 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer hover:bg-gray-100 placeholder:text-gray-400"
             >
               <option value="">All Degrees</option>
-              <option value="B.Tech">B.Tech</option>
-              <option value="M.Tech">M.Tech</option>
-              <option value="MBA">MBA</option>
-              <option value="MCA">MCA</option>
+              {degrees.map((degree) => (
+                <option key={degree} value={degree}>
+                  {DEGREE_LABELS[degree] || degree}
+                </option>
+              ))}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-gray-600" size={16} />
           </div>
@@ -218,7 +235,7 @@ export default function ExamCycleList() {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
-                              {cycle.degree}
+                              {DEGREE_LABELS[cycle.degree] || cycle.degree}
                             </span>
                             <span className="text-xs text-gray-500">&bull;</span>
                             <span className="text-sm font-medium text-gray-700">

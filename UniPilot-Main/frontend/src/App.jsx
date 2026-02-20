@@ -111,6 +111,7 @@ import CoordinatorManagement from "./pages/placement/CoordinatorManagement";
 import DepartmentList from "./pages/departments/DepartmentList";
 import ProgramList from "./pages/programs/ProgramList";
 import RoleManagement from "./pages/settings/RoleManagement";
+import AuditLogViewer from "./pages/settings/AuditLogViewer";
 import ProctorDashboard from "./pages/proctoring/ProctorDashboard";
 import PromotionManager from "./pages/promotion/PromotionManager";
 import AttendanceTracker from "./pages/attendance/AttendanceTracker";
@@ -131,13 +132,20 @@ import MyAttendance from "./pages/attendance/MyAttendence";
 
 function App() {
   const dispatch = useDispatch();
-  const { user, accessToken } = useSelector((state) => state.auth);
+  const { user, status, mustChangePassword } = useSelector((state) => state.auth);
+  const location = window.location;
 
   React.useEffect(() => {
-    if (accessToken) {
-      dispatch(loadUser());
-    }
-  }, [dispatch, accessToken]);
+    dispatch(loadUser());
+  }, [dispatch]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -152,7 +160,11 @@ function App() {
         <Route
           element={
             <ProtectedRoute>
-              <MainLayout />
+              {mustChangePassword && !window.location.pathname.includes('/profile') ? (
+                <Navigate to="/profile" replace />
+              ) : (
+                <MainLayout />
+              )}
             </ProtectedRoute>
           }
         >
@@ -333,6 +345,7 @@ function App() {
 
           {/* Settings */}
           <Route path="/settings/roles" element={<RoleManagement />} />
+          <Route path="/settings/audit-logs" element={<AuditLogViewer />} />
           <Route path="/proctoring" element={<ProctorDashboard />} />
           <Route path="/lifecycle" element={<PromotionManager />} />
           <Route

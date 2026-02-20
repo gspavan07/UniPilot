@@ -232,6 +232,12 @@ const MainLayout = () => {
       permission: "settings:roles:manage",
       roles: ["super_admin", "principal"],
     },
+    {
+      name: "Audit Logs",
+      href: "/settings/audit-logs",
+      icon: FileText,
+      roles: ["super_admin"],
+    },
     // Example of role-based restricted item:
     // {
     //   name: "Role Restricted",
@@ -325,8 +331,8 @@ const MainLayout = () => {
               key={item.name}
               to={item.href}
               className={`nav-link group flex items-center ${sidebarOpen ? "gap-3 px-3" : "justify-center px-0"} py-2.5 mb-0.5 rounded-md transition-all duration-200 relative ${isActive(item.href)
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+                ? "bg-blue-600 text-white"
+                : "text-gray-700 hover:bg-gray-100"
                 }`}
               style={{ animationDelay: `${index * 25}ms` }}
             >
@@ -336,15 +342,15 @@ const MainLayout = () => {
               />
               <item.icon
                 className={`w-[18px] h-[18px] shrink-0 transition-colors ${isActive(item.href)
-                    ? "text-white"
-                    : "text-gray-600 group-hover:text-blue-600"
+                  ? "text-white"
+                  : "text-gray-600 group-hover:text-blue-600"
                   }`}
               />
               {sidebarOpen && (
                 <span
                   className={`text-[13px] font-medium truncate whitespace-nowrap overflow-hidden ${isActive(item.href)
-                      ? "font-semibold text-white"
-                      : "text-gray-700"
+                    ? "font-semibold text-white"
+                    : "text-gray-700"
                     }`}
                 >
                   {item.name}

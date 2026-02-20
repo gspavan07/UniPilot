@@ -39,6 +39,8 @@ class AuthController {
   async login(req, res, next) {
     try {
       const { email, password, rememberMe } = req.body;
+      const ipAddress = req.ip;
+      const userAgent = req.headers["user-agent"] || "";
 
       if (!email || !password) {
         return res.status(400).json({
@@ -47,12 +49,32 @@ class AuthController {
         });
       }
 
-      const result = await authService.login(email, password, rememberMe);
+      const result = await authService.login(email, password, rememberMe, ipAddress, userAgent);
+
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "lax",
+        path: "/",
+        maxAge: result.refreshTTLMs,
+      };
+
+      res.cookie("refreshToken", result.refreshPlain, cookieOptions);
+      res.cookie("csrf_token", result.csrfToken, {
+        secure: isProd,
+        sameSite: "lax",
+        path: "/",
+        maxAge: result.refreshTTLMs,
+      });
 
       res.json({
         success: true,
         message: "Login successful",
-        data: result,
+        data: {
+          user: result.user,
+          accessToken: result.accessToken,
+        },
       });
     } catch (error) {
       res.status(401).json({
@@ -130,6 +152,7 @@ class AuthController {
   async changePassword(req, res, next) {
     try {
       const userId = req.user.userId;
+      const sessionId = req.user.sessionId;
       const { oldPassword, newPassword } = req.body;
 
       if (!oldPassword || !newPassword) {
@@ -142,7 +165,8 @@ class AuthController {
       const result = await authService.changePassword(
         userId,
         oldPassword,
-        newPassword
+        newPassword,
+        sessionId
       );
 
       res.json({
@@ -158,16 +182,88 @@ class AuthController {
   }
 
   /**
+   * Refresh token
+   * POST /api/auth/refresh
+   */
+  async refresh(req, res, next) {
+    try {
+      const refreshPlain = req.cookies?.refreshToken;
+      const ipAddress = req.ip;
+      const userAgent = req.headers["user-agent"] || "";
+
+      if (!refreshPlain) {
+        return res.status(401).json({ success: false, error: "Missing refresh token" });
+      }
+
+      const result = await authService.refresh(refreshPlain, ipAddress, userAgent);
+
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "lax",
+        path: "/",
+        maxAge: result.refreshTTLMs,
+      };
+
+      res.cookie("refreshToken", result.newRefreshPlain, cookieOptions);
+
+      res.json({
+        success: true,
+        accessToken: result.accessToken,
+      });
+    } catch (error) {
+      // Clear cookies on refresh failure to force relogin
+      res.clearCookie("refreshToken", { path: "/" });
+      res.clearCookie("csrf_token", { path: "/" });
+      res.status(401).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
    * Logout user
    * POST /api/auth/logout
    */
-  async logout(req, res) {
-    // For JWT, logout is handled client-side by removing the token
-    // Can implement token blacklisting with Redis here if needed
-    res.json({
-      success: true,
-      message: "Logged out successfully",
-    });
+  async logout(req, res, next) {
+    try {
+      const sessionId = req.user?.sessionId;
+      const userId = req.user?.userId;
+      const ipAddress = req.ip;
+      if (sessionId) {
+        await authService.logout(sessionId, userId, ipAddress);
+      }
+
+      res.clearCookie("refreshToken", { path: "/" });
+      res.clearCookie("csrf_token", { path: "/" });
+
+      res.json({
+        success: true,
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Logout from all other sessions
+   * POST /api/auth/logout-all
+   */
+  async logoutAll(req, res, next) {
+    try {
+      const userId = req.user.userId;
+      const sessionId = req.user.sessionId;
+      const ipAddress = req.ip;
+
+      const revokedCount = await authService.logoutAll(userId, sessionId, ipAddress);
+
+      res.json({
+        success: true,
+        message: `Logged out from ${revokedCount} other session(s)`,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 }
 

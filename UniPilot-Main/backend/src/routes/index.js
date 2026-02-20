@@ -44,6 +44,7 @@ import hodExamRoutes from "./exam/hod.routes.js";
 
 import notificationRoutes from "./notifications.js";
 import academicRoutes from "./academic.js";
+import auditLogRoutes from "./auditLog.js";
 
 const router = express.Router();
 
@@ -94,6 +95,7 @@ router.use("/co-po-maps", coPoMapRoutes);
 // Faculty Assignment & Notifications
 router.use("/notifications", notificationRoutes);
 router.use("/academic", academicRoutes);
+router.use("/audit-logs", auditLogRoutes);
 
 // Exam Management routes
 router.use("/exam/cycles", examCycleRoutes);

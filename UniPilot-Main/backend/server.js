@@ -1,8 +1,5 @@
 import 'dotenv/config';
 
-console.log('Database Host:', process.env.DB_HOST); 
-// console.log(process.env);
-
 import app from "./src/app.js";
 import { sequelize } from "./src/config/database.js";
 import logger from "./src/utils/logger.js";
