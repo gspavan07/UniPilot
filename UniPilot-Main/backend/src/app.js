@@ -1,18 +1,18 @@
+import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import routes from "./routes/index.js";
 import errorHandler from "./middleware/errorHandler.js";
 import nullifyEmptyStrings from "./middleware/nullifyEmptyStrings.js";
 import logger from "./utils/logger.js";
-import 'dotenv/config'; 
 
 
 import path from "path";
 
-const __filename = import.meta.filename;
 const __dirname = import.meta.dirname;
 
 const app = express();
@@ -85,6 +85,7 @@ if (process.env.NODE_ENV === "development") {
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
 
 // Nullify empty strings middleware
 app.use(nullifyEmptyStrings);

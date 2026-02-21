@@ -1,14 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../utils/api";
+import api, { setAccessToken, clearAccessToken, getAccessToken } from "../../utils/api";
 
-// Initial state from localStorage
-const user = JSON.parse(localStorage.getItem("user"));
-const accessToken = localStorage.getItem("accessToken");
-
+// Initial state purely in-memory
 const initialState = {
-  user: user ? user : null,
-  accessToken: accessToken ? accessToken : null,
-  status: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
+  user: null,
+  accessToken: null,
+  mustChangePassword: false,
+  status: "loading", // 'idle' | 'loading' | 'succeeded' | 'failed'
   error: null,
 };
 
@@ -23,12 +21,9 @@ export const login = createAsyncThunk(
         rememberMe,
       });
 
-      const { user, accessToken, refreshToken } = response.data.data;
+      const { user, accessToken } = response.data.data;
 
-      // Store in localStorage
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
+      setAccessToken(accessToken);
 
       return { user, accessToken };
     } catch (error) {
@@ -45,13 +40,11 @@ export const loadUser = createAsyncThunk(
   "auth/loadUser",
   async (_, { rejectWithValue }) => {
     try {
+      // First attempt to grab the user data assuming a valid token might exist
       const response = await api.get("/auth/me");
       const user = response.data.data;
 
-      // Update localStorage with fresh data
-      localStorage.setItem("user", JSON.stringify(user));
-
-      return user;
+      return { user, accessToken: getAccessToken() };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error || "Failed to load user profile"
@@ -111,18 +104,31 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
+// Async thunk for logout from all other sessions
+export const logoutAllSessions = createAsyncThunk(
+  "auth/logoutAllSessions",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/auth/logout-all");
+      return response.data.message;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.error || "Failed to logout from all sessions"
+      );
+    }
+  }
+);
+
 export const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
     logout: (state) => {
-      // Clear localStorage
-      localStorage.removeItem("user");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
+      clearAccessToken();
 
       state.user = null;
       state.accessToken = null;
+      state.mustChangePassword = false;
       state.status = "idle";
       state.error = null;
     },
@@ -141,6 +147,7 @@ export const authSlice = createSlice({
         state.status = "succeeded";
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
+        state.mustChangePassword = !!action.payload.user?.must_change_password;
       })
       .addCase(login.rejected, (state, action) => {
         state.status = "failed";
@@ -152,7 +159,9 @@ export const authSlice = createSlice({
       })
       .addCase(loadUser.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.user = action.payload; // Update state with fresh user object
+        state.user = action.payload.user;
+        state.accessToken = action.payload.accessToken;
+        state.mustChangePassword = !!action.payload.user?.must_change_password;
       })
       .addCase(loadUser.rejected, (state, action) => {
         state.status = "failed";
@@ -165,6 +174,7 @@ export const authSlice = createSlice({
       })
       .addCase(changePassword.fulfilled, (state) => {
         state.status = "succeeded";
+        state.mustChangePassword = false;
       })
       .addCase(changePassword.rejected, (state, action) => {
         state.status = "failed";
@@ -191,6 +201,18 @@ export const authSlice = createSlice({
         state.status = "succeeded";
       })
       .addCase(resetPassword.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload;
+      })
+      // Logout All Sessions
+      .addCase(logoutAllSessions.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(logoutAllSessions.fulfilled, (state) => {
+        state.status = "succeeded";
+      })
+      .addCase(logoutAllSessions.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload;
       });

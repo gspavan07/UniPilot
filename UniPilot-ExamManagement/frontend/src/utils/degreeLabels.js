@@ -1,7 +1,16 @@
 export const DEGREE_LABELS = {
   btech: "B.Tech",
   mtech: "M.Tech",
-  mca: "MCA",
+  bba: "BBA",
   mba: "MBA",
+  bsc: "B.Sc",
+  msc: "M.Sc",
+  bca: "BCA",
+  mca: "MCA",
+  bcom: "B.Com",
+  mcom: "M.Com",
+  ba: "BA",
+  ma: "MA",
+  phd: "Ph.D",
   diploma: "Diploma",
 };

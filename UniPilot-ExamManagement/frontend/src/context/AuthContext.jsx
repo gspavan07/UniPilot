@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { authService } from "../services/authService.js";
+import { setAccessToken, clearAccessToken } from "../utils/api.js";
 
 const AuthContext = createContext(null);
 
@@ -14,45 +15,40 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem("token"));
 
+  // Initialize Auth on Mount
   useEffect(() => {
-    // Check if user is logged in on mount
     const initAuth = async () => {
-      const storedToken = localStorage.getItem("token");
-      if (storedToken) {
-        try {
+      try {
+        const { accessToken } = await authService.refreshToken();
+        if (accessToken) {
+          setAccessToken(accessToken);
           const userData = await authService.getCurrentUser();
           setUser(userData);
-          setToken(storedToken);
-        } catch (error) {
-          console.error("Failed to get current user:", error);
-          localStorage.removeItem("token");
-          setToken(null);
         }
+      } catch (error) {
+        // Expected if no valid refresh cookie exists
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     try {
       const response = await authService.login(email, password);
-      console.log(response);
-      if (response?.data?.user?.role !== "super_admin" && response?.data?.user?.role !== "faculty" && response?.data?.user?.role !== "hod") {
-        return {
-          success: false,
-          error: "You are not authorized to login",
-        };
+      // Role validation specific to Exam Management Panel
+      if (
+        response?.data?.user?.role !== "super_admin" &&
+        response?.data?.user?.role !== "faculty" &&
+        response?.data?.user?.role !== "hod"
+      ) {
+        return { success: false, error: "You are not authorized to login" };
       }
-      // authService.login already returns response.data
-      // response structure: { success, data: { user, accessToken, refreshToken } }
-      const { accessToken, user } = response.data;
 
-      localStorage.setItem("token", accessToken);
-      setToken(accessToken);
+      const { accessToken, user } = response.data;
+      setAccessToken(accessToken);
       setUser(user);
 
       return { success: true };
@@ -63,28 +59,26 @@ export const AuthProvider = ({ children }) => {
         error: error.response?.data?.error || "Login failed",
       };
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authService.logout();
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      localStorage.removeItem("token");
-      setToken(null);
+      clearAccessToken();
       setUser(null);
     }
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
-    token,
     loading,
     login,
     logout,
-    isAuthenticated: !!token,
-  };
+    isAuthenticated: !!user,
+  }), [user, loading, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

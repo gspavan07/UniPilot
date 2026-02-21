@@ -169,8 +169,26 @@ async function createCycle(req, res) {
     // Get current year
     const year = new Date().getFullYear();
 
+    // Map DB degree codes to display names
+    const DEGREE_DISPLAY = {
+      btech: "B.Tech",
+      mtech: "M.Tech",
+      bba: "BBA",
+      mba: "MBA",
+      bsc: "B.Sc",
+      msc: "M.Sc",
+      bca: "BCA",
+      mca: "MCA",
+      bcom: "B.Com",
+      mcom: "M.Com",
+      ba: "BA",
+      ma: "MA",
+      phd: "Ph.D",
+    };
+    const degreeDisplay = DEGREE_DISPLAY[degree] || degree;
+
     // Generate cycle name
-    const cycle_name = `${degree}_${regulation_code}_${romanSemester}_${cycle_type}_Examination_${exam_month}-${year}`;
+    const cycle_name = `${degreeDisplay}_${regulation_code}_${romanSemester}_${cycle_type}_Examination_${exam_month}-${year}`;
 
     // Check if cycle with same name already exists
     const existingCycle = await ExamCycle.findOne({ where: { cycle_name } });

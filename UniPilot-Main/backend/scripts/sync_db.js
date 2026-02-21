@@ -1,5 +1,6 @@
 import path from "path";
 import dotenv from "dotenv"
+const __dirname = import.meta.dirname;
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 import { sequelize } from "../src/models/index.js";
 import logger from "../src/utils/logger.js";

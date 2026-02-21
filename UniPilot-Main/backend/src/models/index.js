@@ -2,6 +2,7 @@ import { sequelize } from "../config/database.js";
 
 // Import models
 import User from "./User.js";
+import Session from "./Session.js";
 import AuditLog from "./AuditLog.js";
 import Department from "./Department.js";
 import Program from "./Program.js";
@@ -95,6 +96,7 @@ import HostelRoomBillDistribution from "./HostelRoomBillDistribution.js";
 
 const models = {
   User,
+  Session,
   AuditLog,
   Department,
   Program,
@@ -205,6 +207,10 @@ CourseFaculty.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
 User.hasMany(CourseFaculty, { as: "course_assignments", foreignKey: "faculty_id" });
 
 CourseFaculty.belongsTo(User, { as: "assigner", foreignKey: "assigned_by" });
+
+// User <-> Session
+Session.belongsTo(User, { as: "user", foreignKey: "user_id" });
+User.hasMany(Session, { as: "sessions", foreignKey: "user_id" });
 
 // Department <-> User (HOD)
 Department.belongsTo(User, {
