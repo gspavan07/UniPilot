@@ -34,11 +34,6 @@ app.use(
 // Security middleware
 app.use(helmet());
 
-
-
-
-
-
 // CORS configuration
 const allowedOrigins = [
 
@@ -46,11 +41,13 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://localhost:5174",
   "http://localhost",
+  "http://unipilot.in",
+  "http://examsection.unipilot.in"
 
   // production urls
-  "http://unipilot.in",
-  "http://www.unipilot.in",
-  "http://examsection.unipilot.in"
+  // "https://unipilot.in",
+  // "https://www.unipilot.in",
+  // "https://examsection.unipilot.in"
   
 ];
 
