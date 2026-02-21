@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 import { logout } from "../../store/slices/authSlice";
+import api from "../../utils/api";
 import {
   LayoutDashboard,
   BookOpen,
@@ -287,7 +288,12 @@ const MainLayout = () => {
     return true;
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      // Proceed with client-side logout even if the API call fails
+    }
     dispatch(logout());
     navigate("/auth/login");
   };

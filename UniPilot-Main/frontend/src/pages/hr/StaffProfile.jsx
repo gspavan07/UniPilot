@@ -208,10 +208,11 @@ const BankDetailsTab = ({ user, onUpdate, canEdit }) => {
   }, [user]);
 
   const maskAccountNumber = (accountNumber) => {
-    if (!accountNumber || accountNumber.length < 4) return accountNumber;
-    const lastFour = accountNumber.slice(-4);
-    const masked = "•".repeat(accountNumber.length - 4);
-    return masked + lastFour;
+    if (!accountNumber || typeof accountNumber !== "string") return "N/A";
+    const clean = accountNumber.replace(/\D/g, ""); // digits only
+    if (clean.length < 4) return "••••";
+    const lastFour = clean.slice(-4);
+    return "••••••" + lastFour; // fixed 6 dots + last 4 digits
   };
 
   const validateForm = () => {
@@ -236,15 +237,8 @@ const BankDetailsTab = ({ user, onUpdate, canEdit }) => {
     if (!validateForm()) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/users/${user.id}/bank-details`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      const data = await response.json();
+      const response = await api.put(`/users/${user.id}/bank-details`, formData);
+      const data = response.data;
       if (data.success) {
         setIsEditing(false);
         if (onUpdate) onUpdate(data.data.bank_details);
@@ -1474,8 +1468,8 @@ const StaffProfile = ({ isSelf }) => {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`pb-4 text-sm font-bold capitalize transition-all whitespace-nowrap relative ${activeTab === tab
-                    ? "text-blue-600"
-                    : "text-gray-400 hover:text-gray-600"
+                  ? "text-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
                   }`}
               >
                 {tab.replace("-", " ")}
