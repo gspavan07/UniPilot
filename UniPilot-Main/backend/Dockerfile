@@ -1,5 +1,5 @@
 # Use Node.js LTS version (Debian slim for better DNS/glibc compatibility)
-FROM node:18-slim
+FROM node:24-slim
 
 # Set working directory
 WORKDIR /app

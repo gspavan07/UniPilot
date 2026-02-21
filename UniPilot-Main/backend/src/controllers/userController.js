@@ -15,7 +15,7 @@ import {
 import { StudentDocument } from "../models/index.js";
 import { Op } from "sequelize";
 import logger from "../utils/logger.js";
-import { hashPassword } from "../utils/bcrypt.js";
+import { hashPassword } from "../utils/password.js";
 import Importer from "../utils/importer.js";
 import fs from "fs";
 import { sequelize } from "../config/database.js";
@@ -1089,28 +1089,36 @@ export const updateBankDetails = async (req, res) => {
       });
     }
 
-    // Encrypt Account Number
-    let finalAccountNumber = user.bank_details?.account_number || "";
+    // Encrypt Account Number for storage; keep decrypted value for the API response
+    let finalAccountNumberEncrypted = user.bank_details?.account_number || ""; // raw encrypted, used for DB
+    let finalAccountNumberDecrypted = user.toJSON().bank_details?.account_number || ""; // decrypted, used for response
     if (account_number) {
-      finalAccountNumber = encrypt(account_number);
+      finalAccountNumberEncrypted = encrypt(account_number);
+      finalAccountNumberDecrypted = account_number; // The user just typed this, it's already plaintext
     }
 
-    // Update bank details
-    const updatedBankDetails = {
+    // Save encrypted data to DB
+    const updatedBankDetailsForDb = {
       bank_name: bank_name || user.bank_details?.bank_name || "",
-      account_number: finalAccountNumber,
+      account_number: finalAccountNumberEncrypted,
       ifsc_code: ifsc_code || user.bank_details?.ifsc_code || "",
       branch_name: branch_name || user.bank_details?.branch_name || "",
       holder_name: holder_name || user.bank_details?.holder_name || "",
     };
 
-    await user.update({ bank_details: updatedBankDetails });
+    await user.update({ bank_details: updatedBankDetailsForDb });
+
+    // Return decrypted data to the frontend
+    const updatedBankDetailsForResponse = {
+      ...updatedBankDetailsForDb,
+      account_number: finalAccountNumberDecrypted,
+    };
 
     res.status(200).json({
       success: true,
       message: "Bank details updated successfully",
       data: {
-        bank_details: updatedBankDetails,
+        bank_details: updatedBankDetailsForResponse,
       },
     });
   } catch (error) {

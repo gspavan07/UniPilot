@@ -1,5 +1,6 @@
 import { DataTypes, Op } from "sequelize";
 import { sequelize } from "../config/database.js";
+import { decrypt } from "../utils/encryption.js";
 
 /**
  * User Model
@@ -369,6 +370,24 @@ User.prototype.isFaculty = function () {
 
 User.prototype.isAdmin = function () {
   return this.role_data?.slug === "admin" || this.role === "admin";
+};
+
+User.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+
+  // Safely decrypt account number if it exists
+  if (values.bank_details && typeof values.bank_details.account_number === "string" && values.bank_details.account_number.length > 0) {
+    // Re-assign the entire bank_details object carefully to not mutate the original reference if it's somehow reused
+    const decryptedAccount = decrypt(values.bank_details.account_number);
+    // Don't overwrite if decryption failed (returned original text or undefined), unless it actually changed
+    // In our case, `decrypt` returns the original string if it fails to parse
+    values.bank_details = {
+      ...values.bank_details,
+      account_number: decryptedAccount
+    };
+  }
+
+  return values;
 };
 
 export default User;

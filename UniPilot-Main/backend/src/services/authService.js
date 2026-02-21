@@ -1,6 +1,6 @@
 import { User, Role, Permission, AuditLog } from "../models/index.js";
 import Session from "../models/Session.js";
-import { hashPassword, comparePassword } from "../utils/bcrypt.js";
+import { hashPassword, comparePassword } from "../utils/password.js";
 import { generateAccessToken } from "../utils/jwt.js";
 import { genRefreshToken, hashToken } from "../utils/crypto.js";
 import { genCsrfToken } from "../middleware/csrfDoubleSubmit.js";
@@ -380,7 +380,7 @@ class AuthService {
 
       // Valid URL needs frontend base URL. For now we assume a standard path.
       // We will log the reset link to the console as requested.
-      const resetURL = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/reset-password?token=${resetToken}`;
+      const resetURL = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
 
       const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
 

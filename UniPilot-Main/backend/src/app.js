@@ -34,23 +34,24 @@ app.use(
 // Security middleware
 app.use(helmet());
 
-// Serve static frontend files
-const frontendPath = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(frontendPath));
+
 
 
 
 
 // CORS configuration
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:3001",
-  "http://localhost:3001", // Explicitly allow localhost:3001
-  "http://localhost:5174", // Exam Management Frontend
-  "http://localhost:8086", // Exam Management Docker
-  "http://localhost:8085", // Docker Frontend
-  "http://localhost:3000", // Backend local
-  "http://localhost:3100", // Docker Backend external
-  "http://localhost:5173", // Frontend local
+
+  // development urls
+  "http://localhost:3001",
+  "http://localhost:5174",
+  "http://localhost",
+
+  // production urls
+  "http://unipilot.in",
+  "http://www.unipilot.in",
+  "http://examsection.unipilot.in"
+  
 ];
 
 app.use(
@@ -115,18 +116,12 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api", routes);
 
-// Custom 404/SPA Handler
+// 404 handler for unknown API routes
 app.use((req, res) => {
-  // If the request is for an API endpoint, return JSON 404
-  if (req.originalUrl.startsWith('/api')) {
-    return res.status(404).json({
-      error: "Not Found",
-      message: `Cannot ${req.method} ${req.originalUrl}`,
-    });
-  }
-
-  // For all other requests (SPA client-side routing), serve index.html
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  res.status(404).json({
+    error: "Not Found",
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+  });
 });
 
 // Global error handler

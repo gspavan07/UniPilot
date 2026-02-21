@@ -195,34 +195,6 @@ const Login = () => {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 whitespace-nowrap">
-                  Default Credentials
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Email:{" "}
-                <span className="font-mono text-gray-700 dark:text-gray-200">
-                  admin@university.edu
-                </span>
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Password:{" "}
-                <span className="font-mono text-gray-700 dark:text-gray-200">
-                  Admin@123
-                </span>
-              </p>
-            </div>
-          </div>
         </div>
 
         <p className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
