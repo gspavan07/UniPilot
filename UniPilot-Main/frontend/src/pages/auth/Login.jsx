@@ -39,15 +39,17 @@ const Login = () => {
   const queryParams = new URLSearchParams(location.search);
   const sessionExpired = queryParams.get("message") === "session_expired";
 
+  // Redirect if already logged in
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
     if (user) {
       navigate(getLandingPage(user));
     }
+  }, [user, navigate]);
 
-    // Clear any previous errors on mount
+  // Clear any previous errors only on mount
+  useEffect(() => {
     dispatch(clearError());
-  }, [user, navigate, dispatch]);
+  }, []);
 
   const onSubmit = (data) => {
     dispatch(

@@ -134,12 +134,16 @@ function App() {
   const dispatch = useDispatch();
   const { user, status, mustChangePassword } = useSelector((state) => state.auth);
   const location = window.location;
+  const initialLoad = React.useRef(true);
 
   React.useEffect(() => {
-    dispatch(loadUser());
+    dispatch(loadUser()).finally(() => {
+      initialLoad.current = false;
+    });
   }, [dispatch]);
 
-  if (status === "loading") {
+  // Only show loading spinner during initial app load, not during login attempts
+  if (initialLoad.current && status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
