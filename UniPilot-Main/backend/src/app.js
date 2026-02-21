@@ -42,7 +42,7 @@ const allowedOrigins = [
   "http://localhost:5174",
   "http://localhost",
   "http://unipilot.in",
-  "http://exam.unipilot.in"
+  "http://examsection.unipilot.in"
 
   // production urls
   // "https://unipilot.in",
