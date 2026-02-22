@@ -9,7 +9,8 @@ const generateId = (config, batchYear, program, sequence, isLateral) => {
     : config.id_format || "{YY}{UNIV}{BRANCH}{SEQ}";
 
   // Extract 2-letter branch code (e.g., "AIML" -> "AI", "CSE" -> "CS")
-  let branchCode = program.code?.toUpperCase().substring(0, 2) || "XX";
+  let branchCode =
+    program.code?.toUpperCase()?.split("-")[1]?.slice(0, 2) || "XX";
   if (branchCode.length < 2) {
     branchCode = branchCode.padEnd(2, "X");
   }
@@ -65,6 +66,7 @@ export const previewBulkIds = async (req, res) => {
 
     // 2. Fetch Program
     const program = await Program.findByPk(program_id);
+
     if (!program) {
       return res
         .status(404)
@@ -91,7 +93,7 @@ export const previewBulkIds = async (req, res) => {
         role: "student",
         batch_year,
         program_id,
-        is_temporary_id: true,
+        is_temporary_id: false,
       },
       order: [
         ["first_name", "ASC"],
@@ -167,7 +169,7 @@ export const commitBulkIds = async (req, res) => {
           admission_number: item.new_id, // Setting admission number same as Roll No for now?
           // Or separate? User prompt said "give perminent number". Usually Roll No.
           // Let's assume Updating student_id is the key.
-          is_temporary_id: false,
+          is_temporary_id: true,
         },
         { where: { id: item.id }, transaction: t },
       );

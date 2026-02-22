@@ -1,4 +1,9 @@
-import { AdmissionConfig, Program, InstitutionSetting, sequelize } from "../models/index.js";
+import {
+  AdmissionConfig,
+  Program,
+  InstitutionSetting,
+  sequelize,
+} from "../models/index.js";
 import logger from "../utils/logger.js";
 
 /**
@@ -114,9 +119,12 @@ export const generateGlobalAdmissionNumber = async () => {
     // Ideally we should have a singleton config.
     // For now we will findOne. If not exists, create default.
     let setting = await InstitutionSetting.findOne({
+      where: { setting_key: "global_config" },
       transaction,
       lock: true,
     });
+
+    console.log("setting", setting);
 
     if (!setting) {
       setting = await InstitutionSetting.create(
@@ -148,4 +156,3 @@ export const generateGlobalAdmissionNumber = async () => {
     throw error;
   }
 };
-

@@ -512,8 +512,6 @@ export const getIdPreviews = async (req, res) => {
       });
     }
 
-
-
     // 1. Preview Student ID (Temp)
     let tempIdPreview = "N/A";
     const config = await AdmissionConfig.findOne({
@@ -547,6 +545,7 @@ export const getIdPreviews = async (req, res) => {
     const setting = await InstitutionSetting.findOne({
       where: { setting_key: "global_config" }, // Or just grab the first one if key unknown/migrated differently
     });
+    console.log("setting", setting);
     // Wait, my service used create if not exists.
     // Ideally userController/service should have created it by now if used.
     // If not, we fall back to defaults: ADM-0001
@@ -559,7 +558,7 @@ export const getIdPreviews = async (req, res) => {
     // If row doesn't exist, we assume 1.
 
     // If setting found:
-    let nextSeq = 1;
+    let nextSeq = 0;
     let prefix = "ADM";
 
     // Since I added columns to the TABLE, I don't necessarily need 'setting_key'="global_config".

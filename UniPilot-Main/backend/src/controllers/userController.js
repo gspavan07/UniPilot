@@ -372,10 +372,7 @@ export const getAllBatches = async (req, res) => {
 
     const batches = await User.findAll({
       attributes: [
-        [
-          sequelize.fn("DISTINCT", sequelize.col("batch_year")),
-          "batch_year",
-        ],
+        [sequelize.fn("DISTINCT", sequelize.col("batch_year")), "batch_year"],
       ],
       where,
       order: [["batch_year", "DESC"]],
@@ -423,7 +420,9 @@ export const getBatchDetails = async (req, res) => {
       raw: true,
     });
 
-    const semesterList = semesters.map((s) => s.current_semester).filter(Boolean);
+    const semesterList = semesters
+      .map((s) => s.current_semester)
+      .filter(Boolean);
 
     // Get distinct sections
     const sections = await User.findAll({
@@ -651,23 +650,22 @@ export const createUser = async (req, res) => {
 
     // Auto-generate Student ID/Admission Number if not provided for students
     if (role === "student" && (!student_id || !admission_number)) {
-
       try {
         const batchYear = userData.batch_year || new Date().getFullYear();
         if (!userData.admission_date) {
           userData.admission_date = new Date();
         }
-        if (!student_id) {
-          userData.student_id = await generateStudentId({
-            batchYear,
-            deptId: department_id,
-            isTemporary:
-              req.body.is_temporary_id === "true" ||
-              req.body.is_temporary_id === true,
-            isLateral:
-              req.body.is_lateral === "true" || req.body.is_lateral === true,
-          });
-        }
+        // if (!student_id) {
+        //   userData.student_id = await generateStudentId({
+        //     batchYear,
+        //     deptId: department_id,
+        //     isTemporary:
+        //       req.body.is_temporary_id === "true" ||
+        //       req.body.is_temporary_id === true,
+        //     isLateral:
+        //       req.body.is_lateral === "true" || req.body.is_lateral === true,
+        //   });
+        // }
         if (!admission_number) {
           userData.admission_number = await generateGlobalAdmissionNumber();
         }
@@ -1091,7 +1089,8 @@ export const updateBankDetails = async (req, res) => {
 
     // Encrypt Account Number for storage; keep decrypted value for the API response
     let finalAccountNumberEncrypted = user.bank_details?.account_number || ""; // raw encrypted, used for DB
-    let finalAccountNumberDecrypted = user.toJSON().bank_details?.account_number || ""; // decrypted, used for response
+    let finalAccountNumberDecrypted =
+      user.toJSON().bank_details?.account_number || ""; // decrypted, used for response
     if (account_number) {
       finalAccountNumberEncrypted = encrypt(account_number);
       finalAccountNumberDecrypted = account_number; // The user just typed this, it's already plaintext

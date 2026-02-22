@@ -28,12 +28,13 @@ const ExaminationsHub = () => {
   const [paying, setPaying] = useState(false);
   const [expandedCycles, setExpandedCycles] = useState([]);
 
-  useEffect(() => {
-    if (exams.length > 0) {
-      setExpandedCycles(exams.map(exam => exam.id));
-    }
-  }, [exams]);
+  // useEffect(() => {
+  //   if (exams.length > 0) {
+  //     setExpandedCycles(exams.map((exam) => exam.id));
+  //   }
+  // }, [exams]);
 
+  console.log("Exams data:", expandedCycles);
   const toggleCycle = (id) => {
     setExpandedCycles((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
@@ -237,9 +238,10 @@ const ExaminationsHub = () => {
                     onClick={() => setActiveTab(tab)}
                     className={`
                       px-8 py-3.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center gap-3
-                      ${activeTab === tab
-                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                        : "text-gray-400 hover:text-black hover:bg-gray-50"
+                      ${
+                        activeTab === tab
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                          : "text-gray-400 hover:text-black hover:bg-gray-50"
                       }
                     `}
                   >
@@ -283,10 +285,11 @@ const ExaminationsHub = () => {
                             </span>
                             {needsFee && (
                               <div
-                                className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm ${paymentStatus === "completed"
+                                className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm ${
+                                  paymentStatus === "completed"
                                     ? "bg-blue-50 text-blue-600 border border-blue-100"
                                     : "bg-red-50 text-red-600 border border-red-100 animate-pulse"
-                                  }`}
+                                }`}
                               >
                                 {paymentStatus === "completed" ? (
                                   <>
@@ -319,14 +322,16 @@ const ExaminationsHub = () => {
                           )}
                           <button
                             onClick={() => toggleCycle(exam.id)}
-                            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 border ${isExpanded
+                            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 border ${
+                              isExpanded
                                 ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20"
                                 : "bg-white text-gray-400 border-gray-400 hover:border-blue-600 hover:text-blue-600 hover:shadow-md"
-                              }`}
+                            }`}
                           >
                             <ChevronRight
-                              className={`w-5 h-5 transition-transform duration-500 ${isExpanded ? "rotate-90" : ""
-                                }`}
+                              className={`w-5 h-5 transition-transform duration-500 ${
+                                isExpanded ? "rotate-90" : ""
+                              }`}
                             />
                           </button>
                         </div>
@@ -334,10 +339,11 @@ const ExaminationsHub = () => {
 
                       {/* Collapsible Content Section */}
                       <div
-                        className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded
+                        className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                          isExpanded
                             ? "max-h-[2000px] opacity-100 mb-16"
                             : "max-h-0 opacity-0"
-                          }`}
+                        }`}
                       >
                         {/* Eligibility / Issues Section */}
                         {eligibility && !isEligible && (
@@ -407,10 +413,11 @@ const ExaminationsHub = () => {
                                         </div>
                                       </div>
                                       <span
-                                        className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${timetable.session === "morning"
+                                        className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                                          timetable.session === "morning"
                                             ? "bg-blue-600 text-white"
                                             : "bg-black text-white"
-                                          }`}
+                                        }`}
                                       >
                                         {timetable.session}
                                       </span>
@@ -499,12 +506,13 @@ const ExaminationsHub = () => {
                       >
                         {/* Status Strip */}
                         <div
-                          className={`absolute left-0 top-0 bottom-0 w-3 transition-colors ${isPaid
+                          className={`absolute left-0 top-0 bottom-0 w-3 transition-colors ${
+                            isPaid
                               ? "bg-green-600"
                               : isBlocked
                                 ? "bg-red-200"
                                 : "bg-blue-600 animate-pulse"
-                            }`}
+                          }`}
                         ></div>
 
                         <div className="p-6 pl-14">
@@ -630,22 +638,24 @@ const ExaminationsHub = () => {
                                 (slab, index) => (
                                   <div
                                     key={index}
-                                    className={`relative px-5 py-2  rounded-2xl border transition-all duration-300 overflow-hidden group/slab ${today >= slab.start_date &&
-                                        today <= slab.end_date
+                                    className={`relative px-5 py-2  rounded-2xl border transition-all duration-300 overflow-hidden group/slab ${
+                                      today >= slab.start_date &&
+                                      today <= slab.end_date
                                         ? "bg-red-50/30 border-red-200 shadow-md ring-1 ring-red-100"
                                         : "bg-white border-gray-100 opacity-60 hover:opacity-100"
-                                      }`}
+                                    }`}
                                   >
                                     <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/slab:opacity-100 transition-opacity">
                                       <AlertCircle className="w-8 h-8 text-red-600" />
                                     </div>
                                     <div className="space-y-1 relative z-10">
                                       <span
-                                        className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${today >= slab.start_date &&
-                                            today <= slab.end_date
+                                        className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${
+                                          today >= slab.start_date &&
+                                          today <= slab.end_date
                                             ? "bg-red-600 text-white"
                                             : "bg-gray-100 text-gray-400"
-                                          }`}
+                                        }`}
                                       >
                                         Slab {index + 1}
                                       </span>
@@ -665,11 +675,12 @@ const ExaminationsHub = () => {
                                         })}
                                       </p>
                                       <p
-                                        className={`text-[10px] font-bold ${today >= slab.start_date &&
-                                            today <= slab.end_date
+                                        className={`text-[10px] font-bold ${
+                                          today >= slab.start_date &&
+                                          today <= slab.end_date
                                             ? "text-red-600"
                                             : "text-gray-400"
-                                          }`}
+                                        }`}
                                       >
                                         + ₹
                                         {parseFloat(

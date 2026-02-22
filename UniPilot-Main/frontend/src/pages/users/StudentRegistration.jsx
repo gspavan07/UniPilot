@@ -141,7 +141,7 @@ const StudentRegistration = () => {
   const { programs } = useSelector((state) => state.programs);
   const { regulations } = useSelector((state) => state.regulations);
   const { roles } = useSelector((state) => state.roles);
-  const [currentStep, setCurrentStep] = useState(5);
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [registeredStudent, setRegisteredStudent] = useState(null);
@@ -1529,7 +1529,7 @@ const StudentRegistration = () => {
                       </div>
 
                       {admissionConfig?.required_documents &&
-                        admissionConfig.required_documents.length > 0 ? (
+                      admissionConfig.required_documents.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {admissionConfig.required_documents.map((docType) => {
                             const docKey = docType
@@ -1542,10 +1542,11 @@ const StudentRegistration = () => {
                               <label
                                 key={docKey}
                                 className={`group relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer
-              ${uploadedFile
-                                    ? "border-green-400 bg-green-50"
-                                    : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
-                                  }`}
+              ${
+                uploadedFile
+                  ? "border-green-400 bg-green-50"
+                  : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
+              }`}
                               >
                                 <input
                                   type="file"
@@ -1573,7 +1574,7 @@ const StudentRegistration = () => {
                                         !allowedExts.includes(fileExt)
                                       ) {
                                         toast.error(
-                                          "Invalid file type. Only PDF, JPG, JPEG, PNG files are allowed."
+                                          "Invalid file type. Only PDF, JPG, JPEG, PNG files are allowed.",
                                         );
                                         e.target.value = "";
                                         return;
@@ -1588,10 +1589,11 @@ const StudentRegistration = () => {
                                 {/* Icon */}
                                 <div
                                   className={`mb-3 p-3 rounded-full transition-all
-                ${uploadedFile
-                                      ? "bg-green-100 text-green-600"
-                                      : "bg-white text-gray-400 group-hover:text-blue-500"
-                                    }`}
+                ${
+                  uploadedFile
+                    ? "bg-green-100 text-green-600"
+                    : "bg-white text-gray-400 group-hover:text-blue-500"
+                }`}
                                 >
                                   <Upload className="w-7 h-7" />
                                 </div>
@@ -1760,12 +1762,12 @@ const StudentRegistration = () => {
                                 value={
                                   vals.date_of_birth
                                     ? new Date(
-                                      vals.date_of_birth,
-                                    ).toLocaleDateString("en-IN", {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "numeric",
-                                    })
+                                        vals.date_of_birth,
+                                      ).toLocaleDateString("en-IN", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })
                                     : ""
                                 }
                               />
@@ -1821,65 +1823,65 @@ const StudentRegistration = () => {
                               {(gt === "Both Parents" ||
                                 (gt === "Single Parent" &&
                                   spt === "Father")) && (
-                                  <div className="mb-3">
-                                    <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">
-                                      Father
-                                    </p>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
-                                      <ReviewField
-                                        label="Name"
-                                        value={vals.father_name}
-                                      />
-                                      <ReviewField
-                                        label="Mobile"
-                                        value={vals.father_mobile}
-                                      />
-                                      <ReviewField
-                                        label="Email"
-                                        value={vals.father_email}
-                                      />
-                                      <ReviewField
-                                        label="Occupation"
-                                        value={vals.father_job}
-                                      />
-                                      <ReviewField
-                                        label="Annual Income"
-                                        value={vals.father_income}
-                                      />
-                                    </div>
+                                <div className="mb-3">
+                                  <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">
+                                    Father
+                                  </p>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
+                                    <ReviewField
+                                      label="Name"
+                                      value={vals.father_name}
+                                    />
+                                    <ReviewField
+                                      label="Mobile"
+                                      value={vals.father_mobile}
+                                    />
+                                    <ReviewField
+                                      label="Email"
+                                      value={vals.father_email}
+                                    />
+                                    <ReviewField
+                                      label="Occupation"
+                                      value={vals.father_job}
+                                    />
+                                    <ReviewField
+                                      label="Annual Income"
+                                      value={vals.father_income}
+                                    />
                                   </div>
-                                )}
+                                </div>
+                              )}
                               {(gt === "Both Parents" ||
                                 (gt === "Single Parent" &&
                                   spt === "Mother")) && (
-                                  <div className="mb-3">
-                                    <p className="text-[11px] font-bold text-pink-600 uppercase tracking-wider mb-1">
-                                      Mother
-                                    </p>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
-                                      <ReviewField
-                                        label="Name"
-                                        value={vals.mother_name}
-                                      />
-                                      <ReviewField
-                                        label="Mobile"
-                                        value={vals.mother_mobile}
-                                      />
-                                      <ReviewField
-                                        label="Email"
-                                        value={vals.mother_email}
-                                      />
-                                      <ReviewField
-                                        label="Occupation"
-                                        value={vals.mother_job}
-                                      />
-                                      <ReviewField
-                                        label="Annual Income"
-                                        value={vals.mother_income}
-                                      />
-                                    </div>
+                                <div className="mb-3">
+                                  <p className="text-[11px] font-bold text-pink-600 uppercase tracking-wider mb-1">
+                                    Mother
+                                  </p>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
+                                    <ReviewField
+                                      label="Name"
+                                      value={vals.mother_name}
+                                    />
+                                    <ReviewField
+                                      label="Mobile"
+                                      value={vals.mother_mobile}
+                                    />
+                                    <ReviewField
+                                      label="Email"
+                                      value={vals.mother_email}
+                                    />
+                                    <ReviewField
+                                      label="Occupation"
+                                      value={vals.mother_job}
+                                    />
+                                    <ReviewField
+                                      label="Annual Income"
+                                      value={vals.mother_income}
+                                    />
                                   </div>
-                                )}
+                                </div>
+                              )}
                               {gt === "Guardian" && (
                                 <div>
                                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
