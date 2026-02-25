@@ -1,5 +1,12 @@
 import authService from "../services/authService.js";
-import logger from "../utils/logger.js";
+
+const buildRefreshCookieOptions = (refreshTTLMs, isProd) => ({
+  httpOnly: true,
+  secure: isProd,
+  sameSite: "lax",
+  path: "/",
+  maxAge: refreshTTLMs,
+});
 
 /**
  * Authentication Controller
@@ -10,6 +17,7 @@ class AuthController {
    * Register a new user
    * POST /api/auth/register
    */
+
   async register(req, res, next) {
     try {
       const userData = req.body;
@@ -52,13 +60,7 @@ class AuthController {
       const result = await authService.login(email, password, rememberMe, ipAddress, userAgent);
 
       const isProd = process.env.NODE_ENV === "production";
-      const cookieOptions = {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "lax",
-        path: "/",
-        maxAge: result.refreshTTLMs,
-      };
+      const cookieOptions = buildRefreshCookieOptions(result.refreshTTLMs, isProd);
 
       res.cookie("refreshToken", result.refreshPlain, cookieOptions);
       res.cookie("csrf_token", result.csrfToken, {
@@ -198,13 +200,7 @@ class AuthController {
       const result = await authService.refresh(refreshPlain, ipAddress, userAgent);
 
       const isProd = process.env.NODE_ENV === "production";
-      const cookieOptions = {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "lax",
-        path: "/",
-        maxAge: result.refreshTTLMs,
-      };
+      const cookieOptions = buildRefreshCookieOptions(result.refreshTTLMs, isProd);
 
       res.cookie("refreshToken", result.newRefreshPlain, cookieOptions);
 
