@@ -9,22 +9,14 @@ import {
   Dimensions,
   Animated,
   StatusBar,
+  TextInput as RNTextInput,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Rocket,
-  User,
-  Lock,
-  Eye,
-  EyeOff,
-  CheckSquare,
-  Square,
-  ChevronRight,
-} from 'lucide-react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { Rocket, User, Lock, Eye, EyeOff } from 'lucide-react-native';
 import {
   loginStart,
   loginSuccess,
@@ -33,9 +25,79 @@ import {
 } from '../../redux/slices/authSlice';
 import authService from '../../services/authService';
 import theme from '../../theme/theme';
-import PremiumCard from '../../components/common/PremiumCard';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+
+const CustomInput = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  icon: Icon,
+  secureTextEntry,
+  rightIcon: RightIcon,
+  onRightIconPress,
+  keyboardType,
+  autoCapitalize,
+  id,
+  focusedInput,
+  setFocusedInput,
+  errors,
+  error,
+  dispatch,
+  clearError,
+}) => {
+  const isFocused = focusedInput === id;
+
+  return (
+    <View style={styles.inputWrapper}>
+      <View style={styles.labelRow}>
+        <Text style={styles.inputLabel}>{label}</Text>
+        {id === 'password' && (
+          <TouchableOpacity
+            onPress={() => {
+              /* Handle forgot password */
+            }}
+          >
+            <Text style={styles.forgotText}>Forgot password?</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <View
+        style={[
+          styles.inputContainer,
+          isFocused && styles.inputContainerFocused,
+          errors[id] && styles.inputContainerError,
+        ]}
+      >
+        <View style={styles.inputIcon}>
+          <Icon
+            size={20}
+            color={isFocused ? theme.colors.primary : '#94a3b8'}
+          />
+        </View>
+        <RNTextInput
+          style={styles.textInput}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#94a3b8"
+          secureTextEntry={secureTextEntry}
+          onFocus={() => setFocusedInput(id)}
+          onBlur={() => setFocusedInput(null)}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+        />
+        {RightIcon && (
+          <TouchableOpacity onPress={onRightIconPress} style={styles.rightIcon}>
+            <RightIcon size={20} color="#94a3b8" />
+          </TouchableOpacity>
+        )}
+      </View>
+      {errors[id] && <Text style={styles.errorText}>{errors[id]}</Text>}
+    </View>
+  );
+};
 
 const LoginScreen = () => {
   const dispatch = useDispatch();
@@ -44,43 +106,20 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
   const [errors, setErrors] = useState({});
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     dispatch(clearError());
 
-    // Load remembered credentials
-    const loadCredentials = async () => {
-      try {
-        const savedEmail = await AsyncStorage.getItem('rememberedEmail');
-        const savedRememberMe = await AsyncStorage.getItem('rememberMe');
-        if (savedEmail && savedRememberMe === 'true') {
-          setEmail(savedEmail);
-          setRememberMe(true);
-        }
-      } catch (e) {
-        console.error('Failed to load credentials', e);
-      }
-    };
-    loadCredentials();
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [dispatch, fadeAnim, slideAnim]);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, [dispatch, fadeAnim]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -106,15 +145,6 @@ const LoginScreen = () => {
         await AsyncStorage.setItem('authToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(user));
 
-        // Handle Remember Me
-        if (rememberMe) {
-          await AsyncStorage.setItem('rememberedEmail', email.trim());
-          await AsyncStorage.setItem('rememberMe', 'true');
-        } else {
-          await AsyncStorage.removeItem('rememberedEmail');
-          await AsyncStorage.setItem('rememberMe', 'false');
-        }
-
         dispatch(
           loginSuccess({
             user: user,
@@ -130,19 +160,8 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.mainContainer}>
-      <StatusBar
-        barStyle="light-content"
-        translucent
-        backgroundColor="transparent"
-      />
-
-      {/* Premium Background Accent */}
-      <LinearGradient
-        colors={[theme.colors.primary, '#4f46e5']}
-        style={styles.bgGradient}
-      />
-
+    <SafeAreaView style={styles.mainContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -152,144 +171,105 @@ const LoginScreen = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }}
-          >
-            {/* Soft Premium Logo Section */}
-            <View style={styles.logoContainer}>
-              <View style={styles.appIconContainer}>
-                <View style={styles.appIcon}>
-                  <Rocket size={44} color={theme.colors.primary} />
-                </View>
+          <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
+            {/* Logo Section */}
+            <View style={styles.headerSection}>
+              <View style={styles.logoBox}>
+                <Image
+                  source={require('../../assets/logo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.brandName}>UniPilot</Text>
-              <Text style={styles.tagline}>Elevate Your Education</Text>
+              <Text style={styles.brandTitle}>Unipilot</Text>
             </View>
 
-            {/* Premium Form Card */}
-            <PremiumCard style={styles.loginCard}>
-              <View style={styles.formHeader}>
-                <Text style={styles.welcomeText}>Welcome Back</Text>
-                <Text style={styles.subText}>
-                  Sign in to your student workspace
-                </Text>
-              </View>
+            {/* Welcome Text */}
+            <View style={styles.welcomeSection}>
+              <Text style={styles.welcomeTitle}>Welcome back</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Please enter your details to continue.
+              </Text>
+            </View>
 
-              <TextInput
-                label="Email / Student ID"
+            {/* Form Section */}
+            <View style={styles.formSection}>
+              <CustomInput
+                id="email"
+                label="Student ID"
+                placeholder="Enter your ID"
                 value={email}
                 onChangeText={text => {
                   setEmail(text);
                   if (errors.email) setErrors({ ...errors, email: null });
                   if (error) dispatch(clearError());
                 }}
-                mode="flat"
-                style={styles.input}
-                backgroundColor="#f8fafc"
-                activeUnderlineColor={theme.colors.primary}
-                left={
-                  <TextInput.Icon
-                    icon={() => <User size={20} color="#94a3b8" />}
-                  />
-                }
+                icon={User}
                 autoCapitalize="none"
+                focusedInput={focusedInput}
+                setFocusedInput={setFocusedInput}
+                errors={errors}
+                error={error}
+                dispatch={dispatch}
+                clearError={clearError}
               />
-              {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              )}
 
-              <TextInput
+              <CustomInput
+                id="password"
                 label="Password"
+                placeholder="••••••••"
                 value={password}
                 onChangeText={text => {
                   setPassword(text);
                   if (errors.password) setErrors({ ...errors, password: null });
                   if (error) dispatch(clearError());
                 }}
+                icon={Lock}
                 secureTextEntry={!showPassword}
-                mode="flat"
-                style={styles.input}
-                backgroundColor="#f8fafc"
-                activeUnderlineColor={theme.colors.primary}
-                left={
-                  <TextInput.Icon
-                    icon={() => <Lock size={20} color="#94a3b8" />}
-                  />
-                }
-                right={
-                  <TextInput.Icon
-                    icon={() =>
-                      showPassword ? (
-                        <EyeOff size={20} color="#94a3b8" />
-                      ) : (
-                        <Eye size={20} color="#94a3b8" />
-                      )
-                    }
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
+                rightIcon={showPassword ? EyeOff : Eye}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                focusedInput={focusedInput}
+                setFocusedInput={setFocusedInput}
+                errors={errors}
+                error={error}
+                dispatch={dispatch}
+                clearError={clearError}
               />
-              {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
-
-              <View style={styles.optionsRow}>
-                <TouchableOpacity
-                  style={styles.rememberRow}
-                  onPress={() => setRememberMe(!rememberMe)}
-                  activeOpacity={0.7}
-                >
-                  {rememberMe ? (
-                    <CheckSquare size={22} color={theme.colors.primary} />
-                  ) : (
-                    <Square size={22} color="#94a3b8" />
-                  )}
-                  <Text style={styles.rememberText}>Remember Me</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.forgotBtn}>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </View>
 
               {error && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorBannerText}>{error}</Text>
-                </View>
+                <Text
+                  style={[
+                    styles.errorText,
+                    { textAlign: 'center', marginBottom: 10 },
+                  ]}
+                >
+                  {error}
+                </Text>
               )}
 
               <TouchableOpacity
-                activeOpacity={0.8}
+                style={[styles.signInButton, loading && styles.buttonDisabled]}
                 onPress={handleLogin}
+                activeOpacity={0.8}
                 disabled={loading}
               >
-                <LinearGradient
-                  colors={[theme.colors.primary, '#4f46e5']}
-                  style={styles.primaryButton}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Text style={styles.buttonText}>
-                    {loading ? 'AUTHENTICATING...' : 'SIGN IN'}
-                  </Text>
-                  {!loading && <ChevronRight size={24} color="#fff" />}
-                </LinearGradient>
+                <Text style={styles.signInButtonText}>
+                  {loading ? 'Signing In...' : 'Sign In'}
+                </Text>
               </TouchableOpacity>
-            </PremiumCard>
+            </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>New here? </Text>
-              <TouchableOpacity>
-                <Text style={styles.footerLink}>Contact UniPilot AP</Text>
-              </TouchableOpacity>
+            {/* Footer */}
+            <View style={styles.footerSection}>
+              <Text style={styles.footerText}>
+                Having trouble?{' '}
+                <Text style={styles.supportLink}>Contact Support</Text>
+              </Text>
             </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -298,158 +278,150 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  bgGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.45,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-  },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Platform.OS === 'android' ? 32 : 28,
-    justifyContent: 'center',
-    paddingVertical: 50,
+    paddingHorizontal: 24,
+    paddingBottom: 30,
   },
-  logoContainer: {
+  headerSection: {
     alignItems: 'center',
-    marginBottom: 35,
+    marginTop: 40,
+    marginBottom: 40,
   },
-  appIconContainer: {
-    padding: 3,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 28,
-    marginBottom: 16,
-  },
-  appIcon: {
-    width: 86,
-    height: 86,
-    borderRadius: 25,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-  },
-  brandName: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 1,
-  },
-  tagline: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  loginCard: {
-    padding: 28,
-    backgroundColor: '#fff',
-  },
-  formHeader: {
-    marginBottom: 28,
-  },
-  welcomeText: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: 6,
-  },
-  subText: {
-    fontSize: 15,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  input: {
-    marginBottom: 14,
-    fontSize: 15,
-    height: 60,
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginBottom: 10,
-    marginLeft: 4,
-    fontWeight: '600',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rememberText: {
-    marginLeft: 8,
-    color: '#64748b',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  forgotBtn: {
-    // marginBottom removed as it's now in optionsRow
-  },
-  forgotText: {
-    color: theme.colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  errorBanner: {
-    backgroundColor: '#fff1f2',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#ffe4e6',
-  },
-  errorBannerText: {
-    color: '#e11d48',
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  primaryButton: {
-    height: 62,
-    borderRadius: 18,
-    flexDirection: 'row',
+  logoBox: {
+    width: 80,
+    height: 80,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 5,
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+    marginLeft: 5,
+    marginTop: 3,
+  },
+  brandTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#000',
+    marginTop: 15,
+  },
+  welcomeSection: {
+    marginBottom: 35,
+  },
+  welcomeTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  formSection: {
+    width: '100%',
+  },
+  inputWrapper: {
+    marginBottom: 20,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  inputLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000',
+  },
+  forgotText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    height: 62,
+    paddingHorizontal: 15,
+    backgroundColor: '#fff',
+  },
+  inputContainerFocused: {
+    borderColor: theme.colors.primary,
+  },
+  inputContainerError: {
+    borderColor: theme.colors.error,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
+  },
+  rightIcon: {
+    padding: 5,
+  },
+  errorText: {
+    color: theme.colors.text.error,
+    fontSize: 13,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  signInButton: {
+    height: 62,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginRight: 8,
+  buttonDisabled: {
+    backgroundColor: theme.colors.muted,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 35,
+  signInButtonText: {
+    color: theme.colors.text.inverse,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  footerSection: {
+    marginTop: 'auto',
+    paddingVertical: 20,
+    alignItems: 'center',
   },
   footerText: {
-    color: '#94a3b8',
-    fontSize: 14,
+    fontSize: 15,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
   },
-  footerLink: {
-    color: '#1e293b',
-    fontSize: 14,
-    fontWeight: '800',
+  supportLink: {
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
 });
 

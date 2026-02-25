@@ -1,5 +1,5 @@
 export const colors = {
-  primary: '#1680F0', // Indigo (Modern, trustworthy)
+  primary: '#256AF4', // Indigo (Modern, trustworthy)
   secondary: '#06b6d4', // Cyan (Fresh)
   accent: '#8b5cf6', // Purple (Cohesive with primary)
   background: '#ffffff',
@@ -12,7 +12,11 @@ export const colors = {
     secondary: '#4b5563',
     inverse: '#ffffff',
     muted: '#9ca3af',
+    error: '#ef4444',
+    success: '#10b981',
+    warning: '#f59e0b',
   },
+  muted: '#9ca3af',
   border: '#e5e7eb',
   card: '#ffffff',
   notification: '#f59e0b',

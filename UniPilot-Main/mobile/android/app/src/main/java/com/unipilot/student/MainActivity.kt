@@ -1,5 +1,6 @@
 package com.unipilot.student
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,12 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "UniPilotMobile"
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+   
+    setTheme(R.style.AppTheme) // Switch back to normal theme before React loads
+    super.onCreate(savedInstanceState)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
