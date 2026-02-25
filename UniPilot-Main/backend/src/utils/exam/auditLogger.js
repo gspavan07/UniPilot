@@ -1,4 +1,4 @@
-import ExamAuditLog from "../../models/exam/ExamAuditLog.js";
+import ExamAuditLog from "../../modules/exams/models/ExamAuditLog.js";
 import logger from "../../utils/logger.js";
 
 /**
