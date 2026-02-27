@@ -3,9 +3,9 @@ import PDFDocument from "pdfkit";
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
 import { AdmissionConfig, StudentDocument } from "../models/index.js";
-import { Role, User } from "../../core/models/index.js";
-import { InstitutionSetting } from "../../settings/models/index.js";
-import academicLookupService from "../../academics/services/academicLookupService.js";
+import { CoreService } from "../../core/services/index.js";
+import { SettingsService } from "../../settings/services/index.js";
+import { AcademicService } from "../../academics/services/index.js";
 
 // Template import
 import generateAdmissionLetterPdf from "../../../templates/admission/admissionLetterPdf.js";
@@ -35,10 +35,10 @@ const hydrateStudentsWithAcademics = async (
     .filter(Boolean);
 
   const [programMap, departmentMap] = await Promise.all([
-    academicLookupService.getProgramMapByIds(programIds, {
+    AcademicService.getProgramMapByIds(programIds, {
       attributes: programAttributes,
     }),
-    academicLookupService.getDepartmentMapByIds(departmentIds, {
+    AcademicService.getDepartmentMapByIds(departmentIds, {
       attributes: departmentAttributes,
     }),
   ]);
@@ -65,10 +65,10 @@ export const getAdmissionStats = async (req, res) => {
     const { year } = req.query;
 
     // 1. Group by Batch Year
-    const batchStats = await User.findAll({
+    const batchStats = await CoreService.findAll({
       attributes: [
         "batch_year",
-        [User.sequelize.fn("COUNT", User.sequelize.col("id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
       ],
       where: {
         role: "student",
@@ -84,10 +84,10 @@ export const getAdmissionStats = async (req, res) => {
       deptWhere.batch_year = year;
     }
 
-    const deptStatsRaw = await User.findAll({
+    const deptStatsRaw = await CoreService.findAll({
       attributes: [
         "department_id",
-        [User.sequelize.fn("COUNT", User.sequelize.col("User.id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("User.id")), "count"],
       ],
       where: {
         ...deptWhere,
@@ -97,7 +97,7 @@ export const getAdmissionStats = async (req, res) => {
       raw: true,
     });
 
-    const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    const departmentMap = await AcademicService.getDepartmentMapByIds(
       deptStatsRaw.map((dept) => dept.department_id),
       { attributes: ["id", "name", "code"] },
     );
@@ -134,7 +134,7 @@ export const exportAdmissionData = async (req, res) => {
     if (year) where.batch_year = year;
     if (department_id) where.department_id = department_id;
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where,
       attributes: [
         "student_id",
@@ -181,12 +181,12 @@ export const getSeatMatrix = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
-    const programs = await academicLookupService.listPrograms({
+    const programs = await AcademicService.listPrograms({
       where: { is_active: true },
       attributes: ["id", "name", "code", "department_id", "max_intake"],
     });
 
-    const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    const departmentMap = await AcademicService.getDepartmentMapByIds(
       programs.map((program) => program.department_id),
       { attributes: ["id", "name", "code"] },
     );
@@ -198,7 +198,7 @@ export const getSeatMatrix = async (req, res) => {
     const seatMatrix = await Promise.all(
       programs.map(async (prog) => {
         const department = departmentMap.get(prog.department_id);
-        const filled = await User.count({
+        const filled = await CoreService.count({
           where: {
             role: "student",
             program_id: prog.id,
@@ -242,14 +242,30 @@ export const getStudentDocuments = async (req, res) => {
   try {
     const documents = await StudentDocument.findAll({
       where: { user_id: req.params.userId },
-      include: [
-        {
-          model: User,
-          as: "verifier",
-          attributes: ["first_name", "last_name"],
-        },
-      ],
       order: [["created_at", "DESC"]],
+    });
+
+    const verifierIds = documents
+      .map((document) => document.verified_by)
+      .filter(Boolean);
+    const verifierMap =
+      verifierIds.length > 0
+        ? await CoreService.getUserMapByIds(verifierIds, {
+            attributes: ["id", "first_name", "last_name"],
+          })
+        : new Map();
+
+    documents.forEach((document) => {
+      const verifier = verifierMap.get(document.verified_by);
+      const payload = verifier
+        ? { first_name: verifier.first_name, last_name: verifier.last_name }
+        : null;
+
+      if (typeof document?.setDataValue === "function") {
+        document.setDataValue("verifier", payload);
+      } else {
+        document.verifier = payload;
+      }
     });
 
     res.status(200).json({
@@ -353,7 +369,7 @@ export const reuploadDocument = async (req, res) => {
 // @access  Private (Admission Staff)
 export const verifyStudent = async (req, res) => {
   try {
-    const student = await User.findByPk(req.params.userId);
+    const student = await CoreService.findByPk(req.params.userId);
 
     if (!student) {
       return res.status(404).json({
@@ -387,7 +403,7 @@ export const verifyStudent = async (req, res) => {
 // @access  Private (Admission Admin/Staff/Student)
 export const generateAdmissionLetter = async (req, res) => {
   try {
-    const student = await User.findByPk(req.params.userId);
+    const student = await CoreService.findByPk(req.params.userId);
 
     if (!student || student.role !== "student") {
       return res.status(404).json({
@@ -430,37 +446,36 @@ export const getFunnelStats = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
-    const totalApplied = await User.count({
+    const studentRows = await CoreService.findAll({
+      attributes: ["id"],
       where: { role: "student", batch_year: year },
+      raw: true,
     });
+    const studentIds = studentRows.map((row) => row.id);
+    const totalApplied = studentIds.length;
 
     // Students with at least one document
-    const withDocs = await User.count({
-      include: [
-        {
-          model: StudentDocument,
-          as: "documents",
-          required: true,
-        },
-      ],
-      where: { role: "student", batch_year: year },
-    });
+    let withDocs = 0;
+    let verified = 0;
+    if (studentIds.length > 0) {
+      const docWhere = { user_id: { [Op.in]: studentIds } };
+      withDocs = await StudentDocument.count({
+        where: docWhere,
+        distinct: true,
+        col: "user_id",
+      });
+
+      // Students with at least one approved document
+      verified = await StudentDocument.count({
+        where: { ...docWhere, status: "approved" },
+        distinct: true,
+        col: "user_id",
+      });
+    }
 
     // Students with all documents approved (simplified: at least one approved and none rejected/pending)
     // Actually, let's just count those with at least one approved document for now as a "Verified" stage proxy
-    const verified = await User.count({
-      include: [
-        {
-          model: StudentDocument,
-          as: "documents",
-          required: true,
-          where: { status: "approved" },
-        },
-      ],
-      where: { role: "student", batch_year: year },
-    });
-
-    const admitted = await User.count({
+    const admitted = await CoreService.count({
       where: {
         role: "student",
         batch_year: year,
@@ -490,7 +505,7 @@ export const getGeoStats = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
-    const stats = await User.findAll({
+    const stats = await CoreService.findAll({
       attributes: [
         [sequelize.col("state"), "state"],
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -525,7 +540,7 @@ export const getGenderStats = async (req, res) => {
       where.batch_year = year;
     }
 
-    const stats = await User.findAll({
+    const stats = await CoreService.findAll({
       attributes: [
         "gender",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -566,7 +581,7 @@ export const getIdPreviews = async (req, res) => {
       where: { batch_year: batch_year, is_active: true },
     });
 
-    const program = await academicLookupService.getProgramById(program_id, {
+    const program = await AcademicService.getProgramById(program_id, {
       attributes: ["id", "code"],
     });
 
@@ -592,10 +607,7 @@ export const getIdPreviews = async (req, res) => {
 
     // 2. Preview Admission Number (Global)
     let admissionNumberPreview = "N/A";
-    const setting = await InstitutionSetting.findOne({
-      where: { setting_key: "global_config" }, // Or just grab the first one if key unknown/migrated differently
-    });
-    console.log("setting", setting);
+    const setting = await SettingsService.getGlobalConfig();
     // Wait, my service used create if not exists.
     // Ideally userController/service should have created it by now if used.
     // If not, we fall back to defaults: ADM-0001
@@ -617,12 +629,8 @@ export const getIdPreviews = async (req, res) => {
     // My service code: `setting = await InstitutionSetting.create({ setting_key: "global_config", ... })`
     // So yes, I expect a row with `setting_key: "global_config"`.
 
-    let globalSetting = null;
-    if (setting) globalSetting = setting;
-    else {
-      // Find ANY row? Or specifically global_config
-      globalSetting = await InstitutionSetting.findOne();
-    }
+    const globalSetting =
+      setting || (await SettingsService.getAnySetting());
 
     if (globalSetting) {
       nextSeq = globalSetting.current_admission_sequence || 1;

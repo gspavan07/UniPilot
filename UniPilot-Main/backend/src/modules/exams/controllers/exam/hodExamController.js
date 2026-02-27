@@ -1,7 +1,7 @@
 import { ExamCycle, ExamTimetable } from "../../models/associations.js";
-import { Course, Regulation } from "../../../academics/models/index.js";
-import { User } from "../../../core/models/index.js";
-import { Notification } from "../../../notifications/models/index.js";
+import AcademicService from "../../../academics/services/index.js";
+import CoreService from "../../../core/services/index.js";
+import NotificationService from "../../../notifications/services/index.js";
 import { sequelize } from "../../../../config/database.js";
 import logger from "../../../../utils/logger.js";
 import { Op } from "sequelize";
@@ -13,7 +13,7 @@ import { Op } from "sequelize";
 async function getDepartmentFormattedPapers(req, res) {
     try {
         const hodId = req.user.userId;
-        const hod = await User.findByPk(hodId, {
+        const hod = await CoreService.findByPk(hodId, {
             attributes: ["id", "department_id"],
         });
 
@@ -36,43 +36,62 @@ async function getDepartmentFormattedPapers(req, res) {
             },
             include: [
                 {
-                    model: Course,
-                    as: "course",
-                    where: {
-                        department_id: hod.department_id,
-                    },
-                    attributes: ["id", "name", "code", "department_id", "course_type"],
-                },
-                {
                     model: ExamCycle,
                     as: "exam_cycle",
                     attributes: ["id", "cycle_name", "status", "cycle_type", "regulation_id"],
-                },
-                {
-                    model: User,
-                    as: "assigned_faculty",
-                    attributes: ["id", "first_name", "last_name"],
                 },
             ],
             order: [["updated_at", "DESC"]],
         });
 
-        // Fetch Regulation details similarly to faculty controller
-        const regulationIds = [...new Set(exams.map((e) => e.exam_cycle.regulation_id))];
-        const regulations = await Regulation.findAll({
-            where: { id: regulationIds },
-            attributes: ["id", "exam_configuration"],
+        const courseIds = [
+            ...new Set(exams.map((exam) => exam.course_id).filter(Boolean)),
+        ];
+        const facultyIds = [
+            ...new Set(
+                exams.map((exam) => exam.assigned_faculty_id).filter(Boolean),
+            ),
+        ];
+
+        const [courses, faculty, regulations] = await Promise.all([
+            AcademicService.getCoursesByIds(courseIds, {
+                attributes: ["id", "name", "code", "department_id", "course_type"],
+                raw: true,
+            }),
+            CoreService.getUsersByIds(facultyIds, {
+                attributes: ["id", "first_name", "last_name"],
+            }),
+            AcademicService.getRegulationsByIds(
+                [...new Set(exams.map((e) => e.exam_cycle?.regulation_id).filter(Boolean))],
+                { attributes: ["id", "exam_configuration"], raw: true },
+            ),
+        ]);
+
+        const courseMap = new Map(courses.map((course) => [course.id, course]));
+        const facultyMap = new Map(
+            faculty.map((user) => [user.id, user.toJSON?.() ?? user]),
+        );
+        const regulationMap = new Map(
+            regulations.map((regulation) => [regulation.id, regulation.exam_configuration]),
+        );
+
+        const filteredExams = exams.filter((exam) => {
+            const course = courseMap.get(exam.course_id);
+            return course && course.department_id === hod.department_id;
         });
 
-        const regulationMap = {};
-        regulations.forEach(r => {
-            regulationMap[r.id] = r.exam_configuration;
-        });
-
-        const examsWithConfig = exams.map(exam => {
+        const examsWithConfig = filteredExams.map((exam) => {
             const examJson = exam.toJSON();
-            const regId = exam.exam_cycle.regulation_id;
-            examJson.exam_configuration = regulationMap[regId] || null;
+            const regId = exam.exam_cycle?.regulation_id;
+            examJson.course = examJson.course_id
+                ? courseMap.get(examJson.course_id) || null
+                : null;
+            examJson.assigned_faculty = examJson.assigned_faculty_id
+                ? facultyMap.get(examJson.assigned_faculty_id) || null
+                : null;
+            examJson.exam_configuration = regId
+                ? regulationMap.get(regId) || null
+                : null;
             return examJson;
         });
 
@@ -94,16 +113,13 @@ async function updatePaperFormat(req, res) {
         const { paper_format } = req.body;
         const hodId = req.user.userId;
 
-        const hod = await User.findByPk(hodId);
+        const hod = await CoreService.findByPk(hodId, {
+            attributes: ["id", "department_id"],
+            transaction: t,
+        });
 
         const exam = await ExamTimetable.findOne({
             where: { id: timetableId },
-            include: [
-                {
-                    model: Course,
-                    as: "course",
-                },
-            ],
             transaction: t,
         });
 
@@ -112,8 +128,19 @@ async function updatePaperFormat(req, res) {
             return res.status(404).json({ success: false, error: "Exam not found" });
         }
 
+        const course = await AcademicService.getCourseById(exam.course_id, {
+            attributes: ["id", "name", "code", "department_id"],
+            transaction: t,
+            raw: true,
+        });
+
+        if (!course) {
+            await t.rollback();
+            return res.status(404).json({ success: false, error: "Course not found" });
+        }
+
         // Verify Department Permission
-        if (exam.course.department_id !== hod.department_id) {
+        if (!hod || course.department_id !== hod.department_id) {
             await t.rollback();
             return res.status(403).json({ success: false, error: "Unauthorized: Different Department" });
         }
@@ -128,10 +155,10 @@ async function updatePaperFormat(req, res) {
 
         // Notify Faculty
         if (exam.assigned_faculty_id) {
-            await Notification.create({
+            await NotificationService.createNotification({
                 user_id: exam.assigned_faculty_id,
                 title: "Paper Format Updated by HOD",
-                message: `The paper format for ${exam.course.name} (${exam.course.code}) has been updated by the HOD. Please review the changes.`,
+                message: `The paper format for ${course.name} (${course.code}) has been updated by the HOD. Please review the changes.`,
                 type: "INFO",
                 metadata: {
                     exam_id: exam.id,
@@ -143,7 +170,9 @@ async function updatePaperFormat(req, res) {
         await t.commit();
 
         logger.info(`Paper format updated by HOD ${hodId} for exam ${timetableId}`);
-        res.json({ success: true, message: "Paper format updated successfully", data: exam });
+        const examJson = exam.toJSON();
+        examJson.course = course;
+        res.json({ success: true, message: "Paper format updated successfully", data: examJson });
     } catch (error) {
         await t.rollback();
         logger.error("HOD Update paper format error:", error);
@@ -160,16 +189,13 @@ async function freezePaperFormat(req, res) {
     try {
         const { timetableId } = req.params;
         const hodId = req.user.userId;
-        const hod = await User.findByPk(hodId);
+        const hod = await CoreService.findByPk(hodId, {
+            attributes: ["id", "department_id"],
+            transaction: t,
+        });
 
         const exam = await ExamTimetable.findOne({
             where: { id: timetableId },
-            include: [
-                {
-                    model: Course,
-                    as: "course",
-                },
-            ],
             transaction: t,
         });
 
@@ -178,7 +204,18 @@ async function freezePaperFormat(req, res) {
             return res.status(404).json({ success: false, error: "Exam not found" });
         }
 
-        if (exam.course.department_id !== hod.department_id) {
+        const course = await AcademicService.getCourseById(exam.course_id, {
+            attributes: ["id", "name", "code", "department_id"],
+            transaction: t,
+            raw: true,
+        });
+
+        if (!course) {
+            await t.rollback();
+            return res.status(404).json({ success: false, error: "Course not found" });
+        }
+
+        if (!hod || course.department_id !== hod.department_id) {
             await t.rollback();
             return res.status(403).json({ success: false, error: "Unauthorized" });
         }
@@ -190,10 +227,10 @@ async function freezePaperFormat(req, res) {
 
         // Notify Faculty
         if (exam.assigned_faculty_id) {
-            await Notification.create({
+            await NotificationService.createNotification({
                 user_id: exam.assigned_faculty_id,
                 title: "Paper Format Freezed",
-                message: `The paper format for ${exam.course.name} (${exam.course.code}) has been freezed by the HOD. You can no longer edit it.`,
+                message: `The paper format for ${course.name} (${course.code}) has been freezed by the HOD. You can no longer edit it.`,
                 type: "WARNING", // Using WARNING to grab attention
                 metadata: {
                     exam_id: exam.id,
@@ -205,7 +242,9 @@ async function freezePaperFormat(req, res) {
         await t.commit();
 
         logger.info(`Paper format freezed by HOD ${hodId} for exam ${timetableId}`);
-        res.json({ success: true, message: "Paper format freezed successfully", data: exam });
+        const examJson = exam.toJSON();
+        examJson.course = course;
+        res.json({ success: true, message: "Paper format freezed successfully", data: examJson });
     } catch (error) {
         await t.rollback();
         logger.error("HOD Freeze paper format error:", error);

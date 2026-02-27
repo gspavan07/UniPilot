@@ -1,6 +1,6 @@
-import { FeePayment } from "../../../fees/models/index.js";
-import { User } from "../../../core/models/index.js";
-import { Course, Program } from "../../../academics/models/index.js";
+import FeesService from "../../../fees/services/index.js";
+import CoreService from "../../../core/services/index.js";
+import AcademicService from "../../../academics/services/index.js";
 import {
   ExamCycle,
   ExamTimetable,
@@ -306,7 +306,7 @@ async function getMyExams(req, res) {
   try {
     const userId = req.user.userId;
 
-    const student = await User.findByPk(userId, {
+    const student = await CoreService.findByPk(userId, {
       attributes: [
         "id",
         "program_id",
@@ -360,13 +360,6 @@ async function getMyExams(req, res) {
             program_id: { [Op.contains]: [student.program_id] },
           },
           required: false,
-          include: [
-            {
-              model: Course,
-              as: "course",
-              attributes: ["id", "name", "code"],
-            },
-          ],
         },
         {
           model: ExamFeeConfiguration,
@@ -390,7 +383,33 @@ async function getMyExams(req, res) {
       order: [["created_at", "DESC"]],
     });
 
-    res.json({ success: true, data: cycles });
+    const timetableCourseIds = new Set();
+    cycles.forEach((cycle) => {
+      cycle.timetables?.forEach((timetable) => {
+        if (timetable.course_id) timetableCourseIds.add(timetable.course_id);
+      });
+    });
+
+    const courses = await AcademicService.getCoursesByIds(
+      [...timetableCourseIds],
+      { attributes: ["id", "name", "code"], raw: true },
+    );
+    const courseMap = new Map(courses.map((course) => [course.id, course]));
+
+    const cyclesWithCourses = cycles.map((cycle) => {
+      const cycleJson = cycle.toJSON();
+      if (cycleJson.timetables) {
+        cycleJson.timetables = cycleJson.timetables.map((timetable) => ({
+          ...timetable,
+          course: timetable.course_id
+            ? courseMap.get(timetable.course_id) || null
+            : null,
+        }));
+      }
+      return cycleJson;
+    });
+
+    res.json({ success: true, data: cyclesWithCourses });
   } catch (error) {
     logger.error("Get student exams error:", error);
     res.status(500).json({ success: false, error: error.message });
@@ -412,30 +431,36 @@ async function getExamPaymentHistory(req, res) {
           as: "exam_cycle",
           attributes: ["cycle_name", "exam_month", "exam_year", "semester"],
         },
-        {
-          model: FeePayment,
-          as: "transaction",
-          attributes: [
-            "payment_date",
-            "payment_method",
-            "transaction_id",
-            "status",
-          ],
-        },
       ],
       order: [["created_at", "DESC"]],
+    });
+
+    const feePaymentIds = payments
+      .map((payment) => payment.fee_payment_id)
+      .filter(Boolean);
+
+    const feePaymentMap = await FeesService.getPaymentMapByIds(feePaymentIds, {
+      attributes: [
+        "id",
+        "payment_date",
+        "payment_method",
+        "transaction_id",
+        "status",
+      ],
     });
 
     // Flatten data for frontend expectations
     const flattenedPayments = payments.map((p) => {
       const paymentData = p.toJSON();
+      const transaction = feePaymentMap.get(paymentData.fee_payment_id);
       return {
         ...paymentData,
-        payment_date: paymentData.transaction?.payment_date || p.created_at,
+        payment_date: transaction?.payment_date || p.created_at,
         payment_status:
-          paymentData.transaction?.status === "completed"
+          transaction?.status === "completed"
             ? "success"
-            : paymentData.transaction?.status || "pending",
+            : transaction?.status || "pending",
+        transaction,
       };
     });
 
@@ -616,7 +641,7 @@ async function verifyPayment(req, res) {
     const paidAmount = order.amount / 100;
 
     // 3. Create master FeePayment
-    const mainPayment = await FeePayment.create(
+    const mainPayment = await FeesService.createPayment(
       {
         student_id: userId,
         amount_paid: paidAmount,
@@ -673,14 +698,19 @@ async function getCycleStudents(req, res) {
     // 1. Get target programs from Timetable
     const timetables = await ExamTimetable.findAll({
       where: { exam_cycle_id: id, is_deleted: false },
-      include: [
-        {
-          model: Course,
-          as: "course",
-          attributes: ["id", "name", "code"],
-        },
-      ],
     });
+
+    const timetableCourseIds = [
+      ...new Set(timetables.map((timetable) => timetable.course_id).filter(Boolean)),
+    ];
+
+    const timetableCourses = await AcademicService.getCoursesByIds(
+      timetableCourseIds,
+      { attributes: ["id", "name", "code"], raw: true },
+    );
+    const timetableCourseMap = new Map(
+      timetableCourses.map((course) => [course.id, course]),
+    );
 
     const programIds = [
       ...new Set(timetables.flatMap((t) => t.program_id || [])),
@@ -703,7 +733,7 @@ async function getCycleStudents(req, res) {
     }
 
     // 2. Fetch Base Students
-    const baseStudents = await User.findAll({
+    const baseStudents = await CoreService.findAll({
       where: {
         program_id: { [Op.in]: programIds },
         current_semester: cycle.semester,
@@ -718,15 +748,16 @@ async function getCycleStudents(req, res) {
         "section",
         "program_id",
       ],
-      include: [
-        {
-          model: Program,
-          as: "program",
-          attributes: ["id", "name"],
-        },
-      ],
       order: [["student_id", "ASC"]],
     });
+
+    const programDetails = await AcademicService.getProgramsByIds(programIds, {
+      attributes: ["id", "name"],
+      raw: true,
+    });
+    const programMap = new Map(
+      programDetails.map((program) => [program.id, program]),
+    );
 
     // 3. Layer in Payment Data if needed
     let paymentsMap = new Map();
@@ -758,7 +789,9 @@ async function getCycleStudents(req, res) {
         last_name: s.last_name,
         section: s.section,
         program_id: s.program_id,
-        program_name: s.program?.name,
+        program_name: s.program_id
+          ? programMap.get(s.program_id)?.name
+          : null,
         payment_status: payment ? "paid" : "pending",
         amount_paid: payment?.amount || 0,
         payment_date: payment?.created_at,
@@ -771,7 +804,7 @@ async function getCycleStudents(req, res) {
     const programsRaw = baseStudents
       .map((s) => ({
         id: s.program_id,
-        name: s.program?.name,
+        name: s.program_id ? programMap.get(s.program_id)?.name : null,
       }))
       .filter((p) => p.id);
 
@@ -787,7 +820,12 @@ async function getCycleStudents(req, res) {
       success: true,
       data: {
         students,
-        timetables,
+        timetables: timetables.map((timetable) => ({
+          ...timetable.toJSON(),
+          course: timetable.course_id
+            ? timetableCourseMap.get(timetable.course_id) || null
+            : null,
+        })),
         filters: {
           programs,
           sections,

@@ -1,8 +1,8 @@
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
 import { AdmissionConfig } from "../models/index.js";
-import { InstitutionSetting } from "../../settings/models/index.js";
-import academicLookupService from "../../academics/services/academicLookupService.js";
+import { SettingsService } from "../../settings/services/index.js";
+import { AcademicService } from "../../academics/services/index.js";
 
 /**
  * Generates a unique student ID based on batch configuration
@@ -31,7 +31,7 @@ export const generateStudentId = async ({
     }
 
     // 2. Get Program Code
-    const program = await academicLookupService.getProgramById(programId, {
+    const program = await AcademicService.getProgramById(programId, {
       transaction,
       attributes: ["id", "code"],
     });
@@ -119,25 +119,9 @@ export const generateGlobalAdmissionNumber = async () => {
     // We assume there's only one relevant row or we pick the first one.
     // Ideally we should have a singleton config.
     // For now we will findOne. If not exists, create default.
-    let setting = await InstitutionSetting.findOne({
-      where: { setting_key: "global_config" },
+    const setting = await SettingsService.getOrCreateGlobalConfig({
       transaction,
-      lock: true,
     });
-
-    console.log("setting", setting);
-
-    if (!setting) {
-      setting = await InstitutionSetting.create(
-        {
-          setting_key: "global_config",
-          setting_value: "{}",
-          current_admission_sequence: 1,
-          admission_number_prefix: "ADM",
-        },
-        { transaction },
-      );
-    }
 
     // 2. Generate Number
     const prefix = setting.admission_number_prefix || "ADM";

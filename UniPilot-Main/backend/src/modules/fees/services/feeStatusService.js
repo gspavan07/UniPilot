@@ -1,4 +1,4 @@
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import {
   AcademicFeePayment,
   FeeCategory,
@@ -12,7 +12,7 @@ import {
 import academicLookupService from "../../academics/services/academicLookupService.js";
 
 export const calculateFeeStatus = async (studentId) => {
-  const student = await User.findByPk(studentId);
+  const student = await CoreService.findByPk(studentId);
   if (!student) {
     throw new Error("Student not found");
   }

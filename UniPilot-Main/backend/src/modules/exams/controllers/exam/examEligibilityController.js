@@ -1,6 +1,5 @@
-import { sequelize } from "../../../../config/database.js";
-import { Attendance, Program, Regulation } from "../../../academics/models/index.js";
-import { User } from "../../../core/models/index.js";
+import AcademicService from "../../../academics/services/index.js";
+import CoreService from "../../../core/services/index.js";
 import { ExamCycle, ExamStudentEligibility } from "../../models/associations.js";
 import feeStatusService from "../../../fees/services/feeStatusService.js";
 import logger from "../../../../utils/logger.js";
@@ -16,7 +15,14 @@ export async function calculateEligibility(studentId, cycleId) {
     const cycle = await ExamCycle.findByPk(cycleId);
     if (!cycle) throw new Error("Exam cycle not found");
 
-    const student = await User.findByPk(studentId);
+    const student = await CoreService.findByPk(studentId, {
+      attributes: [
+        "id",
+        "regulation_id",
+        "program_id",
+        "current_semester",
+      ],
+    });
     if (!student) throw new Error("Student not found");
 
     // Fetch existing record to preserve manual overrides
@@ -38,7 +44,10 @@ export async function calculateEligibility(studentId, cycleId) {
       // Get semester course IDs from Regulation
       let targetCourseIds = [];
       if (student.regulation_id && student.program_id) {
-        const regulation = await Regulation.findByPk(student.regulation_id);
+        const regulation = await AcademicService.getRegulationById(
+          student.regulation_id,
+          { attributes: ["id", "courses_list"] },
+        );
         if (regulation && regulation.courses_list) {
           const coursesList = regulation.courses_list;
           const progId = student.program_id;
@@ -55,20 +64,10 @@ export async function calculateEligibility(studentId, cycleId) {
         attendanceWhere.course_id = { [Op.in]: targetCourseIds };
       }
 
-      const attendanceSummary = await Attendance.findAll({
-        where: attendanceWhere,
-        attributes: [
-          [sequelize.fn("COUNT", sequelize.col("id")), "total"],
-          [
-            sequelize.literal("COUNT(CASE WHEN status = 'present' THEN 1 END)"),
-            "present",
-          ],
-        ],
-        raw: true,
+      const { total, present } = await AcademicService.getAttendanceCounts({
+        studentId,
+        courseIds: targetCourseIds,
       });
-
-      const total = parseInt(attendanceSummary[0]?.total || 0);
-      const present = parseInt(attendanceSummary[0]?.present || 0);
       const percentage = total > 0 ? (present / total) * 100 : 100;
 
       eligibilityData.attendance_percentage = percentage;
@@ -252,7 +251,7 @@ export async function getCycleEligibilities(req, res) {
     if (department_id) userWhere.department_id = department_id;
     if (program_id) userWhere.program_id = program_id;
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where: userWhere,
       attributes: [
         "id",
@@ -262,26 +261,46 @@ export async function getCycleEligibilities(req, res) {
         "email",
         "program_id",
         "section",
-      ], // Added program_id and section for filtering
-      include: [
-        {
-          model: ExamStudentEligibility,
-          as: "student_eligibilities",
-          where: { exam_cycle_id: cycle_id },
-          required: false,
-        },
-        {
-          // Assuming Program association exists on User
-          model: Program,
-          as: "program",
-          attributes: ["name", "code"],
-          required: false,
-        },
       ],
-      order: [["student_id", "ASC"]], // Default sort
+      order: [["student_id", "ASC"]],
     });
 
-    res.json({ success: true, data: students });
+    const studentIds = students.map((student) => student.id);
+    const programIds = [
+      ...new Set(students.map((student) => student.program_id).filter(Boolean)),
+    ];
+
+    const [eligibilities, programs] = await Promise.all([
+      ExamStudentEligibility.findAll({
+        where: {
+          student_id: { [Op.in]: studentIds },
+          exam_cycle_id: cycle_id,
+        },
+      }),
+      AcademicService.getProgramsByIds(programIds, {
+        attributes: ["id", "name", "code"],
+        raw: true,
+      }),
+    ]);
+
+    const eligibilityMap = new Map(
+      eligibilities.map((eligibility) => [eligibility.student_id, eligibility]),
+    );
+    const programMap = new Map(programs.map((program) => [program.id, program]));
+
+    const result = students.map((student) => {
+      const studentJson = student.toJSON?.() ?? student;
+      const eligibility = eligibilityMap.get(student.id);
+      studentJson.student_eligibilities = eligibility
+        ? [eligibility.toJSON?.() ?? eligibility]
+        : [];
+      studentJson.program = studentJson.program_id
+        ? programMap.get(studentJson.program_id) || null
+        : null;
+      return studentJson;
+    });
+
+    res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -304,7 +323,7 @@ export async function recalculateAllEligibilities(req, res) {
       batch_year: cycle.batch,
     };
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where: userWhere,
       attributes: ["id"],
     });

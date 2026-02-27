@@ -1,6 +1,6 @@
 import logger from "../../../utils/logger.js";
-import { Graduation, SemesterResult } from "../../academics/models/index.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
+import AcademicService from "../../academics/services/index.js";
 import { DriveEligibility, Placement, PlacementDrive, PlacementPolicy, StudentPlacementProfile } from "../models/index.js";
 
 /**
@@ -15,7 +15,7 @@ export const isStudentEligible = async (studentId, driveId) => {
     if (!drive) throw new Error("Drive not found");
     if (!drive.eligibility) return { eligible: true }; // No criteria set
 
-    const student = await User.findByPk(studentId, {
+    const student = await CoreService.findByPk(studentId, {
       attributes: [
         "id",
         "department_id",
@@ -44,18 +44,13 @@ export const isStudentEligible = async (studentId, driveId) => {
     }
 
     // 3. CGPA Check
-    const graduation = await Graduation.findOne({
-      where: { student_id: studentId },
-    });
+    const graduation = await AcademicService.getGraduationByStudentId(studentId);
 
     let studentCgpa = 0;
     if (graduation?.final_cgpa) {
       studentCgpa = parseFloat(graduation.final_cgpa);
     } else {
-      const latestResult = await SemesterResult.findOne({
-        where: { student_id: studentId },
-        order: [["semester", "DESC"]],
-      });
+      const latestResult = await AcademicService.getLatestSemesterResultByStudentId(studentId);
       if (latestResult) studentCgpa = parseFloat(latestResult.sgpa || 0);
     }
 

@@ -1,7 +1,7 @@
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
 import { Op } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import feeLedgerService from "../../fees/services/feeLedgerService.js";
 import academicLookupService from "../../academics/services/academicLookupService.js";
 import { HostelAllocation, HostelAttendance, HostelBed, HostelBuilding, HostelComplaint, HostelFeeStructure, HostelFloor, HostelGatePass, HostelMessFeeStructure, HostelRoom, HostelStayLog, HostelVisitor } from "../models/index.js";
@@ -80,6 +80,27 @@ const hydrateAllocationsWithAcademics = async (allocations) => {
     }
   });
 };
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
+    }
+  });
+};
+
 
 /**
  * Hostel Management Controller
@@ -400,19 +421,6 @@ export const getAllocations = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "student_id",
-            "email",
-            "program_id",
-            "department_id",
-          ],
-        },
-        {
           model: HostelRoom,
           as: "room",
           include: [
@@ -436,6 +444,9 @@ export const getAllocations = async (req, res) => {
       ],
       order: [["created_at", "DESC"]],
     });
+    await hydrateListWithUser(allocations, "student_id", "student", [
+      "id", "first_name", "last_name", "student_id", "email", "program_id", "department_id"
+    ]);
     await hydrateAllocationsWithFeeStructures(allocations);
     await hydrateAllocationsWithAcademics(allocations);
     res.json({ success: true, data: allocations });
@@ -482,7 +493,7 @@ export const allocateStudent = async (req, res) => {
     }
 
     // Get student details for main fee creation
-    const student = await User.findByPk(student_id);
+    const student = await CoreService.findByPk(student_id);
     if (!student) {
       return res.status(404).json({ error: "Student not found" });
     }
@@ -657,7 +668,6 @@ export const allocateStudent = async (req, res) => {
       allocation.id,
       {
         include: [
-          { model: User, as: "student" },
           { model: HostelRoom, as: "room" },
           { model: HostelBed, as: "bed" },
           { model: HostelFeeStructure, as: "fee_structure" },
@@ -666,6 +676,7 @@ export const allocateStudent = async (req, res) => {
       { transaction },
     );
 
+    await hydrateListWithUser(allocationWithDetails, "student_id", "student", ["id", "first_name", "last_name", "email"]);
     await transaction.commit();
     res.status(201).json({ success: true, data: allocationWithDetails });
   } catch (error) {
@@ -701,7 +712,7 @@ export const checkoutStudent = async (req, res) => {
       return res.status(400).json({ error: "Allocation is not active" });
     }
 
-    const student = await User.findByPk(allocation.student_id);
+    const student = await CoreService.findByPk(allocation.student_id);
     const currentSemester =
       student?.current_semester || allocation.semester || 1;
 
@@ -736,13 +747,14 @@ export const checkoutStudent = async (req, res) => {
 
       const updatedAllocation = await HostelAllocation.findByPk(allocation.id, {
         include: [
-          { model: User, as: "student" },
           { model: HostelRoom, as: "room" },
           { model: HostelBed, as: "bed" },
           { model: HostelFeeStructure, as: "fee_structure" },
           { model: HostelMessFeeStructure, as: "mess_fee_structure" },
         ],
       });
+
+      await hydrateListWithUser(updatedAllocation, "student_id", "student", ["id", "first_name", "last_name", "email"]);
 
       return res.json({
         success: true,
@@ -763,10 +775,7 @@ export const checkoutStudent = async (req, res) => {
     );
 
     // Sync is_hosteller flag on student
-    await User.update(
-      { is_hosteller: false },
-      { where: { id: allocation.student_id }, transaction },
-    );
+    await CoreService.updateUser(allocation.student_id, { is_hosteller: false }, { transaction });
 
     // Update historical stay log
     const latestLog = await HostelStayLog.findOne({
@@ -936,7 +945,6 @@ export const updateAllocation = async (req, res) => {
 
     const updated = await HostelAllocation.findByPk(id, {
       include: [
-        { model: User, as: "student" },
         { model: HostelRoom, as: "room" },
         { model: HostelBed, as: "bed" },
         { model: HostelFeeStructure, as: "fee_structure" },
@@ -944,6 +952,7 @@ export const updateAllocation = async (req, res) => {
       ],
     });
 
+    await hydrateListWithUser(updated, "student_id", "student", ["id", "first_name", "last_name", "email"]);
     res.json({ success: true, data: updated });
   } catch (error) {
     if (transaction && !transaction.finished) {
@@ -996,10 +1005,7 @@ export const deleteAllocation = async (req, res) => {
 
     // 3. Sync is_hosteller flag on student
     if (allocation.status === "active") {
-      await User.update(
-        { is_hosteller: false },
-        { where: { id: allocation.student_id }, transaction },
-      );
+      await CoreService.updateUser(allocation.student_id, { is_hosteller: false }, { transaction });
     }
 
     await allocation.destroy({ transaction });
@@ -1221,18 +1227,8 @@ export const getComplaints = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id"],
-        },
-        {
           model: HostelRoom,
           as: "room",
-        },
-        {
-          model: User,
-          as: "assignedTo",
-          attributes: ["id", "first_name", "last_name"],
         },
       ],
       order: [
@@ -1240,6 +1236,10 @@ export const getComplaints = async (req, res) => {
         ["created_at", "DESC"],
       ],
     });
+
+    await hydrateListWithUser(complaints, "student_id", "student", ["id", "first_name", "last_name", "student_id"]);
+    await hydrateListWithUser(complaints, "assigned_to", "assignedTo", ["id", "first_name", "last_name"]);
+
     res.json({ success: true, data: complaints });
   } catch (error) {
     logger.error("Error fetching complaints:", error);
@@ -1319,15 +1319,11 @@ export const getAttendance = async (req, res) => {
 
     const attendance = await HostelAttendance.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id"],
-        },
-      ],
       order: [["date", "DESC"]],
     });
+
+    await hydrateListWithUser(attendance, "student_id", "student", ["id", "first_name", "last_name", "student_id"]);
+
     res.json({ success: true, data: attendance });
   } catch (error) {
     logger.error("Error fetching attendance:", error);
@@ -1413,15 +1409,11 @@ export const getGatePasses = async (req, res) => {
 
     const gatePasses = await HostelGatePass.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id"],
-        },
-      ],
       order: [["out_time", "DESC"]],
     });
+
+    await hydrateListWithUser(gatePasses, "student_id", "student", ["id", "first_name", "last_name", "student_id"]);
+
     res.json({ success: true, data: gatePasses });
   } catch (error) {
     logger.error("Error fetching gate passes:", error);

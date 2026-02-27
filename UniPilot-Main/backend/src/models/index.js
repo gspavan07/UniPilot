@@ -1,15 +1,11 @@
 import { sequelize } from "../config/database.js";
 
-// Import models
-import User from "../modules/core/models/User.js";
-import Session from "../modules/core/models/Session.js";
+import { User, Session, Role, Permission } from "../modules/core/models/index.js";
 import AuditLog from "../modules/settings/models/AuditLog.js";
 import Department from "../modules/academics/models/Department.js";
 import Program from "../modules/academics/models/Program.js";
 import Course from "../modules/academics/models/Course.js";
 import Regulation from "../modules/academics/models/Regulation.js";
-import Role from "../modules/core/models/Role.js";
-import Permission from "../modules/core/models/Permission.js";
 import ProctorAssignment from "../modules/proctoring/models/ProctorAssignment.js";
 import ProctorSession from "../modules/proctoring/models/ProctorSession.js";
 import ProctorFeedback from "../modules/proctoring/models/ProctorFeedback.js";
@@ -203,35 +199,6 @@ User.hasMany(Notification, { as: "notifications", foreignKey: "user_id" });
 CourseFaculty.belongsTo(Course, { as: "course", foreignKey: "course_id" });
 Course.hasMany(CourseFaculty, { as: "faculty_assignments", foreignKey: "course_id" });
 
-CourseFaculty.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
-User.hasMany(CourseFaculty, { as: "course_assignments", foreignKey: "faculty_id" });
-
-CourseFaculty.belongsTo(User, { as: "assigner", foreignKey: "assigned_by" });
-
-// User <-> Session
-Session.belongsTo(User, { as: "user", foreignKey: "user_id" });
-User.hasMany(Session, { as: "sessions", foreignKey: "user_id" });
-
-// Department <-> User (HOD)
-Department.belongsTo(User, {
-  as: "hod",
-  foreignKey: "hod_id",
-});
-User.hasMany(Department, {
-  as: "departments_as_hod",
-  foreignKey: "hod_id",
-});
-
-// Department <-> User (Faculty/Students)
-User.belongsTo(Department, {
-  as: "department",
-  foreignKey: "department_id",
-});
-Department.hasMany(User, {
-  as: "members",
-  foreignKey: "department_id",
-});
-
 // Program <-> Department
 Program.belongsTo(Department, {
   as: "department",
@@ -240,24 +207,6 @@ Program.belongsTo(Department, {
 Department.hasMany(Program, {
   as: "programs",
   foreignKey: "department_id",
-});
-
-// Program <-> User (Students)
-User.belongsTo(Program, {
-  as: "program",
-  foreignKey: "program_id",
-});
-Program.hasMany(User, {
-  as: "students",
-  foreignKey: "program_id",
-});
-User.belongsTo(Regulation, {
-  as: "regulation",
-  foreignKey: "regulation_id",
-});
-Regulation.hasMany(User, {
-  as: "students",
-  foreignKey: "regulation_id",
 });
 
 // Course <-> Department
@@ -283,30 +232,6 @@ Department.belongsTo(Department, {
 Department.hasMany(Department, {
   as: "sub_departments",
   foreignKey: "parent_department_id",
-});
-
-// Role <-> User
-User.belongsTo(Role, {
-  as: "role_data",
-  foreignKey: "role_id",
-});
-Role.hasMany(User, {
-  as: "users",
-  foreignKey: "role_id",
-});
-
-// Role <-> Permission
-Role.belongsToMany(Permission, {
-  through: "role_permissions",
-  as: "permissions",
-  foreignKey: "role_id",
-  otherKey: "permission_id",
-});
-Permission.belongsToMany(Role, {
-  through: "role_permissions",
-  as: "roles",
-  foreignKey: "permission_id",
-  otherKey: "role_id",
 });
 
 // Proctoring Associations
@@ -377,25 +302,6 @@ Program.hasMany(PromotionCriteria, {
   foreignKey: "program_id",
 });
 
-PromotionEvaluation.belongsTo(User, {
-  as: "student",
-  foreignKey: "student_id",
-});
-User.hasMany(PromotionEvaluation, {
-  as: "evaluations",
-  foreignKey: "student_id",
-});
-
-Graduation.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasOne(Graduation, { as: "graduation_info", foreignKey: "student_id" });
-
-// Attendance Associations
-Attendance.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(Attendance, {
-  as: "attendance_records",
-  foreignKey: "student_id",
-});
-
 Attendance.belongsTo(Course, { as: "course", foreignKey: "course_id" });
 Course.hasMany(Attendance, {
   as: "attendance_records",
@@ -411,21 +317,7 @@ TimetableSlot.hasMany(Attendance, {
   foreignKey: "timetable_slot_id",
 });
 
-Attendance.belongsTo(User, { as: "instructor", foreignKey: "marked_by" });
-
-LeaveRequest.belongsTo(User, { as: "student", foreignKey: "student_id" });
-LeaveRequest.belongsTo(User, { as: "applicant", foreignKey: "student_id" });
-User.hasMany(LeaveRequest, { as: "leave_requests", foreignKey: "student_id" });
-
-LeaveRequest.belongsTo(User, { as: "reviewer", foreignKey: "reviewed_by" });
-LeaveRequest.belongsTo(User, { as: "approver", foreignKey: "approver_id" });
-
 // Semester Result Associations
-SemesterResult.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(SemesterResult, {
-  as: "semester_results",
-  foreignKey: "student_id",
-});
 
 // Fee Management Associations
 FeeStructure.belongsTo(FeeCategory, {
@@ -442,9 +334,6 @@ Program.hasMany(FeeStructure, {
   as: "fee_structures",
   foreignKey: "program_id",
 });
-
-FeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(FeePayment, { as: "payments", foreignKey: "student_id" });
 
 FeePayment.belongsTo(FeeStructure, {
   as: "fee_structure", // Deprecated, use AcademicFeePayment
@@ -464,12 +353,10 @@ StudentFeeCharge.hasMany(FeePayment, {
   foreignKey: "fee_charge_id",
 });
 
-StudentFeeCharge.belongsTo(User, { as: "student", foreignKey: "student_id" });
 StudentFeeCharge.belongsTo(FeeCategory, {
   as: "category",
   foreignKey: "category_id",
 });
-User.hasMany(StudentFeeCharge, { as: "fee_charges", foreignKey: "student_id" });
 FeeCategory.hasMany(StudentFeeCharge, {
   as: "fee_charges",
   foreignKey: "category_id",
@@ -498,12 +385,6 @@ StudentChargePayment.belongsTo(FeePayment, {
 });
 
 // 2. AcademicFeePayment Associations
-AcademicFeePayment.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(AcademicFeePayment, {
-  as: "academic_payments",
-  foreignKey: "student_id",
-});
-
 AcademicFeePayment.belongsTo(FeeStructure, {
   as: "structure",
   foreignKey: "fee_structure_id",
@@ -514,15 +395,6 @@ FeeStructure.hasMany(AcademicFeePayment, {
 });
 
 // 3. StudentChargePayment Associations
-StudentChargePayment.belongsTo(User, {
-  as: "student",
-  foreignKey: "student_id",
-});
-User.hasMany(StudentChargePayment, {
-  as: "charge_payments",
-  foreignKey: "student_id",
-});
-
 StudentChargePayment.belongsTo(StudentFeeCharge, {
   as: "charge",
   foreignKey: "student_fee_charge_id",
@@ -531,9 +403,6 @@ StudentFeeCharge.hasMany(StudentChargePayment, {
   as: "charge_payments", // Renamed from "payments" to avoid conflict
   foreignKey: "student_fee_charge_id",
 });
-
-FeeWaiver.belongsTo(User, { as: "student", foreignKey: "student_id" });
-User.hasMany(FeeWaiver, { as: "waivers", foreignKey: "student_id" });
 
 FeeWaiver.belongsTo(FeeCategory, {
   as: "category",
@@ -564,7 +433,6 @@ TimetableSlot.belongsTo(Timetable, {
 });
 
 TimetableSlot.belongsTo(Course, { as: "course", foreignKey: "course_id" });
-TimetableSlot.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
 TimetableSlot.belongsTo(Block, { as: "block", foreignKey: "block_id" });
 TimetableSlot.belongsTo(Room, { as: "room", foreignKey: "room_id" });
 Block.hasMany(TimetableSlot, { as: "timetable_slots", foreignKey: "block_id" });
@@ -618,12 +486,10 @@ Block.hasMany(Department, { foreignKey: "block_id", as: "departments" });
 Room.hasOne(Department, { foreignKey: "room_id", as: "department" });
 
 // Section Incharge Associations
-SectionIncharge.belongsTo(User, { as: "faculty", foreignKey: "faculty_id" });
-User.hasMany(SectionIncharge, {
-  as: "section_assignments",
-  foreignKey: "faculty_id",
+SectionIncharge.belongsTo(SectionIncharge, {
+  as: "parentIncharge",
+  foreignKey: "parent_incharge_id",
 });
-
 SectionIncharge.belongsTo(Department, {
   as: "department",
   foreignKey: "department_id",
@@ -641,8 +507,6 @@ Program.hasMany(SectionIncharge, {
   as: "section_incharges",
   foreignKey: "program_id",
 });
-
-SectionIncharge.belongsTo(User, { as: "assigner", foreignKey: "assigned_by" });
 
 // Transport Management Associations
 if (models.Route && models.TransportStop) {

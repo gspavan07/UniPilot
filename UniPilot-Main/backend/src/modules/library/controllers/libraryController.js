@@ -1,7 +1,6 @@
 import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
-import { User } from "../../core/models/index.js";
 import { Book, BookIssue } from "../models/index.js";
 
 

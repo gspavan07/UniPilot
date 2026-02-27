@@ -9,6 +9,17 @@ export const getGlobalConfig = async ({ transaction, lock = false } = {}) =>
     lock: lock && transaction ? true : undefined,
   });
 
+export const getSettingByKey = async (settingKey, { transaction } = {}) => {
+  if (!settingKey) return null;
+  return InstitutionSetting.findOne({
+    where: { setting_key: settingKey },
+    transaction,
+  });
+};
+
+export const getAnySetting = async ({ transaction } = {}) =>
+  InstitutionSetting.findOne({ transaction });
+
 export const getOrCreateGlobalConfig = async ({
   transaction,
   defaults = {},
@@ -34,4 +45,6 @@ export const getOrCreateGlobalConfig = async ({
 export default {
   getGlobalConfig,
   getOrCreateGlobalConfig,
+  getSettingByKey,
+  getAnySetting,
 };

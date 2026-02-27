@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import logger from "../../../utils/logger.js";
 import { Department, Program, SectionIncharge } from "../models/index.js";
-import { Role, User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 
 /**
  * Section Incharge Controller
@@ -37,8 +37,8 @@ export const assignSectionIncharge = async (req, res) => {
 
     // Permission Check
     if (req.user && req.user.userId) {
-      const requester = await User.findByPk(req.user.userId, {
-        include: [{ model: Role, as: "role_data" }],
+      const requester = await CoreService.findByPk(req.user.userId, {
+        include: ["role_data"],
       });
       const requesterSlug = requester?.role_data?.slug;
 
@@ -60,8 +60,8 @@ export const assignSectionIncharge = async (req, res) => {
     }
 
     // Check if faculty exists and has correct role (faculty or hod)
-    const facultyUser = await User.findByPk(faculty_id, {
-      include: [{ model: Role, as: "role_data" }],
+    const facultyUser = await CoreService.findByPk(faculty_id, {
+      include: ["role_data"],
     });
 
     if (!facultyUser) {
@@ -140,11 +140,6 @@ export const getSectionIncharges = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: "faculty",
-          attributes: ["id", "first_name", "last_name", "email", "employee_id"],
-        },
-        {
           model: Department,
           as: "department",
           attributes: ["id", "name", "code"],
@@ -161,10 +156,23 @@ export const getSectionIncharges = async (req, res) => {
       ],
     });
 
+    const facultyIds = [...new Set(incharges.map(i => i.faculty_id).filter(Boolean))];
+    const facultyMap = await CoreService.getUserMapByIds(facultyIds, {
+      attributes: ["id", "first_name", "last_name", "email", "employee_id"]
+    });
+
+    const enrichedIncharges = incharges.map(incharge => {
+      const inchargeJSON = incharge.toJSON ? incharge.toJSON() : incharge;
+      if (inchargeJSON.faculty_id) {
+        inchargeJSON.faculty = facultyMap.get(inchargeJSON.faculty_id) || null;
+      }
+      return inchargeJSON;
+    });
+
     res.status(200).json({
       success: true,
-      count: incharges.length,
-      data: incharges,
+      count: enrichedIncharges.length,
+      data: enrichedIncharges,
     });
   } catch (error) {
     logger.error("Error in getSectionIncharges:", error);
@@ -191,8 +199,8 @@ export const removeSectionIncharge = async (req, res) => {
 
     // Permission Check
     if (req.user && req.user.userId) {
-      const requester = await User.findByPk(req.user.userId, {
-        include: [{ model: Role, as: "role_data" }],
+      const requester = await CoreService.findByPk(req.user.userId, {
+        include: ["role_data"],
       });
       const requesterSlug = requester?.role_data?.slug;
 

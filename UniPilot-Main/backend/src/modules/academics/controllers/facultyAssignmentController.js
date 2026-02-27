@@ -1,7 +1,7 @@
 import logger from "../../../utils/logger.js";
 import { Course, CourseFaculty, Department } from "../models/index.js";
-import { User } from "../../core/models/index.js";
-import { Notification } from "../../notifications/models/index.js";
+import CoreService from "../../core/services/index.js";
+import NotificationService from "../../notifications/services/index.js";
 
 
 
@@ -36,16 +36,30 @@ export const getAssignments = async (req, res) => {
                     attributes: ["id", "name", "code"],
                 },
                 {
-                    model: User,
-                    as: "faculty",
-                    attributes: ["id", "first_name", "last_name", "email", "employee_id"],
+                    model: Course,
+                    as: "course",
+                    attributes: ["id", "name", "code"],
                 },
             ],
         });
 
+        // Hydrate Faculty
+        const facultyIds = [...new Set(assignments.map(a => a.faculty_id).filter(Boolean))];
+        const facultyMap = await CoreService.getUserMapByIds(facultyIds, {
+            attributes: ["id", "first_name", "last_name", "email", "employee_id"]
+        });
+
+        const enrichedAssignments = assignments.map(assignment => {
+            const assignmentJSON = assignment.toJSON ? assignment.toJSON() : assignment;
+            if (assignmentJSON.faculty_id) {
+                assignmentJSON.faculty = facultyMap.get(assignmentJSON.faculty_id) || null;
+            }
+            return assignmentJSON;
+        });
+
         res.status(200).json({
             success: true,
-            data: assignments,
+            data: enrichedAssignments,
         });
     } catch (error) {
         logger.error("Error in getAssignments:", error);
@@ -114,11 +128,11 @@ export const assignFaculty = async (req, res) => {
         if (createdAssignments.length > 0) {
             // Notify Faculty
             const course = await Course.findByPk(course_id);
-            const faculty = await User.findByPk(faculty_id);
+            const faculty = await CoreService.findByPk(faculty_id);
 
             if (course && faculty) {
                 const sectionList = createdAssignments.map(a => a.section).join(", ");
-                await Notification.create({
+                await NotificationService.createNotification({
                     user_id: faculty_id,
                     title: "New Course Assignment",
                     message: `You have been assigned to teach ${course.name} (${course.code}) for Batch ${batch_year}, Semester ${semester}, Sections: ${sectionList}.`,

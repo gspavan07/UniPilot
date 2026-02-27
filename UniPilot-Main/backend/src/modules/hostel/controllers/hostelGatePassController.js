@@ -2,8 +2,28 @@ import logger from "../../../utils/logger.js";
 
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { HostelAttendance, HostelGatePass } from "../models/index.js";
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
+    }
+  });
+};
 
 // @desc    Request gate pass (Student)
 // @route   POST /api/hostel/gate-passes
@@ -70,9 +90,7 @@ export const verifyOtpAndApprove = async (req, res) => {
     const { id } = req.params;
     const { otp } = req.body;
 
-    const gatePass = await HostelGatePass.findByPk(id, {
-      include: [{ model: User, as: "student" }],
-    });
+    const gatePass = await HostelGatePass.findByPk(id);
 
     if (!gatePass) {
       await transaction.rollback();
@@ -210,27 +228,23 @@ export const getGatePasses = async (req, res) => {
 
     const gatePasses = await HostelGatePass.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "student_id",
-            "section",
-            "batch_year",
-          ],
-        },
-        {
-          model: User,
-          as: "approver",
-          attributes: ["id", "first_name", "last_name"],
-        },
-      ],
       order: [["created_at", "DESC"]],
     });
+
+    await hydrateListWithUser(gatePasses, "student_id", "student", [
+      "id",
+      "first_name",
+      "last_name",
+      "student_id",
+      "section",
+      "batch_year",
+    ]);
+
+    await hydrateListWithUser(gatePasses, "approved_by", "approver", [
+      "id",
+      "first_name",
+      "last_name",
+    ]);
 
     res.json({ success: true, data: gatePasses });
   } catch (error) {

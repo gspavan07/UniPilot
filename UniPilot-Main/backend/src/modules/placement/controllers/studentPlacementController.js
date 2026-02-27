@@ -1,8 +1,8 @@
 import eligibilityService from "../services/eligibilityService.js";
 import policyService from "../services/placementPolicyService.js";
 import logger from "../../../utils/logger.js";
-import { Graduation, SemesterResult } from "../../academics/models/index.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
+import AcademicService from "../../academics/services/index.js";
 import { Company, DriveEligibility, DriveRound, JobPosting, Placement, PlacementDrive, StudentApplication, StudentPlacementProfile } from "../models/index.js";
 
 /**
@@ -10,7 +10,7 @@ import { Company, DriveEligibility, DriveRound, JobPosting, Placement, Placement
  */
 export const getStudentSystemFields = async (req, res) => {
   try {
-    const student = await User.findByPk(req.user.userId, {
+    const student = await CoreService.findByPk(req.user.userId, {
       attributes: ["email", "phone", "previous_academics"],
     });
 
@@ -27,17 +27,12 @@ export const getStudentSystemFields = async (req, res) => {
 
     // 1. Get CGPA from latest SemesterResult or Graduation
     let cgpa = 0;
-    const graduation = await Graduation.findOne({
-      where: { student_id: req.user.userId },
-    });
+    const graduation = await AcademicService.getGraduationByStudentId(req.user.userId);
 
     if (graduation?.final_cgpa) {
       cgpa = graduation.final_cgpa;
     } else {
-      const latestResult = await SemesterResult.findOne({
-        where: { student_id: req.user.userId },
-        order: [["semester", "DESC"]],
-      });
+      const latestResult = await AcademicService.getLatestSemesterResultByStudentId(req.user.userId);
       if (latestResult) cgpa = latestResult.sgpa; // Simplification: using SGPA of latest sem if CGPA not calculated
     }
 
@@ -165,7 +160,7 @@ export const uploadMasterResume = async (req, res) => {
 export const getEligibleDrives = async (req, res) => {
   try {
     // 1. Fetch student data (CGPA, backlogs, department)
-    const student = await User.findByPk(req.user.userId, {
+    const student = await CoreService.findByPk(req.user.userId, {
       attributes: ["id", "department_id", "regulation_id"],
       // Note: In real system, we'd fetch actual CGPA/Backlogs from academic records
     });

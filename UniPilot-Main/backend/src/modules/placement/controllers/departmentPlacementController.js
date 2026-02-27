@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import logger from "../../../utils/logger.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { Company, DriveEligibility, DriveRound, JobPosting, Placement, PlacementDrive, StudentApplication } from "../models/index.js";
 
 /**
@@ -12,8 +12,7 @@ export const getDepartmentStats = async (req, res) => {
     const { departmentId } = req.params;
     const { batch_year, section } = req.query;
 
-    // Fetch requester for scoping
-    const requester = await User.findByPk(req.user.userId);
+    const requester = await CoreService.findByPk(req.user.userId);
     if (
       requester.is_placement_coordinator &&
       requester.department_id !== departmentId
@@ -33,31 +32,24 @@ export const getDepartmentStats = async (req, res) => {
     }
 
     // 1. Total students in department with filters
-    const totalStudents = await User.count({
+    const totalStudents = await CoreService.count({
       where: studentWhere,
     });
 
+    const studentIdsRaw = await CoreService.findAll({
+      where: studentWhere,
+      attributes: ["id"]
+    });
+    const studentIds = studentIdsRaw.map(s => s.id);
+
     // 2. Placed students with filters
     const placedStudents = await Placement.count({
-      include: [
-        {
-          model: User,
-          as: "student",
-          where: studentWhere,
-        },
-      ],
-      where: { status: ["offered", "accepted"] },
+      where: { student_id: { [Op.in]: studentIds }, status: ["offered", "accepted"] },
     });
 
     // 3. Drive participation with filters
     const totalApplications = await StudentApplication.count({
-      include: [
-        {
-          model: User,
-          as: "student",
-          where: studentWhere,
-        },
-      ],
+      where: { student_id: { [Op.in]: studentIds } },
     });
 
     res.status(200).json({
@@ -86,8 +78,7 @@ export const getDepartmentStudentList = async (req, res) => {
     const { departmentId } = req.params;
     const { batch_year, section } = req.query;
 
-    // Fetch requester for scoping
-    const requester = await User.findByPk(req.user.userId);
+    const requester = await CoreService.findByPk(req.user.userId);
     if (
       requester.is_placement_coordinator &&
       requester.department_id !== departmentId
@@ -109,7 +100,7 @@ export const getDepartmentStudentList = async (req, res) => {
       where.section = section;
     }
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where,
       attributes: [
         "id",
@@ -119,19 +110,31 @@ export const getDepartmentStudentList = async (req, res) => {
         "email",
         "batch_year",
       ],
+    });
+
+    const studentIds = students.map(s => s.id);
+
+    const placements = await Placement.findAll({
+      where: { student_id: { [Op.in]: studentIds } },
       include: [
         {
-          model: Placement,
-          as: "placements",
-          include: [
-            {
-              model: JobPosting,
-              as: "job_posting",
-              include: [{ model: Company, as: "company" }],
-            },
-          ],
+          model: JobPosting,
+          as: "job_posting",
+          include: [{ model: Company, as: "company" }],
         },
       ],
+    });
+
+    const placementMap = new Map();
+    studentIds.forEach(id => placementMap.set(id, []));
+    placements.forEach(p => {
+      placementMap.get(p.student_id).push(p);
+    });
+
+    const result = students.map(student => {
+      const studentJSON = student.toJSON ? student.toJSON() : student;
+      studentJSON.placements = placementMap.get(studentJSON.id) || [];
+      return studentJSON;
     });
 
     res.status(200).json({
@@ -151,8 +154,7 @@ export const getDepartmentDrives = async (req, res) => {
   try {
     const { departmentId } = req.params;
 
-    // Fetch requester for scoping
-    const requester = await User.findByPk(req.user.userId);
+    const requester = await CoreService.findByPk(req.user.userId);
     if (
       requester.is_placement_coordinator &&
       requester.department_id !== departmentId
@@ -199,19 +201,14 @@ export const getDepartmentDrives = async (req, res) => {
           studentWhere.batch_year = { [Op.in]: eligibility.batch_ids };
         }
 
-        // Count eligible students in this department
-        const eligibleCount = await User.count({ where: studentWhere });
+        const eligibleCount = await CoreService.count({ where: studentWhere });
+
+        const eligibleStudentIdsRaw = await CoreService.findAll({ where: studentWhere, attributes: ["id"] });
+        const eligibleStudentIds = eligibleStudentIdsRaw.map(s => s.id);
 
         // Count those who applied
         const appliedCount = await StudentApplication.count({
-          where: { drive_id: drive.id },
-          include: [
-            {
-              model: User,
-              as: "student",
-              where: studentWhere,
-            },
-          ],
+          where: { drive_id: drive.id, student_id: { [Op.in]: eligibleStudentIds } },
         });
 
         const driveData = drive.toJSON();
@@ -243,8 +240,7 @@ export const getDriveStudentMatrix = async (req, res) => {
   try {
     const { departmentId, driveId } = req.params;
 
-    // Scoping
-    const requester = await User.findByPk(req.user.userId);
+    const requester = await CoreService.findByPk(req.user.userId);
     if (
       requester.is_placement_coordinator &&
       requester.department_id !== departmentId
@@ -273,7 +269,7 @@ export const getDriveStudentMatrix = async (req, res) => {
       studentWhere.batch_year = { [Op.in]: eligibility.batch_ids };
     }
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where: studentWhere,
       attributes: [
         "id",
@@ -284,23 +280,25 @@ export const getDriveStudentMatrix = async (req, res) => {
         "batch_year",
         "section",
       ],
-      include: [
-        {
-          model: StudentApplication,
-          as: "placement_applications",
-          where: { drive_id: driveId },
-          required: false,
-        },
-      ],
       order: [
         ["batch_year", "ASC"],
         ["first_name", "ASC"],
       ],
     });
 
+    const studentIds = students.map(s => s.id);
+
+    const applications = await StudentApplication.findAll({
+      where: { drive_id: driveId, student_id: { [Op.in]: studentIds } }
+    });
+
+    const applicationMap = new Map();
+    applications.forEach(app => applicationMap.set(app.student_id, app));
+
     // 3. Map status
     const result = students.map((student) => {
-      const application = student.placement_applications?.[0];
+      const studentJSON = student.toJSON ? student.toJSON() : student;
+      const application = applicationMap.get(studentJSON.id);
       return {
         id: student.id,
         name: `${student.first_name} ${student.last_name}`,
@@ -331,8 +329,7 @@ export const getDepartmentDriveDetail = async (req, res) => {
   try {
     const { departmentId, driveId } = req.params;
 
-    // Scoping
-    const requester = await User.findByPk(req.user.userId);
+    const requester = await CoreService.findByPk(req.user.userId);
     if (
       requester.is_placement_coordinator &&
       requester.department_id !== departmentId
@@ -357,16 +354,25 @@ export const getDepartmentDriveDetail = async (req, res) => {
           model: DriveRound,
           as: "rounds",
         },
-        {
-          model: User,
-          as: "coordinator",
-          attributes: ["id", "first_name", "last_name", "email"],
-        },
       ],
     });
 
     if (!drive) {
       return res.status(404).json({ success: false, error: "Drive not found" });
+    }
+
+    const driveJson = drive.toJSON();
+    if (driveJson.coordinator_id) {
+      const userMap = await CoreService.getUserMapByIds([driveJson.coordinator_id]);
+      const user = userMap.get(driveJson.coordinator_id);
+      if (user) {
+        driveJson.coordinator = {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+        };
+      }
     }
 
     // 2. Verify eligibility for this department
@@ -383,7 +389,7 @@ export const getDepartmentDriveDetail = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: drive,
+      data: driveJson,
     });
   } catch (error) {
     logger.error("Error fetching department drive detail:", error);

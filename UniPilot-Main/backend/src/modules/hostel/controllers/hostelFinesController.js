@@ -1,7 +1,27 @@
 import { sequelize } from "../../../config/database.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import feeLedgerService from "../../fees/services/feeLedgerService.js";
 import { HostelFine } from "../models/index.js";
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
+    }
+  });
+};
 
 
 // @desc    Issue a fine to a hostel student
@@ -15,7 +35,7 @@ export const issueFine = async (req, res) => {
       req.body;
 
     // Validate student exists
-    const student = await User.findByPk(student_id);
+    const student = await CoreService.findByPk(student_id);
     if (!student) {
       await transaction.rollback();
       return res.status(404).json({ error: "Student not found" });
@@ -77,20 +97,10 @@ export const issueFine = async (req, res) => {
     await transaction.commit();
 
     // Fetch with associations
-    const fineWithDetails = await HostelFine.findByPk(fine.id, {
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "email", "student_id"],
-        },
-        {
-          model: User,
-          as: "issued_by_user",
-          attributes: ["id", "first_name", "last_name"],
-        },
-      ],
-    });
+    const fineWithDetails = await HostelFine.findByPk(fine.id);
+
+    await hydrateListWithUser(fineWithDetails, "student_id", "student", ["id", "first_name", "last_name", "email", "student_id"]);
+    await hydrateListWithUser(fineWithDetails, "issued_by", "issued_by_user", ["id", "first_name", "last_name"]);
 
     res.status(201).json({
       message: "Fine issued successfully and added to student's ledger",
@@ -119,22 +129,13 @@ export const getAllFines = async (req, res) => {
 
     const { rows: fines, count } = await HostelFine.findAndCountAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "email", "student_id"],
-        },
-        {
-          model: User,
-          as: "issued_by_user",
-          attributes: ["id", "first_name", "last_name"],
-        },
-      ],
       order: [["issued_date", "DESC"]],
       limit: parseInt(limit),
       offset,
     });
+
+    await hydrateListWithUser(fines, "student_id", "student", ["id", "first_name", "last_name", "email", "student_id"]);
+    await hydrateListWithUser(fines, "issued_by", "issued_by_user", ["id", "first_name", "last_name"]);
 
     res.json({
       fines,
@@ -159,15 +160,10 @@ export const getStudentFines = async (req, res) => {
 
     const fines = await HostelFine.findAll({
       where: { student_id: studentId },
-      include: [
-        {
-          model: User,
-          as: "issued_by_user",
-          attributes: ["id", "first_name", "last_name"],
-        },
-      ],
       order: [["issued_date", "DESC"]],
     });
+
+    await hydrateListWithUser(fines, "issued_by", "issued_by_user", ["id", "first_name", "last_name"]);
 
     res.json({ fines });
   } catch (error) {

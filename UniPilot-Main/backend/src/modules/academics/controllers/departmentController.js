@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import logger from "../../../utils/logger.js";
 import { Department } from "../models/index.js";
-import { Role, User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 
 
 
@@ -23,17 +23,6 @@ export const getAllDepartments = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: "hod",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "profile_picture",
-          ],
-        },
-        {
           model: Department,
           as: "parentDepartment",
           attributes: ["id", "name", "code"],
@@ -42,10 +31,23 @@ export const getAllDepartments = async (req, res) => {
       order: [["name", "ASC"]],
     });
 
+    const hodIds = [...new Set(departments.map(d => d.hod_id).filter(Boolean))];
+    const hodMap = await CoreService.getUserMapByIds(hodIds, {
+      attributes: ["id", "first_name", "last_name", "email", "profile_picture"]
+    });
+
+    const enrichedDepartments = departments.map(dept => {
+      const deptJSON = dept.toJSON ? dept.toJSON() : dept;
+      if (deptJSON.hod_id) {
+        deptJSON.hod = hodMap.get(deptJSON.hod_id) || null;
+      }
+      return deptJSON;
+    });
+
     res.status(200).json({
       success: true,
-      count: departments.length,
-      data: departments,
+      count: enrichedDepartments.length,
+      data: enrichedDepartments,
     });
   } catch (error) {
     logger.error("Error in getAllDepartments:", error);
@@ -64,17 +66,6 @@ export const getDepartment = async (req, res) => {
     const department = await Department.findByPk(req.params.id, {
       include: [
         {
-          model: User,
-          as: "hod",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "profile_picture",
-          ],
-        },
-        {
           model: Department,
           as: "parentDepartment",
           attributes: ["id", "name", "code"],
@@ -89,9 +80,17 @@ export const getDepartment = async (req, res) => {
       });
     }
 
+    const deptJSON = department.toJSON ? department.toJSON() : department;
+    if (deptJSON.hod_id) {
+      const hod = await CoreService.findByPk(deptJSON.hod_id, {
+        attributes: ["id", "first_name", "last_name", "email", "profile_picture"]
+      });
+      deptJSON.hod = hod || null;
+    }
+
     res.status(200).json({
       success: true,
-      data: department,
+      data: deptJSON,
     });
   } catch (error) {
     logger.error("Error in getDepartment:", error);
@@ -111,11 +110,11 @@ export const createDepartment = async (req, res) => {
 
     // Automatic HOD Promotion
     if (department.hod_id) {
-      const hodUser = await User.findByPk(department.hod_id, {
-        include: [{ model: Role, as: "role_data" }],
+      const hodUser = await CoreService.findByPk(department.hod_id, {
+        include: ["role_data"],
       });
-      if (hodUser && hodUser.role_data.slug === "faculty") {
-        const hodRole = await Role.findOne({ where: { slug: "hod" } });
+      if (hodUser && hodUser.role_data && hodUser.role_data.slug === "faculty") {
+        const hodRole = await CoreService.findOneRole({ where: { slug: "hod" } });
         if (hodRole) {
           await hodUser.update({
             role_id: hodRole.id,
@@ -168,17 +167,17 @@ export const updateDepartment = async (req, res) => {
 
     // Handle HOD Role Changes
     if (previousHodId !== newHodId) {
-      const facultyRole = await Role.findOne({ where: { slug: "faculty" } });
-      const hodRole = await Role.findOne({ where: { slug: "hod" } });
+      const facultyRole = await CoreService.findOneRole({ where: { slug: "faculty" } });
+      const hodRole = await CoreService.findOneRole({ where: { slug: "hod" } });
 
       // 1. Demote Old HOD (if exists and hasn't been reassigned elsewhere - simplified logic: demote if role is HOD)
       // Note: Realistically we should check if they are HOD of another dept before demoting,
       // but assuming 1 HOD per dept and 1 person per role mostly.
       if (previousHodId) {
-        const oldHod = await User.findByPk(previousHodId, {
-          include: [{ model: Role, as: "role_data" }],
+        const oldHod = await CoreService.findByPk(previousHodId, {
+          include: ["role_data"],
         });
-        if (oldHod && oldHod.role_data.slug === "hod") {
+        if (oldHod && oldHod.role_data && oldHod.role_data.slug === "hod") {
           // Check if they are HOD of any *other* department
           const otherDepts = await Department.count({
             where: {
@@ -199,10 +198,10 @@ export const updateDepartment = async (req, res) => {
 
       // 2. Promote New HOD
       if (newHodId) {
-        const newHod = await User.findByPk(newHodId, {
-          include: [{ model: Role, as: "role_data" }],
+        const newHod = await CoreService.findByPk(newHodId, {
+          include: ["role_data"],
         });
-        if (newHod && newHod.role_data.slug === "faculty" && hodRole) {
+        if (newHod && newHod.role_data && newHod.role_data.slug === "faculty" && hodRole) {
           await newHod.update({
             role_id: hodRole.id,
             role: "hod",
@@ -254,12 +253,12 @@ export const deleteDepartment = async (req, res) => {
 
     // Demote HOD if department is deleted
     if (currentHodId) {
-      const facultyRole = await Role.findOne({ where: { slug: "faculty" } });
-      const oldHod = await User.findByPk(currentHodId, {
-        include: [{ model: Role, as: "role_data" }],
+      const facultyRole = await CoreService.findOneRole({ where: { slug: "faculty" } });
+      const oldHod = await CoreService.findByPk(currentHodId, {
+        include: ["role_data"],
       });
 
-      if (oldHod && oldHod.role_data.slug === "hod") {
+      if (oldHod && oldHod.role_data && oldHod.role_data.slug === "hod") {
         // Check if they are HOD of any *other* department
         const otherDepts = await Department.count({
           where: { hod_id: currentHodId }, // department already destroyed, so simple check

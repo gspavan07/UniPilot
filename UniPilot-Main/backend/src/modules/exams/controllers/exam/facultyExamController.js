@@ -1,6 +1,6 @@
 import logger from "../../../../utils/logger.js";
 import { ExamCycle, ExamTimetable } from "../../models/index.js";
-import { Course, Regulation } from "../../../academics/models/index.js";
+import AcademicService from "../../../academics/services/index.js";
 
 /**
  * Get assigned exams for the logged-in faculty
@@ -18,11 +18,6 @@ async function getAssignedExams(req, res) {
             },
             include: [
                 {
-                    model: Course,
-                    as: "course",
-                    attributes: ["id", "name", "code", "department_id", "course_type"],
-                },
-                {
                     model: ExamCycle,
                     as: "exam_cycle",
                     attributes: ["id", "cycle_name", "status", "regulation_id", "cycle_type"],
@@ -39,24 +34,41 @@ async function getAssignedExams(req, res) {
 
         // Fetch Regulation details (exam_configuration) for each unique regulation ID
         const regulationIds = [
-            ...new Set(exams.map((e) => e.exam_cycle.regulation_id)),
+            ...new Set(
+                exams.map((e) => e.exam_cycle?.regulation_id).filter(Boolean),
+            ),
         ];
 
-        const regulations = await Regulation.findAll({
-            where: { id: regulationIds },
-            attributes: ["id", "exam_configuration"],
-        });
+        const courseIds = [
+            ...new Set(exams.map((e) => e.course_id).filter(Boolean)),
+        ];
 
-        const regulationMap = {};
-        regulations.forEach(r => {
-            regulationMap[r.id] = r.exam_configuration;
-        });
+        const [regulations, courses] = await Promise.all([
+            AcademicService.getRegulationsByIds(regulationIds, {
+                attributes: ["id", "exam_configuration"],
+                raw: true,
+            }),
+            AcademicService.getCoursesByIds(courseIds, {
+                attributes: ["id", "name", "code", "department_id", "course_type"],
+                raw: true,
+            }),
+        ]);
+
+        const regulationMap = new Map(
+            regulations.map((r) => [r.id, r.exam_configuration]),
+        );
+        const courseMap = new Map(courses.map((c) => [c.id, c]));
 
         // Attach exam configuration to each exam entry
         const examsWithConfig = exams.map(exam => {
             const examJson = exam.toJSON();
-            const regId = exam.exam_cycle.regulation_id;
-            examJson.exam_configuration = regulationMap[regId] || null;
+            const regId = exam.exam_cycle?.regulation_id;
+            examJson.course = examJson.course_id
+                ? courseMap.get(examJson.course_id) || null
+                : null;
+            examJson.exam_configuration = regId
+                ? regulationMap.get(regId) || null
+                : null;
             return examJson;
         });
 

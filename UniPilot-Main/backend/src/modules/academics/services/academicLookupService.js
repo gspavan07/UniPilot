@@ -50,6 +50,20 @@ export const getRegulationById = async (
   return Regulation.findByPk(regulationId, options);
 };
 
+export const updateRegulationExamConfiguration = async (
+  regulationId,
+  examConfiguration,
+  { transaction } = {},
+) => {
+  if (!regulationId) return null;
+  const regulation = await Regulation.findByPk(regulationId, { transaction });
+  if (!regulation) return null;
+  regulation.exam_configuration = examConfiguration;
+  regulation.changed("exam_configuration", true);
+  await regulation.save({ transaction });
+  return regulation;
+};
+
 export const getCourseById = async (
   courseId,
   { attributes = DEFAULT_COURSE_ATTRIBUTES, transaction, raw = false } = {},
@@ -153,6 +167,21 @@ export const listPrograms = async ({
   return Program.findAll(options);
 };
 
+export const listDistinctDegrees = async ({
+  where = {},
+  transaction,
+} = {}) => {
+  const options = {
+    attributes: [
+      [Program.sequelize.fn("DISTINCT", Program.sequelize.col("degree_type")), "degree_type"],
+    ],
+    where,
+    raw: true,
+    transaction,
+  };
+  return Program.findAll(options);
+};
+
 export const listDepartments = async ({
   where = {},
   attributes = DEFAULT_DEPARTMENT_ATTRIBUTES,
@@ -174,6 +203,9 @@ export const countDepartments = async ({ where = {}, transaction } = {}) =>
 export const countPrograms = async ({ where = {}, transaction } = {}) =>
   Program.count({ where, transaction });
 
+export const countCourses = async ({ where = {}, transaction } = {}) =>
+  Course.count({ where, transaction });
+
 export const listCourses = async ({
   where = {},
   attributes = DEFAULT_COURSE_ATTRIBUTES,
@@ -187,6 +219,22 @@ export const listCourses = async ({
   const options = { where, raw, transaction };
   if (resolvedAttributes) options.attributes = resolvedAttributes;
   return Course.findAll(options);
+};
+
+export const listRegulations = async ({
+  where = {},
+  attributes = DEFAULT_REGULATION_ATTRIBUTES,
+  transaction,
+  raw = true,
+  order = [["academic_year", "DESC"]],
+} = {}) => {
+  const resolvedAttributes = resolveAttributes(
+    attributes,
+    DEFAULT_REGULATION_ATTRIBUTES,
+  );
+  const options = { where, raw, transaction, order };
+  if (resolvedAttributes) options.attributes = resolvedAttributes;
+  return Regulation.findAll(options);
 };
 
 export const getProgramMapByIds = async (

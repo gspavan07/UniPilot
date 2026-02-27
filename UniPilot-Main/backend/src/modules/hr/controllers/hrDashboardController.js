@@ -1,8 +1,8 @@
 import { Op } from "sequelize";
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
-import { Course, Department, LeaveRequest, Program, Timetable, TimetableSlot } from "../../academics/models/index.js";
-import { Role, User } from "../../core/models/index.js";
+import AcademicService from "../../academics/services/index.js";
+import CoreService from "../../core/services/index.js";
 import { Payslip, SalaryStructure, StaffAttendance } from "../models/index.js";
 
 // @desc    Get All HR Dashboard Stats (Admin/HR only)
@@ -13,85 +13,98 @@ export const getDashboardStats = async (req, res) => {
     const today = new Date().toLocaleDateString("en-CA");
 
     // 1. Workforce Distribution by Department (Staff only)
-    const workforceMix = await User.findAll({
-      attributes: [
-        [sequelize.col("department.name"), "name"],
-        [sequelize.fn("COUNT", sequelize.col("User.id")), "value"],
-      ],
-      include: [
-        {
-          model: Department,
-          as: "department",
-          attributes: [],
-        },
-      ],
+    const staffUsers = await CoreService.findAll({
       where: {
         role: { [Op.ne]: "student" },
         is_active: true,
       },
-      group: [sequelize.col("department.name")],
-      raw: true,
+      attributes: ["id", "department_id"],
     });
+    const staffIds = staffUsers.map((user) => user.id);
+    const departmentIds = [
+      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const departments = await AcademicService.getDepartmentsByIds(
+      departmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const departmentMap = new Map(
+      departments.map((department) => [department.id, department]),
+    );
+
+    const workforceCountMap = staffUsers.reduce((acc, user) => {
+      const deptName =
+        user.department_id && departmentMap.get(user.department_id)
+          ? departmentMap.get(user.department_id).name
+          : "Unassigned";
+      acc[deptName] = (acc[deptName] || 0) + 1;
+      return acc;
+    }, {});
+
+    const workforceMix = Object.entries(workforceCountMap).map(
+      ([name, value]) => ({
+        name,
+        value,
+      }),
+    );
 
     // 2. Today's Attendance Snapshot
-    const totalStaff = await User.count({
-      where: {
-        role: { [Op.ne]: "student" },
-        is_active: true,
-      },
-    });
+    const totalStaff = staffUsers.length;
 
     const presentToday = await StaffAttendance.count({
       where: {
         date: today,
         status: "present",
+        user_id: { [Op.in]: staffIds },
       },
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: {
-            role: { [Op.ne]: "student" },
-            is_active: true,
-          },
-          required: true,
-        },
-      ],
     });
 
     const onLeaveToday = await StaffAttendance.count({
       where: {
         date: today,
         status: "leave",
+        user_id: { [Op.in]: staffIds },
       },
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: {
-            role: { [Op.ne]: "student" },
-            is_active: true,
-          },
-          required: true,
-        },
-      ],
     });
 
     // 3. Pending Approvals
-    const pendingLeaves = await LeaveRequest.findAll({
+    const pendingLeaves = await AcademicService.listLeaveRequests({
       where: { status: "pending" },
       limit: 5,
       order: [["created_at", "DESC"]],
-      include: [
-        {
-          model: User,
-          as: "applicant",
-          attributes: ["id", "first_name", "last_name", "role", "employee_id"],
-          include: [
-            { model: Department, as: "department", attributes: ["name"] },
-          ],
-        },
-      ],
+    });
+
+    const applicantIds = [
+      ...new Set(pendingLeaves.map((leave) => leave.student_id).filter(Boolean)),
+    ];
+    const applicants = await CoreService.getUsersByIds(applicantIds, {
+      attributes: ["id", "first_name", "last_name", "role", "employee_id", "department_id"],
+    });
+    const applicantMap = new Map(
+      applicants.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+    const applicantDeptIds = [
+      ...new Set(applicants.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const applicantDepartments = await AcademicService.getDepartmentsByIds(
+      applicantDeptIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const applicantDeptMap = new Map(
+      applicantDepartments.map((department) => [department.id, department]),
+    );
+    const pendingLeavesEnriched = pendingLeaves.map((leave) => {
+      const leaveJson = leave.toJSON?.() ?? leave;
+      const applicant = applicantMap.get(leave.student_id);
+      leaveJson.applicant = applicant
+        ? {
+            ...applicant,
+            department: applicant.department_id
+              ? applicantDeptMap.get(applicant.department_id) || null
+              : null,
+          }
+        : null;
+      return leaveJson;
     });
 
     // 4. Payroll Snapshot (Current Month)
@@ -124,21 +137,10 @@ export const getDashboardStats = async (req, res) => {
           "present_count",
         ],
       ],
-      include: [
-        {
-          model: User,
-          as: "staff",
-          attributes: [],
-          where: {
-            role: { [Op.ne]: "student" },
-            is_active: true,
-          },
-          required: true,
-        },
-      ],
       where: {
         date: { [Op.in]: last7Days },
         status: "present",
+        user_id: { [Op.in]: staffIds },
       },
       group: ["date"],
       order: [["date", "ASC"]],
@@ -184,7 +186,7 @@ export const getDashboardStats = async (req, res) => {
           value: parseInt(item.value),
         })),
         attendanceTrend: trend,
-        pendingLeaves,
+        pendingLeaves: pendingLeavesEnriched,
       },
     });
   } catch (error) {
@@ -201,7 +203,9 @@ export const getHodDashboardStats = async (req, res) => {
     const { userId } = req.user;
 
     // Find User's department
-    const user = await User.findByPk(userId);
+    const user = await CoreService.findByPk(userId, {
+      attributes: ["id", "department_id"],
+    });
     if (!user || !user.department_id) {
       return res
         .status(400)
@@ -209,15 +213,17 @@ export const getHodDashboardStats = async (req, res) => {
     }
 
     const departmentId = user.department_id;
-    const department = await Department.findByPk(departmentId);
+    const department = await AcademicService.getDepartmentById(departmentId, {
+      attributes: ["id", "name"],
+    });
 
     // 1. Total Students in Department
-    const totalStudents = await User.count({
+    const totalStudents = await CoreService.count({
       where: { department_id: departmentId, role: "student", is_active: true },
     });
 
     // 2. Total Faculty in Department
-    const totalFaculty = await User.count({
+    const totalFaculty = await CoreService.count({
       where: {
         department_id: departmentId,
         role: { [Op.in]: ["faculty", "hod"] },
@@ -226,53 +232,78 @@ export const getHodDashboardStats = async (req, res) => {
     });
 
     // 3. Total Courses in Department
-    const totalCourses = await Course.count({
+    const totalCourses = await AcademicService.countCourses({
       where: { department_id: departmentId },
     });
 
     // 4. Classes Today in Department
     // Get program IDs for timetable filtering
-    const programs = await Program.findAll({
+    const programs = await AcademicService.listPrograms({
       where: { department_id: departmentId },
       attributes: ["id"],
+      raw: true,
     });
     const programIds = programs.map((p) => p.id);
 
     const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-    const activeClasses = await TimetableSlot.count({
-      include: [
-        {
-          model: Timetable,
-          as: "timetable",
-          where: { program_id: { [Op.in]: programIds }, is_active: true },
-          required: true,
-        },
-      ],
-      where: { day_of_week: today },
+    const timetables = await AcademicService.listTimetables({
+      where: { program_id: { [Op.in]: programIds }, is_active: true },
+      attributes: ["id", "section", "semester", "program_id"],
+      raw: true,
     });
+    const timetableIds = timetables.map((timetable) => timetable.id);
+
+    const activeClasses = timetableIds.length
+      ? await AcademicService.countTimetableSlots({
+          where: { day_of_week: today, timetable_id: { [Op.in]: timetableIds } },
+        })
+      : 0;
 
     // 5. Recent Activity (Timetable changes & New Students)
-    const recentStudents = await User.findAll({
+    const recentStudents = await CoreService.findAll({
       where: { department_id: departmentId, role: "student" },
       limit: 3,
       order: [["created_at", "DESC"]],
       attributes: ["first_name", "last_name", "created_at"],
     });
 
-    const recentTimetableSlots = await TimetableSlot.findAll({
-      include: [
-        {
-          model: Timetable,
-          as: "timetable",
-          where: { program_id: { [Op.in]: programIds } },
-          attributes: ["section", "semester"],
-          required: true,
-        },
-        { model: Course, as: "course", attributes: ["name", "code"] },
-      ],
-      limit: 3,
-      order: [["created_at", "DESC"]],
-    });
+    const recentTimetableSlots = timetableIds.length
+      ? await AcademicService.listTimetableSlots({
+          where: { timetable_id: { [Op.in]: timetableIds } },
+          limit: 3,
+          order: [["created_at", "DESC"]],
+        })
+      : [];
+
+    const recentCourseIds = [
+      ...new Set(
+        recentTimetableSlots.map((slot) => slot.course_id).filter(Boolean),
+      ),
+    ];
+    const recentTimetableIds = [
+      ...new Set(
+        recentTimetableSlots.map((slot) => slot.timetable_id).filter(Boolean),
+      ),
+    ];
+
+    const [recentCourses, recentTimetables] = await Promise.all([
+      AcademicService.getCoursesByIds(recentCourseIds, {
+        attributes: ["id", "name", "code"],
+        raw: true,
+      }),
+      AcademicService.listTimetables({
+        where: { id: { [Op.in]: recentTimetableIds } },
+        attributes: ["id", "section", "semester"],
+        raw: true,
+      }),
+    ]);
+
+    const recentCourseMap = new Map(
+      recentCourses.map((course) => [course.id, course]),
+    );
+    const recentTimetableMap = new Map(
+      recentTimetables.map((timetable) => [timetable.id, timetable]),
+    );
 
     // Merge and format updates
     const recentUpdates = [
@@ -282,12 +313,17 @@ export const getHodDashboardStats = async (req, res) => {
         message: `${s.first_name} ${s.last_name} joined the department.`,
         time: s.created_at || s.createdAt || new Date(),
       })),
-      ...recentTimetableSlots.map((slot) => ({
-        type: "TIMETABLE",
-        title: "Timetable Updated",
-        message: `${slot.course?.name || "Activity"} scheduled for Sem ${slot.timetable.semester} - Sec ${slot.timetable.section}`,
-        time: slot.created_at || slot.createdAt || new Date(),
-      })),
+      ...recentTimetableSlots.map((slot) => {
+        const course = recentCourseMap.get(slot.course_id);
+        const timetable = recentTimetableMap.get(slot.timetable_id);
+        return {
+          type: "TIMETABLE",
+          title: "Timetable Updated",
+          message: `${course?.name || "Activity"} scheduled for Sem ${timetable?.semester || "-"} - Sec ${timetable?.section || "-"}`,
+          time: slot.created_at || slot.createdAt || new Date(),
+        };
+      }),
+      
     ].sort((a, b) => new Date(b.time) - new Date(a.time));
 
     res.status(200).json({

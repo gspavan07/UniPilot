@@ -2,8 +2,9 @@ import { sequelize } from "../../../../config/database.js";
 import logger from "../../../../utils/logger.js";
 import { Op } from "sequelize";
 import { ExamCycle, ExamTimetable } from "../../models/index.js";
-import { Course, Program } from "../../../academics/models/index.js";
-import { User } from "../../../core/models/index.js";
+import AcademicService from "../../../academics/services/index.js";
+import CoreService from "../../../core/services/index.js";
+import SettingsService from "../../../settings/services/index.js";
 
 /**
  * Get all timetables for a cycle with optional program filter
@@ -26,46 +27,54 @@ async function getTimetablesByCycle(req, res) {
 
     const timetables = await ExamTimetable.findAll({
       where,
-      include: [
-        {
-          model: Course,
-          as: "course",
-          attributes: ["id", "name", "code", "department_id"],
-        },
-        {
-          model: User,
-          as: "assigned_faculty",
-          attributes: ["id", "first_name", "last_name", "department_id"],
-        },
-      ],
       order: [
         ["exam_date", "ASC"],
         ["start_time", "ASC"],
       ],
     });
 
-    // Manually fetch program details for all unique program IDs
-    const allProgramIds = new Set();
+    const courseIds = new Set();
+    const facultyIds = new Set();
+    const programIds = new Set();
+
     timetables.forEach((timetable) => {
+      if (timetable.course_id) courseIds.add(timetable.course_id);
+      if (timetable.assigned_faculty_id)
+        facultyIds.add(timetable.assigned_faculty_id);
       if (timetable.program_id && Array.isArray(timetable.program_id)) {
-        timetable.program_id.forEach((pid) => allProgramIds.add(pid));
+        timetable.program_id.forEach((pid) => programIds.add(pid));
       }
     });
 
-    const programs = await Program.findAll({
-      where: { id: Array.from(allProgramIds) },
-      attributes: ["id", "name", "code"],
-    });
+    const [courses, programs, faculty] = await Promise.all([
+      AcademicService.getCoursesByIds([...courseIds], {
+        attributes: ["id", "name", "code", "department_id"],
+        raw: true,
+      }),
+      AcademicService.getProgramsByIds([...programIds], {
+        attributes: ["id", "name", "code"],
+        raw: true,
+      }),
+      CoreService.getUsersByIds([...facultyIds], {
+        attributes: ["id", "first_name", "last_name", "department_id"],
+      }),
+    ]);
 
-    const programMap = {};
-    programs.forEach((p) => {
-      programMap[p.id] = p;
-    });
+    const courseMap = new Map(courses.map((course) => [course.id, course]));
+    const programMap = new Map(programs.map((program) => [program.id, program]));
+    const facultyMap = new Map(
+      faculty.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
 
-    // Attach program details to each timetable
     const timetablesWithPrograms = timetables.map((timetable) => {
       const tt = timetable.toJSON();
-      tt.programs = (tt.program_id || []).map((pid) => programMap[pid]);
+      tt.course = tt.course_id ? courseMap.get(tt.course_id) || null : null;
+      tt.assigned_faculty = tt.assigned_faculty_id
+        ? facultyMap.get(tt.assigned_faculty_id) || null
+        : null;
+      tt.programs = (tt.program_id || [])
+        .map((pid) => programMap.get(pid))
+        .filter(Boolean);
       return tt;
     });
 
@@ -257,31 +266,26 @@ async function autoGenerateTimetable(req, res) {
     console.log(cycle);
 
     // Get all programs for this degree
-    const programs = await sequelize.query(
-      `SELECT id, name, code FROM programs WHERE degree_type = :degree AND is_active = true`,
-      {
-        replacements: { degree: cycle.degree },
-        type: sequelize.QueryTypes.SELECT,
-      },
-    );
+    const programs = await AcademicService.listPrograms({
+      where: { degree_type: cycle.degree, is_active: true },
+      attributes: ["id", "name", "code"],
+      raw: true,
+    });
 
     // Get regulation with course_list
-    const regulation = await sequelize.query(
-      `SELECT id, name, courses_list FROM regulations WHERE id = :regulationId`,
-      {
-        replacements: { regulationId: cycle.regulation_id },
-        type: sequelize.QueryTypes.SELECT,
-      },
+    const regulation = await AcademicService.getRegulationById(
+      cycle.regulation_id,
+      { attributes: ["id", "name", "courses_list"] },
     );
 
-    if (!regulation || regulation.length === 0) {
+    if (!regulation) {
       return res.status(404).json({
         success: false,
         error: "Regulation not found",
       });
     }
 
-    const courseList = regulation[0].courses_list || {};
+    const courseList = regulation.courses_list || {};
 
     // Extract course IDs and track which programs they belong to
     const courseIdsSet = new Set();
@@ -312,16 +316,10 @@ async function autoGenerateTimetable(req, res) {
     }
 
     // Get course details for the extracted course IDs
-    const courses = await sequelize.query(
-      `SELECT c.id, c.name, c.code
-       FROM courses c
-       WHERE c.id IN (:courseIds)
-       AND c.is_active = true`,
-      {
-        replacements: { courseIds },
-        type: sequelize.QueryTypes.SELECT,
-      },
-    );
+    const courses = await AcademicService.getCoursesByIds(courseIds, {
+      attributes: ["id", "name", "code"],
+      raw: true,
+    });
 
     // Attach array of program IDs to each course
     const coursesWithPrograms = courses.map((course) => ({
@@ -506,15 +504,11 @@ function groupByCourseCode(courses) {
 
 async function getHolidays(fromDate) {
   try {
-    // Query academic calendar for holidays
-    const holidays = await sequelize.query(
-      `SELECT date FROM holidays WHERE date >= :fromDate`,
-      {
-        replacements: { fromDate },
-        type: sequelize.QueryTypes.SELECT,
-      },
-    );
-    return holidays.map((h) => h.date);
+    const holidays = await SettingsService.listHolidaysFromDate(fromDate, {
+      attributes: ["date"],
+      raw: true,
+    });
+    return holidays.map((holiday) => holiday.date);
   } catch (error) {
     logger.error(
       "Could not fetch holidays, continuing without holiday data",

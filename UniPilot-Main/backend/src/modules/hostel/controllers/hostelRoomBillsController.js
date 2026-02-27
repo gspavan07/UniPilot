@@ -1,8 +1,28 @@
 import { sequelize } from "../../../config/database.js";
 import { Op } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import feeLedgerService from "../../fees/services/feeLedgerService.js";
 import { HostelAllocation, HostelBuilding, HostelFloor, HostelRoom, HostelRoomBill, HostelRoomBillDistribution } from "../models/index.js";
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
+    }
+  });
+};
 
 // @desc    Create a room bill
 // @route   POST /api/hostel/room-bills
@@ -84,24 +104,21 @@ async function distributeBillToStudents(bill, transaction, req = null) {
     },
     include: [
       {
-        model: User,
-        as: "student",
-        attributes: [
-          "id",
-          "first_name",
-          "last_name",
-          "email",
-          "batch_year",
-          "current_semester",
-        ],
-      },
-      {
         model: HostelRoom,
         as: "room",
         attributes: ["id", "room_number"],
       },
     ],
   });
+
+  await hydrateListWithUser(allAllocations, "student_id", "student", [
+    "id",
+    "first_name",
+    "last_name",
+    "email",
+    "batch_year",
+    "current_semester",
+  ]);
 
   // Filter allocations that residency overlaps with billing period
   const allocations = allAllocations.filter((allocation) => {
@@ -300,13 +317,6 @@ export const getRoomBills = async (req, res) => {
         {
           model: HostelRoomBillDistribution,
           as: "distributions",
-          include: [
-            {
-              model: User,
-              as: "student",
-              attributes: ["id", "first_name", "last_name"],
-            },
-          ],
         },
       ],
       order: [
@@ -314,6 +324,12 @@ export const getRoomBills = async (req, res) => {
         ["billing_month", "DESC"],
       ],
     });
+
+    for (const bill of bills) {
+      if (bill.distributions && bill.distributions.length > 0) {
+        await hydrateListWithUser(bill.distributions, "student_id", "student", ["id", "first_name", "last_name"]);
+      }
+    }
 
     res.json({ bills });
   } catch (error) {

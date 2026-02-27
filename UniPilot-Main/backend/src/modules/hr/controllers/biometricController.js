@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { StaffAttendance } from "../models/index.js";
 
 
@@ -32,7 +32,7 @@ export const syncBiometricData = async (req, res) => {
   try {
     // 1. Get all mapped users
     const deviceIds = logs.map((l) => l.device_user_id.toString());
-    const mappedUsers = await User.findAll({
+    const mappedUsers = await CoreService.findAll({
       where: {
         biometric_device_id: {
           [Op.in]: deviceIds,
@@ -128,7 +128,7 @@ export const mapUserToDevice = async (req, res) => {
   const { user_id, biometric_device_id } = req.body;
 
   try {
-    const user = await User.findByPk(user_id);
+    const user = await CoreService.findByPk(user_id);
     if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }

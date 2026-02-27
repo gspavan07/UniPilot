@@ -1,7 +1,7 @@
 import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { Course, Department, Program, Regulation } from "../models/index.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 
 
 
@@ -258,7 +258,7 @@ export const getMyCourses = async (req, res) => {
     const studentId = req.user.userId;
 
     // 1. Get student's program and semester
-    const student = await User.findByPk(studentId);
+    const student = await CoreService.findByPk(studentId);
 
     if (!student || !student.program_id) {
       return res.status(404).json({

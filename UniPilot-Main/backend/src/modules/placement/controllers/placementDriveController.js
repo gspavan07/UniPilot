@@ -1,7 +1,7 @@
 import eligibilityService from "../services/eligibilityService.js";
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { Company, DriveEligibility, DriveRound, JobPosting, Placement, PlacementDrive, StudentApplication } from "../models/index.js";
 
 /**
@@ -34,23 +34,30 @@ export const getDrives = async (req, res) => {
             },
           ],
         },
-        {
-          model: User,
-          as: "coordinator",
-          attributes: ["id", "first_name", "last_name"],
-        },
-        {
-          model: DriveEligibility,
-          as: "eligibility",
-          attributes: ["department_ids"],
-        },
       ],
       order: [["drive_date", "DESC"]],
     });
 
+    const coordinatorIdsRaw = drives.map(d => d.coordinator_id).filter(Boolean);
+    const coordinatorIds = [...new Set(coordinatorIdsRaw)];
+    let coordinatorMap = new Map();
+    if (coordinatorIds.length > 0) {
+      coordinatorMap = await CoreService.getUserMapByIds(coordinatorIds, {
+        attributes: ["id", "first_name", "last_name"]
+      });
+    }
+
+    const drivesJson = drives.map(drive => {
+      const driveData = drive.toJSON ? drive.toJSON() : drive;
+      if (driveData.coordinator_id) {
+        driveData.coordinator = coordinatorMap.get(driveData.coordinator_id) || null;
+      }
+      return driveData;
+    });
+
     // Scoping for Placement Coordinator
-    const requester = await User.findByPk(req.user.userId);
-    let filteredDrives = drives;
+    const requester = await CoreService.findByPk(req.user.userId);
+    let filteredDrives = drivesJson;
 
     if (requester.is_placement_coordinator && requester.department_id) {
       filteredDrives = drives.filter(
@@ -100,11 +107,6 @@ export const getDriveById = async (req, res) => {
           model: DriveRound,
           as: "rounds",
         },
-        {
-          model: User,
-          as: "coordinator",
-          attributes: ["id", "first_name", "last_name", "email", "phone"],
-        },
       ],
     });
 
@@ -118,8 +120,15 @@ export const getDriveById = async (req, res) => {
     // Convert to JSON to add dynamic properties
     let driveData = drive.toJSON();
 
+    if (driveData.coordinator_id) {
+      const userMap = await CoreService.getUserMapByIds([driveData.coordinator_id], {
+        attributes: ["id", "first_name", "last_name", "email", "phone"]
+      });
+      driveData.coordinator = userMap.get(driveData.coordinator_id) || null;
+    }
+
     // If requester is a student, calculate eligibility and application status
-    const student = await User.findByPk(req.user.userId);
+    const student = await CoreService.findByPk(req.user.userId);
     if (student && student.role === "student") {
       const eligibilityRes = await eligibilityService.isStudentEligible(
         req.user.userId,
@@ -419,11 +428,6 @@ export const getDriveApplications = async (req, res) => {
       where: { drive_id: id },
       include: [
         {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id", "email"],
-        },
-        {
           model: Placement,
           as: "placement_records",
         },
@@ -431,9 +435,27 @@ export const getDriveApplications = async (req, res) => {
       order: [["applied_at", "DESC"]],
     });
 
+    const studentIds = applications.map(a => a.student_id).filter(Boolean);
+    const uniqueStudentIds = [...new Set(studentIds)];
+    let studentsMap = new Map();
+
+    if (uniqueStudentIds.length > 0) {
+      studentsMap = await CoreService.getUserMapByIds(uniqueStudentIds, {
+        attributes: ["id", "first_name", "last_name", "student_id", "email"]
+      });
+    }
+
+    const appsJson = applications.map(app => {
+      const appData = app.toJSON ? app.toJSON() : app;
+      if (appData.student_id) {
+        appData.student = studentsMap.get(appData.student_id) || null;
+      }
+      return appData;
+    });
+
     res.status(200).json({
       success: true,
-      data: applications,
+      data: appsJson,
     });
   } catch (error) {
     logger.error("Error fetching drive applications:", error);
@@ -621,16 +643,27 @@ export const getPlacementRecords = async (req, res) => {
     const { id } = req.params; // drive id
     const placements = await Placement.findAll({
       where: { drive_id: id },
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id", "email"],
-        },
-      ],
     });
 
-    res.status(200).json({ success: true, data: placements });
+    const studentIds = placements.map(p => p.student_id).filter(Boolean);
+    const uniqueStudentIds = [...new Set(studentIds)];
+    let studentsMap = new Map();
+
+    if (uniqueStudentIds.length > 0) {
+      studentsMap = await CoreService.getUserMapByIds(uniqueStudentIds, {
+        attributes: ["id", "first_name", "last_name", "student_id", "email"]
+      });
+    }
+
+    const placementsJson = placements.map(p => {
+      const pData = p.toJSON ? p.toJSON() : p;
+      if (pData.student_id) {
+        pData.student = studentsMap.get(pData.student_id) || null;
+      }
+      return pData;
+    });
+
+    res.status(200).json({ success: true, data: placementsJson });
   } catch (error) {
     logger.error("Error fetching placement records:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });

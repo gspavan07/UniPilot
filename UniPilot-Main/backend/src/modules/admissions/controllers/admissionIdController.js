@@ -1,9 +1,8 @@
 import logger from "../../../utils/logger.js";
-import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import { AdmissionConfig } from "../models/index.js";
-import { User } from "../../core/models/index.js";
-import academicLookupService from "../../academics/services/academicLookupService.js";
+import { CoreService } from "../../core/services/index.js";
+import { AcademicService } from "../../academics/services/index.js";
 
 
 // Helper to generate ID
@@ -69,7 +68,7 @@ export const previewBulkIds = async (req, res) => {
     }
 
     // 2. Fetch Program
-    const program = await academicLookupService.getProgramById(program_id, {
+    const program = await AcademicService.getProgramById(program_id, {
       attributes: ["id", "code"],
     });
 
@@ -94,7 +93,7 @@ export const previewBulkIds = async (req, res) => {
     }
 
     // 4. Fetch Students (Temp Only)
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where: {
         role: "student",
         batch_year,
@@ -169,7 +168,7 @@ export const commitBulkIds = async (req, res) => {
     // 1. Update each student
     let lastSequence = 0;
     for (const item of students) {
-      await User.update(
+      await CoreService.update(
         {
           student_id: item.new_id,
           admission_number: item.new_id, // Setting admission number same as Roll No for now?

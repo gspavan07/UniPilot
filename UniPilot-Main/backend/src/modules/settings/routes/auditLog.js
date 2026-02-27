@@ -1,7 +1,7 @@
 import express from "express";
 import { authenticate, checkPermission } from "../../../middleware/auth.js";
 import { Op } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { AuditLog } from "../models/index.js";
 
 
@@ -40,11 +40,20 @@ router.get(
             }
 
             if (search) {
+                const matchingUsers = await CoreService.findAll({
+                    where: { email: { [Op.iLike]: `%${search}%` } },
+                    attributes: ["id"]
+                });
+                const matchingUserIds = matchingUsers.map(u => u.id);
+
                 where[Op.or] = [
                     { action: { [Op.iLike]: `%${search}%` } },
                     { ip_address: { [Op.iLike]: `%${search}%` } },
-                    { "$actor.email$": { [Op.iLike]: `%${search}%` } },
                 ];
+
+                if (matchingUserIds.length > 0) {
+                    where[Op.or].push({ user_id: { [Op.in]: matchingUserIds } });
+                }
             }
 
             if (startDate || endDate) {
@@ -58,23 +67,27 @@ router.get(
 
             const { rows: logs, count: total } = await AuditLog.findAndCountAll({
                 where,
-                include: [
-                    {
-                        model: User,
-                        as: "actor",
-                        attributes: ["id", "first_name", "last_name", "email", "role"],
-                    },
-                ],
                 order: [["created_at", "DESC"]],
                 limit: parseInt(limit, 10),
                 offset,
                 subQuery: false,
             });
 
+            const uniqueUserIds = [...new Set(logs.map(l => l.user_id).filter(Boolean))];
+            const userMap = await CoreService.getUserMapByIds(uniqueUserIds, {
+                attributes: ["id", "first_name", "last_name", "email", "role"]
+            });
+
+            const enrichedLogs = logs.map(log => {
+                const logData = log.toJSON ? log.toJSON() : log;
+                logData.actor = userMap.get(log.user_id) || null;
+                return logData;
+            });
+
             res.json({
                 success: true,
                 data: {
-                    logs,
+                    logs: enrichedLogs,
                     pagination: {
                         total,
                         page: parseInt(page, 10),

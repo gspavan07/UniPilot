@@ -1,7 +1,6 @@
-import { sequelize } from "../../../../config/database.js";
 import logger from "../../../../utils/logger.js";
-import { Program, Regulation } from "../../../academics/models/index.js";
-import { User } from "../../../core/models/index.js";
+import AcademicService from "../../../academics/services/index.js";
+import CoreService from "../../../core/services/index.js";
 
 
 
@@ -11,9 +10,8 @@ import { User } from "../../../core/models/index.js";
  */
 async function getAllRegulations(req, res) {
   try {
-    const regulations = await Regulation.findAll({
+    const regulations = await AcademicService.listRegulations({
       attributes: ["id", "name", "academic_year", "exam_configuration"],
-      order: [["academic_year", "DESC"]],
     });
 
     res.json({ success: true, data: regulations });
@@ -29,22 +27,9 @@ async function getAllRegulations(req, res) {
  */
 async function getAllBatches(req, res) {
   try {
-    const batches = await User.findAll({
-      attributes: [
-        [
-          User.sequelize.fn("DISTINCT", User.sequelize.col("batch_year")),
-          "batch_year",
-        ],
-      ],
-      where: {
-        batch_year: { [sequelize.Sequelize.Op.ne]: null },
-        role: "student",
-      },
-      order: [["batch_year", "DESC"]],
-      raw: true,
+    const batchList = await CoreService.getDistinctBatchYears({
+      role: "student",
     });
-
-    const batchList = batches.map((b) => b.batch_year).filter(Boolean);
 
     res.json({ success: true, data: batchList });
   } catch (error) {
@@ -61,7 +46,9 @@ async function getCourseTypes(req, res) {
   try {
     const { regulationId } = req.params;
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_config"],
+    });
 
     if (!regulation) {
       return res
@@ -87,7 +74,9 @@ async function getCycleTypes(req, res) {
   try {
     const { regulationId, courseType } = req.params;
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_config"],
+    });
 
     if (!regulation) {
       return res
@@ -123,29 +112,17 @@ async function getCurrentSemester(req, res) {
     const { batch } = req.params;
 
     // Get most common current_semester for students in this batch_year
-    const result = await User.findAll({
-      attributes: [
-        "current_semester",
-        [sequelize.fn("COUNT", sequelize.col("current_semester")), "count"],
-      ],
-      where: {
-        batch_year: batch,
-        role: "student",
-        current_semester: { [sequelize.Sequelize.Op.ne]: null },
-      },
-      group: ["current_semester"],
-      order: [[sequelize.literal("count"), "DESC"]],
-      limit: 1,
-      raw: true,
+    const semester = await CoreService.getMostCommonSemesterForBatch(batch, {
+      role: "student",
     });
 
-    if (!result || !result[0]) {
+    if (!semester) {
       return res
         .status(404)
         .json({ success: false, error: "No students found for this batch" });
     }
 
-    res.json({ success: true, data: result[0].current_semester });
+    res.json({ success: true, data: semester });
   } catch (error) {
     logger.error("Get current semester error:", error);
     res.status(500).json({ success: false, error: error.message });
@@ -160,13 +137,14 @@ async function getProgramsByDegree(req, res) {
   try {
     const { degree } = req.params;
 
-    const programs = await Program.findAll({
+    const programs = await AcademicService.listPrograms({
       where: {
         degree_type: degree,
         is_active: true,
       },
       attributes: ["id", "name", "code", "degree_type"],
       order: [["name", "ASC"]],
+      raw: true,
     });
 
     res.json({ success: true, data: programs });
@@ -192,19 +170,9 @@ export default {
  */
 async function getAllDegrees(req, res) {
   try {
-    const degrees = await Program.findAll({
-      attributes: [
-        [
-          sequelize.fn("DISTINCT", sequelize.col("degree_type")),
-          "degree_type",
-        ],
-      ],
-      where: {
-        is_active: true,
-      },
-      raw: true,
+    const degrees = await AcademicService.listDistinctDegrees({
+      where: { is_active: true },
     });
-
     const degreeList = degrees.map((d) => d.degree_type).filter(Boolean);
     res.json({ success: true, data: degreeList });
   } catch (error) {

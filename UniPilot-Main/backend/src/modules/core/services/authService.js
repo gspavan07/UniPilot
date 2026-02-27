@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { Permission, Role, Session, User } from "../models/index.js";
-import { AuditLog } from "../../settings/models/index.js";
+import SettingsService from "../../settings/services/index.js";
 
 
 
@@ -90,13 +90,13 @@ class AuthService {
       });
 
       if (!user) {
-        await AuditLog.create({ action: 'LOGIN_FAIL', details: { reason: 'User not found', email }, ip_address: ipAddress });
+        await SettingsService.log({ action: 'LOGIN_FAIL', details: { reason: 'User not found', email }, req: { headers: { "x-forwarded-for": ipAddress } } });
         throw new Error("Invalid credentials");
       }
 
       // Check if user is active (account lock)
       if (!user.is_active) {
-        await AuditLog.create({ user_id: user.id, action: 'LOGIN_BLOCKED', entity_type: 'User', entity_id: user.id, details: { reason: 'Account deactivated', email }, ip_address: ipAddress });
+        await SettingsService.log({ actor: { id: user.id }, action: 'LOGIN_BLOCKED', entityType: 'User', entityId: user.id, details: { reason: 'Account deactivated', email }, req: { headers: { "x-forwarded-for": ipAddress } } });
         throw new Error("Your account has been deactivated. Please contact your administrator.");
       }
 
@@ -107,7 +107,7 @@ class AuthService {
       );
 
       if (!isValidPassword) {
-        await AuditLog.create({ user_id: user.id, action: 'LOGIN_FAIL', entity_type: 'User', entity_id: user.id, details: { reason: 'Wrong password', email }, ip_address: ipAddress });
+        await SettingsService.log({ actor: { id: user.id }, action: 'LOGIN_FAIL', entityType: 'User', entityId: user.id, details: { reason: 'Wrong password', email }, req: { headers: { "x-forwarded-for": ipAddress } } });
         throw new Error("Invalid credentials");
       }
 
@@ -163,7 +163,7 @@ class AuthService {
       const csrfToken = genCsrfToken();
 
       // Audit log
-      await AuditLog.create({ user_id: user.id, action: 'LOGIN_SUCCESS', entity_type: 'Session', entity_id: sessionId, details: { email: user.email, userAgent }, ip_address: ipAddress });
+      await SettingsService.log({ actor: { id: user.id }, action: 'LOGIN_SUCCESS', entityType: 'Session', entityId: sessionId, details: { email: user.email, userAgent }, req: { headers: { "x-forwarded-for": ipAddress } } });
 
       logger.info(`User logged in: ${user.email} (Remember Me: ${rememberMe})`);
 
@@ -283,7 +283,7 @@ class AuthService {
       );
 
       // Audit log
-      await AuditLog.create({ user_id: user.id, action: 'TOKEN_REFRESH', entity_type: 'Session', entity_id: session.id, details: { userAgent }, ip_address: ipAddress });
+      await SettingsService.log({ actor: { id: user.id }, action: 'TOKEN_REFRESH', entityType: 'Session', entityId: session.id, details: { userAgent }, req: { headers: { "x-forwarded-for": ipAddress } } });
 
       return { accessToken, newRefreshPlain, refreshTTLMs };
     } catch (error) {
@@ -299,7 +299,7 @@ class AuthService {
     if (sessionId) {
       await Session.update({ revoked: true }, { where: { id: sessionId } });
       if (userId) {
-        await AuditLog.create({ user_id: userId, action: 'LOGOUT', entity_type: 'Session', entity_id: sessionId, ip_address: ipAddress });
+        await SettingsService.log({ actor: { id: userId }, action: 'LOGOUT', entityType: 'Session', entityId: sessionId, req: { headers: { "x-forwarded-for": ipAddress } } });
       }
     }
   }
@@ -312,7 +312,7 @@ class AuthService {
       { revoked: true },
       { where: { user_id: userId, id: { [Op.ne]: currentSessionId }, revoked: false } }
     );
-    await AuditLog.create({ user_id: userId, action: 'LOGOUT_ALL', entity_type: 'User', entity_id: userId, details: { sessionsRevoked: revokedCount }, ip_address: ipAddress });
+    await SettingsService.log({ actor: { id: userId }, action: 'LOGOUT_ALL', entityType: 'User', entityId: userId, details: { sessionsRevoked: revokedCount }, req: { headers: { "x-forwarded-for": ipAddress } } });
     return revokedCount;
   }
 
@@ -345,7 +345,7 @@ class AuthService {
         await this.logoutAll(userId, currentSessionId);
       }
 
-      await AuditLog.create({ user_id: userId, action: 'PASSWORD_CHANGE', entity_type: 'User', entity_id: userId, details: { email: user.email } });
+      await SettingsService.log({ actor: { id: userId }, action: 'PASSWORD_CHANGE', entityType: 'User', entityId: userId, details: { email: user.email } });
       logger.info(`Password changed for user: ${user.email}`);
 
       return { message: "Password changed successfully" };

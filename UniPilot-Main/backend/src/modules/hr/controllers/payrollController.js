@@ -1,11 +1,11 @@
 import logger from "../../../utils/logger.js";
 import mailService from "../services/mailService.js";
-import auditService from "../../settings/services/auditService.js";
 import leaveService from "../services/leaveService.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
-import { Department } from "../../academics/models/index.js";
-import { User } from "../../core/models/index.js";
+import AcademicService from "../../academics/services/index.js";
+import CoreService from "../../core/services/index.js";
+import SettingsService from "../../settings/services/index.js";
 import { Payslip, SalaryGrade, SalaryStructure, StaffAttendance } from "../models/index.js";
 
 // Template imports
@@ -116,7 +116,7 @@ export const generatePayslip = async (req, res) => {
     }
 
     // 2. Fetch User (for name etc)
-    const user = await User.findByPk(user_id);
+    const user = await CoreService.findByPk(user_id);
 
     // Helper to calculate actual value from component (Fixed or Percentage)
     const getVal = (comp, basic) => {
@@ -203,29 +203,34 @@ export const getBulkPayrollPreview = async (req, res) => {
       whereUser.department_id = department_id;
     }
 
+    const staffUsers = await CoreService.findAll({
+      where: whereUser,
+      attributes: ["id", "first_name", "last_name", "employee_id", "role", "department_id"],
+    });
+    const staffUserMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+    const staffIds = staffUsers.map((user) => user.id);
+    if (!staffIds.length) {
+      await t.rollback();
+      return res.status(404).json({
+        success: false,
+        error:
+          "No staff found for the selected criteria",
+      });
+    }
+
     const structures = await SalaryStructure.findAll({
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: whereUser,
-          attributes: ["id", "first_name", "last_name", "employee_id", "role"],
-          include: [
-            {
-              model: Department,
-              as: "department",
-              attributes: ["name"],
-            },
-          ],
-        },
-      ],
+      where: {
+        user_id: { [Op.in]: staffIds },
+      },
     });
 
     // Check existing payslips for these users in this period
     const userIds = structures.map((s) => s.user_id);
     const existingPayslips = await Payslip.findAll({
       where: {
-        user_id: userIds,
+        user_id: { [Op.in]: userIds },
         month: parseInt(month),
         year: parseInt(year),
       },
@@ -237,16 +242,35 @@ export const getBulkPayrollPreview = async (req, res) => {
       return acc;
     }, {});
 
-    const previewData = structures.map((s) => ({
-      userId: s.user_id,
-      name: `${s.staff.first_name} ${s.staff.last_name}`,
-      employeeId: s.staff.employee_id,
-      role: s.staff.role,
-      department: s.staff.department?.name || "N/A",
-      basicSalary: s.basic_salary,
-      hasExisting: !!payslipMap[s.user_id],
-      status: payslipMap[s.user_id] || "pending",
-    }));
+    const departmentIds = [
+      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const departments = await AcademicService.getDepartmentsByIds(
+      departmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const departmentMap = new Map(
+      departments.map((department) => [department.id, department]),
+    );
+
+    const previewData = structures
+      .map((s) => {
+        const staff = staffUserMap.get(s.user_id);
+        if (!staff) return null;
+        return {
+          userId: s.user_id,
+          name: `${staff.first_name} ${staff.last_name}`,
+          employeeId: staff.employee_id,
+          role: staff.role,
+          department: staff.department_id
+            ? departmentMap.get(staff.department_id)?.name || "N/A"
+            : "N/A",
+          basicSalary: s.basic_salary,
+          hasExisting: !!payslipMap[s.user_id],
+          status: payslipMap[s.user_id] || "pending",
+        };
+      })
+      .filter(Boolean);
 
     res.status(200).json({
       success: true,
@@ -309,24 +333,28 @@ export const bulkGeneratePayslips = async (req, res) => {
     if (department_id && department_id !== "all")
       whereUser.department_id = department_id;
 
-    const structures = await SalaryStructure.findAll(
-      {
-        include: [
-          {
-            model: User,
-            as: "staff",
-            where: whereUser,
-
-            required: true,
-          },
-          {
-            model: SalaryGrade,
-            as: "grade",
-          },
-        ],
-      },
-      { transaction: t },
+    const staffUsers = await CoreService.findAll({
+      where: whereUser,
+      attributes: ["id", "joining_date"],
+      transaction: t,
+    });
+    const staffUserMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
     );
+    const staffIds = staffUsers.map((user) => user.id);
+
+    const structures = await SalaryStructure.findAll({
+      where: {
+        user_id: { [Op.in]: staffIds },
+      },
+      include: [
+        {
+          model: SalaryGrade,
+          as: "grade",
+        },
+      ],
+      transaction: t,
+    });
 
     if (!structures.length) {
       await t.rollback();
@@ -364,8 +392,9 @@ export const bulkGeneratePayslips = async (req, res) => {
       let effectiveDays = 0;
       let monthDays = endObj.getDate(); // e.g. 28, 30, 31
 
-      if (structure.staff.joining_date) {
-        const joinDate = new Date(structure.staff.joining_date);
+      const staffProfile = staffUserMap.get(structure.user_id);
+      if (staffProfile?.joining_date) {
+        const joinDate = new Date(staffProfile.joining_date);
         // Reset time to ensure strict date comparison
         joinDate.setHours(0, 0, 0, 0);
 
@@ -437,7 +466,7 @@ export const bulkGeneratePayslips = async (req, res) => {
       if (isProrata) {
         breakdown.prorata = {
           is_active: true,
-          joining_date: structure.staff.joining_date,
+          joining_date: staffProfile.joining_date,
           factor: prorataFactor.toFixed(2),
           effective_days: effectiveDays,
           month_days: monthDays,
@@ -487,7 +516,7 @@ export const bulkGeneratePayslips = async (req, res) => {
     await t.commit();
 
     // Audit Log
-    await auditService.log({
+    await SettingsService.log({
       action: "PAYROLL_BULK_GENERATE",
       actor: req.user,
       details: { count: results.length, month, year, department_id },
@@ -540,27 +569,29 @@ export const getPayslips = async (req, res) => {
     if (month) where.month = month;
     if (status) where.status = status;
 
+    let scopedUserIds = null;
     if (department_id && department_id !== "all") {
       userWhere.department_id = department_id;
+      const deptUsers = await CoreService.findAll({
+        where: userWhere,
+        attributes: ["id"],
+      });
+      scopedUserIds = deptUsers.map((user) => user.id);
+      if (scopedUserIds.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+      if (where.user_id) {
+        if (!scopedUserIds.includes(where.user_id)) {
+          return res.status(200).json({ success: true, data: [] });
+        }
+      } else {
+        where.user_id = { [Op.in]: scopedUserIds };
+      }
     }
 
     // 3. Execute Query
     const payslips = await Payslip.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: Object.keys(userWhere).length > 0 ? userWhere : undefined, // Only apply if filters exist
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "employee_id",
-            "department_id",
-          ],
-        },
-      ],
       order: [
         ["year", "DESC"],
         ["month", "DESC"],
@@ -568,7 +599,46 @@ export const getPayslips = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ success: true, data: payslips });
+    const staffIds = [...new Set(payslips.map((payslip) => payslip.user_id))];
+    const staffUsers = await CoreService.getUsersByIds(staffIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "employee_id",
+        "department_id",
+      ],
+    });
+    const staffMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+
+    const departmentIds = [
+      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const departments = await AcademicService.getDepartmentsByIds(
+      departmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const departmentMap = new Map(
+      departments.map((department) => [department.id, department]),
+    );
+
+    const enrichedPayslips = payslips.map((payslip) => {
+      const payslipJson = payslip.toJSON();
+      const staff = staffMap.get(payslip.user_id);
+      payslipJson.staff = staff
+        ? {
+            ...staff,
+            department: staff.department_id
+              ? departmentMap.get(staff.department_id) || null
+              : null,
+          }
+        : null;
+      return payslipJson;
+    });
+
+    res.status(200).json({ success: true, data: enrichedPayslips });
   } catch (error) {
     logger.error("Error fetching payslips:", error);
     res.status(500).json({ error: "Fetch failed" });
@@ -638,7 +708,7 @@ export const upsertSalaryGrade = async (req, res) => {
 export const getPayrollStats = async (req, res) => {
   try {
     // 1. Total Active Staff (Everyone except students)
-    const staffCount = await User.count({
+    const staffCount = await CoreService.count({
       where: {
         role: { [Op.ne]: "student" },
         is_active: true,
@@ -649,7 +719,7 @@ export const getPayrollStats = async (req, res) => {
     const configuredCount = await SalaryStructure.count();
 
     // 3. Department Count
-    const deptCount = await Department.count();
+    const deptCount = await AcademicService.countDepartments();
 
     // 4. Percentage Ready
     const readiness =
@@ -685,25 +755,34 @@ export const exportBankTransferFile = async (req, res) => {
       whereUser.department_id = department_id;
     }
 
+    const staffUsers = await CoreService.findAll({
+      where: whereUser,
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "bank_details",
+        "employee_id",
+      ],
+    });
+    const staffMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+    const staffIds = staffUsers.map((user) => user.id);
+
     const payslips = await Payslip.findAll({
       where: {
         month: parseInt(month),
         year: parseInt(year),
         status: "published", // Only export published slips
+        user_id: { [Op.in]: staffIds },
       },
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: whereUser,
-          attributes: [
-            "first_name",
-            "last_name",
-            "bank_details",
-            "employee_id",
-          ],
-        },
-      ],
+    });
+
+    const enrichedPayslips = payslips.map((payslip) => {
+      const payslipJson = payslip.toJSON();
+      payslipJson.staff = staffMap.get(payslip.user_id) || null;
+      return payslipJson;
     });
 
     if (!payslips.length) {
@@ -714,7 +793,7 @@ export const exportBankTransferFile = async (req, res) => {
     }
 
     // Use template module to generate CSV
-    const csv = generateBankTransferCsv(payslips);
+    const csv = generateBankTransferCsv(enrichedPayslips);
 
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
@@ -754,9 +833,19 @@ export const confirmPayment = async (req, res) => {
         });
       }
 
-      const whereUser = {};
+      let scopedUserIds = null;
       if (department_id && department_id !== "all") {
-        whereUser.department_id = department_id;
+        const deptUsers = await CoreService.findAll({
+          where: { department_id },
+          attributes: ["id"],
+        });
+        scopedUserIds = deptUsers.map((user) => user.id);
+        if (scopedUserIds.length === 0) {
+          await t.rollback();
+          return res
+            .status(404)
+            .json({ error: "No published payslips found to confirm" });
+        }
       }
 
       const slips = await Payslip.findAll({
@@ -764,10 +853,8 @@ export const confirmPayment = async (req, res) => {
           month: parseInt(month),
           year: parseInt(year),
           status: "published",
+          ...(scopedUserIds ? { user_id: { [Op.in]: scopedUserIds } } : {}),
         },
-        include: [
-          { model: User, as: "staff", where: whereUser, attributes: ["id"] },
-        ],
         transaction: t,
       });
       targetIds = slips.map((s) => s.id);
@@ -795,20 +882,24 @@ export const confirmPayment = async (req, res) => {
     // Trigger Email Notifications
     const payslipDetails = await Payslip.findAll({
       where: { id: targetIds },
-      include: [
-        {
-          model: User,
-          as: "staff",
-          attributes: ["first_name", "last_name", "email"],
-        },
-      ],
       transaction: t,
     });
 
+    const staffIds = [
+      ...new Set(payslipDetails.map((ps) => ps.user_id).filter(Boolean)),
+    ];
+    const staffUsers = await CoreService.getUsersByIds(staffIds, {
+      attributes: ["id", "first_name", "last_name", "email"],
+    });
+    const staffMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+
     for (const ps of payslipDetails) {
-      if (ps.staff && ps.staff.email) {
-        mailService.sendPayslipNotification(ps.staff, ps).catch((err) => {
-          logger.error(`Failed to send email to ${ps.staff.email}:`, err);
+      const staff = staffMap.get(ps.user_id);
+      if (staff && staff.email) {
+        mailService.sendPayslipNotification(staff, ps).catch((err) => {
+          logger.error(`Failed to send email to ${staff.email}:`, err);
         });
       }
     }
@@ -816,7 +907,7 @@ export const confirmPayment = async (req, res) => {
     await t.commit();
 
     // Audit Log
-    await auditService.log({
+    await SettingsService.log({
       action: "PAYROLL_PAYOUT",
       actor: req.user,
       details: { count: updatedCount, month, year, department_id },
@@ -851,30 +942,62 @@ export const getPublishStats = async (req, res) => {
     }
 
     // 1. Fetch eligible drafts
+    let scopedUserIds = null;
+    if (Object.keys(whereUser).length > 0) {
+      const deptUsers = await CoreService.findAll({
+        where: whereUser,
+        attributes: ["id"],
+      });
+      scopedUserIds = deptUsers.map((user) => user.id);
+      if (scopedUserIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          stats: {
+            total_drafts: 0,
+            ready_count: 0,
+            not_ready_count: 0,
+          },
+          details: [],
+        });
+      }
+    }
+
     const drafts = await Payslip.findAll({
       where: {
         month: parseInt(month),
         year: parseInt(year),
         status: "draft",
+        ...(scopedUserIds ? { user_id: { [Op.in]: scopedUserIds } } : {}),
       },
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: whereUser,
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "bank_details",
-            "employee_id",
-          ],
-          include: [
-            { model: Department, as: "department", attributes: ["name"] },
-          ],
-        },
+    });
+
+    const staffIds = [
+      ...new Set(drafts.map((draft) => draft.user_id).filter(Boolean)),
+    ];
+    const staffUsers = await CoreService.getUsersByIds(staffIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "bank_details",
+        "employee_id",
+        "department_id",
       ],
     });
+    const staffMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+
+    const departmentIds = [
+      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const departments = await AcademicService.getDepartmentsByIds(
+      departmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const departmentMap = new Map(
+      departments.map((department) => [department.id, department]),
+    );
 
     const total = drafts.length;
     let readyCount = 0;
@@ -882,7 +1005,8 @@ export const getPublishStats = async (req, res) => {
 
     // 2. Validate
     for (const slip of drafts) {
-      const bank = slip.staff?.bank_details || {};
+      const staff = staffMap.get(slip.user_id);
+      const bank = staff?.bank_details || {};
       const missing = [];
 
       const accNum = String(bank.account_number || "").trim();
@@ -897,10 +1021,12 @@ export const getPublishStats = async (req, res) => {
         readyCount++;
       } else {
         notReadyList.push({
-          id: slip.staff.id,
-          employee_id: slip.staff.employee_id,
-          name: `${slip.staff.first_name} ${slip.staff.last_name}`,
-          department: slip.staff.department?.name || "N/A",
+          id: staff?.id || slip.user_id,
+          employee_id: staff?.employee_id,
+          name: staff ? `${staff.first_name} ${staff.last_name}` : "",
+          department: staff?.department_id
+            ? departmentMap.get(staff.department_id)?.name || "N/A"
+            : "N/A",
           missing_fields: missing,
         });
       }
@@ -939,21 +1065,30 @@ export const publishPayslips = async (req, res) => {
       whereUser.department_id = department_id;
     }
 
+    const staffUsers = await CoreService.findAll({
+      where: Object.keys(whereUser).length > 0 ? whereUser : undefined,
+      attributes: ["id", "first_name", "last_name", "bank_details"],
+      transaction: t,
+    });
+    const staffMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+    const staffIds = staffUsers.map((user) => user.id);
+    if (!staffIds.length) {
+      await t.rollback();
+      return res
+        .status(404)
+        .json({ error: "No draft payslips found to publish." });
+    }
+
     // 1. Fetch eligible drafts with user bank details
     const drafts = await Payslip.findAll({
       where: {
         month: parseInt(month),
         year: parseInt(year),
         status: "draft",
+        user_id: { [Op.in]: staffIds },
       },
-      include: [
-        {
-          model: User,
-          as: "staff",
-          where: whereUser,
-          attributes: ["id", "first_name", "last_name", "bank_details"],
-        },
-      ],
       transaction: t,
     });
 
@@ -969,7 +1104,8 @@ export const publishPayslips = async (req, res) => {
 
     // 2. Validate Bank Details
     for (const slip of drafts) {
-      const bank = slip.staff?.bank_details || {};
+      const staff = staffMap.get(slip.user_id);
+      const bank = staff?.bank_details || {};
       const isValid =
         bank.account_number &&
         bank.ifsc_code &&
@@ -980,8 +1116,8 @@ export const publishPayslips = async (req, res) => {
         validIds.push(slip.id);
       } else {
         failedUsers.push({
-          id: slip.staff.id,
-          name: `${slip.staff.first_name} ${slip.staff.last_name}`,
+          id: staff?.id || slip.user_id,
+          name: staff ? `${staff.first_name} ${staff.last_name}` : "",
           reason: "Incomplete Bank Details",
         });
       }
@@ -1008,7 +1144,7 @@ export const publishPayslips = async (req, res) => {
     await t.commit();
 
     // Audit Log
-    await auditService.log({
+    await SettingsService.log({
       action: "PAYROLL_PUBLISH",
       actor: req.user,
       details: {
@@ -1044,19 +1180,33 @@ export const downloadPayslipPdf = async (req, res) => {
     const { id } = req.params;
 
     // 1. Fetch Payslip with details
-    const payslip = await Payslip.findByPk(id, {
-      include: [
-        {
-          model: User,
-          as: "staff",
-          include: [{ model: Department, as: "department" }],
-        },
-      ],
-    });
+    const payslip = await Payslip.findByPk(id);
 
     if (!payslip) {
       return res.status(404).json({ error: "Payslip not found" });
     }
+
+    const staff = await CoreService.findByPk(payslip.user_id, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "employee_id",
+        "department_id",
+      ],
+    });
+    if (!staff) {
+      return res.status(404).json({ error: "Staff record not found" });
+    }
+
+    const department = staff.department_id
+      ? await AcademicService.getDepartmentById(staff.department_id, {
+          attributes: ["id", "name"],
+        })
+      : null;
+
+    const staffPayload = staff.toJSON?.() ?? staff;
+    staffPayload.department = department ? department.toJSON?.() ?? department : null;
 
     // Authorization: Own payslip or HR/Admin
     const isSelf = req.user.userId === payslip.user_id;
@@ -1072,13 +1222,13 @@ export const downloadPayslipPdf = async (req, res) => {
     const monthName = new Date(0, payslip.month - 1).toLocaleString("default", {
       month: "long",
     });
-    const filename = `Payslip_${payslip.staff.employee_id}_${monthName}_${payslip.year}.pdf`;
+    const filename = `Payslip_${staffPayload.employee_id}_${monthName}_${payslip.year}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     // Use template module to generate PDF
-    await generatePayslipPdf(payslip, payslip.staff, res);
+    await generatePayslipPdf(payslip, staffPayload, res);
   } catch (error) {
     console.error("Error generating PDF:", error);
     if (!res.headersSent) {

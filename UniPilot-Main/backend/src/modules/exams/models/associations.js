@@ -5,10 +5,6 @@ import LateFeeSlab from "./LateFeeSlab.js";
 import ExamAuditLog from "./ExamAuditLog.js";
 import ExamFeePayment from "./ExamFeePayment.js";
 import ExamStudentEligibility from "./ExamStudentEligibility.js";
-import { sequelize } from "../../../config/database.js";
-import { Course } from "../../academics/models/index.js";
-import { User } from "../../core/models/index.js";
-import { FeePayment } from "../../fees/models/index.js";
 
 // Define associations
 // 1. ExamCycle associations
@@ -38,16 +34,6 @@ ExamTimetable.belongsTo(ExamCycle, {
   as: "exam_cycle",
 });
 
-ExamTimetable.belongsTo(Course, {
-  foreignKey: "course_id",
-  as: "course",
-});
-
-ExamTimetable.belongsTo(User, {
-  foreignKey: "assigned_faculty_id",
-  as: "assigned_faculty",
-});
-
 // 3. ExamFeeConfiguration associations
 ExamFeeConfiguration.belongsTo(ExamCycle, {
   foreignKey: "exam_cycle_id",
@@ -71,44 +57,11 @@ ExamFeePayment.belongsTo(ExamCycle, {
   as: "exam_cycle",
 });
 
-ExamFeePayment.belongsTo(User, {
-  foreignKey: "student_id",
-  as: "student",
-});
-
-ExamFeePayment.belongsTo(FeePayment, {
-  foreignKey: "fee_payment_id",
-  as: "transaction",
-});
-
 // 6. ExamStudentEligibility associations
 ExamStudentEligibility.belongsTo(ExamCycle, {
   foreignKey: "exam_cycle_id",
   as: "exam_cycle",
 });
-
-ExamStudentEligibility.belongsTo(User, {
-  foreignKey: "student_id",
-  as: "student",
-});
-
-ExamStudentEligibility.belongsTo(User, {
-  foreignKey: "bypassed_by",
-  as: "bypasser",
-});
-
-// Add associations to User model for reverse lookups
-if (User) {
-  User.hasMany(ExamStudentEligibility, {
-    foreignKey: "student_id",
-    as: "student_eligibilities",
-  });
-
-  User.hasMany(ExamStudentEligibility, {
-    foreignKey: "bypassed_by",
-    as: "bypassed_eligibilities",
-  });
-}
 
 export {
   ExamCycle,

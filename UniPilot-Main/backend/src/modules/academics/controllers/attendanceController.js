@@ -2,8 +2,8 @@ import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import { Attendance, Course, LeaveRequest, Program, Regulation, Timetable, TimetableSlot } from "../models/index.js";
-import { User } from "../../core/models/index.js";
-import { Holiday } from "../../settings/models/index.js";
+import CoreService from "../../core/services/index.js";
+import SettingsService from "../../settings/services/index.js";
 
 // @desc    Mark attendance for multiple students
 // @route   POST /api/attendance/mark
@@ -41,7 +41,7 @@ export const markAttendance = async (req, res) => {
     }
 
     // Check if it's a holiday
-    const holiday = await Holiday.findOne({ where: { date } });
+    const holiday = await SettingsService.getHolidayByDate(date);
     if (holiday) {
       return res.status(400).json({
         error: `Cannot mark attendance on a holiday: ${holiday.name}`,
@@ -52,7 +52,7 @@ export const markAttendance = async (req, res) => {
       const records = [];
       for (const item of attendance_data) {
         // Fetch student details to record batch/section at time of marking
-        const student = await User.findByPk(item.student_id, {
+        const student = await CoreService.findByPk(item.student_id, {
           attributes: ["batch_year", "section"],
         });
 
@@ -125,7 +125,7 @@ export const getMyAttendance = async (req, res) => {
 
     // If semester is specified, filter courses by fetching IDs from Regulation
     if (semester) {
-      const student = await User.findByPk(student_id);
+      const student = await CoreService.findByPk(student_id);
 
       let targetIds = new Set();
 
@@ -187,15 +187,23 @@ export const getMyAttendance = async (req, res) => {
 
     const records = await Attendance.findAll({
       where,
-      include: [
-        courseInclude,
-        {
-          model: User,
-          as: "instructor",
-          attributes: ["first_name", "last_name", "role", "role_id"],
-        },
-      ],
+      include: [courseInclude],
       order: [["date", "DESC"]],
+    });
+
+    // Extract instructor IDs to fetch via CoreService
+    const instructorIds = [...new Set(records.map(r => r.marked_by).filter(Boolean))];
+    const instructorsMap = await CoreService.getUserMapByIds(instructorIds, {
+      attributes: ["id", "first_name", "last_name", "role", "role_id"],
+    });
+
+    // Map instructor data onto records
+    const enrichedRecords = records.map(record => {
+      const recordJSON = record.toJSON ? record.toJSON() : record;
+      if (recordJSON.marked_by) {
+        recordJSON.instructor = instructorsMap.get(recordJSON.marked_by) || null;
+      }
+      return recordJSON;
     });
 
     // Calculate Overall Summary
@@ -240,7 +248,7 @@ export const getMyAttendance = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        records,
+        records: enrichedRecords,
         summary: {
           total,
           present,
@@ -291,19 +299,26 @@ export const getLeaveRequests = async (req, res) => {
   try {
     const requests = await LeaveRequest.findAll({
       where: { status: "pending" },
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["first_name", "last_name", "student_id"],
-        },
-      ],
       order: [["created_at", "ASC"]],
+    });
+
+    // Extract student IDs to fetch via CoreService
+    const studentIds = [...new Set(requests.map(r => r.student_id).filter(Boolean))];
+    const studentsMap = await CoreService.getUserMapByIds(studentIds, {
+      attributes: ["id", "first_name", "last_name", "student_id"],
+    });
+
+    const enrichedRequests = requests.map(request => {
+      const requestJSON = request.toJSON ? request.toJSON() : request;
+      if (requestJSON.student_id) {
+        requestJSON.student = studentsMap.get(requestJSON.student_id) || null;
+      }
+      return requestJSON;
     });
 
     res.status(200).json({
       success: true,
-      data: requests,
+      data: enrichedRequests,
     });
   } catch (error) {
     logger.error("Error fetching leave requests:", error);
@@ -422,11 +437,6 @@ export const getTodayClasses = async (req, res) => {
       where,
       include: [
         { model: Course, as: "course", attributes: ["name", "code"] },
-        {
-          model: User,
-          as: "faculty",
-          attributes: ["id", "first_name", "last_name", "profile_picture"],
-        },
         timetableInclude,
         {
           model: Attendance,
@@ -439,22 +449,31 @@ export const getTodayClasses = async (req, res) => {
       order: [["start_time", "ASC"]],
     });
 
-    const results = slots.map((slot) => ({
-      id: slot.id,
-      course_id: slot.course_id,
-      course_name: slot.course?.name || slot.activity_name,
-      course_code: slot.course?.code,
-      faculty_name: slot.faculty
-        ? `${slot.faculty.first_name} ${slot.faculty.last_name}`
-        : "N/A",
-      section: slot.timetable?.section,
-      program_id: slot.timetable?.program_id,
-      semester: slot.timetable?.semester,
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      is_marked: slot.attendance_records.length > 0,
-      type: slot.course_id ? "course" : "activity",
-    }));
+    // Extract faculty IDs to fetch via CoreService
+    const facultyIds = [...new Set(slots.map(s => s.faculty_id).filter(Boolean))];
+    const facultyMap = await CoreService.getUserMapByIds(facultyIds, {
+      attributes: ["id", "first_name", "last_name", "profile_picture"],
+    });
+
+    const results = slots.map((slot) => {
+      const faculty = facultyMap.get(slot.faculty_id);
+      return {
+        id: slot.id,
+        course_id: slot.course_id,
+        course_name: slot.course?.name || slot.activity_name,
+        course_code: slot.course?.code,
+        faculty_name: faculty
+          ? `${faculty.first_name} ${faculty.last_name}`
+          : "N/A",
+        section: slot.timetable?.section,
+        program_id: slot.timetable?.program_id,
+        semester: slot.timetable?.semester,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        is_marked: slot.attendance_records.length > 0,
+        type: slot.course_id ? "course" : "activity",
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -501,7 +520,7 @@ export const getAttendanceStats = async (req, res) => {
     if (semester) where.current_semester = semester;
     if (section) where.section = section;
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where,
       attributes: [
         "id",
@@ -511,18 +530,30 @@ export const getAttendanceStats = async (req, res) => {
         "section",
         "batch_year",
       ],
-      include: [
-        {
-          model: Attendance,
-          as: "attendance_records",
-          attributes: ["status", "date"],
-        },
-      ],
+    });
+
+    const studentIds = students.map(s => s.id);
+
+    const attendances = await Attendance.findAll({
+      where: {
+        student_id: { [Op.in]: studentIds }
+      },
+      attributes: ["student_id", "status", "date"],
+    });
+
+    // Build map of student_id -> array of attendance_records
+    const attendanceMap = new Map();
+    studentIds.forEach(id => attendanceMap.set(id, []));
+    attendances.forEach(record => {
+      if (attendanceMap.has(record.student_id)) {
+        attendanceMap.get(record.student_id).push(record);
+      }
     });
 
     const stats = students.map((student) => {
-      const total = student.attendance_records.length;
-      const present = student.attendance_records.filter(
+      const studentAttendances = attendanceMap.get(student.id) || [];
+      const total = studentAttendances.length;
+      const present = studentAttendances.filter(
         (a) => a.status === "present",
       ).length;
       const percentage = total > 0 ? (present / total) * 100 : 0;

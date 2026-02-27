@@ -1,5 +1,5 @@
 import { Op, fn, col } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import academicLookupService from "../../academics/services/academicLookupService.js";
 import feeAnalyticsService from "../../fees/services/feeAnalyticsService.js";
 
@@ -18,10 +18,10 @@ const getSuperAdminStats = async (req, res) => {
     }
 
     // 1. KPI Cards - Real Data
-    const totalStudents = await User.count({
+    const totalStudents = await CoreService.count({
       where: studentWhere,
     });
-    const totalFaculty = await User.count({
+    const totalFaculty = await CoreService.count({
       where: {
         role: "faculty",
         is_active: true,
@@ -65,7 +65,7 @@ const getSuperAdminStats = async (req, res) => {
     });
 
     // 3. Student Enrollment by Program (Pie Chart) - Live data from DB
-    const enrollmentByProgramRaw = await User.findAll({
+    const enrollmentByProgramRaw = await CoreService.findAll({
       attributes: [
         "program_id",
         [fn("COUNT", col("User.id")), "student_count"],
@@ -95,7 +95,7 @@ const getSuperAdminStats = async (req, res) => {
     }));
 
     // Get Available Batches
-    const availableBatches = await User.findAll({
+    const availableBatches = await CoreService.findAll({
       where: { role: "student", batch_year: { [Op.ne]: null } },
       attributes: [[fn("DISTINCT", col("batch_year")), "batch_year"]],
       order: [[col("batch_year"), "DESC"]],

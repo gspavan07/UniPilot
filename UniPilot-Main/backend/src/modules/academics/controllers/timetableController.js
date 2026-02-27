@@ -2,8 +2,8 @@ import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import { Course, Program, Timetable, TimetableSlot } from "../models/index.js";
-import { User } from "../../core/models/index.js";
-import { Room } from "../../infrastructure/models/index.js";
+import CoreService from "../../core/services/index.js";
+import InfrastructureService from "../../infrastructure/services/index.js";
 
 // @desc    Initialize a new timetable
 // @route   POST /api/timetable/init
@@ -141,12 +141,6 @@ export const getTimetable = async (req, res) => {
           as: "slots",
           include: [
             { model: Course, as: "course", attributes: ["name", "code"] },
-            { model: User, as: "faculty", attributes: ["name"] },
-            {
-              model: Room,
-              as: "room",
-              attributes: ["room_number", "type", "name"],
-            },
           ],
         },
         { model: Program, as: "program", attributes: ["name"] },
@@ -160,7 +154,30 @@ export const getTimetable = async (req, res) => {
     if (!timetable)
       return res.status(404).json({ error: "Timetable not found" });
 
-    res.status(200).json({ success: true, data: timetable });
+    const roomIds = [
+      ...new Set(timetable.slots.map((slot) => slot.room_id).filter(Boolean)),
+    ];
+    const rooms = await InfrastructureService.getRoomsByIds(roomIds, {
+      attributes: ["id", "room_number", "type", "name"],
+      raw: true,
+    });
+    const roomMap = new Map(rooms.map((room) => [room.id, room]));
+
+    const facultyIds = [...new Set(timetable.slots.map(s => s.faculty_id).filter(Boolean))];
+    const facultyMap = await CoreService.getUserMapByIds(facultyIds, {
+      attributes: ["id", "first_name", "last_name"]
+    });
+
+    const formattedData = timetable.toJSON ? timetable.toJSON() : timetable;
+    formattedData.slots = formattedData.slots.map(slot => ({
+      ...slot,
+      room: slot.room_id ? roomMap.get(slot.room_id) || null : null,
+      faculty: facultyMap.get(slot.faculty_id) ? {
+        name: `${facultyMap.get(slot.faculty_id).first_name} ${facultyMap.get(slot.faculty_id).last_name}`
+      } : null
+    }));
+
+    res.status(200).json({ success: true, data: formattedData });
   } catch (error) {
     logger.error("Error fetching timetable:", error);
     res.status(500).json({ error: "Failed to fetch timetable" });
@@ -174,7 +191,7 @@ export const getMyTimetable = async (req, res) => {
     const { userId, role } = req.user;
 
     if (role === "student") {
-      const student = await User.findByPk(userId);
+      const student = await CoreService.findByPk(userId);
       if (!student || !student.program_id) {
         return res
           .status(200)
@@ -195,21 +212,6 @@ export const getMyTimetable = async (req, res) => {
             as: "slots",
             include: [
               { model: Course, as: "course", attributes: ["name", "code"] },
-              {
-                model: User,
-                as: "faculty",
-                attributes: ["first_name", "last_name"],
-              },
-              {
-                model: Room,
-                as: "room",
-                attributes: ["room_number", "type", "name"],
-              },
-              {
-                model: Room,
-                as: "room",
-                attributes: ["room_number", "type", "name"],
-              }, // Add Room
             ],
           },
           { model: Program, as: "program", attributes: ["name"] },
@@ -226,15 +228,35 @@ export const getMyTimetable = async (req, res) => {
           .json({ message: "No timetable found for your program/semester" });
       }
 
+      const roomIds = [
+        ...new Set(
+          timetable.slots.map((slot) => slot.room_id).filter(Boolean),
+        ),
+      ];
+      const rooms = await InfrastructureService.getRoomsByIds(roomIds, {
+        attributes: ["id", "room_number", "type", "name"],
+        raw: true,
+      });
+      const roomMap = new Map(rooms.map((room) => [room.id, room]));
+
       // Mapping faculty name for frontend consistency
+      const facultyIds = [...new Set(timetable.slots.map(s => s.faculty_id).filter(Boolean))];
+      const facultyMap = await CoreService.getUserMapByIds(facultyIds, {
+        attributes: ["id", "first_name", "last_name"]
+      });
+
       const formattedData = timetable.toJSON();
-      formattedData.slots = formattedData.slots.map((slot) => ({
-        ...slot,
-        faculty: {
-          ...slot.faculty,
-          name: `${slot.faculty.first_name} ${slot.faculty.last_name}`,
-        },
-      }));
+      formattedData.slots = formattedData.slots.map((slot) => {
+        const faculty = facultyMap.get(slot.faculty_id);
+        return {
+          ...slot,
+          room: slot.room_id ? roomMap.get(slot.room_id) || null : null,
+          faculty: faculty ? {
+            ...faculty.toJSON(),
+            name: `${faculty.first_name} ${faculty.last_name}`,
+          } : null,
+        }
+      });
 
       return res.status(200).json({ success: true, data: formattedData });
     } else {
@@ -243,11 +265,6 @@ export const getMyTimetable = async (req, res) => {
         where: { faculty_id: userId },
         include: [
           { model: Course, as: "course", attributes: ["name", "code"] },
-          {
-            model: Room,
-            as: "room",
-            attributes: ["room_number", "type", "name"],
-          },
           {
             model: Timetable,
             as: "timetable",
@@ -261,12 +278,22 @@ export const getMyTimetable = async (req, res) => {
       });
 
       // Wrap in a structure the frontend expects
+      const roomIds = [
+        ...new Set(slots.map((slot) => slot.room_id).filter(Boolean)),
+      ];
+      const rooms = await InfrastructureService.getRoomsByIds(roomIds, {
+        attributes: ["id", "room_number", "type", "name"],
+        raw: true,
+      });
+      const roomMap = new Map(rooms.map((room) => [room.id, room]));
+
       return res.status(200).json({
         success: true,
         data: {
           id: "faculty-view",
           slots: slots.map((s) => ({
             ...s.toJSON(),
+            room: s.room_id ? roomMap.get(s.room_id) || null : null,
             room_number: s.room_number || "TBD",
             faculty: { name: "You" },
           })),
@@ -310,16 +337,6 @@ export const getTimetableByCriteria = async (req, res) => {
           as: "slots",
           include: [
             { model: Course, as: "course", attributes: ["name", "code"] },
-            {
-              model: User,
-              as: "faculty",
-              attributes: ["first_name", "last_name"],
-            },
-            {
-              model: Room,
-              as: "room",
-              attributes: ["room_number", "type", "name"],
-            },
           ],
         },
         { model: Program, as: "program", attributes: ["name"] },
@@ -337,15 +354,33 @@ export const getTimetableByCriteria = async (req, res) => {
       });
     }
 
+    const roomIds = [
+      ...new Set(timetable.slots.map((slot) => slot.room_id).filter(Boolean)),
+    ];
+    const rooms = await InfrastructureService.getRoomsByIds(roomIds, {
+      attributes: ["id", "room_number", "type", "name"],
+      raw: true,
+    });
+    const roomMap = new Map(rooms.map((room) => [room.id, room]));
+
     // Standardize faculty name for consistency
+    const facultyIds = [...new Set(timetable.slots.map(s => s.faculty_id).filter(Boolean))];
+    const facultyMap = await CoreService.getUserMapByIds(facultyIds, {
+      attributes: ["id", "first_name", "last_name"]
+    });
+
     const formattedData = timetable.toJSON();
-    formattedData.slots = formattedData.slots.map((slot) => ({
-      ...slot,
-      faculty: {
-        ...slot.faculty,
-        name: `${slot.faculty.first_name} ${slot.faculty.last_name}`,
-      },
-    }));
+    formattedData.slots = formattedData.slots.map((slot) => {
+      const faculty = facultyMap.get(slot.faculty_id);
+      return {
+        ...slot,
+        room: slot.room_id ? roomMap.get(slot.room_id) || null : null,
+        faculty: faculty ? {
+          ...faculty.toJSON(),
+          name: `${faculty.first_name} ${faculty.last_name}`,
+        } : null,
+      }
+    });
 
     res.status(200).json({ success: true, data: formattedData });
   } catch (error) {

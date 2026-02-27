@@ -1,10 +1,10 @@
 import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
-import { LeaveRequest } from "../../academics/models/index.js";
-import { User } from "../../core/models/index.js";
+import AcademicService from "../../academics/services/index.js";
+import CoreService from "../../core/services/index.js";
 import { LeaveBalance, StaffAttendance } from "../models/index.js";
-import { Holiday, InstitutionSetting } from "../../settings/models/index.js";
+import SettingsService from "../../settings/services/index.js";
 
 // @desc    Mark staff attendance (Admin/Manager)
 // @route   POST /api/hr/attendance/mark
@@ -77,7 +77,7 @@ export const getDailyAttendanceView = async (req, res) => {
       userWhere.department_id = department_id;
     }
 
-    const users = await User.findAll({
+    const users = await CoreService.findAll({
       where: userWhere,
       attributes: [
         "id",
@@ -88,9 +88,19 @@ export const getDailyAttendanceView = async (req, res) => {
         "department_id",
         "biometric_device_id",
       ],
-      include: ["department"],
       order: [["first_name", "ASC"]],
     });
+
+    const departmentIds = [
+      ...new Set(users.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const departments = await AcademicService.getDepartmentsByIds(
+      departmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const departmentMap = new Map(
+      departments.map((department) => [department.id, department]),
+    );
 
     // 2. Fetch Existing Attendance
     const attendance = await StaffAttendance.findAll({
@@ -98,7 +108,7 @@ export const getDailyAttendanceView = async (req, res) => {
     });
 
     // 3. Fetch Approved Leaves covering this date
-    const leaves = await LeaveRequest.findAll({
+    const leaves = await AcademicService.listLeaveRequests({
       where: {
         status: "approved",
         start_date: { [Op.lte]: date },
@@ -107,20 +117,17 @@ export const getDailyAttendanceView = async (req, res) => {
     });
 
     // 4. Fetch Holiday for this date (Staff targeted)
-    const holiday = await Holiday.findOne({
-      where: {
-        date,
-        target: { [Op.in]: ["staff", "both"] },
-      },
+    const holiday = await SettingsService.getHolidayByDate(date, {
+      targets: ["staff", "both"],
     });
 
     // 4.5 Check if Saturday is a working day for staff
     let isSatWorking = false;
     const dayOfWeek = new Date(date).getDay(); // 0 is Sunday, 6 is Saturday
     if (dayOfWeek === 6) {
-      const satSetting = await InstitutionSetting.findOne({
-        where: { setting_key: "staff_saturday_working" },
-      });
+      const satSetting = await SettingsService.getSettingByKey(
+        "staff_saturday_working",
+      );
       isSatWorking = satSetting?.setting_value === "true";
     }
     const isSunday = dayOfWeek === 0;
@@ -170,7 +177,9 @@ export const getDailyAttendanceView = async (req, res) => {
         name: `${user.first_name} ${user.last_name}`,
         employee_id: user.employee_id,
         role: user.role,
-        department: user.department?.name || "-",
+        department: user.department_id
+          ? departmentMap.get(user.department_id)?.name || "-"
+          : "-",
         biometric_device_id: user.biometric_device_id,
         status,
         check_in_time: check_in,
@@ -201,31 +210,66 @@ export const getStats = async (req, res) => {
     }
     if (user_id) where.user_id = user_id;
 
-    // Filter by department requires join
-    const include = [
-      {
-        model: User,
-        as: "staff",
-        attributes: ["first_name", "last_name", "employee_id", "department_id"],
-        include: ["department"],
-      },
-    ];
-
     if (department_id) {
-      // Filter inside User include? No, top level filter on nested association in Sequelize is tricky without required: true
-      include[0].where = { department_id };
-      include[0].required = true;
+      const staffInDepartment = await CoreService.findAll({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const filteredUserIds = staffInDepartment.map((staff) => staff.id);
+      if (filteredUserIds.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+      if (user_id) {
+        if (!filteredUserIds.includes(user_id)) {
+          return res.status(200).json({ success: true, data: [] });
+        }
+        where.user_id = user_id;
+      } else {
+        where.user_id = { [Op.in]: filteredUserIds };
+      }
     }
 
     const records = await StaffAttendance.findAll({
       where,
-      include,
       order: [["date", "DESC"]],
+    });
+
+    const staffIds = [...new Set(records.map((record) => record.user_id))];
+    const staffUsers = await CoreService.getUsersByIds(staffIds, {
+      attributes: ["id", "first_name", "last_name", "employee_id", "department_id"],
+    });
+    const staffUserMap = new Map(
+      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+
+    const staffDepartmentIds = [
+      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+    ];
+    const staffDepartments = await AcademicService.getDepartmentsByIds(
+      staffDepartmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const staffDepartmentMap = new Map(
+      staffDepartments.map((department) => [department.id, department]),
+    );
+
+    const enrichedRecords = records.map((record) => {
+      const recordJson = record.toJSON?.() ?? record;
+      const staff = staffUserMap.get(record.user_id);
+      recordJson.staff = staff
+        ? {
+            ...staff,
+            department: staff.department_id
+              ? staffDepartmentMap.get(staff.department_id) || null
+              : null,
+          }
+        : null;
+      return recordJson;
     });
 
     res.status(200).json({
       success: true,
-      data: records,
+      data: enrichedRecords,
     });
   } catch (error) {
     logger.error("Error fetching staff attendance:", error);
@@ -266,18 +310,27 @@ export const getMyAttendance = async (req, res) => {
 // @access  Private/Staff
 export const getMyLeaveRequests = async (req, res) => {
   try {
-    const requests = await LeaveRequest.findAll({
+    const requests = await AcademicService.listLeaveRequests({
       where: { student_id: req.user.userId }, // Reuse student_id as user_id
       order: [["created_at", "DESC"]],
-      include: [
-        {
-          model: User,
-          as: "approver",
-          attributes: ["first_name", "last_name", "role"],
-        },
-      ],
     });
-    res.status(200).json({ success: true, data: requests });
+    const approverIds = [
+      ...new Set(requests.map((request) => request.approver_id).filter(Boolean)),
+    ];
+    const approvers = await CoreService.getUsersByIds(approverIds, {
+      attributes: ["id", "first_name", "last_name", "role"],
+    });
+    const approverMap = new Map(
+      approvers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+    const enriched = requests.map((request) => {
+      const requestJson = request.toJSON?.() ?? request;
+      requestJson.approver = requestJson.approver_id
+        ? approverMap.get(requestJson.approver_id) || null
+        : null;
+      return requestJson;
+    });
+    res.status(200).json({ success: true, data: enriched });
   } catch (error) {
     logger.error("Error fetching my leaves:", error);
     res.status(500).json({ error: "Fetch failed" });
@@ -291,18 +344,27 @@ export const getUserLeaveRequests = async (req, res) => {
   try {
     const { user_id } = req.params;
 
-    const requests = await LeaveRequest.findAll({
+    const requests = await AcademicService.listLeaveRequests({
       where: { student_id: user_id },
       order: [["created_at", "DESC"]],
-      include: [
-        {
-          model: User,
-          as: "approver",
-          attributes: ["first_name", "last_name", "role"],
-        },
-      ],
     });
-    res.status(200).json({ success: true, data: requests });
+    const approverIds = [
+      ...new Set(requests.map((request) => request.approver_id).filter(Boolean)),
+    ];
+    const approvers = await CoreService.getUsersByIds(approverIds, {
+      attributes: ["id", "first_name", "last_name", "role"],
+    });
+    const approverMap = new Map(
+      approvers.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+    const enriched = requests.map((request) => {
+      const requestJson = request.toJSON?.() ?? request;
+      requestJson.approver = requestJson.approver_id
+        ? approverMap.get(requestJson.approver_id) || null
+        : null;
+      return requestJson;
+    });
+    res.status(200).json({ success: true, data: enriched });
   } catch (error) {
     logger.error("Error fetching user leaves:", error);
     res.status(500).json({ error: "Fetch failed" });
@@ -325,7 +387,7 @@ export const applyLeave = async (req, res) => {
     const user_id = req.user.userId;
 
     // Fetch User details for hierarchy
-    const user = await User.findByPk(user_id);
+    const user = await CoreService.findByPk(user_id);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     // Determine Approver
@@ -334,7 +396,7 @@ export const applyLeave = async (req, res) => {
 
     // Hierarchy Logic
     if (role === "hr") {
-      const boss = await User.findOne({ where: { role: "hr_admin" } });
+      const boss = await CoreService.findOne({ where: { role: "hr_admin" } });
       approverId = boss?.id;
     } else if (
       ["faculty", "staff", "lab_assistant", "operator", "student"].includes(
@@ -342,18 +404,18 @@ export const applyLeave = async (req, res) => {
       )
     ) {
       // Find HOD
-      const hod = await User.findOne({
+      const hod = await CoreService.findOne({
         where: { department_id: user.department_id, role: "hod" },
       });
       approverId = hod?.id;
     } else if (role === "hod") {
-      const admin = await User.findOne({ where: { role: "admin" } });
+      const admin = await CoreService.findOne({ where: { role: "admin" } });
       approverId = admin?.id;
     }
 
     // Fallback
     if (!approverId) {
-      const fallback = await User.findOne({ where: { role: "admin" } });
+      const fallback = await CoreService.findOne({ where: { role: "admin" } });
       approverId = fallback?.id;
     }
 
@@ -392,7 +454,7 @@ export const applyLeave = async (req, res) => {
       }
     }
 
-    const leave = await LeaveRequest.create({
+    const leave = await AcademicService.createLeaveRequest({
       student_id: user_id, // Note: LeaveRequest model uses 'student_id' foreign key for user. We reuse it for staff.
       leave_type,
       start_date,
@@ -424,7 +486,7 @@ export const updateLeaveStatus = async (req, res) => {
     const { id } = req.params;
     const { status, remarks } = req.body; // status: 'approved' | 'rejected'
 
-    const leave = await LeaveRequest.findByPk(id);
+    const leave = await AcademicService.findLeaveRequestByPk(id);
     if (!leave) {
       await t.rollback();
       return res.status(404).json({ error: "Leave request not found" });
@@ -529,34 +591,57 @@ export const getPendingApprovals = async (req, res) => {
       where.approver_id = userId;
     }
 
-    const approvals = await LeaveRequest.findAll({
+    const approvals = await AcademicService.listLeaveRequests({
       where,
       order: [["created_at", "ASC"]],
-      include: [
-        {
-          model: User,
-          as: "student", // Model alias
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "employee_id",
-            "department_id",
-            "role",
-          ],
-          include: [
-            { model: Department, as: "department" },
-          ],
-        },
+    });
+
+    const applicantIds = [
+      ...new Set(approvals.map((leave) => leave.student_id).filter(Boolean)),
+    ];
+    const applicants = await CoreService.getUsersByIds(applicantIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "employee_id",
+        "department_id",
+        "role",
       ],
     });
+    const applicantMap = new Map(
+      applicants.map((user) => [user.id, user.toJSON?.() ?? user]),
+    );
+
+    const applicantDepartmentIds = [
+      ...new Set(
+        applicants.map((user) => user.department_id).filter(Boolean),
+      ),
+    ];
+    const applicantDepartments = await AcademicService.getDepartmentsByIds(
+      applicantDepartmentIds,
+      { attributes: ["id", "name"], raw: true },
+    );
+    const applicantDepartmentMap = new Map(
+      applicantDepartments.map((department) => [department.id, department]),
+    );
 
     // Remap for frontend consistency if needed
     // Frontend expects `applicant` object.
-    const data = approvals.map((a) => ({
-      ...a.toJSON(),
-      applicant: a.student,
-    }));
+    const data = approvals.map((a) => {
+      const applicant = applicantMap.get(a.student_id);
+      return {
+        ...a.toJSON(),
+        applicant: applicant
+          ? {
+              ...applicant,
+              department: applicant.department_id
+                ? applicantDepartmentMap.get(applicant.department_id) || null
+                : null,
+            }
+          : null,
+      };
+    });
 
     res.status(200).json({ success: true, data });
   } catch (error) {

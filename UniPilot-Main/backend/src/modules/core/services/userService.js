@@ -30,6 +30,54 @@ export const getUserMapByIds = async (ids = [], options = {}) => {
   return new Map(users.map((user) => [user.id, user]));
 };
 
+export const getDistinctBatchYears = async ({
+  role = "student",
+  transaction,
+} = {}) => {
+  const rows = await User.findAll({
+    attributes: [
+      [
+        User.sequelize.fn("DISTINCT", User.sequelize.col("batch_year")),
+        "batch_year",
+      ],
+    ],
+    where: {
+      batch_year: { [Op.ne]: null },
+      role,
+    },
+    order: [["batch_year", "DESC"]],
+    raw: true,
+    transaction,
+  });
+
+  return rows.map((row) => row.batch_year).filter(Boolean);
+};
+
+export const getMostCommonSemesterForBatch = async (
+  batchYear,
+  { role = "student", transaction } = {},
+) => {
+  if (!batchYear) return null;
+  const [row] = await User.findAll({
+    attributes: [
+      "current_semester",
+      [User.sequelize.fn("COUNT", User.sequelize.col("current_semester")), "count"],
+    ],
+    where: {
+      batch_year: batchYear,
+      role,
+      current_semester: { [Op.ne]: null },
+    },
+    group: ["current_semester"],
+    order: [[User.sequelize.literal("count"), "DESC"]],
+    limit: 1,
+    raw: true,
+    transaction,
+  });
+
+  return row?.current_semester ?? null;
+};
+
 export default {
   findByPk,
   findOne,
@@ -42,4 +90,6 @@ export default {
   destroy,
   getUsersByIds,
   getUserMapByIds,
+  getDistinctBatchYears,
+  getMostCommonSemesterForBatch,
 };

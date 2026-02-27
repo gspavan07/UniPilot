@@ -1,9 +1,28 @@
 import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
-import { Department } from "../../academics/models/index.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { ProctorAlert, ProctorAssignment, ProctorFeedback, ProctorSession } from "../models/index.js";
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
+    }
+  });
+};
 
 // @desc    Assign students to a proctor
 // @route   POST /api/proctor/assign
@@ -78,7 +97,7 @@ export const autoAssignProctors = async (req, res) => {
     }
 
     // 1. Get all faculty in department
-    const faculty = await User.findAll({
+    const faculty = await CoreService.findAll({
       where: {
         department_id,
         role: { [Op.in]: ["faculty", "hod"] },
@@ -102,7 +121,7 @@ export const autoAssignProctors = async (req, res) => {
     };
     if (batch_year) studentQuery.batch_year = batch_year;
 
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where: studentQuery,
       attributes: ["id"],
     });
@@ -166,28 +185,23 @@ export const autoAssignProctors = async (req, res) => {
 export const getMyStudents = async (req, res) => {
   try {
     const assignments = await ProctorAssignment.findAll({
-      where: { proctor_id: req.user.userId, is_active: true },
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "student_id",
-            "current_semester",
-            "phone",
-            "profile_picture",
-          ],
-        },
-      ],
+      where: { proctor_id: req.user.userId, is_active: true }
     });
+
+    await hydrateListWithUser(assignments, "student_id", "student", [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "student_id",
+      "current_semester",
+      "phone",
+      "profile_picture",
+    ]);
 
     res.status(200).json({
       success: true,
-      data: assignments.map((a) => a.student),
+      data: assignments.map((a) => a.student || null).filter(Boolean),
     });
   } catch (error) {
     logger.error("Error fetching proctor's students:", error);
@@ -285,20 +299,7 @@ export const createSession = async (req, res) => {
 export const getMyProctor = async (req, res) => {
   try {
     const assignment = await ProctorAssignment.findOne({
-      where: { student_id: req.user.userId, is_active: true },
-      include: [
-        {
-          model: User,
-          as: "proctor",
-          attributes: [
-            "first_name",
-            "last_name",
-            "email",
-            "phone",
-            "profile_picture",
-          ],
-        },
-      ],
+      where: { student_id: req.user.userId, is_active: true }
     });
 
     if (!assignment) {
@@ -307,6 +308,14 @@ export const getMyProctor = async (req, res) => {
         error: "No proctor assigned yet",
       });
     }
+
+    await hydrateListWithUser(assignment, "proctor_id", "proctor", [
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "profile_picture",
+    ]);
 
     res.status(200).json({
       success: true,

@@ -1,8 +1,28 @@
 import xlsx from "xlsx";
 import { Op } from "sequelize";
 import logger from "../../../utils/logger.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { HostelAllocation, HostelAttendance, HostelBuilding, HostelComplaint, HostelGatePass, HostelRoom } from "../models/index.js";
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
+    }
+  });
+};
 
 /**
  * Generate Excel Buffer from Data
@@ -25,11 +45,6 @@ export const downloadOccupancyReport = async (req, res) => {
       where: { status: "active" },
       include: [
         {
-          model: User,
-          as: "student",
-          attributes: ["first_name", "last_name", "student_id", "email"],
-        },
-        {
           model: HostelRoom,
           as: "room",
           include: [
@@ -42,6 +57,8 @@ export const downloadOccupancyReport = async (req, res) => {
         },
       ],
     });
+
+    await hydrateListWithUser(allocations, "student_id", "student", ["first_name", "last_name", "student_id", "email"]);
 
     const data = allocations.map((a) => ({
       "Student ID": a.student?.student_id,
@@ -86,15 +103,10 @@ export const downloadAttendanceReport = async (req, res) => {
 
     const attendance = await HostelAttendance.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["first_name", "last_name", "student_id"],
-        },
-      ],
       order: [["date", "DESC"]],
     });
+
+    await hydrateListWithUser(attendance, "student_id", "student", ["first_name", "last_name", "student_id"]);
 
     const data = attendance.map((a) => ({
       Date: a.date,
@@ -141,11 +153,6 @@ export const downloadComplaintReport = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: "student",
-          attributes: ["first_name", "last_name", "student_id"],
-        },
-        {
           model: HostelRoom,
           as: "room",
           attributes: ["room_number"],
@@ -156,6 +163,8 @@ export const downloadComplaintReport = async (req, res) => {
       ],
       order: [["created_at", "DESC"]],
     });
+
+    await hydrateListWithUser(complaints, "student_id", "student", ["first_name", "last_name", "student_id"]);
 
     const data = complaints.map((c) => ({
       "Ticket ID": c.id.split("-")[0],
@@ -205,15 +214,10 @@ export const downloadGatePassReport = async (req, res) => {
 
     const passes = await HostelGatePass.findAll({
       where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["first_name", "last_name", "student_id"],
-        },
-      ],
       order: [["going_date", "DESC"]],
     });
+
+    await hydrateListWithUser(passes, "student_id", "student", ["first_name", "last_name", "student_id"]);
 
     const data = passes.map((p) => ({
       "Pass ID": p.id.split("-")[0],

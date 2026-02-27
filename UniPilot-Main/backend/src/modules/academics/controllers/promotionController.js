@@ -2,7 +2,7 @@ import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import { Graduation, Program, PromotionCriteria, PromotionEvaluation } from "../models/index.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 
 // @desc    Create or update promotion criteria
 // @route   POST /api/promotion/criteria
@@ -67,7 +67,7 @@ export const evaluatePromotion = async (req, res) => {
     const to_semester = criteria ? criteria.to_semester : current_semester + 1;
 
     // 2. Get Students
-    const students = await User.findAll({
+    const students = await CoreService.findAll({
       where: {
         program_id,
         current_semester,
@@ -144,15 +144,15 @@ export const processBulkPromotion = async (req, res) => {
       // Update each student individually or in bulk
       // For now individual for simplicity and status tracking
       for (const id of student_ids) {
-        const student = await User.findByPk(id);
+        const student = await CoreService.findByPk(id);
         if (student) {
           const from_sem = student.current_semester;
-          await student.update(
+          await CoreService.update(
             {
               current_semester: to_semester,
               academic_status: "promoted",
             },
-            { transaction: t },
+            { where: { id: id }, transaction: t },
           );
 
           // Record evaluation/history

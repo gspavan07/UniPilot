@@ -1,5 +1,5 @@
 import { Op, fn, col } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import {
   FeePayment,
   FeeStructure,
@@ -8,57 +8,53 @@ import {
 
 export const getTotalRevenue = async ({ batchYear } = {}) => {
   const paymentWhere = { status: "completed" };
+
   if (batchYear) {
-    paymentWhere["$student.batch_year$"] = parseInt(batchYear, 10);
+    const students = await CoreService.findAll({
+      where: { role: "student", batch_year: parseInt(batchYear, 10) },
+      attributes: ['id']
+    });
+    const studentIds = students.map(s => s.id);
+    if (studentIds.length === 0) return 0;
+    paymentWhere.student_id = { [Op.in]: studentIds };
   }
 
   const totalRevenueResult = await FeePayment.sum("amount_paid", {
     where: paymentWhere,
-    include: [
-      {
-        model: User,
-        as: "student",
-        attributes: [],
-        required: !!batchYear,
-      },
-    ],
   });
 
   return totalRevenueResult || 0;
 };
 
-export const getRevenueTrend = async ({ sinceDate, batchYear } = {}) =>
-  FeePayment.findAll({
+export const getRevenueTrend = async ({ sinceDate, batchYear } = {}) => {
+  const paymentWhere = {
+    status: "completed",
+    payment_date: sinceDate ? { [Op.gte]: sinceDate } : undefined,
+  };
+
+  if (batchYear) {
+    const students = await CoreService.findAll({
+      where: { role: "student", batch_year: parseInt(batchYear, 10) },
+      attributes: ['id']
+    });
+    const studentIds = students.map(s => s.id);
+    if (studentIds.length === 0) return [];
+    paymentWhere.student_id = { [Op.in]: studentIds };
+  }
+
+  return FeePayment.findAll({
     attributes: [
       [fn("date_trunc", "month", col("payment_date")), "month"],
       [fn("sum", col("amount_paid")), "collected"],
     ],
-    where: {
-      status: "completed",
-      payment_date: sinceDate ? { [Op.gte]: sinceDate } : undefined,
-      ...(batchYear
-        ? {
-            "$student.batch_year$": parseInt(batchYear, 10),
-          }
-        : {}),
-    },
-    include:
-      batchYear
-        ? [
-            {
-              model: User,
-              as: "student",
-              attributes: [],
-              required: true,
-            },
-          ]
-        : [],
+    where: paymentWhere,
     group: [fn("date_trunc", "month", col("payment_date"))],
     order: [[fn("date_trunc", "month", col("payment_date")), "ASC"]],
   });
+};
 
 export const getTotalCollectableStructure = async ({ studentWhere } = {}) => {
-  const students = await User.findAll({
+  const students = await CoreService.findAll({
     where: studentWhere,
     attributes: ["id", "program_id", "admission_type", "batch_year"],
     raw: true,

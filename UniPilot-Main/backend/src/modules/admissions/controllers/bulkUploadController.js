@@ -1,8 +1,7 @@
 import path from "path";
 import fs from "fs";
 import logger from "../../../utils/logger.js";
-import { sequelize } from "../../../config/database.js";
-import { User } from "../../core/models/index.js";
+import { CoreService } from "../../core/services/index.js";
 
 
 // @desc    Bulk Upload Student Photos
@@ -35,7 +34,7 @@ export const uploadStudentPhotos = async (req, res) => {
 
       try {
         // Find user by student_id
-        const user = await User.findOne({
+        const user = await CoreService.findOne({
           where: { student_id: studentId }, // Exact match
           attributes: ["id", "student_id", "first_name", "last_name"],
         });
@@ -45,7 +44,7 @@ export const uploadStudentPhotos = async (req, res) => {
           const publicPath = `/uploads/profiles/${file.filename}`;
 
           // Update user
-          await User.update(
+          await CoreService.update(
             { profile_picture: publicPath },
             { where: { id: user.id } }
           );

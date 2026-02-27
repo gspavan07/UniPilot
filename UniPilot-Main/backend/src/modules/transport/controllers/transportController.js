@@ -1,7 +1,7 @@
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
 import { Op } from "sequelize";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import academicLookupService from "../../academics/services/academicLookupService.js";
 import feeLedgerService from "../../fees/services/feeLedgerService.js";
 import { Route, SpecialTrip, StudentRouteAllocation, TransportDriver, TransportStop, TripLog, Vehicle, VehicleRouteAssignment } from "../models/index.js";
@@ -43,6 +43,26 @@ const hydrateAllocationsWithAcademics = async (allocations) => {
     } else {
       student.program = program;
       student.department = department;
+    }
+  });
+};
+
+const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
+  const items = Array.isArray(list) ? list.filter(Boolean) : list ? [list] : [];
+  if (items.length === 0) return;
+
+  const userIdsRaw = items.map(item => item[userIdField]).filter(Boolean);
+  const userIds = [...new Set(userIdsRaw)];
+  if (userIds.length === 0) return;
+
+  const userMap = await CoreService.getUserMapByIds(userIds, { attributes });
+
+  items.forEach(item => {
+    const user = userMap.get(item[userIdField]) || null;
+    if (typeof item?.setDataValue === 'function') {
+      item.setDataValue(asField, user);
+    } else {
+      item[asField] = user;
     }
   });
 };
@@ -488,19 +508,6 @@ export const getAllocations = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "student_id",
-            "phone",
-            "program_id",
-            "department_id",
-          ],
-        },
-        {
           model: Route,
           as: "route",
           attributes: ["id", "name", "route_code"],
@@ -513,6 +520,16 @@ export const getAllocations = async (req, res) => {
       ],
       order: [["created_at", "DESC"]],
     });
+
+    await hydrateListWithUser(allocations, "student_id", "student", [
+      "id",
+      "first_name",
+      "last_name",
+      "student_id",
+      "phone",
+      "program_id",
+      "department_id",
+    ]);
     await hydrateAllocationsWithAcademics(allocations);
     res.json({ success: true, data: allocations });
   } catch (error) {
@@ -537,7 +554,7 @@ export const createAllocation = async (req, res) => {
     }
 
     // Get student info
-    const student = await User.findByPk(student_id);
+    const student = await CoreService.findByPk(student_id);
     if (!student) {
       await transaction.rollback();
       return res.status(404).json({ error: "Student not found" });
@@ -594,7 +611,7 @@ export const createAllocation = async (req, res) => {
     );
 
     // Update student's requires_transport flag
-    await student.update({ requires_transport: true }, { transaction });
+    await CoreService.updateUser(student_id, { requires_transport: true }, { transaction });
 
     await transaction.commit();
 
@@ -603,16 +620,13 @@ export const createAllocation = async (req, res) => {
       allocation.id,
       {
         include: [
-          {
-            model: User,
-            as: "student",
-            attributes: ["id", "first_name", "last_name", "student_id"],
-          },
           { model: Route, as: "route" },
           { model: TransportStop, as: "stop" },
         ],
       },
     );
+
+    await hydrateListWithUser(fullAllocation, "student_id", "student", ["id", "first_name", "last_name", "student_id"]);
 
     res.status(201).json({ success: true, data: fullAllocation });
   } catch (error) {
@@ -655,11 +669,12 @@ export const updateAllocation = async (req, res) => {
 
     const updated = await StudentRouteAllocation.findByPk(id, {
       include: [
-        { model: User, as: "student" },
         { model: Route, as: "route" },
         { model: TransportStop, as: "stop" },
       ],
     });
+
+    await hydrateListWithUser(updated, "student_id", "student", ["id", "first_name", "last_name", "student_id"]);
     res.json({ success: true, data: updated });
   } catch (error) {
     await transaction.rollback();
@@ -713,10 +728,7 @@ export const deleteAllocation = async (req, res) => {
 
     // If no other active allocations, update student's requires_transport flag
     if (activeAllocCount === 0) {
-      await User.update(
-        { requires_transport: false },
-        { where: { id: allocation.student_id }, transaction },
-      );
+      await CoreService.updateUser(allocation.student_id, { requires_transport: false }, { transaction });
     }
 
     await transaction.commit();
@@ -742,16 +754,25 @@ export const syncSemesterFees = async (req, res) => {
         .json({ error: "Batch year and semester are required" });
     }
 
+    // Find all active students in the target batch
+    const targetStudents = await CoreService.findAll({
+      where: { batch_year },
+      attributes: ["id"]
+    });
+    const studentIds = targetStudents.map(s => s.id);
+
+    if (studentIds.length === 0) {
+      return res.json({ success: true, message: "No students found in target batch" });
+    }
+
     // 1. Get all active allocations for the target batch
     const activeAllocations = await StudentRouteAllocation.findAll({
-      where: { status: "active" },
+      where: {
+        status: "active",
+        student_id: { [Op.in]: studentIds }
+      },
       include: [
-        { model: TransportStop, as: "stop" },
-        {
-          model: User,
-          as: "student",
-          where: { batch_year }, // Filter by target batch
-        },
+        { model: TransportStop, as: "stop" }
       ],
       transaction,
     });
@@ -847,19 +868,12 @@ export const getSpecialTrips = async (req, res) => {
       include: [
         { model: Vehicle, as: "vehicle" },
         { model: TransportDriver, as: "driver" },
-        {
-          model: User,
-          as: "requester",
-          attributes: ["id", "first_name", "last_name"],
-        },
-        {
-          model: User,
-          as: "approver",
-          attributes: ["id", "first_name", "last_name"],
-        },
       ],
       order: [["trip_date", "DESC"]],
     });
+
+    await hydrateListWithUser(trips, "requester_id", "requester", ["id", "first_name", "last_name"]);
+    await hydrateListWithUser(trips, "approved_by", "approver", ["id", "first_name", "last_name"]);
     res.json({ success: true, data: trips });
   } catch (error) {
     logger.error("Error fetching special trips:", error);

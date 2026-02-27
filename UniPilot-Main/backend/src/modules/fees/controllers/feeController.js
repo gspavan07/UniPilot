@@ -2,7 +2,7 @@ import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import XLSX from "xlsx";
 import { sequelize } from "../../../config/database.js";
-import { User } from "../../core/models/index.js";
+import CoreService from "../../core/services/index.js";
 import { AcademicFeePayment, FeeCategory, FeePayment, FeeSemesterConfig, FeeStructure, FeeWaiver, StudentChargePayment, StudentFeeCharge } from "../models/index.js";
 import feeStatusService from "../services/feeStatusService.js";
 import academicLookupService from "../../academics/services/academicLookupService.js";
@@ -502,19 +502,6 @@ export const collectPayment = async (req, res) => {
     const hydrated = await FeePayment.findAll({
       where: { id: createdParentPayments.map((p) => p.id) },
       include: [
-        {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "student_id",
-            "program_id",
-            "department_id",
-            "batch_year",
-          ],
-        },
         // Include children
         {
           model: AcademicFeePayment,
@@ -532,10 +519,29 @@ export const collectPayment = async (req, res) => {
         },
       ],
     });
-    await hydrateStudentsWithAcademics(
-      hydrated.map((payment) => payment.student).filter(Boolean),
-      { programAttributes: ["name"], departmentAttributes: ["name"] },
-    );
+
+    const studentIds = [...new Set(hydrated.map((p) => p.student_id))];
+    const userMap = await CoreService.getUserMapByIds(studentIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "student_id",
+        "program_id",
+        "department_id",
+        "batch_year",
+      ],
+    });
+
+    hydrated.forEach((payment) => {
+      const studentData = userMap.get(payment.student_id);
+      if (studentData) {
+        payment.setDataValue("student", studentData);
+      }
+    });
+
+    const studentsToHydrate = hydrated.map((payment) => payment.getDataValue("student")).filter(Boolean);
+    await hydrateStudentsWithAcademics(studentsToHydrate, { programAttributes: ["name"], departmentAttributes: ["name"] });
     return res.status(201).json({ success: true, data: hydrated });
   } catch (err) {
     logger.warn("Hydration failed:", err);
@@ -763,19 +769,6 @@ export const payMyFees = async (req, res) => {
     const hydratedPayments = await FeePayment.findAll({
       where: { id: createdPayments.map((p) => p.id) },
       include: [
-        {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "student_id",
-            "program_id",
-            "department_id",
-            "batch_year",
-          ],
-        },
         // {
         //   model: FeeStructure,
         //   as: "fee_structure",
@@ -783,10 +776,29 @@ export const payMyFees = async (req, res) => {
         // },
       ],
     });
-    await hydrateStudentsWithAcademics(
-      hydratedPayments.map((payment) => payment.student).filter(Boolean),
-      { programAttributes: ["name"], departmentAttributes: ["name"] },
-    );
+
+    const studentIds = [...new Set(hydratedPayments.map((p) => p.student_id))];
+    const userMap = await CoreService.getUserMapByIds(studentIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "student_id",
+        "program_id",
+        "department_id",
+        "batch_year",
+      ],
+    });
+
+    hydratedPayments.forEach((payment) => {
+      const studentData = userMap.get(payment.student_id);
+      if (studentData) {
+        payment.setDataValue("student", studentData);
+      }
+    });
+
+    const studentsToHydrate = hydratedPayments.map((payment) => payment.getDataValue("student")).filter(Boolean);
+    await hydrateStudentsWithAcademics(studentsToHydrate, { programAttributes: ["name"], departmentAttributes: ["name"] });
     return res.status(201).json({ success: true, data: hydratedPayments });
   } catch (hydrationError) {
     logger.warn("Hydration failed after payment commit:", hydrationError);
@@ -913,33 +925,34 @@ export const getCollectionStats = async (req, res) => {
       },
     });
 
-    // Program-wise collection (Joined via student to include all payment types)
-    const programWiseRaw = await FeePayment.findAll({
-      attributes: [
-        [sequelize.col("student.program_id"), "program_id"],
-        [sequelize.fn("SUM", sequelize.col("amount_paid")), "total"],
-      ],
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: [],
-        },
-      ],
+    // Program-wise collection (Fetch payments, then map programs manually avoiding SQL join on User)
+    const allCompletedPayments = await FeePayment.findAll({
+      attributes: ["student_id", "amount_paid"],
       where: { status: "completed" },
-      group: [sequelize.col("student.program_id")],
       raw: true,
     });
 
-    const programMap = await academicLookupService.getProgramMapByIds(
-      programWiseRaw.map((row) => row.program_id),
-      { attributes: ["id", "name"] },
-    );
+    const studentIds = [...new Set(allCompletedPayments.map(p => p.student_id))];
+    const userMap = await CoreService.getUserMapByIds(studentIds, { attributes: ["id", "program_id"] });
 
-    const programWise = programWiseRaw.map((row) => ({
-      program_id: row.program_id,
-      program_name: programMap.get(row.program_id)?.name || null,
-      total: row.total,
+    const programWiseTotals = {};
+    allCompletedPayments.forEach(payment => {
+      const student = userMap.get(payment.student_id);
+      if (student && student.program_id) {
+        if (!programWiseTotals[student.program_id]) {
+          programWiseTotals[student.program_id] = 0;
+        }
+        programWiseTotals[student.program_id] += parseFloat(payment.amount_paid);
+      }
+    });
+
+    const programIds = Object.keys(programWiseTotals);
+    const programMap = await academicLookupService.getProgramMapByIds(programIds, { attributes: ["id", "name"] });
+
+    const programWise = programIds.map((pid) => ({
+      program_id: pid,
+      program_name: programMap.get(pid)?.name || null,
+      total: programWiseTotals[pid],
     }));
 
     // Payment method distribution
@@ -975,79 +988,152 @@ export const getTransactions = async (req, res) => {
     const { page = 1, limit = 20, search = "" } = req.query;
     const offset = (page - 1) * limit;
 
-    const where = { status: "completed" };
+    let rowsToReturn = [];
+    let count = 0;
+
+    // Manual search on hydrated students
     if (search) {
+      const allPaymentsForSearch = await FeePayment.findAll({
+        where: { status: "completed" }
+      });
+      const allStudentIds = [...new Set(allPaymentsForSearch.map(p => p.student_id))];
+      const searchPattern = `%${search}%`.toLowerCase();
+      // Use CoreService to find students matching search
+      const matchingStudents = await CoreService.findAll({
+        where: {
+          id: { [Op.in]: allStudentIds },
+          [Op.or]: [
+            { first_name: { [Op.iLike]: searchPattern } },
+            { last_name: { [Op.iLike]: searchPattern } },
+            { admission_number: { [Op.iLike]: searchPattern } },
+          ]
+        },
+        attributes: ["id"]
+      });
+
+      const matchingStudentIds = matchingStudents.map(s => s.id);
+
       where[Op.or] = [
         { transaction_id: { [Op.iLike]: `%${search}%` } },
-        { "$student.first_name$": { [Op.iLike]: `%${search}%` } },
-        { "$student.last_name$": { [Op.iLike]: `%${search}%` } },
-        { "$student.admission_number$": { [Op.iLike]: `%${search}%` } },
+        { student_id: { [Op.in]: matchingStudentIds } }
       ];
+
+      const paginatedResult = await FeePayment.findAndCountAll({
+        where,
+        include: [
+          {
+            model: FeeStructure,
+            as: "fee_structure",
+            include: [{ model: FeeCategory, as: "category" }],
+          },
+          {
+            model: StudentFeeCharge,
+            as: "student_fee_charge",
+            include: [{ model: FeeCategory, as: "category" }],
+          },
+          {
+            model: AcademicFeePayment,
+            as: "academic_fee_payments",
+            include: [
+              {
+                model: FeeStructure,
+                as: "structure",
+                include: [{ model: FeeCategory, as: "category" }],
+              },
+            ],
+          },
+          {
+            model: StudentChargePayment,
+            as: "student_charge_payments",
+            include: [
+              {
+                model: StudentFeeCharge,
+                as: "charge",
+                include: [{ model: FeeCategory, as: "category" }],
+              },
+            ],
+          },
+        ],
+        order: [["payment_date", "DESC"]],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+
+      count = paginatedResult.count;
+      rowsToReturn = paginatedResult.rows;
+    } else {
+      const paginatedResult = await FeePayment.findAndCountAll({
+        where,
+        include: [
+          {
+            model: FeeStructure,
+            as: "fee_structure",
+            include: [{ model: FeeCategory, as: "category" }],
+          },
+          {
+            model: StudentFeeCharge,
+            as: "student_fee_charge",
+            include: [{ model: FeeCategory, as: "category" }],
+          },
+          {
+            model: AcademicFeePayment,
+            as: "academic_fee_payments",
+            include: [
+              {
+                model: FeeStructure,
+                as: "structure",
+                include: [{ model: FeeCategory, as: "category" }],
+              },
+            ],
+          },
+          {
+            model: StudentChargePayment,
+            as: "student_charge_payments",
+            include: [
+              {
+                model: StudentFeeCharge,
+                as: "charge",
+                include: [{ model: FeeCategory, as: "category" }],
+              },
+            ],
+          },
+        ],
+        order: [["payment_date", "DESC"]],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+
+      count = paginatedResult.count;
+      rowsToReturn = paginatedResult.rows;
     }
 
-    const { count, rows } = await FeePayment.findAndCountAll({
-      where,
-      include: [
-        {
-          model: User,
-          as: "student",
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "admission_number",
-            "student_id",
-            "program_id",
-            "department_id",
-          ],
-        },
-        {
-          model: FeeStructure,
-          as: "fee_structure",
-          include: [{ model: FeeCategory, as: "category" }],
-        },
-        {
-          model: StudentFeeCharge,
-          as: "student_fee_charge",
-          include: [{ model: FeeCategory, as: "category" }],
-        },
-        {
-          model: AcademicFeePayment,
-          as: "academic_fee_payments",
-          include: [
-            {
-              model: FeeStructure,
-              as: "structure",
-              include: [{ model: FeeCategory, as: "category" }],
-            },
-          ],
-        },
-        {
-          model: StudentChargePayment,
-          as: "student_charge_payments",
-          include: [
-            {
-              model: StudentFeeCharge,
-              as: "charge",
-              include: [{ model: FeeCategory, as: "category" }],
-            },
-          ],
-        },
+    const studentIds = [...new Set(rowsToReturn.map((p) => p.student_id))];
+    const userMap = await CoreService.getUserMapByIds(studentIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "admission_number",
+        "student_id",
+        "program_id",
+        "department_id",
       ],
-      order: [["payment_date", "DESC"]],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
     });
 
-    await hydrateStudentsWithAcademics(
-      rows.map((payment) => payment.student).filter(Boolean),
-      { programAttributes: ["name"], departmentAttributes: ["name"] },
-    );
+    rowsToReturn.forEach((payment) => {
+      const studentData = userMap.get(payment.student_id);
+      if (studentData) {
+        payment.setDataValue("student", studentData);
+      }
+    });
+
+    const studentsToHydrate = rowsToReturn.map((payment) => payment.getDataValue("student")).filter(Boolean);
+    await hydrateStudentsWithAcademics(studentsToHydrate, { programAttributes: ["name"], departmentAttributes: ["name"] });
 
     res.json({
       success: true,
       data: {
-        transactions: rows,
+        transactions: rowsToReturn,
         total: count,
         pages: Math.ceil(count / limit),
         currentPage: parseInt(page),
@@ -1060,6 +1146,7 @@ export const getTransactions = async (req, res) => {
       .json({ success: false, message: "Error fetching transactions" });
   }
 };
+
 // @desc    Get all available admission batches
 export const getBatches = async (req, res) => {
   try {
@@ -1072,7 +1159,7 @@ export const getBatches = async (req, res) => {
     });
 
     // Get unique batches from Students (Users)
-    const studentBatches = await User.findAll({
+    const studentBatches = await CoreService.findAll({
       where: { role: "student" },
       attributes: [
         [sequelize.fn("DISTINCT", sequelize.col("batch_year")), "batch_year"],
@@ -1147,14 +1234,21 @@ export const getWaivers = async (req, res) => {
     const waivers = await FeeWaiver.findAll({
       where,
       include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id"],
-        },
         { model: FeeCategory, as: "category" },
       ],
       order: [["created_at", "DESC"]],
+    });
+
+    const studentIds = [...new Set(waivers.map((w) => w.student_id))];
+    const userMap = await CoreService.getUserMapByIds(studentIds, {
+      attributes: ["id", "first_name", "last_name", "student_id"],
+    });
+
+    waivers.forEach((waiver) => {
+      const studentData = userMap.get(waiver.student_id);
+      if (studentData) {
+        waiver.setDataValue("student", studentData);
+      }
     });
 
     res.status(200).json({ success: true, data: waivers });
@@ -1220,14 +1314,14 @@ export const updateWaiver = async (req, res) => {
     // Reload with associations to return complete data
     await waiver.reload({
       include: [
-        {
-          model: User,
-          as: "student",
-          attributes: ["id", "first_name", "last_name", "student_id"],
-        },
         { model: FeeCategory, as: "category" },
       ],
     });
+
+    const studentData = await CoreService.findByPk(waiver.student_id, {
+      attributes: ["id", "first_name", "last_name", "student_id"],
+    });
+    waiver.setDataValue("student", studentData);
 
     res.status(200).json({ success: true, data: waiver });
   } catch (error) {
@@ -1290,7 +1384,7 @@ export const validateScholarshipImport = async (req, res) => {
 
     // Bulk fetch students and categories for validation
     const [students, categories] = await Promise.all([
-      User.findAll({
+      CoreService.findAll({
         where: {
           [Op.or]: [
             { admission_number: { [Op.in]: identifiers } },
@@ -1429,7 +1523,7 @@ export const getDefaulters = async (req, res) => {
     // Bulk Fetch
     const [students, structures, payments, waivers, configs] =
       await Promise.all([
-        User.findAll({
+        CoreService.findAll({
           where: studentWhere,
           attributes: [
             "id",
@@ -1649,7 +1743,7 @@ export const getSections = async (req, res) => {
 
     where.is_active = true;
 
-    const sections = await User.findAll({
+    const sections = await CoreService.findAll({
       attributes: [
         [sequelize.fn("DISTINCT", sequelize.col("section")), "section"],
       ],
@@ -1693,7 +1787,7 @@ export const exportDefaulters = async (req, res) => {
     // Fetch All Match (No Pagination)
     const [students, structures, payments, waivers, configs] =
       await Promise.all([
-        User.findAll({
+        CoreService.findAll({
           where: studentWhere,
           attributes: [
             "id",
@@ -1861,7 +1955,7 @@ export const addStudentFine = async (req, res) => {
   try {
     const { student_id, category_id, amount, semester, remarks } = req.body;
 
-    const student = await User.findByPk(student_id);
+    const student = await CoreService.findByPk(student_id);
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     const charge = await StudentFeeCharge.create({
@@ -1960,26 +2054,25 @@ export const getDailyCollection = async (req, res) => {
     if (program_id) studentWhere.program_id = program_id;
     if (batch_year) studentWhere.batch_year = batch_year;
 
+    let allowedStudentIds = null;
+    if (Object.keys(studentWhere).length > 0) {
+      const matchedStudents = await CoreService.findAll({
+        where: studentWhere,
+        attributes: ["id"],
+      });
+      allowedStudentIds = matchedStudents.map((s) => s.id);
+
+      if (allowedStudentIds.length === 0) {
+        // No students match the criteria, so no payments to return
+        return res.json({ success: true, data: [] });
+      } else {
+        where.student_id = { [Op.in]: allowedStudentIds };
+      }
+    }
+
     const payments = await FeePayment.findAll({
       where,
       include: [
-        {
-          model: User,
-          as: "student",
-          where:
-            Object.keys(studentWhere).length > 0 ? studentWhere : undefined,
-          attributes: [
-            "id",
-            "first_name",
-            "last_name",
-            "student_id",
-            "email",
-            "batch_year",
-            "program_id",
-            "department_id",
-          ],
-        },
-
         {
           model: AcademicFeePayment,
           as: "academic_fee_payments",
@@ -2006,10 +2099,29 @@ export const getDailyCollection = async (req, res) => {
       order: [["payment_date", "ASC"]],
     });
 
-    await hydrateStudentsWithAcademics(
-      payments.map((payment) => payment.student).filter(Boolean),
-      { programAttributes: ["name"], departmentAttributes: ["name"] },
-    );
+    const studentIds = [...new Set(payments.map(p => p.student_id))];
+    const userMap = await CoreService.getUserMapByIds(studentIds, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "student_id",
+        "email",
+        "batch_year",
+        "program_id",
+        "department_id",
+      ],
+    });
+
+    payments.forEach(payment => {
+      const studentData = userMap.get(payment.student_id);
+      if (studentData) {
+        payment.setDataValue("student", studentData);
+      }
+    });
+
+    const studentsToHydrate = payments.map((p) => p.getDataValue("student")).filter(Boolean);
+    await hydrateStudentsWithAcademics(studentsToHydrate, { programAttributes: ["name"], departmentAttributes: ["name"] });
 
     const summary = {
       total_collected: 0,

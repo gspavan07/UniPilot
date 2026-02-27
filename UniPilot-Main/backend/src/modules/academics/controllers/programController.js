@@ -1,6 +1,5 @@
 import logger from "../../../utils/logger.js";
 import { Department, Program } from "../models/index.js";
-import { User } from "../../core/models/index.js";
 
 
 
@@ -20,13 +19,12 @@ export const getAllPrograms = async (req, res) => {
     if (!department_id && req.user) {
       // If user is HOD, find their department
       // We can check if the user object has department_id (if added to token)
-      // OR we can query the Department table
-      const userWithDept = await User.findByPk(req.user.userId, {
-        include: [{ model: Department, as: 'departments_as_hod' }]
+      const hodDepartments = await Department.findAll({
+        where: { hod_id: req.user.userId }
       });
 
-      if (userWithDept && userWithDept.departments_as_hod && userWithDept.departments_as_hod.length > 0) {
-        department_id = userWithDept.departments_as_hod[0].id;
+      if (hodDepartments && hodDepartments.length > 0) {
+        department_id = hodDepartments[0].id;
       }
     }
 

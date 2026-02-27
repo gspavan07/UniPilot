@@ -1,4 +1,4 @@
-import { Regulation } from "../../academics/models/index.js";
+import AcademicService from "../../academics/services/index.js";
 
 
 /**
@@ -8,7 +8,9 @@ export const getExamConfig = async (req, res) => {
   try {
     const { regulationId } = req.params;
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_configuration"],
+    });
     if (!regulation) {
       return res.status(404).json({ message: "Regulation not found" });
     }
@@ -61,19 +63,24 @@ export const updateExamConfig = async (req, res) => {
       }
     }
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_configuration"],
+    });
     if (!regulation) {
       return res.status(404).json({ message: "Regulation not found" });
     }
 
-    // Direct assignment and save for JSONB fields
-    regulation.exam_configuration = exam_configuration;
-    regulation.changed("exam_configuration", true);
-    await regulation.save();
+    const updated = await AcademicService.updateRegulationExamConfiguration(
+      regulationId,
+      exam_configuration,
+    );
+    if (!updated) {
+      return res.status(404).json({ message: "Regulation not found" });
+    }
 
     res.json({
       message: "Exam configuration updated successfully",
-      exam_configuration: regulation.exam_configuration,
+      exam_configuration: updated.exam_configuration,
     });
   } catch (error) {
     console.error("Error updating exam configuration:", error);
@@ -100,7 +107,9 @@ export const addCourseType = async (req, res) => {
       });
     }
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_configuration"],
+    });
     if (!regulation) {
       return res.status(404).json({ message: "Regulation not found" });
     }
@@ -122,14 +131,17 @@ export const addCourseType = async (req, res) => {
       course_types: [...examConfig.course_types, courseType],
     };
 
-    // Direct assignment and save for JSONB fields
-    regulation.exam_configuration = newExamConfig;
-    regulation.changed("exam_configuration", true);
-    await regulation.save();
+    const updated = await AcademicService.updateRegulationExamConfiguration(
+      regulationId,
+      newExamConfig,
+    );
+    if (!updated) {
+      return res.status(404).json({ message: "Regulation not found" });
+    }
 
     res.json({
       message: "Course type added successfully",
-      exam_configuration: regulation.exam_configuration,
+      exam_configuration: updated.exam_configuration,
     });
   } catch (error) {
     console.error("Error adding course type:", error);
@@ -145,7 +157,9 @@ export const updateCourseType = async (req, res) => {
     const { regulationId, courseTypeId } = req.params;
     const { courseType } = req.body;
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_configuration"],
+    });
     if (!regulation) {
       return res.status(404).json({ message: "Regulation not found" });
     }
@@ -166,14 +180,17 @@ export const updateCourseType = async (req, res) => {
 
     const newExamConfig = { course_types: newCourseTypes };
 
-    // Direct assignment and save for JSONB fields
-    regulation.exam_configuration = newExamConfig;
-    regulation.changed("exam_configuration", true);
-    await regulation.save();
+    const updated = await AcademicService.updateRegulationExamConfiguration(
+      regulationId,
+      newExamConfig,
+    );
+    if (!updated) {
+      return res.status(404).json({ message: "Regulation not found" });
+    }
 
     res.json({
       message: "Course type updated successfully",
-      exam_configuration: regulation.exam_configuration,
+      exam_configuration: updated.exam_configuration,
     });
   } catch (error) {
     console.error("Error updating course type:", error);
@@ -188,7 +205,9 @@ export const deleteCourseType = async (req, res) => {
   try {
     const { regulationId, courseTypeId } = req.params;
 
-    const regulation = await Regulation.findByPk(regulationId);
+    const regulation = await AcademicService.getRegulationById(regulationId, {
+      attributes: ["id", "exam_configuration"],
+    });
     if (!regulation) {
       return res.status(404).json({ message: "Regulation not found" });
     }
@@ -202,14 +221,17 @@ export const deleteCourseType = async (req, res) => {
       ),
     };
 
-    // Direct assignment and save for JSONB fields
-    regulation.exam_configuration = newExamConfig;
-    regulation.changed("exam_configuration", true);
-    await regulation.save();
+    const updated = await AcademicService.updateRegulationExamConfiguration(
+      regulationId,
+      newExamConfig,
+    );
+    if (!updated) {
+      return res.status(404).json({ message: "Regulation not found" });
+    }
 
     res.json({
       message: "Course type deleted successfully",
-      exam_configuration: regulation.exam_configuration,
+      exam_configuration: updated.exam_configuration,
     });
   } catch (error) {
     console.error("Error deleting course type:", error);

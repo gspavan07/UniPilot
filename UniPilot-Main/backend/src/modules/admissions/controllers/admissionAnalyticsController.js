@@ -2,8 +2,8 @@ import { Op } from "sequelize";
 import logger from "../../../utils/logger.js";
 import { sequelize } from "../../../config/database.js";
 import { AdmissionConfig } from "../models/index.js";
-import { User } from "../../core/models/index.js";
-import academicLookupService from "../../academics/services/academicLookupService.js";
+import { CoreService } from "../../core/services/index.js";
+import { AcademicService } from "../../academics/services/index.js";
 
 /**
  * Admission Analytics Controller
@@ -31,7 +31,7 @@ export const getAdmissionAnalytics = async (req, res) => {
       batch && batch !== "all" ? { batch_year: parseInt(batch) } : {};
 
     // 1. Batch-wise growth data (last 5 years)
-    const batchGrowth = await User.findAll({
+    const batchGrowth = await CoreService.findAll({
       attributes: [
         "batch_year",
         [sequelize.fn("COUNT", sequelize.col("id")), "students"],
@@ -64,7 +64,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     });
 
     // 2. Department classification
-    const departmentData = await User.findAll({
+    const departmentData = await CoreService.findAll({
       attributes: [
         "department_id",
         [sequelize.fn("COUNT", sequelize.col("User.id")), "students"],
@@ -78,7 +78,7 @@ export const getAdmissionAnalytics = async (req, res) => {
       raw: true,
     });
 
-    const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    const departmentMap = await AcademicService.getDepartmentMapByIds(
       departmentData.map((dept) => dept.department_id),
       { attributes: ["id", "name", "code"] },
     );
@@ -92,7 +92,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     });
 
     // 3. Gender distribution
-    const genderData = await User.findAll({
+    const genderData = await CoreService.findAll({
       attributes: [
         "gender",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -112,7 +112,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 4. Caste distribution
-    const casteData = await User.findAll({
+    const casteData = await CoreService.findAll({
       attributes: [
         "caste",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -132,7 +132,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 5. Religion distribution
-    const religionData = await User.findAll({
+    const religionData = await CoreService.findAll({
       attributes: [
         "religion",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -152,7 +152,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 6. Country distribution
-    const countryData = await User.findAll({
+    const countryData = await CoreService.findAll({
       attributes: [
         "nationality",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -173,7 +173,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 7. State distribution (India only)
-    const stateData = await User.findAll({
+    const stateData = await CoreService.findAll({
       attributes: [
         "state",
         [sequelize.fn("COUNT", sequelize.col("id")), "students"],
@@ -196,7 +196,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 8. Admission Type distribution
-    const admissionTypeData = await User.findAll({
+    const admissionTypeData = await CoreService.findAll({
       attributes: [
         "admission_type",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
@@ -218,14 +218,14 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 9. KPI statistics
-    const totalStudents = await User.count({
+    const totalStudents = await CoreService.count({
       where: {
         role: "student",
         ...batchWhere,
       },
     });
 
-    const internationalStudents = await User.count({
+    const internationalStudents = await CoreService.count({
       where: {
         role: "student",
         nationality: { [Op.ne]: "Indian" },
@@ -238,7 +238,7 @@ export const getAdmissionAnalytics = async (req, res) => {
     const departmentCount = departmentFormatted.length;
 
     // 9. Get all available batches
-    const allBatches = await User.findAll({
+    const allBatches = await CoreService.findAll({
       attributes: [
         [sequelize.fn("DISTINCT", sequelize.col("batch_year")), "batch_year"],
       ],
