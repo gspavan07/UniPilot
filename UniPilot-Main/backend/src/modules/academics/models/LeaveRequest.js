@@ -55,6 +55,7 @@ const LeaveRequest = sequelize.define(
   },
   {
     tableName: "leave_requests",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   }

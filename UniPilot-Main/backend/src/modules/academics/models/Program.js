@@ -85,6 +85,7 @@ const Program = sequelize.define(
   },
   {
     tableName: "programs",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
     indexes: [

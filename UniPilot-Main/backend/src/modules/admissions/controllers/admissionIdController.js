@@ -92,24 +92,34 @@ export const previewBulkIds = async (req, res) => {
       currentSeq = config.program_sequences[program_id] + 1;
     }
 
-    // 4. Fetch Students (Temp Only)
-    const students = await CoreService.findAll({
+    // 4. Fetch Students (Temp Only) via StudentProfile
+    const { StudentProfile, User } = sequelize.models;
+    const students = await StudentProfile.findAll({
       where: {
-        role: "student",
         batch_year,
         program_id,
         is_temporary_id: false,
       },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "first_name", "last_name"],
+          where: { role: "student" },
+          required: true,
+        },
+      ],
+      attributes: ["student_id", "is_lateral"],
       order: [
-        ["first_name", "ASC"],
-        ["last_name", "ASC"],
-      ], // Alphabetical Sort
-      attributes: ["id", "first_name", "last_name", "student_id", "is_lateral"],
+        [{ model: User, as: "user" }, "first_name", "ASC"],
+        [{ model: User, as: "user" }, "last_name", "ASC"],
+      ],
     });
 
     // 5. Generate Previews
-    const previewData = students.map((student) => {
-      const isLateral = student.is_lateral || false;
+    const previewData = students.map((profile) => {
+      const student = profile.user;
+      const isLateral = profile.is_lateral || false;
       // Note: Lateral logic might imply different batch/year calc?
       // But assuming batch_year passed IS the student's batch year.
 
@@ -123,7 +133,7 @@ export const previewBulkIds = async (req, res) => {
       const item = {
         id: student.id,
         name: `${student.first_name} ${student.last_name}`,
-        current_id: student.student_id,
+        current_id: profile.student_id,
         new_id: newId,
         sequence: currentSeq,
       };
@@ -165,10 +175,10 @@ export const commitBulkIds = async (req, res) => {
         .json({ success: false, error: "Config not found" });
     }
 
-    // 1. Update each student
+    // 1. Update each student profile
     let lastSequence = 0;
     for (const item of students) {
-      await CoreService.update(
+      await sequelize.models.StudentProfile.update(
         {
           student_id: item.new_id,
           admission_number: item.new_id, // Setting admission number same as Roll No for now?
@@ -176,7 +186,7 @@ export const commitBulkIds = async (req, res) => {
           // Let's assume Updating student_id is the key.
           is_temporary_id: true,
         },
-        { where: { id: item.id }, transaction: t },
+        { where: { user_id: item.id }, transaction: t },
       );
       if (item.sequence > lastSequence) lastSequence = item.sequence;
     }

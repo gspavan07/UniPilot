@@ -61,6 +61,7 @@ const Payslip = sequelize.define(
   },
   {
     tableName: "payslips",
+    schema: 'hr',
     timestamps: true,
     underscored: true,
     indexes: [

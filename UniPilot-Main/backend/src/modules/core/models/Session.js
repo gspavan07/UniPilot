@@ -47,6 +47,7 @@ const Session = sequelize.define(
     },
     {
         tableName: "sessions",
+        schema: 'core',
         timestamps: true,
         underscored: true,
         indexes: [

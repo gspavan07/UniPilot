@@ -58,6 +58,7 @@ const StudentPlacementProfile = sequelize.define(
   },
   {
     tableName: "student_placement_profiles",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

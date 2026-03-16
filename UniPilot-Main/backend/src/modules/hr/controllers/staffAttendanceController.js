@@ -73,10 +73,6 @@ export const getDailyAttendanceView = async (req, res) => {
       role: { [Op.ne]: "student" },
       is_active: true,
     };
-    if (department_id && department_id !== "all") {
-      userWhere.department_id = department_id;
-    }
-
     const users = await CoreService.findAll({
       where: userWhere,
       attributes: [
@@ -88,11 +84,25 @@ export const getDailyAttendanceView = async (req, res) => {
         "department_id",
         "biometric_device_id",
       ],
+      includeProfiles: "staff",
       order: [["first_name", "ASC"]],
     });
 
+    const filteredUsers =
+      department_id && department_id !== "all"
+        ? users.filter(
+            (user) =>
+              (user.staff_profile?.department_id || user.department_id) ===
+              department_id,
+          )
+        : users;
+
     const departmentIds = [
-      ...new Set(users.map((user) => user.department_id).filter(Boolean)),
+      ...new Set(
+        filteredUsers
+          .map((user) => user.staff_profile?.department_id || user.department_id)
+          .filter(Boolean),
+      ),
     ];
     const departments = await AcademicService.getDepartmentsByIds(
       departmentIds,
@@ -133,7 +143,7 @@ export const getDailyAttendanceView = async (req, res) => {
     const isSunday = dayOfWeek === 0;
 
     // 5. Merge Data
-    const mergedData = users.map((user) => {
+    const mergedData = filteredUsers.map((user) => {
       // Check existing attendance
       const attCallback = attendance.find((a) => a.user_id === user.id);
 
@@ -172,14 +182,14 @@ export const getDailyAttendanceView = async (req, res) => {
         is_locked = true;
       }
 
+      const deptId = user.staff_profile?.department_id || user.department_id;
+
       return {
         user_id: user.id,
         name: `${user.first_name} ${user.last_name}`,
-        employee_id: user.employee_id,
+        employee_id: user.staff_profile?.employee_id || user.employee_id,
         role: user.role,
-        department: user.department_id
-          ? departmentMap.get(user.department_id)?.name || "-"
-          : "-",
+        department: deptId ? departmentMap.get(deptId)?.name || "-" : "-",
         biometric_device_id: user.biometric_device_id,
         status,
         check_in_time: check_in,
@@ -212,10 +222,15 @@ export const getStats = async (req, res) => {
 
     if (department_id) {
       const staffInDepartment = await CoreService.findAll({
-        where: { department_id },
-        attributes: ["id"],
+        where: {},
+        includeProfiles: "staff",
       });
-      const filteredUserIds = staffInDepartment.map((staff) => staff.id);
+      // Filter those whose profile matches the department
+      const filteredUsers = staffInDepartment.filter(
+        (staff) => (staff.staff_profile?.department_id || staff.department_id) === department_id
+      );
+      const filteredUserIds = filteredUsers.map((staff) => staff.id);
+      
       if (filteredUserIds.length === 0) {
         return res.status(200).json({ success: true, data: [] });
       }
@@ -237,13 +252,14 @@ export const getStats = async (req, res) => {
     const staffIds = [...new Set(records.map((record) => record.user_id))];
     const staffUsers = await CoreService.getUsersByIds(staffIds, {
       attributes: ["id", "first_name", "last_name", "employee_id", "department_id"],
+      includeProfiles: "staff",
     });
     const staffUserMap = new Map(
       staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
     );
 
     const staffDepartmentIds = [
-      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+      ...new Set(staffUsers.map((user) => user.staff_profile?.department_id || user.department_id).filter(Boolean)),
     ];
     const staffDepartments = await AcademicService.getDepartmentsByIds(
       staffDepartmentIds,
@@ -256,11 +272,18 @@ export const getStats = async (req, res) => {
     const enrichedRecords = records.map((record) => {
       const recordJson = record.toJSON?.() ?? record;
       const staff = staffUserMap.get(record.user_id);
+      
+      const deptId = staff?.staff_profile?.department_id || staff?.department_id;
+      
+      if (staff) {
+        staff.employee_id = staff.staff_profile?.employee_id || staff.employee_id;
+      }
+      
       recordJson.staff = staff
         ? {
             ...staff,
-            department: staff.department_id
-              ? staffDepartmentMap.get(staff.department_id) || null
+            department: deptId
+              ? staffDepartmentMap.get(deptId) || null
               : null,
           }
         : null;
@@ -387,7 +410,9 @@ export const applyLeave = async (req, res) => {
     const user_id = req.user.userId;
 
     // Fetch User details for hierarchy
-    const user = await CoreService.findByPk(user_id);
+    const user = await CoreService.findByPk(user_id, {
+      includeProfiles: "staff",
+    });
     if (!user) return res.status(404).json({ error: "User not found" });
 
     // Determine Approver
@@ -404,10 +429,17 @@ export const applyLeave = async (req, res) => {
       )
     ) {
       // Find HOD
+      const deptId = user.staff_profile?.department_id || user.department_id;
       const hod = await CoreService.findOne({
-        where: { department_id: user.department_id, role: "hod" },
+        includeProfiles: "staff",
       });
-      approverId = hod?.id;
+      const hods = await CoreService.findAll({
+        where: { role: "hod" },
+        includeProfiles: "staff",
+      });
+      const matchedHod = hods.find(h => (h.staff_profile?.department_id || h.department_id) === deptId);
+      
+      approverId = matchedHod?.id;
     } else if (role === "hod") {
       const admin = await CoreService.findOne({ where: { role: "admin" } });
       approverId = admin?.id;
@@ -608,6 +640,7 @@ export const getPendingApprovals = async (req, res) => {
         "department_id",
         "role",
       ],
+      includeProfiles: "staff",
     });
     const applicantMap = new Map(
       applicants.map((user) => [user.id, user.toJSON?.() ?? user]),
@@ -615,7 +648,7 @@ export const getPendingApprovals = async (req, res) => {
 
     const applicantDepartmentIds = [
       ...new Set(
-        applicants.map((user) => user.department_id).filter(Boolean),
+        applicants.map((user) => user.staff_profile?.department_id || user.department_id).filter(Boolean),
       ),
     ];
     const applicantDepartments = await AcademicService.getDepartmentsByIds(
@@ -630,13 +663,19 @@ export const getPendingApprovals = async (req, res) => {
     // Frontend expects `applicant` object.
     const data = approvals.map((a) => {
       const applicant = applicantMap.get(a.student_id);
+      
+      const deptId = applicant?.staff_profile?.department_id || applicant?.department_id;
+      if (applicant) {
+        applicant.employee_id = applicant.staff_profile?.employee_id || applicant.employee_id;
+      }
+      
       return {
         ...a.toJSON(),
         applicant: applicant
           ? {
               ...applicant,
-              department: applicant.department_id
-                ? applicantDepartmentMap.get(applicant.department_id) || null
+              department: deptId
+                ? applicantDepartmentMap.get(deptId) || null
                 : null,
             }
           : null,

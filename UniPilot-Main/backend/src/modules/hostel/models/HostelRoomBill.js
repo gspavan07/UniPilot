@@ -99,6 +99,7 @@ const HostelRoomBill = sequelize.define(
   },
   {
     tableName: "hostel_room_bills",
+    schema: 'hostel',
     timestamps: true,
     underscored: true,
     indexes: [

@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import logger from "../../../utils/logger.js";
+import { sequelize } from "../../../config/database.js";
 import { CoreService } from "../../core/services/index.js";
 
 
@@ -34,10 +35,18 @@ export const uploadStudentPhotos = async (req, res) => {
 
       try {
         // Find user by student_id
-        const user = await CoreService.findOne({
-          where: { student_id: studentId }, // Exact match
-          attributes: ["id", "student_id", "first_name", "last_name"],
+        const profile = await sequelize.models.StudentProfile.findOne({
+          where: { student_id: studentId },
+          include: [
+            {
+              model: sequelize.models.User,
+              as: "user",
+              attributes: ["id", "first_name", "last_name"],
+            },
+          ],
         });
+
+        const user = profile?.user;
 
         if (user) {
           // Construct public URL path

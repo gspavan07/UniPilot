@@ -100,6 +100,7 @@ const HostelAllocation = sequelize.define(
   },
   {
     tableName: "hostel_allocations",
+    schema: 'hostel',
     underscored: true,
     timestamps: true,
   },

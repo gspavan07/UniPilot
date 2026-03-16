@@ -36,6 +36,7 @@ const FeeSemesterConfig = sequelize.define(
   },
   {
     tableName: "fee_semester_configs",
+    schema: 'fees',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

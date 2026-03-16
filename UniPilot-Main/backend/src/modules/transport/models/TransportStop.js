@@ -57,6 +57,7 @@ const TransportStop = sequelize.define(
   },
   {
     tableName: "transport_stops",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

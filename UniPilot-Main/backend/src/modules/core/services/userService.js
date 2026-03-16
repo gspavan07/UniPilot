@@ -1,13 +1,186 @@
 import { Op } from "sequelize";
 import { User } from "../models/index.js";
+import { sequelize } from "../../../config/database.js";
 
-export const findByPk = (id, options = {}) => User.findByPk(id, options);
+const STUDENT_PROFILE_FIELDS = new Set([
+  "student_id",
+  "program_id",
+  "regulation_id",
+  "batch_year",
+  "current_semester",
+  "section",
+  "admission_date",
+  "is_hosteller",
+  "requires_transport",
+  "academic_status",
+  "admission_number",
+  "admission_type",
+  "is_lateral",
+  "is_temporary_id",
+  "parent_details",
+  "previous_academics",
+]);
 
-export const findOne = (options = {}) => User.findOne(options);
+const STAFF_PROFILE_FIELDS = new Set([
+  "employee_id",
+  "department_id",
+  "salary_grade_id",
+  "designation",
+  "joining_date",
+]);
 
-export const findAll = (options = {}) => User.findAll(options);
+const splitProfileAttributes = (attributes) => {
+  if (attributes === null || attributes === undefined) {
+    return {
+      userAttributes: attributes,
+      studentAttributes: [],
+      staffAttributes: [],
+    };
+  }
 
-export const findAndCountAll = (options = {}) => User.findAndCountAll(options);
+  const userAttributes = [];
+  const studentAttributes = [];
+  const staffAttributes = [];
+
+  attributes.forEach((attr) => {
+    if (STUDENT_PROFILE_FIELDS.has(attr)) {
+      studentAttributes.push(attr);
+    } else if (STAFF_PROFILE_FIELDS.has(attr)) {
+      staffAttributes.push(attr);
+    } else {
+      userAttributes.push(attr);
+    }
+  });
+
+  return { userAttributes, studentAttributes, staffAttributes };
+};
+
+const normalizeUserProfiles = (user) => {
+  if (!user) return user;
+
+  const studentProfile = user.student_profile;
+  if (studentProfile) {
+    STUDENT_PROFILE_FIELDS.forEach((field) => {
+      if (studentProfile[field] !== undefined) {
+        user.setDataValue(field, studentProfile[field]);
+      }
+    });
+  }
+
+  const staffProfile = user.staff_profile;
+  if (staffProfile) {
+    STAFF_PROFILE_FIELDS.forEach((field) => {
+      if (staffProfile[field] !== undefined) {
+        user.setDataValue(field, staffProfile[field]);
+      }
+    });
+  }
+
+  return user;
+};
+
+const normalizeUserCollection = (users) => {
+  if (!users) return users;
+  if (Array.isArray(users)) {
+    users.forEach((user) => normalizeUserProfiles(user));
+    return users;
+  }
+  return normalizeUserProfiles(users);
+};
+
+// Helper to inject profiles if requested or inferred from attributes
+const applyProfileIncludes = (options, { studentAttributes = [], staffAttributes = [] } = {}) => {
+  const inferredIncludeStudent = studentAttributes.length > 0;
+  const inferredIncludeStaff = staffAttributes.length > 0;
+
+  const includeProfiles =
+    options.includeProfiles ??
+    (inferredIncludeStudent || inferredIncludeStaff ? ["student", "staff"] : undefined);
+
+  if (!includeProfiles) return options;
+
+  const includes = Array.isArray(options.include)
+    ? [...options.include]
+    : options.include
+      ? [options.include]
+      : [];
+
+  const includeStudent =
+    includeProfiles === "all" ||
+    (Array.isArray(includeProfiles) && includeProfiles.includes("student"));
+  const includeStaff =
+    includeProfiles === "all" ||
+    (Array.isArray(includeProfiles) && includeProfiles.includes("staff"));
+
+  if (includeStudent && !includes.some((inc) => inc.as === "student_profile")) {
+    includes.push({
+      model: sequelize.models.StudentProfile,
+      as: "student_profile",
+      required: false,
+      attributes: studentAttributes.length > 0 ? studentAttributes : undefined,
+    });
+  }
+
+  if (includeStaff && !includes.some((inc) => inc.as === "staff_profile")) {
+    includes.push({
+      model: sequelize.models.StaffProfile,
+      as: "staff_profile",
+      required: false,
+      attributes: staffAttributes.length > 0 ? staffAttributes : undefined,
+    });
+  }
+
+  return { ...options, includeProfiles, include: includes };
+};
+
+export const findByPk = async (id, options = {}) => {
+  const { userAttributes, studentAttributes, staffAttributes } = splitProfileAttributes(
+    options.attributes,
+  );
+  const resolvedOptions = applyProfileIncludes(
+    { ...options, attributes: userAttributes, includeProfiles: options.includeProfiles ?? "all" },
+    { studentAttributes, staffAttributes },
+  );
+  const user = await User.findByPk(id, resolvedOptions);
+  return normalizeUserCollection(user);
+};
+
+export const findOne = async (options = {}) => {
+  const { userAttributes, studentAttributes, staffAttributes } = splitProfileAttributes(
+    options.attributes,
+  );
+  const resolvedOptions = applyProfileIncludes(
+    { ...options, attributes: userAttributes },
+    { studentAttributes, staffAttributes },
+  );
+  const user = await User.findOne(resolvedOptions);
+  return normalizeUserCollection(user);
+};
+
+export const findAll = async (options = {}) => {
+  const { userAttributes, studentAttributes, staffAttributes } = splitProfileAttributes(
+    options.attributes,
+  );
+  const resolvedOptions = applyProfileIncludes(
+    { ...options, attributes: userAttributes },
+    { studentAttributes, staffAttributes },
+  );
+  const users = await User.findAll(resolvedOptions);
+  return normalizeUserCollection(users);
+};
+
+export const findAndCountAll = async (options = {}) => {
+  const { userAttributes, studentAttributes, staffAttributes } = splitProfileAttributes(
+    options.attributes,
+  );
+  const resolvedOptions = applyProfileIncludes(
+    { ...options, attributes: userAttributes },
+    { studentAttributes, staffAttributes },
+  );
+  const result = await User.findAndCountAll(resolvedOptions);
+  normalizeUserCollection(result?.rows);
+  return result;
+};
 
 export const count = (options = {}) => User.count(options);
 
@@ -22,7 +195,21 @@ export const destroy = (options = {}) => User.destroy(options);
 export const getUsersByIds = async (ids = [], options = {}) => {
   const uniqueIds = [...new Set(ids.filter(Boolean))];
   if (uniqueIds.length === 0) return [];
-  return User.findAll({ where: { id: { [Op.in]: uniqueIds } }, ...options });
+
+  const { userAttributes, studentAttributes, staffAttributes } = splitProfileAttributes(
+    options.attributes,
+  );
+  const resolvedOptions = applyProfileIncludes(
+    {
+      ...options,
+      attributes: userAttributes,
+      where: { id: { [Op.in]: uniqueIds } },
+    },
+    { studentAttributes, staffAttributes },
+  );
+
+  const users = await User.findAll(resolvedOptions);
+  return normalizeUserCollection(users);
 };
 
 export const getUserMapByIds = async (ids = [], options = {}) => {
@@ -34,16 +221,15 @@ export const getDistinctBatchYears = async ({
   role = "student",
   transaction,
 } = {}) => {
-  const rows = await User.findAll({
+  const rows = await sequelize.models.StudentProfile.findAll({
     attributes: [
       [
-        User.sequelize.fn("DISTINCT", User.sequelize.col("batch_year")),
+        sequelize.fn("DISTINCT", sequelize.col("batch_year")),
         "batch_year",
       ],
     ],
     where: {
       batch_year: { [Op.ne]: null },
-      role,
     },
     order: [["batch_year", "DESC"]],
     raw: true,
@@ -58,18 +244,17 @@ export const getMostCommonSemesterForBatch = async (
   { role = "student", transaction } = {},
 ) => {
   if (!batchYear) return null;
-  const [row] = await User.findAll({
+  const [row] = await sequelize.models.StudentProfile.findAll({
     attributes: [
       "current_semester",
-      [User.sequelize.fn("COUNT", User.sequelize.col("current_semester")), "count"],
+      [sequelize.fn("COUNT", sequelize.col("current_semester")), "count"],
     ],
     where: {
       batch_year: batchYear,
-      role,
       current_semester: { [Op.ne]: null },
     },
     group: ["current_semester"],
-    order: [[User.sequelize.literal("count"), "DESC"]],
+    order: [[sequelize.literal("count"), "DESC"]],
     limit: 1,
     raw: true,
     transaction,

@@ -81,6 +81,7 @@ const StudentRouteAllocation = sequelize.define(
   },
   {
     tableName: "student_route_allocations",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

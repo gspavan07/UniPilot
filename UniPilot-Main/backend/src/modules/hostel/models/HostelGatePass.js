@@ -84,6 +84,7 @@ const HostelGatePass = sequelize.define(
   },
   {
     tableName: "hostel_gate_passes",
+    schema: 'hostel',
     underscored: true,
     timestamps: true,
   },

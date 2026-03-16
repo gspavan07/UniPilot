@@ -60,6 +60,7 @@ const Route = sequelize.define(
   },
   {
     tableName: "transport_routes",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

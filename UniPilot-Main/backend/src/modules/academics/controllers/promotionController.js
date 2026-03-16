@@ -147,12 +147,12 @@ export const processBulkPromotion = async (req, res) => {
         const student = await CoreService.findByPk(id);
         if (student) {
           const from_sem = student.current_semester;
-          await CoreService.update(
+          await sequelize.models.StudentProfile.update(
             {
               current_semester: to_semester,
               academic_status: "promoted",
             },
-            { where: { id: id }, transaction: t },
+            { where: { user_id: id }, transaction: t },
           );
 
           // Record evaluation/history

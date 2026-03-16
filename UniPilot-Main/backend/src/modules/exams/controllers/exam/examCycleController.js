@@ -735,11 +735,21 @@ async function getCycleStudents(req, res) {
     // 2. Fetch Base Students
     const baseStudents = await CoreService.findAll({
       where: {
-        program_id: { [Op.in]: programIds },
-        current_semester: cycle.semester,
         role: { [Op.in]: ["student"] },
         is_active: true,
       },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: {
+            program_id: { [Op.in]: programIds },
+            current_semester: cycle.semester,
+          },
+          attributes: [],
+        },
+      ],
       attributes: [
         "id",
         "student_id",
@@ -748,7 +758,9 @@ async function getCycleStudents(req, res) {
         "section",
         "program_id",
       ],
-      order: [["student_id", "ASC"]],
+      order: [
+        [{ model: sequelize.models.StudentProfile, as: "student_profile" }, "student_id", "ASC"],
+      ],
     });
 
     const programDetails = await AcademicService.getProgramsByIds(programIds, {

@@ -108,6 +108,7 @@ const Department = sequelize.define(
   },
   {
     tableName: "departments",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
     indexes: [

@@ -39,6 +39,7 @@ const Block = sequelize.define(
   },
   {
     tableName: "blocks",
+    schema: 'infrastructure',
     timestamps: true,
     underscored: true,
   },

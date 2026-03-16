@@ -35,6 +35,7 @@ const ProgramOutcome = sequelize.define(
     },
     {
         tableName: 'program_outcomes',
+        schema: 'obe',
         timestamps: true,
         underscored: true,
         indexes: [

@@ -258,37 +258,42 @@ export const getMyCourses = async (req, res) => {
     const studentId = req.user.userId;
 
     // 1. Get student's program and semester
-    const student = await CoreService.findByPk(studentId);
+    const student = await CoreService.findByPk(studentId, {
+      includeProfiles: "student",
+    });
 
-    if (!student || !student.program_id) {
+    const programId = student?.student_profile?.program_id || student?.program_id;
+    const regulationId = student?.student_profile?.regulation_id || student?.regulation_id;
+    const batchYear = student?.student_profile?.batch_year || student?.batch_year;
+
+    if (!student || !programId) {
       return res.status(404).json({
         success: false,
         error: "Student program details not found",
       });
     }
 
-    if (!student.regulation_id) {
+    if (!regulationId) {
       return res
         .status(404)
         .json({ error: "Student has no regulation assigned" });
     }
 
 
-    const regulation = await Regulation.findByPk(student.regulation_id);
+    const regulation = await Regulation.findByPk(regulationId);
 
     if (!regulation || !regulation.courses_list) {
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
-    const { program_id, batch_year } = student;
     const coursesList = regulation.courses_list;
     let targetIds = new Set();
     let courseToSemesterMap = {};
 
     // 2. Collect courses from all semesters for this student's program and batch
-    if (program_id && coursesList[program_id] && batch_year) {
-      if (coursesList[program_id][batch_year]) {
-        const programBatchData = coursesList[program_id][batch_year];
+    if (programId && coursesList[programId] && batchYear) {
+      if (coursesList[programId][batchYear]) {
+        const programBatchData = coursesList[programId][batchYear];
         Object.keys(programBatchData).forEach((sem) => {
           const semCourses = programBatchData[sem] || [];
           semCourses.forEach((id) => {
@@ -313,8 +318,8 @@ export const getMyCourses = async (req, res) => {
         });
       };
 
-      if (coursesList["common"][batch_year]) {
-        addFromSource(coursesList["common"][batch_year]);
+      if (coursesList["common"][batchYear]) {
+        addFromSource(coursesList["common"][batchYear]);
       } else if (coursesList["common"]["all_batches"]) {
         addFromSource(coursesList["common"]["all_batches"]);
       }

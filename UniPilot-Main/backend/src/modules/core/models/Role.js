@@ -31,6 +31,7 @@ const Role = sequelize.define(
   },
   {
     tableName: "roles",
+    schema: 'core',
     timestamps: true,
     underscored: true,
   }

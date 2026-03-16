@@ -1,4 +1,5 @@
 import { Op, fn, col } from "sequelize";
+import { sequelize } from "../../../config/database.js";
 import CoreService from "../../core/services/index.js";
 import academicLookupService from "../../academics/services/academicLookupService.js";
 import feeAnalyticsService from "../../fees/services/feeAnalyticsService.js";
@@ -11,15 +12,25 @@ const getSuperAdminStats = async (req, res) => {
     // 0. Filters
     const { batch } = req.query;
     const studentWhere = { role: "student", is_active: true };
+    const studentProfileWhere = {};
     const paymentWhere = { status: "completed" };
 
     if (batch && batch !== "all") {
-      studentWhere.batch_year = parseInt(batch, 10);
+      studentProfileWhere.batch_year = parseInt(batch, 10);
     }
 
     // 1. KPI Cards - Real Data
-    const totalStudents = await CoreService.count({
-      where: studentWhere,
+    const totalStudents = await sequelize.models.StudentProfile.count({
+      where: studentProfileWhere,
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: studentWhere,
+          required: true,
+        },
+      ],
     });
     const totalFaculty = await CoreService.count({
       where: {
@@ -65,15 +76,24 @@ const getSuperAdminStats = async (req, res) => {
     });
 
     // 3. Student Enrollment by Program (Pie Chart) - Live data from DB
-    const enrollmentByProgramRaw = await CoreService.findAll({
+    const enrollmentByProgramRaw = await sequelize.models.StudentProfile.findAll({
       attributes: [
         "program_id",
-        [fn("COUNT", col("User.id")), "student_count"],
+        [fn("COUNT", col("StudentProfile.id")), "student_count"],
       ],
       where: {
-        ...studentWhere,
+        ...studentProfileWhere,
         program_id: { [Op.ne]: null },
       },
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: studentWhere,
+          required: true,
+        },
+      ],
       group: ["program_id"],
       raw: true,
     });
@@ -95,8 +115,8 @@ const getSuperAdminStats = async (req, res) => {
     }));
 
     // Get Available Batches
-    const availableBatches = await CoreService.findAll({
-      where: { role: "student", batch_year: { [Op.ne]: null } },
+    const availableBatches = await sequelize.models.StudentProfile.findAll({
+      where: { batch_year: { [Op.ne]: null } },
       attributes: [[fn("DISTINCT", col("batch_year")), "batch_year"]],
       order: [[col("batch_year"), "DESC"]],
       raw: true,

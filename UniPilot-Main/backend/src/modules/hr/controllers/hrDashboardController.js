@@ -19,10 +19,11 @@ export const getDashboardStats = async (req, res) => {
         is_active: true,
       },
       attributes: ["id", "department_id"],
+      includeProfiles: "staff",
     });
     const staffIds = staffUsers.map((user) => user.id);
     const departmentIds = [
-      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+      ...new Set(staffUsers.map((user) => user.staff_profile?.department_id || user.department_id).filter(Boolean)),
     ];
     const departments = await AcademicService.getDepartmentsByIds(
       departmentIds,
@@ -33,9 +34,10 @@ export const getDashboardStats = async (req, res) => {
     );
 
     const workforceCountMap = staffUsers.reduce((acc, user) => {
+      const deptId = user.staff_profile?.department_id || user.department_id;
       const deptName =
-        user.department_id && departmentMap.get(user.department_id)
-          ? departmentMap.get(user.department_id).name
+        deptId && departmentMap.get(deptId)
+          ? departmentMap.get(deptId).name
           : "Unassigned";
       acc[deptName] = (acc[deptName] || 0) + 1;
       return acc;
@@ -79,12 +81,13 @@ export const getDashboardStats = async (req, res) => {
     ];
     const applicants = await CoreService.getUsersByIds(applicantIds, {
       attributes: ["id", "first_name", "last_name", "role", "employee_id", "department_id"],
+      includeProfiles: "staff",
     });
     const applicantMap = new Map(
       applicants.map((user) => [user.id, user.toJSON?.() ?? user]),
     );
     const applicantDeptIds = [
-      ...new Set(applicants.map((user) => user.department_id).filter(Boolean)),
+      ...new Set(applicants.map((user) => user.staff_profile?.department_id || user.department_id).filter(Boolean)),
     ];
     const applicantDepartments = await AcademicService.getDepartmentsByIds(
       applicantDeptIds,
@@ -96,11 +99,17 @@ export const getDashboardStats = async (req, res) => {
     const pendingLeavesEnriched = pendingLeaves.map((leave) => {
       const leaveJson = leave.toJSON?.() ?? leave;
       const applicant = applicantMap.get(leave.student_id);
+      
+      const deptId = applicant?.staff_profile?.department_id || applicant?.department_id;
+      if (applicant) {
+        applicant.employee_id = applicant.staff_profile?.employee_id || applicant.employee_id;
+      }
+      
       leaveJson.applicant = applicant
         ? {
             ...applicant,
-            department: applicant.department_id
-              ? applicantDeptMap.get(applicant.department_id) || null
+            department: deptId
+              ? applicantDeptMap.get(deptId) || null
               : null,
           }
         : null;
@@ -218,17 +227,40 @@ export const getHodDashboardStats = async (req, res) => {
     });
 
     // 1. Total Students in Department
-    const totalStudents = await CoreService.count({
-      where: { department_id: departmentId, role: "student", is_active: true },
+    const totalStudents = await sequelize.models.StudentProfile.count({
+      include: [
+        {
+          model: sequelize.models.Program,
+          as: "program",
+          attributes: [],
+          where: { department_id: departmentId },
+          required: true,
+        },
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: { role: "student", is_active: true },
+          required: true,
+        },
+      ],
     });
 
     // 2. Total Faculty in Department
-    const totalFaculty = await CoreService.count({
-      where: {
-        department_id: departmentId,
-        role: { [Op.in]: ["faculty", "hod"] },
-        is_active: true,
-      },
+    const totalFaculty = await sequelize.models.StaffProfile.count({
+      where: { department_id: departmentId },
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: {
+            role: { [Op.in]: ["faculty", "hod"] },
+            is_active: true,
+          },
+          required: true,
+        },
+      ],
     });
 
     // 3. Total Courses in Department
@@ -260,12 +292,27 @@ export const getHodDashboardStats = async (req, res) => {
       : 0;
 
     // 5. Recent Activity (Timetable changes & New Students)
-    const recentStudents = await CoreService.findAll({
-      where: { department_id: departmentId, role: "student" },
+    const recentStudentProfiles = await sequelize.models.StudentProfile.findAll({
+      include: [
+        {
+          model: sequelize.models.Program,
+          as: "program",
+          attributes: [],
+          where: { department_id: departmentId },
+          required: true,
+        },
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: ["first_name", "last_name", "created_at"],
+          where: { role: "student" },
+          required: true,
+        },
+      ],
       limit: 3,
-      order: [["created_at", "DESC"]],
-      attributes: ["first_name", "last_name", "created_at"],
+      order: [[{ model: sequelize.models.User, as: "user" }, "created_at", "DESC"]],
     });
+    const recentStudents = recentStudentProfiles.map((profile) => profile.user);
 
     const recentTimetableSlots = timetableIds.length
       ? await AcademicService.listTimetableSlots({

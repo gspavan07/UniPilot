@@ -191,8 +191,15 @@ export const getMyTimetable = async (req, res) => {
     const { userId, role } = req.user;
 
     if (role === "student") {
-      const student = await CoreService.findByPk(userId);
-      if (!student || !student.program_id) {
+      const student = await CoreService.findByPk(userId, {
+        includeProfiles: "student",
+      });
+      
+      const programId = student?.student_profile?.program_id || student?.program_id;
+      const currentSemester = student?.student_profile?.current_semester || student?.current_semester || 1;
+      const section = student?.student_profile?.section || student?.section;
+      
+      if (!student || !programId) {
         return res
           .status(200)
           .json({ message: "Student program details not found" });
@@ -201,9 +208,9 @@ export const getMyTimetable = async (req, res) => {
       // Find timetable for this program/semester
       const timetable = await Timetable.findOne({
         where: {
-          program_id: student.program_id,
-          semester: student.current_semester || 1,
-          section: student.section,
+          program_id: programId,
+          semester: currentSemester,
+          section: section,
           is_active: true,
         },
         include: [

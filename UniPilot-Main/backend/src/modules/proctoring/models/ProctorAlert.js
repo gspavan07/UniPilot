@@ -45,6 +45,7 @@ const ProctorAlert = sequelize.define(
   },
   {
     tableName: "proctor_alerts",
+    schema: 'proctoring',
     timestamps: false, // Using triggered_at instead
     underscored: true,
   }

@@ -199,20 +199,23 @@ export const getBulkPayrollPreview = async (req, res) => {
       role: { [Op.ne]: "student" },
       is_active: true,
     };
-    if (department_id && department_id !== "all") {
-      whereUser.department_id = department_id;
-    }
 
     const staffUsers = await CoreService.findAll({
       where: whereUser,
       attributes: ["id", "first_name", "last_name", "employee_id", "role", "department_id"],
+      includeProfiles: "staff",
     });
+    
+    // Filter by department_id after staff inclusion
+    const filteredUsers = department_id && department_id !== "all" 
+      ? staffUsers.filter(u => (u.staff_profile?.department_id || u.department_id) === department_id)
+      : staffUsers;
+      
     const staffUserMap = new Map(
-      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+      filteredUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
     );
-    const staffIds = staffUsers.map((user) => user.id);
+    const staffIds = filteredUsers.map((user) => user.id);
     if (!staffIds.length) {
-      await t.rollback();
       return res.status(404).json({
         success: false,
         error:
@@ -243,7 +246,7 @@ export const getBulkPayrollPreview = async (req, res) => {
     }, {});
 
     const departmentIds = [
-      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+      ...new Set(filteredUsers.map((user) => user.staff_profile?.department_id || user.department_id).filter(Boolean)),
     ];
     const departments = await AcademicService.getDepartmentsByIds(
       departmentIds,
@@ -257,13 +260,16 @@ export const getBulkPayrollPreview = async (req, res) => {
       .map((s) => {
         const staff = staffUserMap.get(s.user_id);
         if (!staff) return null;
+        
+        const deptId = staff.staff_profile?.department_id || staff.department_id;
+        
         return {
           userId: s.user_id,
           name: `${staff.first_name} ${staff.last_name}`,
-          employeeId: staff.employee_id,
+          employeeId: staff.staff_profile?.employee_id || staff.employee_id,
           role: staff.role,
-          department: staff.department_id
-            ? departmentMap.get(staff.department_id)?.name || "N/A"
+          department: deptId
+            ? departmentMap.get(deptId)?.name || "N/A"
             : "N/A",
           basicSalary: s.basic_salary,
           hasExisting: !!payslipMap[s.user_id],
@@ -330,18 +336,23 @@ export const bulkGeneratePayslips = async (req, res) => {
       role: { [Op.ne]: "student" },
       is_active: true,
     };
-    if (department_id && department_id !== "all")
-      whereUser.department_id = department_id;
 
     const staffUsers = await CoreService.findAll({
       where: whereUser,
-      attributes: ["id", "joining_date"],
+      attributes: ["id", "joining_date", "department_id"],
+      includeProfiles: "staff",
       transaction: t,
     });
+    
+    // Filter by department_id after staff inclusion
+    const filteredUsers = department_id && department_id !== "all" 
+      ? staffUsers.filter(u => (u.staff_profile?.department_id || u.department_id) === department_id)
+      : staffUsers;
+      
     const staffUserMap = new Map(
-      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+      filteredUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
     );
-    const staffIds = staffUsers.map((user) => user.id);
+    const staffIds = filteredUsers.map((user) => user.id);
 
     const structures = await SalaryStructure.findAll({
       where: {
@@ -393,8 +404,9 @@ export const bulkGeneratePayslips = async (req, res) => {
       let monthDays = endObj.getDate(); // e.g. 28, 30, 31
 
       const staffProfile = staffUserMap.get(structure.user_id);
-      if (staffProfile?.joining_date) {
-        const joinDate = new Date(staffProfile.joining_date);
+      const joiningDate = staffProfile?.staff_profile?.joining_date || staffProfile?.joining_date;
+      if (joiningDate) {
+        const joinDate = new Date(joiningDate);
         // Reset time to ensure strict date comparison
         joinDate.setHours(0, 0, 0, 0);
 
@@ -466,7 +478,7 @@ export const bulkGeneratePayslips = async (req, res) => {
       if (isProrata) {
         breakdown.prorata = {
           is_active: true,
-          joining_date: staffProfile.joining_date,
+          joining_date: joiningDate,
           factor: prorataFactor.toFixed(2),
           effective_days: effectiveDays,
           month_days: monthDays,
@@ -549,7 +561,6 @@ export const getPayslips = async (req, res) => {
     const isPrivileged = privilegedRoles.includes(requesterRole);
 
     const where = {};
-    const userWhere = {};
 
     // 1. User Scope Logic
     if (user_id) {
@@ -571,12 +582,17 @@ export const getPayslips = async (req, res) => {
 
     let scopedUserIds = null;
     if (department_id && department_id !== "all") {
-      userWhere.department_id = department_id;
       const deptUsers = await CoreService.findAll({
-        where: userWhere,
-        attributes: ["id"],
+        where: {},
+        attributes: ["id", "department_id"],
+        includeProfiles: "staff",
       });
-      scopedUserIds = deptUsers.map((user) => user.id);
+      // Filter those whose profile matches the department
+      const filteredUsers = deptUsers.filter(
+        (staff) => (staff.staff_profile?.department_id || staff.department_id) === department_id
+      );
+      
+      scopedUserIds = filteredUsers.map((user) => user.id);
       if (scopedUserIds.length === 0) {
         return res.status(200).json({ success: true, data: [] });
       }
@@ -608,13 +624,14 @@ export const getPayslips = async (req, res) => {
         "employee_id",
         "department_id",
       ],
+      includeProfiles: "staff",
     });
     const staffMap = new Map(
       staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
     );
 
     const departmentIds = [
-      ...new Set(staffUsers.map((user) => user.department_id).filter(Boolean)),
+      ...new Set(staffUsers.map((user) => user.staff_profile?.department_id || user.department_id).filter(Boolean)),
     ];
     const departments = await AcademicService.getDepartmentsByIds(
       departmentIds,
@@ -627,11 +644,17 @@ export const getPayslips = async (req, res) => {
     const enrichedPayslips = payslips.map((payslip) => {
       const payslipJson = payslip.toJSON();
       const staff = staffMap.get(payslip.user_id);
+      
+      const deptId = staff?.staff_profile?.department_id || staff?.department_id;
+      if (staff) {
+        staff.employee_id = staff.staff_profile?.employee_id || staff.employee_id;
+      }
+      
       payslipJson.staff = staff
         ? {
             ...staff,
-            department: staff.department_id
-              ? departmentMap.get(staff.department_id) || null
+            department: deptId
+              ? departmentMap.get(deptId) || null
               : null,
           }
         : null;
@@ -751,9 +774,6 @@ export const exportBankTransferFile = async (req, res) => {
     }
 
     const whereUser = { is_active: true };
-    if (department_id && department_id !== "all") {
-      whereUser.department_id = department_id;
-    }
 
     const staffUsers = await CoreService.findAll({
       where: whereUser,
@@ -763,12 +783,24 @@ export const exportBankTransferFile = async (req, res) => {
         "last_name",
         "bank_details",
         "employee_id",
+        "department_id",
       ],
+      includeProfiles: "staff",
     });
+    
+    // Filter by department_id after staff inclusion
+    const filteredUsers = department_id && department_id !== "all" 
+      ? staffUsers.filter(u => (u.staff_profile?.department_id || u.department_id) === department_id)
+      : staffUsers;
+      
     const staffMap = new Map(
-      staffUsers.map((user) => [user.id, user.toJSON?.() ?? user]),
+      filteredUsers.map((user) => {
+        const u = user.toJSON?.() ?? user;
+        u.employee_id = u.staff_profile?.employee_id || u.employee_id;
+        return [u.id, u];
+      }),
     );
-    const staffIds = staffUsers.map((user) => user.id);
+    const staffIds = filteredUsers.map((user) => user.id);
 
     const payslips = await Payslip.findAll({
       where: {
@@ -836,7 +868,16 @@ export const confirmPayment = async (req, res) => {
       let scopedUserIds = null;
       if (department_id && department_id !== "all") {
         const deptUsers = await CoreService.findAll({
-          where: { department_id },
+          where: { role: { [Op.ne]: "student" } },
+          include: [
+            {
+              model: sequelize.models.StaffProfile,
+              as: "staff_profile",
+              required: true,
+              where: { department_id },
+              attributes: [],
+            },
+          ],
           attributes: ["id"],
         });
         scopedUserIds = deptUsers.map((user) => user.id);
@@ -936,16 +977,20 @@ export const getPublishStats = async (req, res) => {
       return res.status(400).json({ error: "Month and Year are required" });
     }
 
-    const whereUser = {};
-    if (department_id && department_id !== "all") {
-      whereUser.department_id = department_id;
-    }
-
     // 1. Fetch eligible drafts
     let scopedUserIds = null;
-    if (Object.keys(whereUser).length > 0) {
+    if (department_id && department_id !== "all") {
       const deptUsers = await CoreService.findAll({
-        where: whereUser,
+        where: { role: { [Op.ne]: "student" } },
+        include: [
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: true,
+            where: { department_id },
+            attributes: [],
+          },
+        ],
         attributes: ["id"],
       });
       scopedUserIds = deptUsers.map((user) => user.id);
@@ -1060,13 +1105,22 @@ export const publishPayslips = async (req, res) => {
       return res.status(400).json({ error: "Month and Year are required" });
     }
 
-    const whereUser = {};
-    if (department_id && department_id !== "all") {
-      whereUser.department_id = department_id;
-    }
-
     const staffUsers = await CoreService.findAll({
-      where: Object.keys(whereUser).length > 0 ? whereUser : undefined,
+      where: {
+        role: { [Op.ne]: "student" },
+      },
+      include:
+        department_id && department_id !== "all"
+          ? [
+              {
+                model: sequelize.models.StaffProfile,
+                as: "staff_profile",
+                required: true,
+                where: { department_id },
+                attributes: [],
+              },
+            ]
+          : undefined,
       attributes: ["id", "first_name", "last_name", "bank_details"],
       transaction: t,
     });

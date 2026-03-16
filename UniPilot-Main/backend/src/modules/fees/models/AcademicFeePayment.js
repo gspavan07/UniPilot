@@ -34,6 +34,7 @@ const AcademicFeePayment = sequelize.define(
     },
     {
         tableName: "academic_fee_payments",
+        schema: 'fees',
         timestamps: true,
         underscored: true,
         indexes: [

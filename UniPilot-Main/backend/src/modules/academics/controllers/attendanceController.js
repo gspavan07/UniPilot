@@ -53,8 +53,12 @@ export const markAttendance = async (req, res) => {
       for (const item of attendance_data) {
         // Fetch student details to record batch/section at time of marking
         const student = await CoreService.findByPk(item.student_id, {
-          attributes: ["batch_year", "section"],
+          attributes: ["id", "batch_year", "section"],
+          includeProfiles: "student",
         });
+
+        const batchYear = student?.student_profile?.batch_year || student?.batch_year;
+        const section = student?.student_profile?.section || student?.section;
 
         const [record, created] = await Attendance.findOrCreate({
           where: {
@@ -67,8 +71,8 @@ export const markAttendance = async (req, res) => {
             status: item.status,
             remarks: item.remarks,
             marked_by: req.user.userId,
-            batch_year: student?.batch_year,
-            section: student?.section,
+            batch_year: batchYear,
+            section: section,
           },
           transaction: t,
         });
@@ -125,22 +129,27 @@ export const getMyAttendance = async (req, res) => {
 
     // If semester is specified, filter courses by fetching IDs from Regulation
     if (semester) {
-      const student = await CoreService.findByPk(student_id);
+      const student = await CoreService.findByPk(student_id, {
+        includeProfiles: "student"
+      });
 
       let targetIds = new Set();
+      
+      const regulationId = student?.student_profile?.regulation_id || student?.regulation_id;
+      const programId = student?.student_profile?.program_id || student?.program_id;
+      const batchYear = student?.student_profile?.batch_year || student?.batch_year;
 
       if (
         student &&
-        student.regulation_id &&
-        student.program_id &&
-        student.batch_year
+        regulationId &&
+        programId &&
+        batchYear
       ) {
-        const regulation = await Regulation.findByPk(student.regulation_id);
+        const regulation = await Regulation.findByPk(regulationId);
 
         if (regulation && regulation.courses_list) {
           const coursesList = regulation.courses_list;
-          const batchYear = student.batch_year;
-          const progId = student.program_id;
+          const progId = programId;
           const semKey = String(semester);
 
           // Program Courses
@@ -306,12 +315,17 @@ export const getLeaveRequests = async (req, res) => {
     const studentIds = [...new Set(requests.map(r => r.student_id).filter(Boolean))];
     const studentsMap = await CoreService.getUserMapByIds(studentIds, {
       attributes: ["id", "first_name", "last_name", "student_id"],
+      includeProfiles: "student",
     });
 
     const enrichedRequests = requests.map(request => {
       const requestJSON = request.toJSON ? request.toJSON() : request;
       if (requestJSON.student_id) {
-        requestJSON.student = studentsMap.get(requestJSON.student_id) || null;
+        const student = studentsMap.get(requestJSON.student_id);
+        if (student) {
+          student.student_id = student.student_profile?.student_id || student.student_id;
+        }
+        requestJSON.student = student || null;
       }
       return requestJSON;
     });
@@ -494,33 +508,9 @@ export const getAttendanceStats = async (req, res) => {
     const { role, department_id: userDeptId } = req.user;
 
     const where = { role: "student" };
+    // Department check moved out because department is now potentially in profile
 
-    // Enforce Hierarchy
-    if (role === "hod") {
-      // HODs only see their department
-      if (!userDeptId) {
-        logger.error(
-          `HOD ${req.user.userId} is missing department_id in session`,
-        );
-        return res
-          .status(403)
-          .json({ error: "Departmental context missing. Please re-login." });
-      }
-      where.department_id = userDeptId;
-    } else if (["admin", "super_admin"].includes(role)) {
-      // Admins can filter by department, or see all if not specified
-      if (department_id) where.department_id = department_id;
-    } else {
-      // For faculty/others with manage permission, default to their dept if available
-      if (userDeptId) where.department_id = userDeptId;
-      else if (department_id) where.department_id = department_id;
-    }
-
-    if (batch_year) where.batch_year = batch_year;
-    if (semester) where.current_semester = semester;
-    if (section) where.section = section;
-
-    const students = await CoreService.findAll({
+    const studentsRaw = await CoreService.findAll({
       where,
       attributes: [
         "id",
@@ -529,10 +519,61 @@ export const getAttendanceStats = async (req, res) => {
         "student_id",
         "section",
         "batch_year",
+        "current_semester",
+        "program_id",
       ],
+      includeProfiles: "student",
+    });
+
+    const programIds = [
+      ...new Set(
+        studentsRaw
+          .map((student) => student.student_profile?.program_id || student.program_id)
+          .filter(Boolean),
+      ),
+    ];
+    const programs = programIds.length
+      ? await Program.findAll({
+          where: { id: { [Op.in]: programIds } },
+          attributes: ["id", "department_id"],
+          raw: true,
+        })
+      : [];
+    const programDeptMap = new Map(programs.map((p) => [p.id, p.department_id]));
+
+    // Filter logic using profiles
+    const students = studentsRaw.filter((student) => {
+      const progId = student.student_profile?.program_id || student.program_id;
+      const deptId = progId ? programDeptMap.get(progId) : null;
+      const bYear = student.student_profile?.batch_year || student.batch_year;
+      const curSem = student.student_profile?.current_semester || student.current_semester;
+      const sec = student.student_profile?.section || student.section;
+      
+      // Enforce Hierarchy
+      let targetDeptId = null;
+      if (role === "hod") {
+        if (!userDeptId) return false;
+        targetDeptId = userDeptId;
+      } else if (["admin", "super_admin"].includes(role)) {
+        targetDeptId = department_id;
+      } else {
+        targetDeptId = userDeptId || department_id;
+      }
+      
+      // We need to resolve department for a student. Often it's via Program. For now, rely on student.department_id if it exists, otherwise skip department filter if we can't determine it (or we'd need to join programs). Assume fallback `user.department_id` is maintained or profile has it.
+      if (targetDeptId && deptId !== targetDeptId) return false;
+      if (batch_year && bYear !== parseInt(batch_year) && bYear !== batch_year) return false;
+      if (semester && curSem !== parseInt(semester) && curSem !== semester) return false;
+      if (section && sec !== section) return false;
+      
+      return true;
     });
 
     const studentIds = students.map(s => s.id);
+
+    if (!studentIds.length) {
+      return res.status(200).json({ success: true, data: { total_students: 0, at_risk_count: 0, students: [] } });
+    }
 
     const attendances = await Attendance.findAll({
       where: {
@@ -561,9 +602,9 @@ export const getAttendanceStats = async (req, res) => {
       return {
         id: student.id,
         name: `${student.first_name} ${student.last_name}`,
-        student_id: student.student_id,
-        section: student.section,
-        batch_year: student.batch_year,
+        student_id: student.student_profile?.student_id || student.student_id,
+        section: student.student_profile?.section || student.section,
+        batch_year: student.student_profile?.batch_year || student.batch_year,
         total,
         present,
         percentage: percentage.toFixed(2),

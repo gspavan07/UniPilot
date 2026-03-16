@@ -36,6 +36,7 @@ const LateFeeSlab = sequelize.define(
   },
   {
     tableName: "late_fee_slabs",
+    schema: 'exams',
     underscored: true,
     timestamps: true,
     updatedAt: false,

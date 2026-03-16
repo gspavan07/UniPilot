@@ -17,7 +17,7 @@ import { sequelize } from "../../../config/database.js";
 const hydrateUsersWithAcademics = async (
   users,
   {
-    programAttributes = ["id", "name", "code"],
+    programAttributes = ["id", "name", "code", "department_id"],
     departmentAttributes = ["id", "name", "code"],
     regulationAttributes = ["id", "name", "academic_year"],
   } = {},
@@ -29,34 +29,55 @@ const hydrateUsersWithAcademics = async (
       : [];
   if (list.length === 0) return;
 
-  const programIds = list.map((user) => user.program_id).filter(Boolean);
-  const departmentIds = list.map((user) => user.department_id).filter(Boolean);
-  const regulationIds = list.map((user) => user.regulation_id).filter(Boolean);
+  const programIds = list
+    .map((user) => user.student_profile?.program_id || user.program_id)
+    .filter(Boolean);
+  const regulationIds = list
+    .map((user) => user.student_profile?.regulation_id || user.regulation_id)
+    .filter(Boolean);
+  const staffDepartmentIds = list
+    .map((user) => user.staff_profile?.department_id || user.department_id)
+    .filter(Boolean);
 
-  const [programMap, departmentMap, regulationMap] = await Promise.all([
+  const [programMap, regulationMap] = await Promise.all([
     academicLookupService.getProgramMapByIds(programIds, {
       attributes: programAttributes,
-    }),
-    academicLookupService.getDepartmentMapByIds(departmentIds, {
-      attributes: departmentAttributes,
     }),
     academicLookupService.getRegulationMapByIds(regulationIds, {
       attributes: regulationAttributes,
     }),
   ]);
 
+  const derivedDepartmentIds = new Set(staffDepartmentIds);
+  programMap.forEach((program) => {
+    if (program?.department_id) derivedDepartmentIds.add(program.department_id);
+  });
+
+  const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    [...derivedDepartmentIds],
+    { attributes: departmentAttributes },
+  );
+
   list.forEach((user) => {
-    const program = programMap.get(user.program_id) || null;
-    const department = departmentMap.get(user.department_id) || null;
-    const regulation = regulationMap.get(user.regulation_id) || null;
+    const programId = user.student_profile?.program_id || user.program_id;
+    const regulationId = user.student_profile?.regulation_id || user.regulation_id;
+    const staffDepartmentId =
+      user.staff_profile?.department_id || user.department_id;
+
+    const program = programMap.get(programId) || null;
+    const departmentId = staffDepartmentId || program?.department_id || null;
+    const department = departmentId ? departmentMap.get(departmentId) || null : null;
+    const regulation = regulationMap.get(regulationId) || null;
 
     if (typeof user?.setDataValue === "function") {
       user.setDataValue("program", program);
       user.setDataValue("department", department);
+      user.setDataValue("department_id", departmentId);
       user.setDataValue("regulation", regulation);
     } else {
       user.program = program;
       user.department = department;
+      user.department_id = departmentId;
       user.regulation = regulation;
     }
   });
@@ -78,9 +99,18 @@ export const getAllUsers = async (req, res) => {
     let roleScopeFilter = {};
     if (req.user && req.user.userId) {
       const requester = await User.findByPk(req.user.userId, {
-        include: [{ model: Role, as: "role_data" }],
+        include: [
+          { model: Role, as: "role_data" },
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: false,
+          },
+        ],
       });
       const requesterSlug = requester?.role_data?.slug;
+      const requesterDepartmentId =
+        requester?.staff_profile?.department_id || requester?.department_id;
 
       // If NOT Super Admin, apply scoping
       if (requesterSlug !== "admin" && requesterSlug !== "super_admin") {
@@ -133,9 +163,9 @@ export const getAllUsers = async (req, res) => {
             (req.query.semester && req.query.semester !== "undefined") ||
             (req.query.section && req.query.section !== "undefined");
 
-          if (requester.department_id && !hasAcademicCriteria) {
-            req.forcedDepartmentId = requester.department_id;
-          } else if (!requester.department_id && !hasAcademicCriteria) {
+          if (requesterDepartmentId && !hasAcademicCriteria) {
+            req.forcedDepartmentId = requesterDepartmentId;
+          } else if (!requesterDepartmentId && !hasAcademicCriteria) {
             roleScopeFilter = { id: null }; // block access if no department assigned
           }
         }
@@ -150,58 +180,155 @@ export const getAllUsers = async (req, res) => {
     }
 
     const where = {};
+    const whereAnd = [];
+    const normalizedRoles =
+      role && role !== "undefined"
+        ? role.split(",").map((r) => r.toLowerCase().trim())
+        : null;
+    const isStudentOnly =
+      normalizedRoles?.length > 0 &&
+      normalizedRoles.every((r) => r === "student");
+    const isStaffOnly =
+      normalizedRoles?.length > 0 &&
+      normalizedRoles.every((r) => r !== "student");
+
     if (role_id && role_id !== "undefined") where.role_id = role_id;
-    if (role && role !== "undefined") {
-      const roles = role.split(",");
-      if (roles.length > 1) {
-        where.role = { [Op.in]: roles.map((r) => r.toLowerCase().trim()) };
-      } else {
-        where.role = role.toLowerCase();
-      }
-    }
-    if (department_id && department_id !== "undefined")
-      where.department_id = department_id;
-    if (req.query.batch_year && req.query.batch_year !== "undefined") {
-      where.batch_year = req.query.batch_year;
-    }
-    if (req.query.section && req.query.section !== "undefined") {
-      where.section = { [Op.iLike]: req.query.section };
-    }
-    if (req.query.semester && req.query.semester !== "undefined") {
-      where.current_semester = parseInt(req.query.semester, 10);
-    }
-    if (req.query.program_id && req.query.program_id !== "undefined") {
-      where.program_id = req.query.program_id;
+    if (normalizedRoles?.length) {
+      where.role =
+        normalizedRoles.length > 1
+          ? { [Op.in]: normalizedRoles }
+          : normalizedRoles[0];
     }
 
-    // Faculty Restriction Override
-    if (req.forcedDepartmentId) {
-      where.department_id = req.forcedDepartmentId;
+    // These params belong to student profile now
+    const studentProfileWhere = {};
+    const staffProfileWhere = {};
+    if (req.query.batch_year && req.query.batch_year !== "undefined") {
+      studentProfileWhere.batch_year = req.query.batch_year;
     }
+    if (req.query.section && req.query.section !== "undefined") {
+      studentProfileWhere.section = { [Op.iLike]: req.query.section };
+    }
+    if (req.query.semester && req.query.semester !== "undefined") {
+      studentProfileWhere.current_semester = parseInt(req.query.semester, 10);
+    }
+    if (req.query.program_id && req.query.program_id !== "undefined") {
+      studentProfileWhere.program_id = req.query.program_id;
+    }
+
+    let studentFiltersActive = Object.keys(studentProfileWhere).length > 0;
+
+    const effectiveDepartmentId =
+      department_id && department_id !== "undefined"
+        ? department_id
+        : req.forcedDepartmentId;
+
+    let departmentProgramIds = null;
+    if (effectiveDepartmentId) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id: effectiveDepartmentId },
+        attributes: ["id"],
+      });
+      departmentProgramIds = programs.map((program) => program.id);
+
+      if (studentFiltersActive || isStudentOnly) {
+        if (!studentProfileWhere.program_id) {
+          studentProfileWhere.program_id =
+            departmentProgramIds.length > 0
+              ? { [Op.in]: departmentProgramIds }
+              : { [Op.in]: [] };
+        }
+        studentFiltersActive = true;
+      } else if (isStaffOnly) {
+        staffProfileWhere.department_id = effectiveDepartmentId;
+      } else {
+        const deptClauses = [];
+        if (departmentProgramIds.length > 0) {
+          deptClauses.push({
+            "$student_profile.program_id$": { [Op.in]: departmentProgramIds },
+          });
+        }
+        deptClauses.push({
+          "$staff_profile.department_id$": effectiveDepartmentId,
+        });
+        whereAnd.push({ [Op.or]: deptClauses });
+      }
+    }
+
+    Object.entries(studentProfileWhere).forEach(([key, value]) => {
+      whereAnd.push({ [`$student_profile.${key}$`]: value });
+    });
+    Object.entries(staffProfileWhere).forEach(([key, value]) => {
+      whereAnd.push({ [`$staff_profile.${key}$`]: value });
+    });
+
+    const includeModels = [
+      {
+        model: Role,
+        as: "role_data",
+        attributes: ["id", "name", "slug"],
+        where: roleScopeFilter, // Apply Scoping Here
+      },
+      {
+        model: sequelize.models.StudentProfile,
+        as: "student_profile",
+        required: false,
+      },
+      {
+        model: sequelize.models.StaffProfile,
+        as: "staff_profile",
+        required: false,
+      },
+    ];
+
     if (search) {
-      where[Op.or] = [
-        { first_name: { [Op.iLike]: `%${search}%` } },
-        { last_name: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } },
-        { student_id: { [Op.iLike]: `%${search}%` } },
-        { employee_id: { [Op.iLike]: `%${search}%` } },
-        { admission_number: { [Op.iLike]: `%${search}%` } },
-        { aadhaar_number: { [Op.iLike]: `%${search}%` } },
-      ];
+      const searchPattern = `%${search}%`;
+      whereAnd.push({
+        [Op.or]: [
+          { first_name: { [Op.iLike]: searchPattern } },
+          { last_name: { [Op.iLike]: searchPattern } },
+          { email: { [Op.iLike]: searchPattern } },
+          { aadhaar_number: { [Op.iLike]: searchPattern } },
+          { "$student_profile.student_id$": { [Op.iLike]: searchPattern } },
+          { "$student_profile.admission_number$": { [Op.iLike]: searchPattern } },
+          { "$staff_profile.employee_id$": { [Op.iLike]: searchPattern } },
+        ],
+      });
+    }
+
+    if (whereAnd.length > 0) {
+      where[Op.and] = whereAnd;
     }
 
     const users = await User.findAll({
       where,
-      include: [
-        {
-          model: Role,
-          as: "role_data",
-          attributes: ["id", "name", "slug"],
-          where: roleScopeFilter, // Apply Scoping Here
-        },
-      ],
+      include: includeModels,
       attributes: { exclude: ["password_hash", "refresh_token"] },
       order: [["created_at", "DESC"]],
+    });
+
+    // Fallback/Map fields for backward compatibility
+    users.forEach(user => {
+      if (user.student_profile) {
+        user.dataValues.batch_year = user.student_profile.batch_year || user.batch_year;
+        user.dataValues.section = user.student_profile.section || user.section;
+        user.dataValues.current_semester = user.student_profile.current_semester || user.current_semester;
+        user.dataValues.program_id = user.student_profile.program_id || user.program_id;
+        user.dataValues.student_id = user.student_profile.student_id || user.student_id;
+        user.dataValues.admission_number = user.student_profile.admission_number || user.admission_number;
+        user.dataValues.academic_status = user.student_profile.academic_status || user.academic_status;
+        user.dataValues.is_hosteller = user.student_profile.is_hosteller || user.is_hosteller;
+        user.dataValues.requires_transport = user.student_profile.requires_transport || user.requires_transport;
+      }
+      if (user.staff_profile) {
+        user.dataValues.employee_id = user.staff_profile.employee_id || user.employee_id;
+        user.dataValues.designation = user.staff_profile.designation || user.designation;
+        user.dataValues.joining_date = user.staff_profile.joining_date || user.joining_date;
+        user.dataValues.staff_category = user.staff_profile.staff_category || user.staff_category;
+        user.dataValues.biometric_device_id = user.staff_profile.biometric_device_id || user.biometric_device_id;
+        user.dataValues.department_id = user.staff_profile.department_id || user.department_id;
+        user.dataValues.salary_grade_id = user.staff_profile.salary_grade_id || user.salary_grade_id;
+      }
     });
 
     await hydrateUsersWithAcademics(users);
@@ -229,9 +356,18 @@ export const getUserStats = async (req, res) => {
     let roleScopeFilter = {};
     if (req.user && req.user.userId) {
       const requester = await User.findByPk(req.user.userId, {
-        include: [{ model: Role, as: "role_data" }],
+        include: [
+          { model: Role, as: "role_data" },
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: false,
+          },
+        ],
       });
       const requesterSlug = requester?.role_data?.slug;
+      const requesterDepartmentId =
+        requester?.staff_profile?.department_id || requester?.department_id;
 
       // If NOT Super Admin, apply scoping
       if (requesterSlug !== "admin" && requesterSlug !== "super_admin") {
@@ -263,6 +399,25 @@ export const getUserStats = async (req, res) => {
 
     // 2. Fetch stats with filtering
     // We need to join with Roles table to apply the filter
+    const where = {};
+    if (req.forcedDepartmentId) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id: req.forcedDepartmentId },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      const deptClauses = [];
+      if (programIds.length > 0) {
+        deptClauses.push({
+          "$student_profile.program_id$": { [Op.in]: programIds },
+        });
+      }
+      deptClauses.push({
+        "$staff_profile.department_id$": req.forcedDepartmentId,
+      });
+      where[Op.and] = [{ [Op.or]: deptClauses }];
+    }
+
     const stats = await User.findAll({
       attributes: [
         "role",
@@ -275,11 +430,21 @@ export const getUserStats = async (req, res) => {
           attributes: [], // We don't need role columns in group by, just for filtering
           where: roleScopeFilter,
         },
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          attributes: [],
+          required: false,
+        },
+        {
+          model: sequelize.models.StaffProfile,
+          as: "staff_profile",
+          attributes: [],
+          required: false,
+        },
       ],
       group: ["role"],
-      where: req.forcedDepartmentId
-        ? { department_id: req.forcedDepartmentId }
-        : {},
+      where,
     });
 
     res.status(200).json({
@@ -301,31 +466,41 @@ export const getUserStats = async (req, res) => {
 export const getStudentSections = async (req, res) => {
   try {
     const { department_id, program_id, batch_year, semester } = req.query;
-    const where = {
-      role: "student",
-      section: { [Op.ne]: null }, // Only sections that are not null
-    };
+    const whereProfile = { section: { [Op.ne]: null } };
+    if (program_id) whereProfile.program_id = program_id;
+    if (batch_year) whereProfile.batch_year = batch_year;
+    if (semester) whereProfile.current_semester = semester;
 
-    if (department_id) where.department_id = department_id;
-    if (program_id) where.program_id = program_id;
-    if (batch_year) where.batch_year = batch_year;
-    if (semester) where.current_semester = semester;
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+      whereProfile.program_id = { [Op.in]: programIds };
+    }
 
-    // We use findAll with group and attributes to simulate DISTINCT
-    const sections = await User.findAll({
-      attributes: [
-        [
-          User.sequelize.fn("DISTINCT", User.sequelize.col("section")),
-          "section",
-        ],
+    const profiles = await sequelize.models.StudentProfile.findAll({
+      where: whereProfile,
+      attributes: ["section"],
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          required: true,
+          where: { role: "student" },
+        },
       ],
-      where,
-      order: [["section", "ASC"]],
       raw: true,
     });
 
-    // Extract just the section names
-    const sectionList = sections.map((s) => s.section).filter(Boolean);
+    const sectionList = [
+      ...new Set(profiles.map((profile) => profile.section).filter(Boolean)),
+    ].sort();
 
     res.status(200).json({
       success: true,
@@ -346,30 +521,44 @@ export const getStudentSections = async (req, res) => {
 export const getStudentSemesters = async (req, res) => {
   try {
     const { department_id, program_id, batch_year } = req.query;
-    const where = {
-      role: "student",
-      current_semester: { [Op.ne]: null },
-    };
+    const whereProfile = { current_semester: { [Op.ne]: null } };
+    if (program_id) whereProfile.program_id = program_id;
+    if (batch_year) whereProfile.batch_year = batch_year;
 
-    if (department_id) where.department_id = department_id;
-    if (program_id) where.program_id = program_id;
-    if (batch_year) where.batch_year = batch_year;
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+      whereProfile.program_id = { [Op.in]: programIds };
+    }
 
-    const semesters = await User.findAll({
-      attributes: [
-        [
-          User.sequelize.fn("DISTINCT", User.sequelize.col("current_semester")),
-          "current_semester",
-        ],
+    const profiles = await sequelize.models.StudentProfile.findAll({
+      where: whereProfile,
+      attributes: ["current_semester"],
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          required: true,
+          where: { role: "student" },
+        },
       ],
-      where,
-      order: [["current_semester", "ASC"]],
       raw: true,
     });
 
-    const semesterList = semesters
-      .map((s) => s.current_semester)
-      .filter(Boolean);
+    const semesterList = [
+      ...new Set(
+        profiles
+          .map((profile) => profile.current_semester)
+          .filter((value) => value !== null && value !== undefined),
+      ),
+    ].sort((a, b) => a - b);
 
     res.status(200).json({
       success: true,
@@ -390,25 +579,38 @@ export const getStudentSemesters = async (req, res) => {
 export const getAllBatches = async (req, res) => {
   try {
     const { department_id } = req.query;
-    const where = {
-      role: "student",
-      batch_year: { [Op.ne]: null },
-    };
+    const whereProfile = { batch_year: { [Op.ne]: null } };
 
     if (department_id && department_id !== "undefined") {
-      where.department_id = department_id;
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+      whereProfile.program_id = { [Op.in]: programIds };
     }
 
-    const batches = await User.findAll({
-      attributes: [
-        [sequelize.fn("DISTINCT", sequelize.col("batch_year")), "batch_year"],
+    const profiles = await sequelize.models.StudentProfile.findAll({
+      where: whereProfile,
+      attributes: ["batch_year"],
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          required: true,
+          where: { role: "student" },
+        },
       ],
-      where,
-      order: [["batch_year", "DESC"]],
       raw: true,
     });
 
-    const batchList = batches.map((b) => b.batch_year).filter(Boolean);
+    const batchList = [
+      ...new Set(profiles.map((profile) => profile.batch_year).filter(Boolean)),
+    ].sort((a, b) => b - a); // DESC
 
     res.status(200).json({
       success: true,
@@ -428,45 +630,49 @@ export const getAllBatches = async (req, res) => {
 export const getBatchDetails = async (req, res) => {
   try {
     const { department_id, batch_year, program_id } = req.query;
-    const where = {
-      role: "student",
-      batch_year: batch_year,
-    };
+    const whereProfile = { batch_year: batch_year };
+    if (program_id) whereProfile.program_id = program_id;
 
-    if (department_id) where.department_id = department_id;
-    if (program_id) where.program_id = program_id;
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          data: { semesters: [], sections: [] },
+        });
+      }
+      whereProfile.program_id = { [Op.in]: programIds };
+    }
 
-    // Get distinct semesters
-    const semesters = await User.findAll({
-      attributes: [
-        [
-          sequelize.fn("DISTINCT", sequelize.col("current_semester")),
-          "current_semester",
-        ],
+    const profiles = await sequelize.models.StudentProfile.findAll({
+      where: whereProfile,
+      attributes: ["current_semester", "section"],
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          required: true,
+          where: { role: "student" },
+        },
       ],
-      where,
-      order: [["current_semester", "ASC"]],
       raw: true,
     });
 
-    const semesterList = semesters
-      .map((s) => s.current_semester)
-      .filter(Boolean);
-
-    // Get distinct sections
-    const sections = await User.findAll({
-      attributes: [
-        [sequelize.fn("DISTINCT", sequelize.col("section")), "section"],
-      ],
-      where: {
-        ...where,
-        section: { [Op.ne]: null },
-      },
-      order: [["section", "ASC"]],
-      raw: true,
-    });
-
-    const sectionList = sections.map((s) => s.section).filter(Boolean);
+    const semesterList = [
+      ...new Set(
+        profiles
+          .map((profile) => profile.current_semester)
+          .filter((value) => value !== null && value !== undefined),
+      ),
+    ].sort((a, b) => a - b);
+    const sectionList = [
+      ...new Set(profiles.map((profile) => profile.section).filter(Boolean)),
+    ].sort();
 
     res.status(200).json({
       success: true,
@@ -493,6 +699,16 @@ export const getUser = async (req, res) => {
           as: "role_data",
           attributes: ["id", "name", "slug", "field_config"],
         },
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: false,
+        },
+        {
+          model: sequelize.models.StaffProfile,
+          as: "staff_profile",
+          required: false,
+        }
       ],
       attributes: { exclude: ["password_hash", "refresh_token"] },
     });
@@ -502,6 +718,25 @@ export const getUser = async (req, res) => {
         success: false,
         error: "User not found",
       });
+    }
+
+    // Map profile fields for backward compatibility
+    if (user.student_profile) {
+      user.dataValues.batch_year = user.student_profile.batch_year || user.batch_year;
+      user.dataValues.section = user.student_profile.section || user.section;
+      user.dataValues.current_semester = user.student_profile.current_semester || user.current_semester;
+      user.dataValues.program_id = user.student_profile.program_id || user.program_id;
+      user.dataValues.student_id = user.student_profile.student_id || user.student_id;
+      user.dataValues.admission_number = user.student_profile.admission_number || user.admission_number;
+      user.dataValues.academic_status = user.student_profile.academic_status || user.academic_status;
+    }
+    if (user.staff_profile) {
+      user.dataValues.employee_id = user.staff_profile.employee_id || user.employee_id;
+      user.dataValues.designation = user.staff_profile.designation || user.designation;
+      user.dataValues.joining_date = user.staff_profile.joining_date || user.joining_date;
+      user.dataValues.staff_category = user.staff_profile.staff_category || user.staff_category;
+      user.dataValues.department_id = user.staff_profile.department_id || user.department_id;
+      user.dataValues.salary_grade_id = user.staff_profile.salary_grade_id || user.salary_grade_id;
     }
 
     await hydrateUsersWithAcademics(user);
@@ -578,7 +813,7 @@ export const createUser = async (req, res) => {
             });
           }
           // Enforce Department Match
-          if (req.body.department_id != requester.department_id) {
+          if (req.body.department_id != requesterDepartmentId) {
             return res.status(403).json({
               success: false,
               error: "You can only add users to your own department",
@@ -692,6 +927,38 @@ export const createUser = async (req, res) => {
 
     const user = await User.create(userData);
 
+    // Create Profile depending on role
+    if (user.role === "student") {
+      await sequelize.models.StudentProfile.create({
+        user_id: user.id,
+        student_id: userData.student_id,
+        program_id: userData.program_id,
+        regulation_id: userData.regulation_id,
+        batch_year: userData.batch_year,
+        current_semester: userData.current_semester,
+        section: userData.section,
+        admission_date: userData.admission_date,
+        is_hosteller: userData.is_hosteller || false,
+        requires_transport: userData.requires_transport || false,
+        academic_status: userData.academic_status || 'active',
+        admission_number: userData.admission_number,
+        admission_type: userData.admission_type,
+        is_lateral: userData.is_lateral || false,
+        is_temporary_id: userData.is_temporary_id || false,
+        parent_details: userData.parent_details || {},
+        previous_academics: userData.previous_academics || [],
+      });
+    } else if (["faculty", "hod", "staff"].includes(user.role) || user.role.includes("admin")) {
+      await sequelize.models.StaffProfile.create({
+        user_id: user.id,
+        employee_id: userData.employee_id,
+        department_id: userData.department_id,
+        salary_grade_id: userData.salary_grade_id,
+        designation: userData.custom_fields?.designation || null,
+        joining_date: userData.joining_date || null,
+      });
+    }
+
     // Process Uploaded Documents
     if (req.files && req.files.length > 0) {
       logger.info(
@@ -796,6 +1063,47 @@ export const updateUser = async (req, res) => {
     });
 
     user = await user.update(updateData);
+
+    // Update Profile
+    if (user.role === "student") {
+      const studentProfileObj = {};
+      const fields = [
+        "student_id", "program_id", "regulation_id", "batch_year", "current_semester",
+        "section", "admission_date", "is_hosteller", "requires_transport", "academic_status",
+        "admission_number", "admission_type", "is_lateral", "is_temporary_id", "parent_details",
+        "previous_academics"
+      ];
+      fields.forEach(f => {
+        if (updateData[f] !== undefined) studentProfileObj[f] = updateData[f];
+      });
+      if (Object.keys(studentProfileObj).length > 0) {
+        const [profile, created] = await sequelize.models.StudentProfile.findOrCreate({
+          where: { user_id: user.id },
+          defaults: { user_id: user.id, ...studentProfileObj }
+        });
+        if (!created) {
+          await profile.update(studentProfileObj);
+        }
+      }
+    } else if (["faculty", "hod", "staff"].includes(user.role) || user.role.includes("admin")) {
+      const staffProfileObj = {};
+      const fields = ["employee_id", "department_id", "salary_grade_id", "joining_date"];
+      fields.forEach(f => {
+        if (updateData[f] !== undefined) staffProfileObj[f] = updateData[f];
+      });
+      if (updateData.custom_fields && updateData.custom_fields.designation !== undefined) {
+        staffProfileObj.designation = updateData.custom_fields.designation;
+      }
+      if (Object.keys(staffProfileObj).length > 0) {
+        const [profile, created] = await sequelize.models.StaffProfile.findOrCreate({
+          where: { user_id: user.id },
+          defaults: { user_id: user.id, ...staffProfileObj }
+        });
+        if (!created) {
+          await profile.update(staffProfileObj);
+        }
+      }
+    }
 
     // Process Uploaded Documents
     if (req.files && req.files.length > 0) {
@@ -999,7 +1307,39 @@ export const bulkImportUsers = async (req, res) => {
           throw new Error(`Row ${index + 1}: Email is missing`);
         }
 
-        await User.create(userData);
+        const user = await User.create(userData);
+
+        // Create Profile depending on role
+        if (user.role === "student") {
+          await sequelize.models.StudentProfile.create({
+            user_id: user.id,
+            student_id: userData.student_id,
+            program_id: userData.program_id,
+            regulation_id: userData.regulation_id,
+            batch_year: userData.batch_year,
+            current_semester: userData.current_semester,
+            section: userData.section,
+            admission_date: userData.admission_date,
+            is_hosteller: userData.is_hosteller || false,
+            requires_transport: userData.requires_transport || false,
+            academic_status: userData.academic_status || 'active',
+            admission_number: userData.admission_number,
+            admission_type: userData.admission_type,
+            is_lateral: userData.is_lateral || false,
+            is_temporary_id: userData.is_temporary_id || false,
+            parent_details: userData.parent_details || {},
+            previous_academics: userData.previous_academics || [],
+          });
+        } else if (["faculty", "hod", "staff"].includes(user.role) || user.role.includes("admin")) {
+          await sequelize.models.StaffProfile.create({
+            user_id: user.id,
+            employee_id: userData.employee_id,
+            department_id: userData.department_id,
+            salary_grade_id: userData.salary_grade_id,
+            designation: userData.custom_fields?.designation || null,
+            joining_date: userData.joining_date || null,
+          });
+        }
         results.success++;
       } catch (err) {
         results.failed++;
@@ -1146,24 +1486,44 @@ export const bulkUpdateSections = async (req, res) => {
     // Permission Check
     if (req.user && req.user.userId) {
       const requester = await User.findByPk(req.user.userId, {
-        include: [{ model: Role, as: "role_data" }],
+        include: [
+          { model: Role, as: "role_data" },
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: false,
+          },
+        ],
       });
       const requesterSlug = requester?.role_data?.slug;
+      const requesterDepartmentId =
+        requester?.staff_profile?.department_id || requester?.department_id;
 
       if (requesterSlug !== "admin" && requesterSlug !== "super_admin") {
         if (requesterSlug === "hod") {
           // Check if all users belong to the same department
-          const users = await User.findAll({
-            where: {
-              id: { [Op.in]: userIds },
-              role: "student",
-            },
-            attributes: ["department_id"],
+          const profiles = await sequelize.models.StudentProfile.findAll({
+            where: { user_id: { [Op.in]: userIds } },
+            attributes: ["user_id", "program_id"],
+            raw: true,
           });
-
-          const unauthorized = users.some(
-            (u) => u.department_id !== requester.department_id,
+          const programIds = [
+            ...new Set(profiles.map((p) => p.program_id).filter(Boolean)),
+          ];
+          const programs = await academicLookupService.getProgramsByIds(
+            programIds,
+            { attributes: ["id", "department_id"], raw: true },
           );
+          const programDeptMap = new Map(
+            programs.map((program) => [program.id, program.department_id]),
+          );
+
+          const unauthorized = profiles.some((profile) => {
+            const deptId = profile.program_id
+              ? programDeptMap.get(profile.program_id)
+              : null;
+            return deptId !== requesterDepartmentId;
+          });
           if (unauthorized) {
             return res.status(403).json({
               success: false,
@@ -1179,12 +1539,12 @@ export const bulkUpdateSections = async (req, res) => {
       }
     }
 
-    await User.update(
+    // Update section in StudentProfile
+    await sequelize.models.StudentProfile.update(
       { section: section || null },
       {
         where: {
-          id: { [Op.in]: userIds },
-          role: "student",
+          user_id: { [Op.in]: userIds },
         },
       },
     );

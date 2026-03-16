@@ -34,6 +34,7 @@ const InstitutionSetting = sequelize.define(
   },
   {
     tableName: "institution_settings",
+    schema: 'settings',
     timestamps: true,
     underscored: true,
   }

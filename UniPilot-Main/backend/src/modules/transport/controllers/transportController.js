@@ -19,28 +19,41 @@ const hydrateAllocationsWithAcademics = async (allocations) => {
     .filter(Boolean);
   if (students.length === 0) return;
 
-  const programIds = students.map((student) => student.program_id).filter(Boolean);
-  const departmentIds = students
-    .map((student) => student.department_id)
+  const programIds = students
+    .map((student) => student.program_id || student.student_profile?.program_id)
     .filter(Boolean);
 
-  const [programMap, departmentMap] = await Promise.all([
-    academicLookupService.getProgramMapByIds(programIds, {
-      attributes: ["id", "name", "code"],
-    }),
-    academicLookupService.getDepartmentMapByIds(departmentIds, {
-      attributes: ["id", "name"],
-    }),
-  ]);
+  const programMap = await academicLookupService.getProgramMapByIds(programIds, {
+    attributes: ["id", "name", "code"],
+  });
+
+  const departmentIds = [
+    ...new Set(
+      Array.from(programMap.values())
+        .map((program) => program?.department_id)
+        .filter(Boolean),
+    ),
+  ];
+
+  const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    departmentIds,
+    { attributes: ["id", "name"] },
+  );
 
   students.forEach((student) => {
-    const program = programMap.get(student.program_id) || null;
-    const department = departmentMap.get(student.department_id) || null;
+    const programId =
+      student.program_id || student.student_profile?.program_id || null;
+    const program = programId ? programMap.get(programId) || null : null;
+    const department = program?.department_id
+      ? departmentMap.get(program.department_id) || null
+      : null;
 
     if (typeof student?.setDataValue === "function") {
+      if (programId) student.setDataValue("program_id", programId);
       student.setDataValue("program", program);
       student.setDataValue("department", department);
     } else {
+      if (programId) student.program_id = programId;
       student.program = program;
       student.department = department;
     }
@@ -611,7 +624,10 @@ export const createAllocation = async (req, res) => {
     );
 
     // Update student's requires_transport flag
-    await CoreService.updateUser(student_id, { requires_transport: true }, { transaction });
+    await sequelize.models.StudentProfile.update(
+      { requires_transport: true },
+      { where: { user_id: student_id }, transaction },
+    );
 
     await transaction.commit();
 
@@ -728,7 +744,10 @@ export const deleteAllocation = async (req, res) => {
 
     // If no other active allocations, update student's requires_transport flag
     if (activeAllocCount === 0) {
-      await CoreService.updateUser(allocation.student_id, { requires_transport: false }, { transaction });
+      await sequelize.models.StudentProfile.update(
+        { requires_transport: false },
+        { where: { user_id: allocation.student_id }, transaction },
+      );
     }
 
     await transaction.commit();

@@ -1,5 +1,5 @@
 import { Op, fn, col } from "sequelize";
-import CoreService from "../../core/services/index.js";
+import { sequelize } from "../../../config/database.js";
 import {
   FeePayment,
   FeeStructure,
@@ -10,11 +10,12 @@ export const getTotalRevenue = async ({ batchYear } = {}) => {
   const paymentWhere = { status: "completed" };
 
   if (batchYear) {
-    const students = await CoreService.findAll({
-      where: { role: "student", batch_year: parseInt(batchYear, 10) },
-      attributes: ['id']
+    const students = await sequelize.models.StudentProfile.findAll({
+      where: { batch_year: parseInt(batchYear, 10) },
+      attributes: ["user_id"],
+      raw: true,
     });
-    const studentIds = students.map(s => s.id);
+    const studentIds = students.map((s) => s.user_id);
     if (studentIds.length === 0) return 0;
     paymentWhere.student_id = { [Op.in]: studentIds };
   }
@@ -33,11 +34,12 @@ export const getRevenueTrend = async ({ sinceDate, batchYear } = {}) => {
   };
 
   if (batchYear) {
-    const students = await CoreService.findAll({
-      where: { role: "student", batch_year: parseInt(batchYear, 10) },
-      attributes: ['id']
+    const students = await sequelize.models.StudentProfile.findAll({
+      where: { batch_year: parseInt(batchYear, 10) },
+      attributes: ["user_id"],
+      raw: true,
     });
-    const studentIds = students.map(s => s.id);
+    const studentIds = students.map((s) => s.user_id);
     if (studentIds.length === 0) return [];
     paymentWhere.student_id = { [Op.in]: studentIds };
   }
@@ -54,13 +56,42 @@ export const getRevenueTrend = async ({ sinceDate, batchYear } = {}) => {
 };
 
 export const getTotalCollectableStructure = async ({ studentWhere } = {}) => {
-  const students = await CoreService.findAll({
-    where: studentWhere,
-    attributes: ["id", "program_id", "admission_type", "batch_year"],
+  const profileWhere = {};
+  const userWhere = {};
+  if (studentWhere) {
+    Object.entries(studentWhere).forEach(([key, value]) => {
+      if (
+        [
+          "batch_year",
+          "program_id",
+          "admission_type",
+          "section",
+          "current_semester",
+        ].includes(key)
+      ) {
+        profileWhere[key] = value;
+      } else {
+        userWhere[key] = value;
+      }
+    });
+  }
+
+  const students = await sequelize.models.StudentProfile.findAll({
+    where: profileWhere,
+    include: [
+      {
+        model: sequelize.models.User,
+        as: "user",
+        attributes: [],
+        where: userWhere,
+        required: true,
+      },
+    ],
+    attributes: ["user_id", "program_id", "admission_type", "batch_year"],
     raw: true,
   });
 
-  const studentIds = students.map((s) => s.id);
+  const studentIds = students.map((s) => s.user_id);
   if (studentIds.length === 0) return 0;
 
   const feeStructures = await FeeStructure.findAll({
@@ -74,8 +105,9 @@ export const getTotalCollectableStructure = async ({ studentWhere } = {}) => {
   let totalCollectableStructure = 0;
 
   students.forEach((student) => {
+    const studentId = student.user_id;
     const studentStructures = feeStructures.filter((fs) => {
-      if (fs.student_id === student.id) return true;
+      if (fs.student_id === studentId) return true;
       if (
         fs.student_id === null &&
         fs.program_id === student.program_id &&

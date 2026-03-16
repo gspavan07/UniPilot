@@ -42,6 +42,7 @@ const Book = sequelize.define(
   },
   {
     tableName: "books",
+    schema: 'library',
     timestamps: true,
     underscored: true,
   }

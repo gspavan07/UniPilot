@@ -54,6 +54,7 @@ const JobPosting = sequelize.define(
   },
   {
     tableName: "job_postings",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

@@ -73,6 +73,7 @@ const ExamStudentEligibility = sequelize.define(
   },
   {
     tableName: "exam_student_eligibilities",
+    schema: 'exams',
     underscored: true,
     timestamps: true,
     indexes: [

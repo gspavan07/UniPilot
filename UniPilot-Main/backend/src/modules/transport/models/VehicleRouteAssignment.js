@@ -70,6 +70,7 @@ const VehicleRouteAssignment = sequelize.define(
   },
   {
     tableName: "vehicle_route_assignments",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

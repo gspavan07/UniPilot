@@ -2,6 +2,7 @@ import logger from "../../../utils/logger.js";
 import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import CoreService from "../../core/services/index.js";
+import AcademicService from "../../academics/services/index.js";
 import { ProctorAlert, ProctorAssignment, ProctorFeedback, ProctorSession } from "../models/index.js";
 
 const hydrateListWithUser = async (list, userIdField, asField, attributes) => {
@@ -99,10 +100,18 @@ export const autoAssignProctors = async (req, res) => {
     // 1. Get all faculty in department
     const faculty = await CoreService.findAll({
       where: {
-        department_id,
         role: { [Op.in]: ["faculty", "hod"] },
         is_active: true,
       },
+      include: [
+        {
+          model: sequelize.models.StaffProfile,
+          as: "staff_profile",
+          required: true,
+          where: { department_id },
+          attributes: [],
+        },
+      ],
       attributes: ["id", "first_name", "last_name"],
     });
 
@@ -114,15 +123,37 @@ export const autoAssignProctors = async (req, res) => {
     }
 
     // 2. Get students in department (optionally filter by batch)
-    const studentQuery = {
-      department_id,
-      role: "student",
-      is_active: true,
+    const programs = await AcademicService.listPrograms({
+      where: { department_id },
+      attributes: ["id"],
+    });
+    const programIds = programs.map((program) => program.id);
+    if (programIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "No programs found for this department",
+      });
+    }
+
+    const studentProfileWhere = {
+      program_id: { [Op.in]: programIds },
     };
-    if (batch_year) studentQuery.batch_year = batch_year;
+    if (batch_year) studentProfileWhere.batch_year = batch_year;
 
     const students = await CoreService.findAll({
-      where: studentQuery,
+      where: {
+        role: "student",
+        is_active: true,
+      },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: studentProfileWhere,
+          attributes: [],
+        },
+      ],
       attributes: ["id"],
     });
 

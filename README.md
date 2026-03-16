@@ -7,8 +7,8 @@ UniPilot is a comprehensive, multi-tenant University Management System designed 
 ### Backend
 - **Framework**: Node.js with Express.js
 - **Database**: PostgreSQL (managed via Sequelize ORM)
-- **Authentication**: JWT & bcryptjs
-- **File Storage**: AWS S3 (via aws-sdk) & Local uploads
+- **Authentication**: JWT & Argon2
+- **File Storage**: Local uploads (S3 integration planned)
 - **Email**: Nodemailer
 - **Other**: Redis (caching), Winston (logging), Helmet (security)
 

@@ -61,6 +61,7 @@ const HostelStayLog = sequelize.define(
   },
   {
     tableName: "hostel_stay_logs",
+    schema: 'hostel',
     underscored: true,
     timestamps: true,
   },

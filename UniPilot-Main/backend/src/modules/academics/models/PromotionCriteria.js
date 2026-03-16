@@ -48,6 +48,7 @@ const PromotionCriteria = sequelize.define(
   },
   {
     tableName: "promotion_criteria",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   }

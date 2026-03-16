@@ -40,6 +40,7 @@ const AuditLog = sequelize.define(
   },
   {
     tableName: "audit_logs",
+    schema: 'settings',
     timestamps: true,
     updatedAt: false,
     underscored: true,

@@ -57,6 +57,7 @@ const FeeStructure = sequelize.define(
   },
   {
     tableName: "fee_structures",
+    schema: 'fees',
     timestamps: true,
     underscored: true,
   },

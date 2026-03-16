@@ -34,6 +34,7 @@ const Holiday = sequelize.define(
   },
   {
     tableName: "holidays",
+    schema: 'settings',
     timestamps: true,
     underscored: true,
   }

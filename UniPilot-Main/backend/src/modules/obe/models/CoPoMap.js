@@ -39,6 +39,7 @@ const CoPoMap = sequelize.define(
     },
     {
         tableName: 'co_po_maps',
+        schema: 'obe',
         timestamps: true,
         underscored: true,
         indexes: [

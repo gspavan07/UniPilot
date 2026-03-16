@@ -52,6 +52,7 @@ const PlacementDrive = sequelize.define(
   },
   {
     tableName: "placement_drives",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

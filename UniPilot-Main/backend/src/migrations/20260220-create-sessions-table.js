@@ -2,7 +2,33 @@ import { DataTypes } from "sequelize";
 
 export default {
     up: async (queryInterface, Sequelize) => {
-        await queryInterface.createTable("sessions", {
+        const table = { schema: "core", tableName: "sessions" };
+
+        // Ensure core schema exists
+        await queryInterface.sequelize.query(
+            'CREATE SCHEMA IF NOT EXISTS "core";'
+        );
+
+        // If sessions already exists in core, skip creation
+        const [coreCheck] = await queryInterface.sequelize.query(
+            `SELECT to_regclass('core."sessions"') AS tbl;`
+        );
+        if (coreCheck?.[0]?.tbl) {
+            return;
+        }
+
+        // If sessions exists in public, move it into core
+        const [publicCheck] = await queryInterface.sequelize.query(
+            `SELECT to_regclass('public."sessions"') AS tbl;`
+        );
+        if (publicCheck?.[0]?.tbl) {
+            await queryInterface.sequelize.query(
+                `ALTER TABLE public."sessions" SET SCHEMA "core";`
+            );
+            return;
+        }
+
+        await queryInterface.createTable(table, {
             id: {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
@@ -12,7 +38,7 @@ export default {
                 type: DataTypes.UUID,
                 allowNull: false,
                 references: {
-                    model: "users",
+                    model: { schema: "core", tableName: "users" },
                     key: "id",
                 },
                 onDelete: "CASCADE",
@@ -49,11 +75,11 @@ export default {
             },
         });
 
-        await queryInterface.addIndex("sessions", ["user_id"]);
-        await queryInterface.addIndex("sessions", ["refresh_token_hash"]);
+        await queryInterface.addIndex(table, ["user_id"]);
+        await queryInterface.addIndex(table, ["refresh_token_hash"]);
     },
 
     down: async (queryInterface, Sequelize) => {
-        await queryInterface.dropTable("sessions");
+        await queryInterface.dropTable({ schema: "core", tableName: "sessions" });
     },
 };

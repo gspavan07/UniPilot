@@ -58,6 +58,7 @@ const SemesterResult = sequelize.define(
     },
     {
         tableName: "semester_results",
+        schema: 'academics',
         timestamps: true,
         underscored: true,
     }

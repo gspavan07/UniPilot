@@ -86,6 +86,7 @@ const SpecialTrip = sequelize.define(
   },
   {
     tableName: "special_trips",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

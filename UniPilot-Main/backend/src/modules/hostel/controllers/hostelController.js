@@ -53,28 +53,41 @@ const hydrateAllocationsWithAcademics = async (allocations) => {
     .filter(Boolean);
   if (students.length === 0) return;
 
-  const programIds = students.map((student) => student.program_id).filter(Boolean);
-  const departmentIds = students
-    .map((student) => student.department_id)
+  const programIds = students
+    .map((student) => student.program_id || student.student_profile?.program_id)
     .filter(Boolean);
 
-  const [programMap, departmentMap] = await Promise.all([
-    academicLookupService.getProgramMapByIds(programIds, {
-      attributes: ["id", "name", "code"],
-    }),
-    academicLookupService.getDepartmentMapByIds(departmentIds, {
-      attributes: ["id", "name", "code"],
-    }),
-  ]);
+  const programMap = await academicLookupService.getProgramMapByIds(programIds, {
+    attributes: ["id", "name", "code"],
+  });
+
+  const departmentIds = [
+    ...new Set(
+      Array.from(programMap.values())
+        .map((program) => program?.department_id)
+        .filter(Boolean),
+    ),
+  ];
+
+  const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    departmentIds,
+    { attributes: ["id", "name", "code"] },
+  );
 
   students.forEach((student) => {
-    const program = programMap.get(student.program_id) || null;
-    const department = departmentMap.get(student.department_id) || null;
+    const programId =
+      student.program_id || student.student_profile?.program_id || null;
+    const program = programId ? programMap.get(programId) || null : null;
+    const department = program?.department_id
+      ? departmentMap.get(program.department_id) || null
+      : null;
 
     if (typeof student?.setDataValue === "function") {
+      if (programId) student.setDataValue("program_id", programId);
       student.setDataValue("program", program);
       student.setDataValue("department", department);
     } else {
+      if (programId) student.program_id = programId;
       student.program = program;
       student.department = department;
     }
@@ -662,7 +675,10 @@ export const allocateStudent = async (req, res) => {
     );
 
     // Sync is_hosteller flag on student
-    await student.update({ is_hosteller: true }, { transaction });
+    await sequelize.models.StudentProfile.update(
+      { is_hosteller: true },
+      { where: { user_id: student_id }, transaction },
+    );
 
     const allocationWithDetails = await HostelAllocation.findByPk(
       allocation.id,
@@ -775,7 +791,10 @@ export const checkoutStudent = async (req, res) => {
     );
 
     // Sync is_hosteller flag on student
-    await CoreService.updateUser(allocation.student_id, { is_hosteller: false }, { transaction });
+    await sequelize.models.StudentProfile.update(
+      { is_hosteller: false },
+      { where: { user_id: allocation.student_id }, transaction },
+    );
 
     // Update historical stay log
     const latestLog = await HostelStayLog.findOne({
@@ -1005,7 +1024,10 @@ export const deleteAllocation = async (req, res) => {
 
     // 3. Sync is_hosteller flag on student
     if (allocation.status === "active") {
-      await CoreService.updateUser(allocation.student_id, { is_hosteller: false }, { transaction });
+      await sequelize.models.StudentProfile.update(
+        { is_hosteller: false },
+        { where: { user_id: allocation.student_id }, transaction },
+      );
     }
 
     await allocation.destroy({ transaction });

@@ -85,6 +85,7 @@ const AdmissionConfig = sequelize.define(
   },
   {
     tableName: "admission_configs",
+    schema: 'admissions',
     timestamps: true,
     underscored: true,
   }

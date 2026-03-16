@@ -52,6 +52,7 @@ const DriveRound = sequelize.define(
   },
   {
     tableName: "drive_rounds",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

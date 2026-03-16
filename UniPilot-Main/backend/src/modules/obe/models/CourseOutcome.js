@@ -44,6 +44,7 @@ const CourseOutcome = sequelize.define(
     },
     {
         tableName: 'course_outcomes',
+        schema: 'obe',
         timestamps: true,
         underscored: true,
         indexes: [

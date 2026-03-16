@@ -6,6 +6,13 @@ export {
   Room,
 };
 
+// -----------------------------------------------------------------------------
+// Infrastructure Module Internal Associations
+// -----------------------------------------------------------------------------
+
+Block.hasMany(Room, { foreignKey: "block_id", as: "rooms" });
+Room.belongsTo(Block, { foreignKey: "block_id", as: "block" });
+
 export default {
   Block,
   Room,

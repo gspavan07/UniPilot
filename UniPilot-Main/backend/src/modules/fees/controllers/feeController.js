@@ -46,26 +46,41 @@ const hydrateStudentsWithAcademics = async (
       : [];
   if (list.length === 0) return;
 
-  const programIds = list.map((s) => s.program_id).filter(Boolean);
-  const departmentIds = list.map((s) => s.department_id).filter(Boolean);
+  const programIds = list
+    .map((student) => student.program_id || student.student_profile?.program_id)
+    .filter(Boolean);
 
-  const [programMap, departmentMap] = await Promise.all([
-    academicLookupService.getProgramMapByIds(programIds, {
-      attributes: programAttributes,
-    }),
-    academicLookupService.getDepartmentMapByIds(departmentIds, {
-      attributes: departmentAttributes,
-    }),
-  ]);
+  const programMap = await academicLookupService.getProgramMapByIds(programIds, {
+    attributes: programAttributes,
+  });
+
+  const departmentIds = [
+    ...new Set(
+      Array.from(programMap.values())
+        .map((program) => program?.department_id)
+        .filter(Boolean),
+    ),
+  ];
+
+  const departmentMap = await academicLookupService.getDepartmentMapByIds(
+    departmentIds,
+    { attributes: departmentAttributes },
+  );
 
   list.forEach((student) => {
-    const program = programMap.get(student.program_id) || null;
-    const department = departmentMap.get(student.department_id) || null;
+    const programId =
+      student.program_id || student.student_profile?.program_id || null;
+    const program = programId ? programMap.get(programId) || null : null;
+    const department = program?.department_id
+      ? departmentMap.get(program.department_id) || null
+      : null;
 
     if (typeof student?.setDataValue === "function") {
+      if (programId) student.setDataValue("program_id", programId);
       student.setDataValue("program", program);
       student.setDataValue("department", department);
     } else {
+      if (programId) student.program_id = programId;
       student.program = program;
       student.department = department;
     }
@@ -997,21 +1012,38 @@ export const getTransactions = async (req, res) => {
         where: { status: "completed" }
       });
       const allStudentIds = [...new Set(allPaymentsForSearch.map(p => p.student_id))];
-      const searchPattern = `%${search}%`.toLowerCase();
-      // Use CoreService to find students matching search
-      const matchingStudents = await CoreService.findAll({
-        where: {
-          id: { [Op.in]: allStudentIds },
-          [Op.or]: [
-            { first_name: { [Op.iLike]: searchPattern } },
-            { last_name: { [Op.iLike]: searchPattern } },
-            { admission_number: { [Op.iLike]: searchPattern } },
-          ]
-        },
-        attributes: ["id"]
-      });
+      const searchPattern = `%${search}%`;
+      // Match by name on User, and by admission/student ID on StudentProfile
+      const [matchingUsers, matchingProfiles] = await Promise.all([
+        CoreService.findAll({
+          where: {
+            id: { [Op.in]: allStudentIds },
+            [Op.or]: [
+              { first_name: { [Op.iLike]: searchPattern } },
+              { last_name: { [Op.iLike]: searchPattern } },
+            ],
+          },
+          attributes: ["id"],
+        }),
+        sequelize.models.StudentProfile.findAll({
+          where: {
+            user_id: { [Op.in]: allStudentIds },
+            [Op.or]: [
+              { admission_number: { [Op.iLike]: searchPattern } },
+              { student_id: { [Op.iLike]: searchPattern } },
+            ],
+          },
+          attributes: ["user_id"],
+          raw: true,
+        }),
+      ]);
 
-      const matchingStudentIds = matchingStudents.map(s => s.id);
+      const matchingStudentIds = [
+        ...new Set([
+          ...matchingUsers.map((s) => s.id),
+          ...matchingProfiles.map((p) => p.user_id),
+        ]),
+      ];
 
       where[Op.or] = [
         { transaction_id: { [Op.iLike]: `%${search}%` } },
@@ -1159,8 +1191,7 @@ export const getBatches = async (req, res) => {
     });
 
     // Get unique batches from Students (Users)
-    const studentBatches = await CoreService.findAll({
-      where: { role: "student" },
+    const studentBatches = await sequelize.models.StudentProfile.findAll({
       attributes: [
         [sequelize.fn("DISTINCT", sequelize.col("batch_year")), "batch_year"],
       ],
@@ -1383,21 +1414,22 @@ export const validateScholarshipImport = async (req, res) => {
     ];
 
     // Bulk fetch students and categories for validation
-    const [students, categories] = await Promise.all([
-      CoreService.findAll({
+    const [profiles, categories] = await Promise.all([
+      sequelize.models.StudentProfile.findAll({
         where: {
           [Op.or]: [
             { admission_number: { [Op.in]: identifiers } },
             { student_id: { [Op.in]: identifiers } },
           ],
         },
-        attributes: [
-          "id",
-          "admission_number",
-          "student_id",
-          "first_name",
-          "last_name",
+        include: [
+          {
+            model: sequelize.models.User,
+            as: "user",
+            attributes: ["id", "first_name", "last_name"],
+          },
         ],
+        attributes: ["student_id", "admission_number", "user_id"],
       }),
       FeeCategory.findAll({
         where: { name: { [Op.in]: categoryNames } },
@@ -1405,9 +1437,18 @@ export const validateScholarshipImport = async (req, res) => {
     ]);
 
     const studentMap = {};
-    students.forEach((s) => {
-      if (s.admission_number) studentMap[s.admission_number] = s;
-      if (s.student_id) studentMap[s.student_id] = s;
+    profiles.forEach((profile) => {
+      const user = profile.user;
+      if (!user) return;
+      const entry = {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        student_id: profile.student_id,
+        admission_number: profile.admission_number,
+      };
+      if (profile.admission_number) studentMap[profile.admission_number] = entry;
+      if (profile.student_id) studentMap[profile.student_id] = entry;
     });
 
     const categoryMap = {};
@@ -1514,17 +1555,41 @@ export const getDefaulters = async (req, res) => {
       page = 1,
     } = req.query;
 
-    const studentWhere = { is_active: true };
-    if (batch_year) studentWhere.batch_year = batch_year;
-    if (program_id) studentWhere.program_id = program_id;
-    if (department_id) studentWhere.department_id = department_id;
-    if (section) studentWhere.section = section;
+    const studentProfileWhere = {};
+    if (batch_year) studentProfileWhere.batch_year = batch_year;
+    if (program_id) studentProfileWhere.program_id = program_id;
+    if (section) studentProfileWhere.section = section;
+
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.json({
+          success: true,
+          meta: { total: 0, page: parseInt(page), limit: parseInt(limit), total_outstanding: 0 },
+          data: [],
+        });
+      }
+      studentProfileWhere.program_id = { [Op.in]: programIds };
+    }
 
     // Bulk Fetch
     const [students, structures, payments, waivers, configs] =
       await Promise.all([
         CoreService.findAll({
-          where: studentWhere,
+          where: { role: "student", is_active: true },
+          includeProfiles: ["student"],
+          include: [
+            {
+              model: sequelize.models.StudentProfile,
+              as: "student_profile",
+              required: true,
+              where: studentProfileWhere,
+            },
+          ],
           attributes: [
             "id",
             "first_name",
@@ -1535,7 +1600,6 @@ export const getDefaulters = async (req, res) => {
             "parent_details",
             "batch_year",
             "program_id",
-            "department_id",
             "section",
             "is_hosteller",
             "requires_transport",
@@ -1738,12 +1802,21 @@ export const getSections = async (req, res) => {
     const where = {};
     if (batch_year) where.batch_year = batch_year;
     if (program_id) where.program_id = program_id;
-    if (department_id) where.department_id = department_id;
     if (semester) where.current_semester = semester;
 
-    where.is_active = true;
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      where.program_id = { [Op.in]: programIds };
+    }
 
-    const sections = await CoreService.findAll({
+    const sections = await sequelize.models.StudentProfile.findAll({
       attributes: [
         [sequelize.fn("DISTINCT", sequelize.col("section")), "section"],
       ],
@@ -1777,18 +1850,38 @@ export const exportDefaulters = async (req, res) => {
       days_overdue,
     } = req.query;
 
-    const studentWhere = { is_active: true };
-    if (batch_year) studentWhere.batch_year = batch_year;
-    if (program_id) studentWhere.program_id = program_id;
-    if (department_id) studentWhere.department_id = department_id;
-    if (section) studentWhere.section = section;
-    if (semester) studentWhere.current_semester = semester;
+    const studentProfileWhere = {};
+    if (batch_year) studentProfileWhere.batch_year = batch_year;
+    if (program_id) studentProfileWhere.program_id = program_id;
+    if (section) studentProfileWhere.section = section;
+    if (semester) studentProfileWhere.current_semester = semester;
+
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.status(200).send("Student ID,Name,Department,Program,Semester,Section,Total Payable,Total Paid,Net Due,Days Overdue,Mobile,Parent Mobile\n");
+      }
+      studentProfileWhere.program_id = { [Op.in]: programIds };
+    }
 
     // Fetch All Match (No Pagination)
     const [students, structures, payments, waivers, configs] =
       await Promise.all([
         CoreService.findAll({
-          where: studentWhere,
+          where: { role: "student", is_active: true },
+          includeProfiles: ["student"],
+          include: [
+            {
+              model: sequelize.models.StudentProfile,
+              as: "student_profile",
+              required: true,
+              where: studentProfileWhere,
+            },
+          ],
           attributes: [
             "id",
             "first_name",
@@ -1799,7 +1892,6 @@ export const exportDefaulters = async (req, res) => {
             "parent_details",
             "batch_year",
             "program_id",
-            "department_id",
             "section",
             "is_hosteller",
             "requires_transport",
@@ -2049,18 +2141,30 @@ export const getDailyCollection = async (req, res) => {
       where.payment_method = "WALLET";
     }
 
-    const studentWhere = {};
-    if (department_id) studentWhere.department_id = department_id;
-    if (program_id) studentWhere.program_id = program_id;
-    if (batch_year) studentWhere.batch_year = batch_year;
+    const studentProfileWhere = {};
+    if (program_id) studentProfileWhere.program_id = program_id;
+    if (batch_year) studentProfileWhere.batch_year = batch_year;
 
-    let allowedStudentIds = null;
-    if (Object.keys(studentWhere).length > 0) {
-      const matchedStudents = await CoreService.findAll({
-        where: studentWhere,
+    if (department_id) {
+      const programs = await academicLookupService.listPrograms({
+        where: { department_id },
         attributes: ["id"],
       });
-      allowedStudentIds = matchedStudents.map((s) => s.id);
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      studentProfileWhere.program_id = { [Op.in]: programIds };
+    }
+
+    let allowedStudentIds = null;
+    if (Object.keys(studentProfileWhere).length > 0) {
+      const matchedStudents = await sequelize.models.StudentProfile.findAll({
+        where: studentProfileWhere,
+        attributes: ["user_id"],
+        raw: true,
+      });
+      allowedStudentIds = matchedStudents.map((s) => s.user_id);
 
       if (allowedStudentIds.length === 0) {
         // No students match the criteria, so no payments to return

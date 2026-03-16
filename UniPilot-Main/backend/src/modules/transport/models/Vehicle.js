@@ -70,6 +70,7 @@ const Vehicle = sequelize.define(
   },
   {
     tableName: "transport_vehicles",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

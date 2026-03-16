@@ -97,6 +97,7 @@ const ExamCycle = sequelize.define(
   },
   {
     tableName: "exam_cycles",
+    schema: 'exams',
     underscored: true,
     timestamps: true,
   },

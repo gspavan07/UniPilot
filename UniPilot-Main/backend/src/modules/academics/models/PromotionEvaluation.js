@@ -64,6 +64,7 @@ const PromotionEvaluation = sequelize.define(
   },
   {
     tableName: "promotion_evaluations",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   }

@@ -45,6 +45,7 @@ const ProctorFeedback = sequelize.define(
   },
   {
     tableName: "proctor_feedback",
+    schema: 'proctoring',
     timestamps: true,
     underscored: true,
   }

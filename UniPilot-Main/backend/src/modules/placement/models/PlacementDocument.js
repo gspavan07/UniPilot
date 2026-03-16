@@ -33,6 +33,7 @@ const PlacementDocument = sequelize.define(
   },
   {
     tableName: "placement_documents",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

@@ -65,6 +65,7 @@ const StudentDocument = sequelize.define(
   },
   {
     tableName: "student_documents",
+    schema: 'admissions',
     timestamps: true,
     underscored: true,
     indexes: [

@@ -93,6 +93,7 @@ const TripLog = sequelize.define(
   },
   {
     tableName: "trip_logs",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

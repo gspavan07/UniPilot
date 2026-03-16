@@ -36,6 +36,7 @@ const Timetable = sequelize.define(
   },
   {
     tableName: "timetables",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   }

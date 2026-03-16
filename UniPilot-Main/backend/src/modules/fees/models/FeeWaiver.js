@@ -59,6 +59,7 @@ const FeeWaiver = sequelize.define(
   },
   {
     tableName: "fee_waivers",
+    schema: 'fees',
     timestamps: true,
     underscored: true,
   },

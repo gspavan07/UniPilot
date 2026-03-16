@@ -53,6 +53,7 @@ const DriveEligibility = sequelize.define(
   },
   {
     tableName: "drive_eligibility",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

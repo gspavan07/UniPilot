@@ -70,6 +70,7 @@ const Regulation = sequelize.define(
   },
   {
     tableName: "regulations",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   },

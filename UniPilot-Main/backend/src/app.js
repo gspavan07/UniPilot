@@ -9,10 +9,10 @@ import routes from "./routes/index.js";
 import errorHandler from "./middleware/errorHandler.js";
 import nullifyEmptyStrings from "./middleware/nullifyEmptyStrings.js";
 import logger from "./utils/logger.js";
-import "./models/index.js";
-
+import "./bootstrap/models.js";
 
 import path from "path";
+
 
 const __dirname = import.meta.dirname;
 

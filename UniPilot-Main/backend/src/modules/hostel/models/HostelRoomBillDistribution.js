@@ -69,6 +69,7 @@ const HostelRoomBillDistribution = sequelize.define(
   },
   {
     tableName: "hostel_room_bill_distributions",
+    schema: 'hostel',
     timestamps: true,
     underscored: true,
     indexes: [

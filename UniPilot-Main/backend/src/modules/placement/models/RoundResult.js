@@ -34,6 +34,7 @@ const RoundResult = sequelize.define(
   },
   {
     tableName: "round_results",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

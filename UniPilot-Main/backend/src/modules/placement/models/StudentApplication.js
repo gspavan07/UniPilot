@@ -53,6 +53,7 @@ const StudentApplication = sequelize.define(
   },
   {
     tableName: "student_applications",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

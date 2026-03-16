@@ -67,6 +67,7 @@ const TimetableSlot = sequelize.define(
   },
   {
     tableName: "timetable_slots",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   },

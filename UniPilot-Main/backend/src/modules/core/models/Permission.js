@@ -24,6 +24,7 @@ const Permission = sequelize.define(
   },
   {
     tableName: "permissions",
+    schema: 'core',
     timestamps: true,
     underscored: true,
   }

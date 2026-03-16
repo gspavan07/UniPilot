@@ -58,6 +58,7 @@ const Room = sequelize.define(
   },
   {
     tableName: "rooms",
+    schema: 'infrastructure',
     timestamps: true,
     underscored: true,
   },

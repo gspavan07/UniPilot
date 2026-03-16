@@ -77,6 +77,7 @@ const TransportDriver = sequelize.define(
   },
   {
     tableName: "transport_drivers",
+    schema: 'transport',
     timestamps: true,
     underscored: true,
     indexes: [

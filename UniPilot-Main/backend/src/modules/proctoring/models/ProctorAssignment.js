@@ -47,6 +47,7 @@ const ProctorAssignment = sequelize.define(
   },
   {
     tableName: "proctor_assignments",
+    schema: 'proctoring',
     timestamps: true,
     underscored: true,
   }

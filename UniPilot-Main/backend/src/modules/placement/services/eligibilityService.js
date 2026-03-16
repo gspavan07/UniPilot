@@ -16,13 +16,15 @@ export const isStudentEligible = async (studentId, driveId) => {
     if (!drive.eligibility) return { eligible: true }; // No criteria set
 
     const student = await CoreService.findByPk(studentId, {
-      attributes: [
-        "id",
-        "department_id",
-        "regulation_id",
-        "previous_academics",
-      ],
+      attributes: ["id", "program_id", "regulation_id", "previous_academics"],
+      includeProfiles: ["student"],
     });
+    const program = student?.program_id
+      ? await AcademicService.getProgramById(student.program_id, {
+          attributes: ["id", "department_id"],
+        })
+      : null;
+    const departmentId = program?.department_id || null;
 
     const criteria = drive.eligibility;
     const errors = [];
@@ -30,7 +32,7 @@ export const isStudentEligible = async (studentId, driveId) => {
     // 1. Department Check
     if (
       criteria.department_ids?.length > 0 &&
-      !criteria.department_ids.includes(student.department_id)
+      !criteria.department_ids.includes(departmentId)
     ) {
       errors.push("Your department is not eligible for this drive.");
     }

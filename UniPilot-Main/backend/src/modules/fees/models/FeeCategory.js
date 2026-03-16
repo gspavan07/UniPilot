@@ -19,6 +19,7 @@ const FeeCategory = sequelize.define(
   },
   {
     tableName: "fee_categories",
+    schema: 'fees',
     timestamps: true,
     underscored: true,
   }

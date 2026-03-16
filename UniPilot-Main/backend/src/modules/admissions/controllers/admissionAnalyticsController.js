@@ -27,17 +27,16 @@ export const getAdmissionAnalytics = async (req, res) => {
       activeConfig?.batch_year || new Date().getFullYear();
 
     // Determine batch filter
-    const batchWhere =
+    const profileBatchWhere =
       batch && batch !== "all" ? { batch_year: parseInt(batch) } : {};
 
     // 1. Batch-wise growth data (last 5 years)
-    const batchGrowth = await CoreService.findAll({
+    const batchGrowth = await sequelize.models.StudentProfile.findAll({
       attributes: [
         "batch_year",
-        [sequelize.fn("COUNT", sequelize.col("id")), "students"],
+        [sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "students"],
       ],
       where: {
-        role: "student",
         batch_year: { [Op.ne]: null },
       },
       group: ["batch_year"],
@@ -64,17 +63,28 @@ export const getAdmissionAnalytics = async (req, res) => {
     });
 
     // 2. Department classification
-    const departmentData = await CoreService.findAll({
+    const departmentData = await sequelize.models.StudentProfile.findAll({
       attributes: [
-        "department_id",
-        [sequelize.fn("COUNT", sequelize.col("User.id")), "students"],
+        [sequelize.col("program.department_id"), "department_id"],
+        [sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "students"],
       ],
-      where: {
-        role: "student",
-        department_id: { [Op.ne]: null },
-        ...batchWhere,
-      },
-      group: ["department_id"],
+      include: [
+        {
+          model: sequelize.models.Program,
+          as: "program",
+          attributes: [],
+          required: true,
+        },
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: { role: "student" },
+          required: true,
+        },
+      ],
+      where: profileBatchWhere,
+      group: ["program.department_id"],
       raw: true,
     });
 
@@ -92,16 +102,24 @@ export const getAdmissionAnalytics = async (req, res) => {
     });
 
     // 3. Gender distribution
-    const genderData = await CoreService.findAll({
+    const genderData = await sequelize.models.User.findAll({
       attributes: [
         "gender",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("User.id")), "count"],
       ],
       where: {
         role: "student",
         gender: { [Op.ne]: null },
-        ...batchWhere,
       },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          attributes: [],
+          required: true,
+          where: profileBatchWhere,
+        },
+      ],
       group: ["gender"],
       raw: true,
     });
@@ -112,16 +130,24 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 4. Caste distribution
-    const casteData = await CoreService.findAll({
+    const casteData = await sequelize.models.User.findAll({
       attributes: [
         "caste",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("User.id")), "count"],
       ],
       where: {
         role: "student",
         caste: { [Op.ne]: null },
-        ...batchWhere,
       },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          attributes: [],
+          required: true,
+          where: profileBatchWhere,
+        },
+      ],
       group: ["caste"],
       raw: true,
     });
@@ -132,16 +158,24 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 5. Religion distribution
-    const religionData = await CoreService.findAll({
+    const religionData = await sequelize.models.User.findAll({
       attributes: [
         "religion",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("User.id")), "count"],
       ],
       where: {
         role: "student",
         religion: { [Op.ne]: null },
-        ...batchWhere,
       },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          attributes: [],
+          required: true,
+          where: profileBatchWhere,
+        },
+      ],
       group: ["religion"],
       raw: true,
     });
@@ -152,18 +186,26 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 6. Country distribution
-    const countryData = await CoreService.findAll({
+    const countryData = await sequelize.models.User.findAll({
       attributes: [
         "nationality",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("User.id")), "count"],
       ],
       where: {
         role: "student",
         nationality: { [Op.ne]: null },
-        ...batchWhere,
       },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          attributes: [],
+          required: true,
+          where: profileBatchWhere,
+        },
+      ],
       group: ["nationality"],
-      order: [[sequelize.fn("COUNT", sequelize.col("id")), "DESC"]],
+      order: [[sequelize.fn("COUNT", sequelize.col("User.id")), "DESC"]],
       raw: true,
     });
 
@@ -173,19 +215,27 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 7. State distribution (India only)
-    const stateData = await CoreService.findAll({
+    const stateData = await sequelize.models.User.findAll({
       attributes: [
         "state",
-        [sequelize.fn("COUNT", sequelize.col("id")), "students"],
+        [sequelize.fn("COUNT", sequelize.col("User.id")), "students"],
       ],
       where: {
         role: "student",
         state: { [Op.ne]: null },
         nationality: "Indian",
-        ...batchWhere,
       },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          attributes: [],
+          required: true,
+          where: profileBatchWhere,
+        },
+      ],
       group: ["state"],
-      order: [[sequelize.fn("COUNT", sequelize.col("id")), "DESC"]],
+      order: [[sequelize.fn("COUNT", sequelize.col("User.id")), "DESC"]],
       limit: 5,
       raw: true,
     });
@@ -196,16 +246,24 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 8. Admission Type distribution
-    const admissionTypeData = await CoreService.findAll({
+    const admissionTypeData = await sequelize.models.StudentProfile.findAll({
       attributes: [
         "admission_type",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "count"],
       ],
       where: {
-        role: "student",
         admission_type: { [Op.ne]: null },
-        ...batchWhere,
+        ...profileBatchWhere,
       },
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: { role: "student" },
+          required: true,
+        },
+      ],
       group: ["admission_type"],
       raw: true,
     });
@@ -218,19 +276,30 @@ export const getAdmissionAnalytics = async (req, res) => {
     }));
 
     // 9. KPI statistics
-    const totalStudents = await CoreService.count({
-      where: {
-        role: "student",
-        ...batchWhere,
-      },
+    const totalStudents = await sequelize.models.StudentProfile.count({
+      where: profileBatchWhere,
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: { role: "student" },
+          required: true,
+        },
+      ],
     });
 
-    const internationalStudents = await CoreService.count({
-      where: {
-        role: "student",
-        nationality: { [Op.ne]: "Indian" },
-        ...batchWhere,
-      },
+    const internationalStudents = await sequelize.models.StudentProfile.count({
+      where: profileBatchWhere,
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          where: { role: "student", nationality: { [Op.ne]: "Indian" } },
+          required: true,
+        },
+      ],
     });
 
     const activeBatch = `${activeBatchYear}-${(activeBatchYear + 1).toString().slice(-2)}`;
@@ -238,14 +307,11 @@ export const getAdmissionAnalytics = async (req, res) => {
     const departmentCount = departmentFormatted.length;
 
     // 9. Get all available batches
-    const allBatches = await CoreService.findAll({
+    const allBatches = await sequelize.models.StudentProfile.findAll({
       attributes: [
         [sequelize.fn("DISTINCT", sequelize.col("batch_year")), "batch_year"],
       ],
-      where: {
-        role: "student",
-        batch_year: { [Op.ne]: null },
-      },
+      where: { batch_year: { [Op.ne]: null } },
       order: [["batch_year", "DESC"]],
       raw: true,
     });

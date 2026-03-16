@@ -85,6 +85,7 @@ const ExamTimetable = sequelize.define(
   },
   {
     tableName: "exam_timetables",
+    schema: 'exams',
     underscored: true,
     timestamps: true,
   },

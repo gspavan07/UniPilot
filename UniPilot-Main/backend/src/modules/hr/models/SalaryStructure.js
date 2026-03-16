@@ -49,6 +49,7 @@ const SalaryStructure = sequelize.define(
   },
   {
     tableName: "salary_structures",
+    schema: 'hr',
     timestamps: true,
     underscored: true,
   }

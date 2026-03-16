@@ -47,6 +47,7 @@ const SectionIncharge = sequelize.define(
   },
   {
     tableName: "section_incharges",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   },

@@ -2,7 +2,35 @@ import { Op } from "sequelize";
 import { sequelize } from "../../../config/database.js";
 import logger from "../../../utils/logger.js";
 import CoreService from "../../core/services/index.js";
+import AcademicService from "../../academics/services/index.js";
 import { Company, DriveEligibility, DriveRound, JobPosting, Placement, PlacementDrive, StudentApplication } from "../models/index.js";
+
+const getProgramIdsForDepartment = async (departmentId) => {
+  if (!departmentId) return [];
+  const programs = await AcademicService.listPrograms({
+    where: { department_id: departmentId },
+    attributes: ["id"],
+  });
+  return programs.map((program) => program.id);
+};
+
+const buildStudentProfileWhere = async ({
+  departmentId,
+  batch_year,
+  section,
+  batch_years,
+} = {}) => {
+  const programIds = await getProgramIdsForDepartment(departmentId);
+  if (programIds.length === 0) return null;
+
+  const whereProfile = { program_id: { [Op.in]: programIds } };
+  if (batch_year) whereProfile.batch_year = batch_year;
+  if (Array.isArray(batch_years) && batch_years.length > 0) {
+    whereProfile.batch_year = { [Op.in]: batch_years };
+  }
+  if (section) whereProfile.section = section;
+  return whereProfile;
+};
 
 /**
  * Get overall placement stats for a department
@@ -23,24 +51,42 @@ export const getDepartmentStats = async (req, res) => {
       });
     }
 
-    const studentWhere = { department_id: departmentId, role: "student" };
-    if (batch_year && batch_year !== "undefined") {
-      studentWhere.batch_year = batch_year;
-    }
-    if (section && section !== "undefined") {
-      studentWhere.section = section;
-    }
-
-    // 1. Total students in department with filters
-    const totalStudents = await CoreService.count({
-      where: studentWhere,
+    const profileWhere = await buildStudentProfileWhere({
+      departmentId,
+      batch_year: batch_year && batch_year !== "undefined" ? batch_year : null,
+      section: section && section !== "undefined" ? section : null,
     });
 
-    const studentIdsRaw = await CoreService.findAll({
-      where: studentWhere,
-      attributes: ["id"]
+    if (!profileWhere) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalStudents: 0,
+          placedStudents: 0,
+          totalApplications: 0,
+          placementPercentage: 0,
+        },
+      });
+    }
+
+    const profiles = await sequelize.models.StudentProfile.findAll({
+      where: profileWhere,
+      attributes: ["user_id"],
+      include: [
+        {
+          model: sequelize.models.User,
+          as: "user",
+          attributes: [],
+          required: true,
+          where: { role: "student" },
+        },
+      ],
+      raw: true,
     });
-    const studentIds = studentIdsRaw.map(s => s.id);
+    const studentIds = [
+      ...new Set(profiles.map((profile) => profile.user_id).filter(Boolean)),
+    ];
+    const totalStudents = studentIds.length;
 
     // 2. Placed students with filters
     const placedStudents = await Placement.count({
@@ -90,18 +136,27 @@ export const getDepartmentStudentList = async (req, res) => {
       });
     }
 
-    const where = { department_id: departmentId, role: "student" };
+    const profileWhere = await buildStudentProfileWhere({
+      departmentId,
+      batch_year: batch_year && batch_year !== "undefined" ? batch_year : null,
+      section: section && section !== "undefined" ? section : null,
+    });
 
-    if (batch_year && batch_year !== "undefined") {
-      where.batch_year = batch_year;
-    }
-
-    if (section && section !== "undefined") {
-      where.section = section;
+    if (!profileWhere) {
+      return res.status(200).json({ success: true, data: [] });
     }
 
     const students = await CoreService.findAll({
-      where,
+      where: { role: "student" },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: profileWhere,
+          attributes: [],
+        },
+      ],
       attributes: [
         "id",
         "first_name",
@@ -109,6 +164,7 @@ export const getDepartmentStudentList = async (req, res) => {
         ["student_id", "id_number"],
         "email",
         "batch_year",
+        "section",
       ],
     });
 
@@ -190,21 +246,35 @@ export const getDepartmentDrives = async (req, res) => {
       drives.map(async (drive) => {
         const eligibility = drive.eligibility;
 
-        // Base criteria for students in this department
-        const studentWhere = {
-          department_id: departmentId,
-          role: "student",
-        };
+        const profileWhere = await buildStudentProfileWhere({
+          departmentId,
+          batch_years: eligibility.batch_ids && eligibility.batch_ids.length > 0
+            ? eligibility.batch_ids
+            : null,
+        });
 
-        // Add batch criteria if defined
-        if (eligibility.batch_ids && eligibility.batch_ids.length > 0) {
-          studentWhere.batch_year = { [Op.in]: eligibility.batch_ids };
+        let eligibleStudentIds = [];
+        if (profileWhere) {
+          const profiles = await sequelize.models.StudentProfile.findAll({
+            where: profileWhere,
+            attributes: ["user_id"],
+            include: [
+              {
+                model: sequelize.models.User,
+                as: "user",
+                attributes: [],
+                required: true,
+                where: { role: "student" },
+              },
+            ],
+            raw: true,
+          });
+          eligibleStudentIds = [
+            ...new Set(profiles.map((profile) => profile.user_id).filter(Boolean)),
+          ];
         }
 
-        const eligibleCount = await CoreService.count({ where: studentWhere });
-
-        const eligibleStudentIdsRaw = await CoreService.findAll({ where: studentWhere, attributes: ["id"] });
-        const eligibleStudentIds = eligibleStudentIdsRaw.map(s => s.id);
+        const eligibleCount = eligibleStudentIds.length;
 
         // Count those who applied
         const appliedCount = await StudentApplication.count({
@@ -260,17 +330,29 @@ export const getDriveStudentMatrix = async (req, res) => {
     }
 
     // 2. Fetch all students in department who match batch/dept criteria
-    const studentWhere = {
-      department_id: departmentId,
-      role: "student",
-    };
+    const profileWhere = await buildStudentProfileWhere({
+      departmentId,
+      batch_years:
+        eligibility.batch_ids && eligibility.batch_ids.length > 0
+          ? eligibility.batch_ids
+          : null,
+    });
 
-    if (eligibility.batch_ids && eligibility.batch_ids.length > 0) {
-      studentWhere.batch_year = { [Op.in]: eligibility.batch_ids };
+    if (!profileWhere) {
+      return res.status(200).json({ success: true, data: [] });
     }
 
     const students = await CoreService.findAll({
-      where: studentWhere,
+      where: { role: "student" },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: profileWhere,
+          attributes: [],
+        },
+      ],
       attributes: [
         "id",
         "first_name",
@@ -281,7 +363,7 @@ export const getDriveStudentMatrix = async (req, res) => {
         "section",
       ],
       order: [
-        ["batch_year", "ASC"],
+        [{ model: sequelize.models.StudentProfile, as: "student_profile" }, "batch_year", "ASC"],
         ["first_name", "ASC"],
       ],
     });

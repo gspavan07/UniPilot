@@ -37,6 +37,7 @@ const LeaveBalance = sequelize.define(
   },
   {
     tableName: "leave_balances",
+    schema: 'hr',
     timestamps: true,
     underscored: true,
     indexes: [

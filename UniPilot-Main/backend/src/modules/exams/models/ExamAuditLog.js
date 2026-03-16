@@ -107,6 +107,7 @@ const ExamAuditLog = sequelize.define(
   },
   {
     tableName: "exam_audit_logs",
+    schema: 'exams',
     timestamps: false, // We only need created_at
     indexes: [
       { fields: ["user_id"] },

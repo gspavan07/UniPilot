@@ -2,6 +2,12 @@ import { Sequelize } from 'sequelize';
 import logger from '../utils/logger.js';
 
 // Database configuration
+const moduleSchemas = [
+  'public', 'core', 'academics', 'hr', 'admissions', 'exams', 'fees',
+  'hostel', 'infrastructure', 'obe', 'notifications', 'placement',
+  'proctoring', 'transport', 'library', 'settings'
+];
+
 const config = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT) || 5432,
@@ -11,6 +17,7 @@ const config = {
   dialect: 'postgres',
   timezone: '+05:30',
   logging: (msg) => logger.debug(msg),
+  searchPath: moduleSchemas.join(','),
   pool: {
     min: parseInt(process.env.DB_POOL_MIN) || 2,
     max: parseInt(process.env.DB_POOL_MAX) || 10,

@@ -51,6 +51,7 @@ const Graduation = sequelize.define(
   },
   {
     tableName: "graduations",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   }

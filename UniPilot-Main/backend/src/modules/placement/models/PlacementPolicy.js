@@ -29,6 +29,7 @@ const PlacementPolicy = sequelize.define(
   },
   {
     tableName: "placement_policies",
+    schema: 'placement',
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

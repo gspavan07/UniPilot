@@ -38,6 +38,7 @@ const HostelFeeStructure = sequelize.define(
   },
   {
     tableName: "hostel_fee_structures",
+    schema: 'hostel',
     underscored: true,
     timestamps: true,
   },

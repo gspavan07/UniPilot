@@ -29,28 +29,41 @@ const hydrateStudentsWithAcademics = async (
       : [];
   if (list.length === 0) return;
 
-  const programIds = list.map((student) => student.program_id).filter(Boolean);
-  const departmentIds = list
-    .map((student) => student.department_id)
+  const programIds = list
+    .map((student) => student.program_id || student.student_profile?.program_id)
     .filter(Boolean);
 
-  const [programMap, departmentMap] = await Promise.all([
-    AcademicService.getProgramMapByIds(programIds, {
-      attributes: programAttributes,
-    }),
-    AcademicService.getDepartmentMapByIds(departmentIds, {
-      attributes: departmentAttributes,
-    }),
-  ]);
+  const programMap = await AcademicService.getProgramMapByIds(programIds, {
+    attributes: programAttributes,
+  });
+
+  const departmentIds = [
+    ...new Set(
+      Array.from(programMap.values())
+        .map((program) => program?.department_id)
+        .filter(Boolean),
+    ),
+  ];
+
+  const departmentMap = await AcademicService.getDepartmentMapByIds(
+    departmentIds,
+    { attributes: departmentAttributes },
+  );
 
   list.forEach((student) => {
-    const program = programMap.get(student.program_id) || null;
-    const department = departmentMap.get(student.department_id) || null;
+    const programId =
+      student.program_id || student.student_profile?.program_id || null;
+    const program = programId ? programMap.get(programId) || null : null;
+    const department = program?.department_id
+      ? departmentMap.get(program.department_id) || null
+      : null;
 
     if (typeof student?.setDataValue === "function") {
+      if (programId) student.setDataValue("program_id", programId);
       student.setDataValue("program", program);
       student.setDataValue("department", department);
     } else {
+      if (programId) student.program_id = programId;
       student.program = program;
       student.department = department;
     }
@@ -65,13 +78,12 @@ export const getAdmissionStats = async (req, res) => {
     const { year } = req.query;
 
     // 1. Group by Batch Year
-    const batchStats = await CoreService.findAll({
+    const batchStats = await sequelize.models.StudentProfile.findAll({
       attributes: [
         "batch_year",
         [sequelize.fn("COUNT", sequelize.col("id")), "count"],
       ],
       where: {
-        role: "student",
         batch_year: { [Op.ne]: null },
       },
       group: ["batch_year"],
@@ -79,21 +91,35 @@ export const getAdmissionStats = async (req, res) => {
     });
 
     // 2. Group by Department (for a specific year if provided)
-    const deptWhere = { role: "student" };
+    const deptWhere = {};
     if (year) {
       deptWhere.batch_year = year;
     }
 
-    const deptStatsRaw = await CoreService.findAll({
+    const { User } = sequelize.models;
+
+    const deptStatsRaw = await sequelize.models.StudentProfile.findAll({
       attributes: [
-        "department_id",
-        [sequelize.fn("COUNT", sequelize.col("User.id")), "count"],
+        [sequelize.col("program.department_id"), "department_id"],
+        [sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "count"],
       ],
-      where: {
-        ...deptWhere,
-        department_id: { [Op.ne]: null },
-      },
-      group: ["department_id"],
+      include: [
+        {
+          model: sequelize.models.Program,
+          as: "program",
+          attributes: [],
+          required: true,
+        },
+        {
+          model: User,
+          as: "user",
+          attributes: [],
+          where: { role: "student" },
+          required: true,
+        },
+      ],
+      where: deptWhere,
+      group: ["program.department_id"],
       raw: true,
     });
 
@@ -130,29 +156,54 @@ export const exportAdmissionData = async (req, res) => {
   try {
     const { year, department_id } = req.query;
     const where = { role: "student" };
+    const studentProfileWhere = {};
+    if (year) studentProfileWhere.batch_year = year;
 
-    if (year) where.batch_year = year;
-    if (department_id) where.department_id = department_id;
+    if (department_id) {
+      const programs = await AcademicService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.status(200).json({ success: true, count: 0, data: [] });
+      }
+      studentProfileWhere.program_id = { [Op.in]: programIds };
+    }
 
     const students = await CoreService.findAll({
       where,
-      attributes: [
-        "student_id",
-        "first_name",
-        "last_name",
-        "email",
-        "phone",
-        "batch_year",
-        "admission_date",
-        "admission_number",
-        "academic_status",
-        "program_id",
-        "department_id",
+      includeProfiles: ["student"], // Use helper from CoreService
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: studentProfileWhere,
+        }
       ],
+      attributes: ["id", "first_name", "last_name", "email", "phone"],
       order: [
-        ["batch_year", "DESC"],
+        [{ model: sequelize.models.StudentProfile, as: 'student_profile' }, "batch_year", "DESC"],
         ["last_name", "ASC"],
       ],
+    });
+
+    // Extract student metrics from profile
+    students.forEach(student => {
+      if (student.student_profile) {
+        student.dataValues.student_id = student.student_profile.student_id;
+        student.dataValues.batch_year = student.student_profile.batch_year;
+        student.dataValues.admission_date = student.student_profile.admission_date;
+        student.dataValues.admission_number = student.student_profile.admission_number;
+        student.dataValues.academic_status = student.student_profile.academic_status;
+        student.dataValues.program_id = student.student_profile.program_id;
+        
+        // Ensure property exists directly on the instance as well
+        student.student_id = student.student_profile.student_id;
+        student.batch_year = student.student_profile.batch_year;
+        student.program_id = student.student_profile.program_id;
+      }
     });
 
     await hydrateStudentsWithAcademics(students, {
@@ -198,9 +249,8 @@ export const getSeatMatrix = async (req, res) => {
     const seatMatrix = await Promise.all(
       programs.map(async (prog) => {
         const department = departmentMap.get(prog.department_id);
-        const filled = await CoreService.count({
+        const filled = await sequelize.models.StudentProfile.count({
           where: {
-            role: "student",
             program_id: prog.id,
             batch_year: year,
           },
@@ -446,12 +496,12 @@ export const getFunnelStats = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
-    const studentRows = await CoreService.findAll({
-      attributes: ["id"],
-      where: { role: "student", batch_year: year },
+    const studentRows = await sequelize.models.StudentProfile.findAll({
+      attributes: ["user_id"],
+      where: { batch_year: year },
       raw: true,
     });
-    const studentIds = studentRows.map((row) => row.id);
+    const studentIds = studentRows.map((row) => row.user_id);
     const totalApplied = studentIds.length;
 
     // Students with at least one document
@@ -475,9 +525,8 @@ export const getFunnelStats = async (req, res) => {
 
     // Students with all documents approved (simplified: at least one approved and none rejected/pending)
     // Actually, let's just count those with at least one approved document for now as a "Verified" stage proxy
-    const admitted = await CoreService.count({
+    const admitted = await sequelize.models.StudentProfile.count({
       where: {
-        role: "student",
         batch_year: year,
         admission_number: { [Op.ne]: null },
       },
@@ -505,23 +554,34 @@ export const getGeoStats = async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
 
-    const stats = await CoreService.findAll({
+    const { User } = sequelize.models;
+    const stats = await sequelize.models.StudentProfile.findAll({
       attributes: [
-        [sequelize.col("state"), "state"],
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.col("user.state"), "state"],
+        [sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "count"],
+      ],
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: [],
+          where: {
+            role: "student",
+            state: { [Op.ne]: null },
+          },
+        },
       ],
       where: {
-        role: "student",
         batch_year: year,
-        state: { [Op.ne]: null },
       },
-      group: ["state"],
-      order: [[sequelize.fn("COUNT", sequelize.col("id")), "DESC"]],
+      group: ["user.state"],
+      order: [[sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "DESC"]],
+      raw: true,
     });
 
     res.status(200).json({
       success: true,
-      data: stats,
+      data: stats.map(s => ({ state: s.state, count: parseInt(s.count) })),
     });
   } catch (error) {
     logger.error("Error in getGeoStats:", error);
@@ -534,27 +594,35 @@ export const getGeoStats = async (req, res) => {
 export const getGenderStats = async (req, res) => {
   try {
     const { year } = req.query;
-    const where = { role: "student" };
 
-    if (year) {
-      where.batch_year = year;
-    }
+    const profileWhere = {};
+    if (year) profileWhere.batch_year = year;
 
-    const stats = await CoreService.findAll({
+    const { User } = sequelize.models;
+    const stats = await sequelize.models.StudentProfile.findAll({
       attributes: [
-        "gender",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        [sequelize.col("user.gender"), "gender"],
+        [sequelize.fn("COUNT", sequelize.col("StudentProfile.id")), "count"],
       ],
-      where: {
-        ...where,
-        gender: { [Op.ne]: null },
-      },
-      group: ["gender"],
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: [],
+          where: {
+            role: "student",
+            gender: { [Op.ne]: null },
+          },
+        },
+      ],
+      where: profileWhere,
+      group: ["user.gender"],
+      raw: true,
     });
 
     res.status(200).json({
       success: true,
-      data: stats,
+      data: stats.map(s => ({ gender: s.gender, count: parseInt(s.count) })),
     });
   } catch (error) {
     logger.error("Error in getGenderStats:", error);

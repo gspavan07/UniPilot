@@ -8,6 +8,8 @@ import { Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import { Permission, Role, Session, User } from "../models/index.js";
 import SettingsService from "../../settings/services/index.js";
+import AcademicService from "../../academics/services/index.js";
+import { sequelize } from "../../../config/database.js";
 
 
 
@@ -34,14 +36,14 @@ class AuthService {
 
       // Check if employee_id/student_id already exists
       if (userData.employee_id) {
-        const existing = await User.findOne({
+        const existing = await sequelize.models.StaffProfile.findOne({
           where: { employee_id: userData.employee_id },
         });
         if (existing) throw new Error("Employee ID already exists");
       }
 
       if (userData.student_id) {
-        const existing = await User.findOne({
+        const existing = await sequelize.models.StudentProfile.findOne({
           where: { student_id: userData.student_id },
         });
         if (existing) throw new Error("Student ID already exists");
@@ -78,9 +80,16 @@ class AuthService {
       const user = await User.findOne({
         where: { email },
         include: [
-          { association: "department" },
-          { association: "program" },
-          { association: "regulation" },
+          {
+            model: sequelize.models.StudentProfile,
+            as: "student_profile",
+            required: false,
+          },
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: false,
+          },
           {
             model: Role,
             as: "role_data",
@@ -88,6 +97,47 @@ class AuthService {
           },
         ],
       });
+
+      // Hydrate cross-module data manually
+      if (user) {
+        const programId = user.student_profile?.program_id || user.program_id;
+        const regulationId = user.student_profile?.regulation_id || user.regulation_id;
+        const staffDeptId = user.staff_profile?.department_id || user.department_id;
+
+        const [program, regulation] = await Promise.all([
+          programId
+            ? AcademicService.getProgramById(programId, {
+                attributes: ["id", "name", "code", "department_id"],
+              })
+            : null,
+          regulationId
+            ? AcademicService.getRegulationById(regulationId, {
+                attributes: ["id", "name", "code"],
+              })
+            : null,
+        ]);
+
+        const departmentId = staffDeptId || program?.department_id || null;
+        const department = departmentId
+          ? await AcademicService.getDepartmentById(departmentId, {
+              attributes: ["id", "name", "code"],
+            })
+          : null;
+
+        user.dataValues.department = department;
+        user.dataValues.department_id = departmentId;
+        user.dataValues.program = program;
+        user.dataValues.regulation = regulation;
+
+        // Map profile fields for backward compat
+        if (user.student_profile) {
+          user.dataValues.current_semester = user.student_profile.current_semester || user.current_semester;
+          user.dataValues.student_id = user.student_profile.student_id || user.student_id;
+        }
+        if (user.staff_profile) {
+          user.dataValues.employee_id = user.staff_profile.employee_id || user.employee_id;
+        }
+      }
 
       if (!user) {
         await SettingsService.log({ action: 'LOGIN_FAIL', details: { reason: 'User not found', email }, req: { headers: { "x-forwarded-for": ipAddress } } });
@@ -151,7 +201,7 @@ class AuthService {
           sessionId: session.id,
           email: user.email,
           role: user.role,
-          department_id: user.department_id,
+          department_id: user.dataValues.department_id || null,
           name: `${user.first_name}_${user.last_name || ""}`.replace(
             /\s+/g,
             "_",
@@ -175,7 +225,7 @@ class AuthService {
           email: user.email,
           role: user.role,
           department: user.department,
-          department_id: user.department_id,
+          department_id: user.dataValues.department_id || null,
           program: user.program,
           regulation: user.regulation,
           is_placement_coordinator: user.is_placement_coordinator,
@@ -203,10 +253,16 @@ class AuthService {
     try {
       const user = await User.findByPk(userId, {
         include: [
-          { association: "department" },
-          { association: "program" },
-          { association: "regulation" },
-          { association: "documents" },
+          {
+            model: sequelize.models.StudentProfile,
+            as: "student_profile",
+            required: false,
+          },
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: false,
+          },
           {
             model: Role,
             as: "role_data",
@@ -215,6 +271,55 @@ class AuthService {
         ],
         attributes: { exclude: ["password_hash", "password_reset_token"] },
       });
+
+      // Hydrate cross-module data manually
+      if (user) {
+        const programId = user.student_profile?.program_id || user.program_id;
+        const regulationId = user.student_profile?.regulation_id || user.regulation_id;
+        const staffDeptId = user.staff_profile?.department_id || user.department_id;
+
+        const [program, regulation, documents] = await Promise.all([
+          programId
+            ? AcademicService.getProgramById(programId, {
+                attributes: ["id", "name", "code", "department_id"],
+              })
+            : null,
+          regulationId
+            ? AcademicService.getRegulationById(regulationId, {
+                attributes: ["id", "name", "code"],
+              })
+            : null,
+          AcademicService.getStudentDocuments
+            ? AcademicService.getStudentDocuments(userId)
+            : [],
+        ]);
+
+        const departmentId = staffDeptId || program?.department_id || null;
+        const department = departmentId
+          ? await AcademicService.getDepartmentById(departmentId, {
+              attributes: ["id", "name", "code"],
+            })
+          : null;
+
+        user.dataValues.department = department;
+        user.dataValues.department_id = departmentId;
+        user.dataValues.program = program;
+        user.dataValues.regulation = regulation;
+        user.dataValues.documents = documents;
+
+        // Map profile fields for backward compat
+        if (user.student_profile) {
+          user.dataValues.current_semester = user.student_profile.current_semester || user.current_semester;
+          user.dataValues.student_id = user.student_profile.student_id || user.student_id;
+          user.dataValues.batch_year = user.student_profile.batch_year || user.batch_year;
+          user.dataValues.section = user.student_profile.section || user.section;
+          user.dataValues.academic_status = user.student_profile.academic_status || user.academic_status;
+        }
+        if (user.staff_profile) {
+          user.dataValues.employee_id = user.staff_profile.employee_id || user.employee_id;
+          user.dataValues.designation = user.staff_profile.designation || user.designation;
+        }
+      }
 
       if (!user) {
         throw new Error("User not found");
@@ -248,13 +353,17 @@ class AuthService {
 
       const user = await User.findByPk(session.user_id, {
         include: [
-          { association: "department" },
+          {
+            model: sequelize.models.StaffProfile,
+            as: "staff_profile",
+            required: false,
+          },
           {
             model: Role,
             as: "role_data",
             include: [{ model: Permission, as: "permissions" }],
           },
-        ]
+        ],
       });
 
       if (!user || !user.is_active) throw new Error("Account is deactivated or invalid");
@@ -276,10 +385,10 @@ class AuthService {
           sessionId: session.id,
           email: user.email,
           role: user.role,
-          department_id: user.department_id,
+          department_id: user.staff_profile?.department_id || null,
           name: `${user.first_name}_${user.last_name || ""}`.replace(/\s+/g, "_"),
         },
-        process.env.JWT_EXPIRY || "1h"
+        process.env.JWT_EXPIRY || "1h",
       );
 
       // Audit log

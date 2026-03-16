@@ -48,6 +48,7 @@ const Attendance = sequelize.define(
   },
   {
     tableName: "attendance",
+    schema: 'academics',
     timestamps: true,
     underscored: true,
   },

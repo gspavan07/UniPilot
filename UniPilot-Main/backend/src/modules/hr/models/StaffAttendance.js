@@ -35,6 +35,7 @@ const StaffAttendance = sequelize.define(
   },
   {
     tableName: "staff_attendance",
+    schema: 'hr',
     timestamps: true,
     underscored: true,
     indexes: [

@@ -42,6 +42,7 @@ const HostelBuilding = sequelize.define(
   },
   {
     tableName: "hostel_buildings",
+    schema: 'hostel',
     underscored: true,
     timestamps: true,
   },

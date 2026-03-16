@@ -45,6 +45,7 @@ const SalaryGrade = sequelize.define(
   },
   {
     tableName: "salary_grades",
+    schema: 'hr',
     timestamps: true,
     underscored: true,
   }

@@ -4,6 +4,7 @@ import { ExamCycle, ExamStudentEligibility } from "../../models/associations.js"
 import feeStatusService from "../../../fees/services/feeStatusService.js";
 import logger from "../../../../utils/logger.js";
 import { Op } from "sequelize";
+import { sequelize } from "../../../../config/database.js";
 
 /**
  * Calculate eligibility for a student in a specific exam cycle
@@ -242,17 +243,34 @@ export async function getCycleEligibilities(req, res) {
     const cycle = await ExamCycle.findByPk(cycle_id);
     if (!cycle) return res.status(404).json({ error: "Cycle not found" });
 
-    // Build filter for users (students)
-    const userWhere = {
-      role: "student",
+    const studentProfileWhere = {
       current_semester: cycle.semester,
-      batch_year: cycle.batch, // cycle.batch is assigned to user.batch_year
+      batch_year: cycle.batch,
     };
-    if (department_id) userWhere.department_id = department_id;
-    if (program_id) userWhere.program_id = program_id;
+    if (program_id) studentProfileWhere.program_id = program_id;
+    if (department_id) {
+      const programs = await AcademicService.listPrograms({
+        where: { department_id },
+        attributes: ["id"],
+      });
+      const programIds = programs.map((program) => program.id);
+      if (programIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      studentProfileWhere.program_id = { [Op.in]: programIds };
+    }
 
     const students = await CoreService.findAll({
-      where: userWhere,
+      where: { role: "student" },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: studentProfileWhere,
+          attributes: [],
+        },
+      ],
       attributes: [
         "id",
         "first_name",
@@ -262,7 +280,9 @@ export async function getCycleEligibilities(req, res) {
         "program_id",
         "section",
       ],
-      order: [["student_id", "ASC"]],
+      order: [
+        [{ model: sequelize.models.StudentProfile, as: "student_profile" }, "student_id", "ASC"],
+      ],
     });
 
     const studentIds = students.map((student) => student.id);
@@ -316,15 +336,22 @@ export async function recalculateAllEligibilities(req, res) {
     const cycle = await ExamCycle.findByPk(cycle_id);
     if (!cycle) return res.status(404).json({ error: "Cycle not found" });
 
-    // Build filter for users (students)
-    const userWhere = {
-      role: "student",
+    const studentProfileWhere = {
       current_semester: cycle.semester,
       batch_year: cycle.batch,
     };
 
     const students = await CoreService.findAll({
-      where: userWhere,
+      where: { role: "student" },
+      include: [
+        {
+          model: sequelize.models.StudentProfile,
+          as: "student_profile",
+          required: true,
+          where: studentProfileWhere,
+          attributes: [],
+        },
+      ],
       attributes: ["id"],
     });
 
