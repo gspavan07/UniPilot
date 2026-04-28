@@ -2,7 +2,6 @@ services:
   redis:
     container_name: unipilot-redis
     image: redis:latest
-    restart: unless-stopped
     volumes:
       - redis_data_v1:/data
     networks:
@@ -11,7 +10,6 @@ services:
   backend:
     container_name: unipilot-backend
     build: ./UniPilot-Main/backend
-    restart: unless-stopped
     env_file:
       - ./UniPilot-Main/backend/.env
     environment:
@@ -29,7 +27,6 @@ services:
     container_name: unipilot-main-frontend
     build:
       context: ./UniPilot-Main/frontend
-    restart: unless-stopped
     networks:
       - unipilot-net-v1
 
@@ -37,14 +34,12 @@ services:
     container_name: unipilot-exam-frontend
     build:
       context: ./UniPilot-ExamManagement/frontend
-    restart: unless-stopped
     networks:
       - unipilot-net-v1
 
   nginx:
     container_name: unipilot-nginx
     image: nginx:latest
-    restart: unless-stopped
     ports:
       - "80:80"
     volumes:
