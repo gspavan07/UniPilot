@@ -1,6 +1,7 @@
 import { verifyToken } from "../utils/jwt.js";
 import logger from "../utils/logger.js";
-import { User, Role, Permission } from "../models/index.js";
+import { Permission, Role, User } from "../modules/core/models/index.js";
+
 
 
 /**

@@ -1,0 +1,131 @@
+import logger from "../../../../utils/logger.js";
+import { ExamCycle, ExamTimetable } from "../../models/index.js";
+import AcademicService from "../../../academics/services/index.js";
+
+/**
+ * Get assigned exams for the logged-in faculty
+ * GET /api/exam/faculty/assigned-exams
+ */
+async function getAssignedExams(req, res) {
+    try {
+        const facultyId = req.user.userId;
+        logger.info(`Fetching exams for faculty: ${facultyId}`);
+
+        const exams = await ExamTimetable.findAll({
+            where: {
+                assigned_faculty_id: facultyId,
+                is_deleted: false,
+            },
+            include: [
+                {
+                    model: ExamCycle,
+                    as: "exam_cycle",
+                    attributes: ["id", "cycle_name", "status", "regulation_id", "cycle_type"],
+                    // Removed status filter for debugging to see if cycle status is the issue
+                },
+            ],
+            order: [["exam_date", "ASC"]],
+        });
+
+        logger.info(`Found ${exams.length} exams for faculty ${facultyId}`);
+        if (exams.length > 0) {
+            logger.info(`First exam cycle status: ${exams[0].exam_cycle?.status}`);
+        }
+
+        // Fetch Regulation details (exam_configuration) for each unique regulation ID
+        const regulationIds = [
+            ...new Set(
+                exams.map((e) => e.exam_cycle?.regulation_id).filter(Boolean),
+            ),
+        ];
+
+        const courseIds = [
+            ...new Set(exams.map((e) => e.course_id).filter(Boolean)),
+        ];
+
+        const [regulations, courses] = await Promise.all([
+            AcademicService.getRegulationsByIds(regulationIds, {
+                attributes: ["id", "exam_configuration"],
+                raw: true,
+            }),
+            AcademicService.getCoursesByIds(courseIds, {
+                attributes: ["id", "name", "code", "department_id", "course_type"],
+                raw: true,
+            }),
+        ]);
+
+        const regulationMap = new Map(
+            regulations.map((r) => [r.id, r.exam_configuration]),
+        );
+        const courseMap = new Map(courses.map((c) => [c.id, c]));
+
+        // Attach exam configuration to each exam entry
+        const examsWithConfig = exams.map(exam => {
+            const examJson = exam.toJSON();
+            const regId = exam.exam_cycle?.regulation_id;
+            examJson.course = examJson.course_id
+                ? courseMap.get(examJson.course_id) || null
+                : null;
+            examJson.exam_configuration = regId
+                ? regulationMap.get(regId) || null
+                : null;
+            return examJson;
+        });
+
+        res.json({ success: true, data: examsWithConfig });
+    } catch (error) {
+        logger.error("Get assigned exams error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+/**
+ * Update paper format and exam status
+ * PUT /api/exam/faculty/paper-format/:timetableId
+ */
+async function updatePaperFormat(req, res) {
+    try {
+        const { timetableId } = req.params;
+        const { paper_format } = req.body;
+        const facultyId = req.user.userId;
+
+        const exam = await ExamTimetable.findOne({
+            where: {
+                id: timetableId,
+                assigned_faculty_id: facultyId,
+            },
+        });
+
+        if (!exam) {
+            return res.status(404).json({
+                success: false,
+                error: "Exam not found or you are not assigned to it",
+            });
+        }
+
+        if (exam.exam_status === 'format_freezed') {
+            return res.status(403).json({
+                success: false,
+                error: "Paper format has been frozen by the HOD and cannot be edited.",
+            });
+        }
+
+        // Update paper format and status
+        await exam.update({
+            paper_format,
+            exam_status: "format_submitted",
+        });
+
+        logger.info(`Paper format updated and status set to 'format_submitted' for exam ${timetableId} by faculty ${facultyId}`);
+
+        res.json({ success: true, message: "Paper format saved successfully", data: exam });
+    } catch (error) {
+        logger.error("Update paper format error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+export default {
+    getAssignedExams,
+    updatePaperFormat,
+};
